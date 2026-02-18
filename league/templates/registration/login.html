@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/lux/bootstrap.min.css">
+  <title>Вход — F1 Predictions 2026</title>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+  <div class="container">
+    <a class="navbar-brand fw-semibold" href="/">F1 Predictions 2026</a>
+  </div>
+</nav>
+
+<div class="container py-5" style="max-width: 520px;">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-3">Войти</h1>
+
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          Неверный логин или пароль.
+        </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label">Логин</label>
+          <input type="text" name="username" autofocus class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Пароль</label>
+          <input type="password" name="password" class="form-control" required>
+        </div>
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <button class="btn btn-primary w-100" type="submit">Войти</button>
+      </form>
+
+      <div class="text-muted small mt-3">
+        Аккаунт создаёт судья в админке.
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
