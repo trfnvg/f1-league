@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Этапы — F1 Predictions 2026{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-end justify-content-between mb-3">
+  <div>
+    <h1 class="h3 mb-1">Этапы сезона</h1>
+  </div>
+</div>
+
+<div class="row g-4">
+  {% for e in events %}
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card shadow-sm h-100 border-0 card-hover">
+        {% if e.cover_image %}
+          <img src="{{ e.cover_image.url }}" class="card-img-top" alt="{{ e.name }}">
+        {% else %}
+          <div class="ratio ratio-16x9 bg-secondary-subtle"></div>
+        {% endif %}
+
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <h5 class="card-title mb-1">{{ e.name }}</h5>
+            <span class="badge text-bg-primary">R{{ e.round_number }}</span>
+          </div>
+
+          <div class="text-muted small mb-2">Дедлайн: {{ e.deadline }}</div>
+
+          {% if e.status == "open" %}
+            <span class="badge text-bg-success">Открыто</span>
+          {% elif e.status == "locked" %}
+            <span class="badge text-bg-warning">Закрыто</span>
+          {% else %}
+            <span class="badge text-bg-secondary">Очки посчитаны</span>
+          {% endif %}
+
+          <div class="mt-3 small text-muted">
+            Фото в галерее: {{ e.photos.count }}
+          </div>
+        </div>
+
+        <div class="card-footer bg-transparent border-top-0">
+          <a class="btn btn-outline-primary w-100" href="/events/{{ e.id }}/">
+            Открыть этап
+          </a>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="text-muted">Пока этапов нет. Зайди в админку и добавь первый.</div>
+  {% endfor %}
+</div>
+{% endblock %}

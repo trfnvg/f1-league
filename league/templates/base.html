@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ru">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cyborg/bootstrap.min.css">
+
+  <title>{% block title %}F1 Predictions 2026{% endblock %}</title>
+
+  <style>
+    :root {
+      --f1-red: #e10600;
+    }
+
+    .navbar {
+      background-color: #111 !important;
+      border-bottom: 3px solid var(--f1-red);
+    }
+
+    .btn-primary {
+      background-color: var(--f1-red);
+      border-color: var(--f1-red);
+    }
+
+    .btn-primary:hover {
+      background-color: #ff1a1a;
+      border-color: #ff1a1a;
+    }
+
+    .badge.text-bg-primary {
+      background-color: var(--f1-red) !important;
+    }
+
+    .table thead {
+      border-bottom: 2px solid var(--f1-red);
+    }
+
+    /* Hover эффект карточек */
+    .card-hover {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    }
+
+    body {
+        background: linear-gradient(180deg, #111 0%, #1c1f24 100%);
+    }
+
+    .card {
+        background-color: #24262b;
+    }
+
+    footer {
+        background: linear-gradient(
+            to top,
+            rgba(0,0,0,0.4),
+            rgba(0,0,0,0)
+        );
+        padding-top: 40px;
+        padding-bottom: 40px;
+        margin-top: 60px;
+        border-top: none;
+        opacity: 0.8;
+    } 
+
+    .footer-minimal {
+    margin-top: 80px;
+    padding-top: 30px;
+    padding-bottom: 30px;
+    color: rgba(255,255,255,0.35);
+    border: none;
+    background: transparent;
+    }
+
+    /* Мобильная версия */
+    @media (max-width: 576px) {
+      .main-content {
+        max-width: 92%;
+      }
+
+      .card {
+        border-radius: 14px;
+      }
+
+    .voting-status {
+      background: #1f2227;
+      border-left: 4px solid #e10600;
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+    }
+
+    .points-positive {
+      color: #3ddc84;
+      font-weight: 600;
+    }
+
+    .breakdown-list {
+      margin-top: 6px;
+    }
+
+    .score-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+    }
+
+    .score-total {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .score-subtitle {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.9rem;
+    }
+
+    .breakdown-box {
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 12px 14px;
+    }
+
+    .breakdown-row {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .breakdown-row + .breakdown-row {
+      margin-top: 8px;
+    }
+
+    .points-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      background: rgba(61, 220, 132, 0.12);
+      border: 1px solid rgba(61, 220, 132, 0.28);
+      color: #3ddc84;
+    }
+
+    .points-chip::before {
+      content: "▲";
+      font-size: 0.8rem;
+      opacity: 0.9;
+    }
+
+    .kpi-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 14px 0;
+    }
+
+    .offcanvas {
+      border-right: 3px solid var(--f1-red);
+    }
+
+    .list-group-item:hover {
+      background: rgba(255,255,255,0.06) !important;
+    }
+
+    /* F1-style offcanvas menu */
+    .offcanvas.f1-menu {
+      background: #14161a !important;
+      border-right: 3px solid var(--f1-red);
+    }
+
+    .offcanvas.f1-menu .offcanvas-header {
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .menu-title {
+      color: rgba(255,255,255,0.55);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .menu-item {
+      display: block;
+      padding: 12px 14px;
+      margin: 6px 0;
+      border-radius: 12px;
+      text-decoration: none;
+      color: rgba(255,255,255,0.88);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+    }
+
+    .menu-item:hover {
+      transform: translateX(2px);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.95);
+    }
+
+    .menu-item:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(225,6,0,0.25);
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+    }
+
+    .menu-meta {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.85rem;
+    }
+
+    .menu-user {
+      margin-top: 2px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+      padding: 18px 18px;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .leaderboard-table tbody tr {
+      height: 64px;
+    }
+
+    .leaderboard-table tbody tr {
+      border-color: rgba(255,255,255,0.06);
+    }
+
+    .leaderboard-table tbody tr:hover {
+      background: rgba(255,255,255,0.04);
+    }
+
+    .leaderboard-table thead th {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.7);
+    }
+
+}
+
+  </style>
+
+</head>
+
+<body class="d-flex flex-column min-vh-100">
+
+<nav class="navbar navbar-dark">
+  <div class="container d-flex align-items-center justify-content-between">
+
+    <div class="d-flex align-items-center gap-2">
+      <!-- Кнопка меню -->
+      <button class="btn btn-outline-light btn-sm"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#mainMenu"
+              aria-controls="mainMenu">
+        ☰
+      </button>
+
+      <!-- Лого -->
+      <a class="navbar-brand fw-bold text-uppercase m-0" href="/">
+        <span style="color:#e10600;">F1</span> Predictions 2026
+      </a>
+    </div>
+
+    <div class="d-flex gap-2 align-items-center">
+      {% if user.is_authenticated %}
+        <span class="navbar-text text-white-50 small d-none d-sm-inline">👤 {{ user.username }}</span>
+
+        <form method="post" action="/accounts/logout/" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
+        </form>
+      {% else %}
+        <a class="btn btn-outline-light btn-sm" href="/accounts/login/">Войти</a>
+      {% endif %}
+    </div>
+
+  </div>
+</nav>
+
+<!-- Offcanvas меню -->
+<div class="offcanvas offcanvas-start f1-menu" tabindex="-1" id="mainMenu" aria-labelledby="mainMenuLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="mainMenuLabel">
+      <span style="color:#e10600;">F1</span> Predictions
+    </h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <div class="menu-title mb-2">Навигация</div>
+
+    <a class="menu-item" href="/">Главная</a>
+    <a class="menu-item" href="/leaderboard/">Таблица</a>
+
+    {% if user.is_staff %}
+      <a class="menu-item" href="/admin/">Админка</a>
+    {% endif %}
+
+    <div class="menu-divider my-3"></div>
+
+    {% if user.is_authenticated %}
+      <div class="menu-meta">Вошли как</div>
+      <div class="menu-user">{{ user.username }}</div>
+    {% else %}
+      <div class="menu-meta">Гость</div>
+    {% endif %}
+  </div>
+</div>
+
+
+{% if messages %}
+  <div class="container pt-3">
+    {% for message in messages %}
+      <div class="alert alert-success mb-0 mt-2">
+        {{ message }}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<main class="container py-4 flex-grow-1 main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="mt-auto py-4 footer-minimal">
+  <div class="container text-center small">
+    F1 Predictions League — сезон 2026
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
