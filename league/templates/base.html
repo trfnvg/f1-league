@@ -168,7 +168,7 @@
     }
 
     .offcanvas {
-      border-right: 3px solid var(--f1-red);
+      border-right: none;
     }
 
     .list-group-item:hover {
@@ -178,7 +178,9 @@
     /* F1-style offcanvas menu */
     .offcanvas.f1-menu {
       background: #14161a !important;
-      border-right: 3px solid var(--f1-red);
+      border-right: none;
+      border-left: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
     }
 
     .offcanvas.f1-menu .offcanvas-header {
@@ -256,6 +258,14 @@
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: rgba(255,255,255,0.7);
+    }
+
+    .offcanvas.f1-menu .offcanvas-body {
+      padding: 1rem 0.9rem 1.2rem;
+    }
+
+    .offcanvas.f1-menu .menu-item {
+      margin: 8px 0;
     }
 
 }
