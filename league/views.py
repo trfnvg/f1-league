@@ -1,15 +1,33 @@
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
 
-from .forms import PredictionForm
+from .forms import PredictionForm, RegisterForm
 from .models import Event, Prediction, Score
 
 
 def home(request):
     events = Event.objects.all()
     return render(request, "home.html", {"events": events})
+
+
+def register(request):
+    next_url = request.GET.get("next") or request.POST.get("next") or "league:home"
+
+    if request.method == "POST":
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            if next_url.startswith("/"):
+                return redirect(next_url)
+            return redirect("league:home")
+    else:
+        form = RegisterForm()
+
+    return render(request, "registration/register.html", {"form": form, "next": next_url})
 
 
 def event_detail(request, event_id: int):
@@ -57,7 +75,7 @@ def event_detail(request, event_id: int):
     if request.user.is_authenticated:
         score = Score.objects.filter(event=event, user=request.user).first()
 
-    return render(request, "event_detail.html", {
+    return render(request, "event_detail_v2.html", {
         "event": event,
         "photos": photos,
         "form": form,

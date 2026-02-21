@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация - F1 Predictions 2026{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 520px;">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-3">Регистрация</h1>
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.username.id_for_label }}">Логин</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.password1.id_for_label }}">Пароль</label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}
+            <div class="text-danger small mt-1">{{ form.password1.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.password2.id_for_label }}">Повтори пароль</label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}
+            <div class="text-danger small mt-1">{{ form.password2.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <button class="btn btn-primary w-100" type="submit">Создать аккаунт</button>
+      </form>
+
+      <div class="small mt-3">
+        Уже есть аккаунт?
+        <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Войти</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
