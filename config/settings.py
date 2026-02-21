@@ -15,6 +15,11 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _env_list(name: str, default: str = ""):
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
 
 if DATABASE_URL:
@@ -39,6 +44,13 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 # Timeweb App Platform передаёт DJANGO_ALLOWED_HOSTS; можно задать и ALLOWED_HOSTS
 _allowed = os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS") or "*"
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
+CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
