@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -138,8 +139,10 @@ USE_TZ = True
 
 
 
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+_default_media_root = Path(tempfile.gettempdir()) / "f1_media" if not DEBUG else BASE_DIR / "media"
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(_default_media_root)))
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
