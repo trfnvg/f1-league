@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.name }} - F1 Predictions 2026{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+  <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
+</div>
+
+<div class="card shadow-sm mb-4">
+  {% if event.cover_image %}
+    <img src="{{ event.cover_image.url }}" class="card-img-top" style="max-height: 340px; object-fit: cover;" alt="{{ event.name }}">
+  {% endif %}
+  <div class="card-body">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <span class="badge text-bg-light">R{{ event.round_number }}</span>
+      {% if state == "soon" %}
+        <span class="badge text-bg-info">Скоро откроется</span>
+      {% elif state == "open" %}
+        <span class="badge text-bg-success">Открыто</span>
+      {% elif state == "closed" %}
+        <span class="badge text-bg-warning">Закрыто</span>
+      {% else %}
+        <span class="badge text-bg-secondary">Очки посчитаны</span>
+      {% endif %}
+    </div>
+    <h1 class="h3 mb-1">{{ event.name }}</h1>
+    <div class="text-muted">Дедлайн предиктов: {{ event.deadline }}</div>
+  </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Сделать прогноз</h2>
+
+    {% if not user.is_authenticated %}
+      <div class="voting-status mb-0">
+        Нужно
+        <a href="{% url 'login' %}?next={{ request.path|urlencode }}">войти</a>
+        или
+        <a href="{% url 'league:register' %}?next={{ request.path|urlencode }}">зарегистрироваться</a>,
+        чтобы сделать прогноз.
+      </div>
+    {% elif state != "open" %}
+      <div class="voting-status mb-0">
+        {% if state == "soon" %}
+          Голосование еще не началось. Откроется за 7 дней до гонки.
+        {% elif state == "closed" %}
+          Дедлайн прошел, редактирование закрыто.
+        {% else %}
+          Очки посчитаны, этап завершен.
+        {% endif %}
+      </div>
+    {% else %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">P1</label>
+            {{ form.p1 }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">P2</label>
+            {{ form.p2 }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">P3</label>
+            {{ form.p3 }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Поул</label>
+            {{ form.pole }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-3">Сохранить прогноз</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+{% if user.is_authenticated %}
+  <div class="card shadow-sm mb-4 score-card">
+    <div class="card-body">
+      <div class="d-flex align-items-end justify-content-between">
+        <div>
+          <h2 class="h5 mb-1">Очки за этап</h2>
+          <div class="score-subtitle">Твой результат по этому Гран-при</div>
+        </div>
+        {% if score %}
+          <div class="text-end">
+            <div class="score-subtitle">Итого</div>
+            <div class="score-total">{{ score.points }}</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <div class="kpi-divider"></div>
+
+      {% if score %}
+        {% if score.breakdown %}
+          <div class="breakdown-box">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="score-subtitle">Разбор</div>
+              <div class="score-subtitle">Очки</div>
+            </div>
+            {% for k, v in score.breakdown.items %}
+              <div class="breakdown-row d-flex align-items-center justify-content-between">
+                <div class="fw-semibold">{{ k }}</div>
+                <div class="points-chip">+{{ v }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-muted">Очки есть, но разбор пустой.</div>
+        {% endif %}
+      {% else %}
+        <div class="text-muted">Пока нет очков (результат еще не внесен или подсчет не запускали).</div>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<h2 class="h4 mb-3">Галерея</h2>
+<div class="row g-3">
+  {% for p in photos %}
+    <div class="col-12 col-md-6 col-lg-4">
+      <div class="card shadow-sm h-100">
+        <img src="{{ p.image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="">
+        <div class="card-body">
+          <div class="small text-muted">{{ p.caption }}</div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="text-muted">Пока нет фото в галерее.</div>
+  {% endfor %}
+</div>
+{% endblock %}

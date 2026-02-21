@@ -5,6 +5,7 @@ app_name = "league"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("register/", views.register, name="register"),
     path("events/<int:event_id>/", views.event_detail, name="event_detail"),
     path("leaderboard/", views.leaderboard, name="leaderboard"),
 ]
