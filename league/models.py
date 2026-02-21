@@ -10,7 +10,7 @@ class Event(models.Model):
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
-    cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True)
+    cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
 
     class Status(models.TextChoices):
         OPEN = "open", "Открыто"
@@ -51,7 +51,7 @@ class Event(models.Model):
 
 class EventPhoto(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="photos")
-    image = models.ImageField("Фото", upload_to="event_photos/")
+    image = models.ImageField("Фото", upload_to="event_photos/", max_length=255)
     caption = models.CharField("Подпись", max_length=200, blank=True)
 
     def __str__(self):
