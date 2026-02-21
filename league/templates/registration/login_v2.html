@@ -33,6 +33,11 @@
 
         <button class="btn btn-primary w-100" type="submit">Войти</button>
       </form>
+
+      <div class="small mt-3 text-center">
+        Нет аккаунта?
+        <a href="{% url 'league:register' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Создать аккаунт</a>
+      </div>
     </div>
   </div>
 </div>
