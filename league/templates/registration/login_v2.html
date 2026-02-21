@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Вход - F1 Predictions 2026{% endblock %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 520px;">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-3">Войти</h1>
+
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          Неверный логин или пароль.
+        </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label" for="id_username">Логин</label>
+          <input id="id_username" type="text" name="username" autofocus class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="id_password">Пароль</label>
+          <input id="id_password" type="password" name="password" class="form-control" required>
+        </div>
+
+        {% if next %}
+          <input type="hidden" name="next" value="{{ next }}">
+        {% endif %}
+
+        <button class="btn btn-primary w-100" type="submit">Войти</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
