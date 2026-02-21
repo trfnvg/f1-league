@@ -36,7 +36,9 @@ else:
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-fallback-secret-key")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+# Timeweb App Platform передаёт DJANGO_ALLOWED_HOSTS; можно задать и ALLOWED_HOSTS
+_allowed = os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS") or "*"
+ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
