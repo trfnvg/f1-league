@@ -21,7 +21,12 @@ class EventAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        dt_input = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"]
+        dt_input = [
+            "%Y-%m-%dT%H:%M",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+        ]
         self.fields["deadline"].input_formats = dt_input
         self.fields["race_datetime"].input_formats = dt_input
         self.fields["deadline"].help_text = "Точная дата и время закрытия предиктов."
