@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'league'
 ]
 
@@ -139,10 +140,39 @@ USE_TZ = True
 
 
 
-MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
-_default_media_root = Path(tempfile.gettempdir()) / "f1_media" if not DEBUG else BASE_DIR / "media"
-MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(_default_media_root)))
-MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+    AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME", "")
+    AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "")
+    AWS_S3_ENDPOINT_URL = os.getenv("AWS_S3_ENDPOINT_URL", "")
+    AWS_S3_ADDRESSING_STYLE = os.getenv("AWS_S3_ADDRESSING_STYLE", "path")
+    AWS_S3_SIGNATURE_VERSION = os.getenv("AWS_S3_SIGNATURE_VERSION", "s3v4")
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+
+    media_location = os.getenv("AWS_MEDIA_LOCATION", "media")
+    STORAGES["default"] = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {"location": media_location},
+    }
+
+    custom_domain = os.getenv("AWS_S3_CUSTOM_DOMAIN", "").strip()
+    if custom_domain:
+        MEDIA_URL = f"https://{custom_domain.rstrip('/')}/{media_location}/"
+    elif AWS_S3_ENDPOINT_URL and AWS_STORAGE_BUCKET_NAME:
+        endpoint = AWS_S3_ENDPOINT_URL.rstrip("/")
+        MEDIA_URL = f"{endpoint}/{AWS_STORAGE_BUCKET_NAME}/{media_location}/"
+    else:
+        MEDIA_URL = "/media/"
+else:
+    MEDIA_URL = os.getenv("MEDIA_URL", "/media/")
+    _default_media_root = Path(tempfile.gettempdir()) / "f1_media" if not DEBUG else BASE_DIR / "media"
+    MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(_default_media_root)))
+    MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
