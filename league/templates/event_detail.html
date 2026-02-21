@@ -1,6 +1,6 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}{{ event.name }} — F1 Predictions 2026{% endblock %}
+{% block title %}{{ event.name }} вЂ” F1 Predictions 2026{% endblock %}
 
 {% block content %}
 
@@ -27,7 +27,7 @@
 </style>
 
 <div class="mb-3">
-  <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
+  <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; РќР°Р·Р°Рґ Рє СЌС‚Р°РїР°Рј</a>
 </div>
 
 <div class="hero shadow-sm mb-4">
@@ -43,40 +43,40 @@
         <span class="badge text-bg-light">R{{ event.round_number }}</span>
 
         {% if state == "soon" %}
-          <span class="badge text-bg-info">Скоро откроется</span>
+          <span class="badge text-bg-info">РЎРєРѕСЂРѕ РѕС‚РєСЂРѕРµС‚СЃСЏ</span>
         {% elif state == "open" %}
-          <span class="badge text-bg-success">Открыто</span>
+          <span class="badge text-bg-success">РћС‚РєСЂС‹С‚Рѕ</span>
         {% elif state == "closed" %}
-          <span class="badge text-bg-warning">Закрыто</span>
+          <span class="badge text-bg-warning">Р—Р°РєСЂС‹С‚Рѕ</span>
         {% else %}
-          <span class="badge text-bg-secondary">Очки посчитаны</span>
+          <span class="badge text-bg-secondary">РћС‡РєРё РїРѕСЃС‡РёС‚Р°РЅС‹</span>
         {% endif %}
       </div>
 
       <h1 class="display-6 mb-1">{{ event.name }}</h1>
-      <div class="opacity-75">Дедлайн предиктов: {{ event.deadline }}</div>
+      <div class="opacity-75">Р”РµРґР»Р°Р№РЅ РїСЂРµРґРёРєС‚РѕРІ: {{ event.deadline|date:"d.m.Y H:i" }}</div>
     </div>
   </div>
 </div>
 
-<!-- Форма прогноза -->
+<!-- Р¤РѕСЂРјР° РїСЂРѕРіРЅРѕР·Р° -->
 <div class="card shadow-sm mb-4">
   <div class="card-body">
-    <h2 class="h5 mb-3">Сделать прогноз</h2>
+    <h2 class="h5 mb-3">РЎРґРµР»Р°С‚СЊ РїСЂРѕРіРЅРѕР·</h2>
 
     {% if not user.is_authenticated %}
       <div class="voting-status mb-0">
-        Нужно войти, чтобы сделать прогноз.
+        РќСѓР¶РЅРѕ РІРѕР№С‚Рё, С‡С‚РѕР±С‹ СЃРґРµР»Р°С‚СЊ РїСЂРѕРіРЅРѕР·.
       </div>
 
     {% elif state != "open" %}
       <div class="voting-status mb-0">
         {% if state == "soon" %}
-          Голосование ещё не началось. Откроется за 7 дней до гонки.
+          Р“РѕР»РѕСЃРѕРІР°РЅРёРµ РµС‰С‘ РЅРµ РЅР°С‡Р°Р»РѕСЃСЊ. РћС‚РєСЂРѕРµС‚СЃСЏ Р·Р° 7 РґРЅРµР№ РґРѕ РіРѕРЅРєРё.
         {% elif state == "closed" %}
-          Дедлайн прошёл — редактирование закрыто.
+          Р”РµРґР»Р°Р№РЅ РїСЂРѕС€С‘Р» вЂ” СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ Р·Р°РєСЂС‹С‚Рѕ.
         {% else %}
-          Очки посчитаны — этап завершён.
+          РћС‡РєРё РїРѕСЃС‡РёС‚Р°РЅС‹ вЂ” СЌС‚Р°Рї Р·Р°РІРµСЂС€С‘РЅ.
         {% endif %}
       </div>
 
@@ -97,13 +97,13 @@
             {{ form.p3 }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Поул</label>
+            <label class="form-label">РџРѕСѓР»</label>
             {{ form.pole }}
           </div>
         </div>
 
         <button type="submit" class="btn btn-primary mt-3">
-          Сохранить прогноз
+          РЎРѕС…СЂР°РЅРёС‚СЊ РїСЂРѕРіРЅРѕР·
         </button>
       </form>
     {% endif %}
@@ -116,12 +116,12 @@
 
       <div class="d-flex align-items-end justify-content-between">
         <div>
-          <h2 class="h5 mb-1">Очки за этап</h2>
-          <div class="score-subtitle">Твой результат по этому Гран-при</div>
+          <h2 class="h5 mb-1">РћС‡РєРё Р·Р° СЌС‚Р°Рї</h2>
+          <div class="score-subtitle">РўРІРѕР№ СЂРµР·СѓР»СЊС‚Р°С‚ РїРѕ СЌС‚РѕРјСѓ Р“СЂР°РЅ-РїСЂРё</div>
         </div>
         {% if score %}
           <div class="text-end">
-            <div class="score-subtitle">Итого</div>
+            <div class="score-subtitle">РС‚РѕРіРѕ</div>
             <div class="score-total">{{ score.points }}</div>
           </div>
         {% endif %}
@@ -133,8 +133,8 @@
         {% if score.breakdown %}
           <div class="breakdown-box">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <div class="score-subtitle">Разбор</div>
-              <div class="score-subtitle">Очки</div>
+              <div class="score-subtitle">Р Р°Р·Р±РѕСЂ</div>
+              <div class="score-subtitle">РћС‡РєРё</div>
             </div>
 
             {% for k, v in score.breakdown.items %}
@@ -145,11 +145,11 @@
             {% endfor %}
           </div>
         {% else %}
-          <div class="text-muted">Очки есть, но разбор пустой.</div>
+          <div class="text-muted">РћС‡РєРё РµСЃС‚СЊ, РЅРѕ СЂР°Р·Р±РѕСЂ РїСѓСЃС‚РѕР№.</div>
         {% endif %}
       {% else %}
         <div class="text-muted">
-          Пока нет очков (результат ещё не внесён или подсчёт не запускали).
+          РџРѕРєР° РЅРµС‚ РѕС‡РєРѕРІ (СЂРµР·СѓР»СЊС‚Р°С‚ РµС‰С‘ РЅРµ РІРЅРµСЃС‘РЅ РёР»Рё РїРѕРґСЃС‡С‘С‚ РЅРµ Р·Р°РїСѓСЃРєР°Р»Рё).
         </div>
       {% endif %}
 
@@ -157,8 +157,8 @@
   </div>
 {% endif %}
 
-<!-- Галерея -->
-<h2 class="h4 mb-3">Галерея</h2>
+<!-- Р“Р°Р»РµСЂРµСЏ -->
+<h2 class="h4 mb-3">Р“Р°Р»РµСЂРµСЏ</h2>
 
 <div class="row g-3">
   {% for p in photos %}
@@ -172,8 +172,9 @@
       </div>
     </div>
   {% empty %}
-    <div class="text-muted">Пока нет фото в галерее.</div>
+    <div class="text-muted">РџРѕРєР° РЅРµС‚ С„РѕС‚Рѕ РІ РіР°Р»РµСЂРµРµ.</div>
   {% endfor %}
 </div>
 
 {% endblock %}
+
