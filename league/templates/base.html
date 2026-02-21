@@ -19,10 +19,19 @@
     .navbar {
       background-color: #111 !important;
       border-bottom: 3px solid var(--f1-red);
+      padding-top: 0.35rem;
+      padding-bottom: 0.35rem;
+    }
+
+    .navbar .container {
+      min-height: 50px;
+      flex-wrap: nowrap;
     }
 
     .navbar-brand {
       margin-left: 0.5rem !important;
+      font-size: 1rem;
+      white-space: nowrap;
     }
 
     .btn-primary {
@@ -38,26 +47,28 @@
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.28rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.08);
+      gap: 0.35rem;
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
+      border: none;
+      flex-wrap: nowrap;
     }
 
     .nav-chip {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 32px;
-      padding: 0.4rem 0.82rem;
+      min-height: 30px;
+      padding: 0.34rem 0.72rem;
       border-radius: 999px;
       text-decoration: none;
-      font-size: 0.86rem;
+      font-size: 0.82rem;
       color: rgba(255,255,255,0.92);
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.12);
       transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      line-height: 1;
     }
 
     .nav-chip:hover {
@@ -89,13 +100,17 @@
     .nav-user-pill {
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
-      padding: 0.35rem 0.75rem;
+      min-height: 30px;
+      padding: 0.3rem 0.7rem;
       border-radius: 999px;
-      font-size: 0.82rem;
+      font-size: 0.78rem;
       color: rgba(255,255,255,0.78);
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .nav-actions form {
+      margin: 0;
     }
 
     .navbar .btn-outline-light {
@@ -169,6 +184,21 @@
 
     /* Mobile styles */
     @media (max-width: 576px) {
+      .navbar-brand {
+        font-size: 0.92rem;
+        margin-left: 0.35rem !important;
+      }
+
+      .nav-actions {
+        padding: 0.14rem;
+      }
+
+      .nav-chip {
+        min-height: 28px;
+        padding: 0.3rem 0.64rem;
+        font-size: 0.78rem;
+      }
+
       .main-content {
         max-width: 92%;
       }
@@ -391,8 +421,6 @@
 
     <div class="nav-actions">
       {% if user.is_authenticated %}
-        <span class="nav-user-pill d-none d-sm-inline">{{ user.username }}</span>
-
         <form method="post" action="{% url 'logout' %}" class="d-inline">
           {% csrf_token %}
           <button type="submit" class="nav-chip nav-chip-danger">Выйти</button>
