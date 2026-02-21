@@ -1,10 +1,15 @@
-from django.db import models
 from datetime import timedelta
+
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+
 
 class Event(models.Model):
     name = models.CharField("Название этапа", max_length=120)
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
+    race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True)
 
     class Status(models.TextChoices):
@@ -20,16 +25,11 @@ class Event(models.Model):
     def __str__(self):
         return f"R{self.round_number} — {self.name}"
 
-    race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
-
-    from django.utils import timezone
-    from datetime import timedelta
-
     def voting_state(self):
         """
         returns: 'soon' | 'open' | 'closed' | 'scored'
         """
-        if self.status == "scored":
+        if self.status == self.Status.SCORED:
             return "scored"
 
         now = timezone.now()
@@ -58,10 +58,6 @@ class EventPhoto(models.Model):
         return f"Фото для {self.event}"
 
 
-from django.contrib.auth.models import User
-from django.utils import timezone
-
-
 class Prediction(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="predictions")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -82,9 +78,6 @@ class Prediction(models.Model):
     def __str__(self):
         return f"{self.user} — {self.event}"
 
-
-
-from django.db import models
 
 class Result(models.Model):
     event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name="result")

@@ -1,15 +1,16 @@
-from django.shortcuts import render, get_object_or_404
-from .models import Event, Prediction, Score
 from django.contrib import messages
+from django.contrib.auth.models import User
 from django.db.models import Sum
-from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
+
+from .forms import PredictionForm
+from .models import Event, Prediction, Score
+
 
 def home(request):
     events = Event.objects.all()
     return render(request, "home.html", {"events": events})
 
-from django.utils import timezone
-from .forms import PredictionForm
 
 def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
@@ -21,12 +22,11 @@ def event_detail(request, event_id: int):
 
     state = event.voting_state()
     is_locked = state != "open"
-    # is_locked = (event.status != "open") or (event.deadline and event.deadline < timezone.now())
 
     if request.method == "POST":
         if not request.user.is_authenticated:
             messages.error(request, "Нужно войти.")
-            return redirect(f"/events/{event.id}/")
+            return redirect("league:event_detail", event_id=event.id)
 
         state = event.voting_state()
         is_locked = state != "open"
@@ -38,7 +38,7 @@ def event_detail(request, event_id: int):
                 messages.error(request, "Очки уже посчитаны — прогнозы зафиксированы.")
             else:
                 messages.error(request, "Дедлайн прошёл — прогнозы закрыты.")
-            return redirect(f"/events/{event.id}/")
+            return redirect("league:event_detail", event_id=event.id)
 
         form = PredictionForm(request.POST, instance=prediction)
         if form.is_valid():
@@ -47,7 +47,7 @@ def event_detail(request, event_id: int):
             new_prediction.event = event
             new_prediction.save()
             messages.success(request, "Прогноз сохранён ✅")
-            return redirect(f"/events/{event.id}/")
+            return redirect("league:event_detail", event_id=event.id)
     else:
         state = event.voting_state()
         is_locked = state != "open"
@@ -67,13 +67,6 @@ def event_detail(request, event_id: int):
         "score": score,
     })
 
-
-from django.contrib.auth.models import User
-from django.db.models import Count
-
-from django.contrib.auth.models import User
-from django.db.models import Sum
-from .models import Event, Score
 
 def leaderboard(request):
     events = Event.objects.all()

@@ -8,6 +8,14 @@ def get_item(d, key):
         return None
     return d.get(key)
 
+
+@register.filter
+def message_bootstrap_class(tags):
+    """Map Django message tags to Bootstrap 5 alert classes."""
+    if tags == "error":
+        return "danger"
+    return tags or "info"
+
 @register.simple_tag
 def pred_for(predictions_map, user_id, event_id):
     return predictions_map.get((user_id, event_id))

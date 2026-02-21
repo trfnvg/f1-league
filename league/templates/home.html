@@ -41,7 +41,7 @@
         </div>
 
         <div class="card-footer bg-transparent border-top-0">
-          <a class="btn btn-outline-primary w-100" href="/events/{{ e.id }}/">
+          <a class="btn btn-outline-primary w-100" href="{% url 'league:event_detail' event_id=e.id %}">
             Открыть этап
           </a>
         </div>
