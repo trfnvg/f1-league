@@ -1,4 +1,4 @@
-{% load league_extras %}
+﻿{% load league_extras %}
 <!doctype html>
 <html lang="ru">
 <head>
@@ -21,6 +21,10 @@
       border-bottom: 3px solid var(--f1-red);
     }
 
+    .navbar-brand {
+      margin-left: 0.5rem !important;
+    }
+
     .btn-primary {
       background-color: var(--f1-red);
       border-color: var(--f1-red);
@@ -31,6 +35,90 @@
       border-color: #ff1a1a;
     }
 
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.28rem;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .nav-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32px;
+      padding: 0.4rem 0.82rem;
+      border-radius: 999px;
+      text-decoration: none;
+      font-size: 0.86rem;
+      color: rgba(255,255,255,0.92);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .nav-chip:hover {
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.2);
+      transform: translateY(-1px);
+    }
+
+    .nav-chip:focus,
+    .nav-chip:active {
+      color: #fff;
+      outline: none;
+      box-shadow: none;
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    .nav-chip-danger {
+      background: rgba(225, 6, 0, 0.14);
+      border-color: rgba(225, 6, 0, 0.34);
+    }
+
+    .nav-chip-danger:hover {
+      background: rgba(225, 6, 0, 0.22);
+      border-color: rgba(225, 6, 0, 0.56);
+    }
+
+    .nav-user-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.78);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .navbar .btn-outline-light {
+      border-color: rgba(255,255,255,0.35);
+      color: rgba(255,255,255,0.92);
+      background: rgba(255,255,255,0.04);
+    }
+
+    .navbar .btn-outline-light:hover {
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+    }
+
+    .navbar .btn-outline-light:focus,
+    .navbar .btn-outline-light:active {
+      box-shadow: none;
+      outline: none;
+      border-color: rgba(255,255,255,0.5);
+      color: #fff;
+      background: rgba(255,255,255,0.12);
+    }
+
     .badge.text-bg-primary {
       background-color: var(--f1-red) !important;
     }
@@ -39,7 +127,7 @@
       border-bottom: 2px solid var(--f1-red);
     }
 
-    /* Hover эффект карточек */
+    /* Hover СЌС„С„РµРєС‚ РєР°СЂС‚РѕС‡РµРє */
     .card-hover {
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
@@ -79,7 +167,7 @@
     background: transparent;
     }
 
-    /* Мобильная версия */
+    /* РњРѕР±РёР»СЊРЅР°СЏ РІРµСЂСЃРёСЏ */
     @media (max-width: 576px) {
       .main-content {
         max-width: 92%;
@@ -156,7 +244,7 @@
     }
 
     .points-chip::before {
-      content: "▲";
+      content: "в–І";
       font-size: 0.8rem;
       opacity: 0.9;
     }
@@ -280,38 +368,39 @@
   <div class="container d-flex align-items-center justify-content-between">
 
     <div class="d-flex align-items-center gap-2">
-      <!-- Кнопка меню -->
+      <!-- РљРЅРѕРїРєР° РјРµРЅСЋ -->
       <button class="btn btn-outline-light btn-sm"
               type="button"
               data-bs-toggle="offcanvas"
               data-bs-target="#mainMenu"
               aria-controls="mainMenu">
-        ☰
+        в°
       </button>
 
-      <!-- Лого -->
+      <!-- Р›РѕРіРѕ -->
       <a class="navbar-brand fw-bold text-uppercase m-0" href="{% url 'league:home' %}">
         <span style="color:#e10600;">F1</span> Predictions 2026
       </a>
     </div>
 
-    <div class="d-flex gap-2 align-items-center">
+    <div class="nav-actions">
       {% if user.is_authenticated %}
-        <span class="navbar-text text-white-50 small d-none d-sm-inline">👤 {{ user.username }}</span>
+        <span class="nav-user-pill d-none d-sm-inline">{{ user.username }}</span>
 
         <form method="post" action="{% url 'logout' %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
+          <button type="submit" class="nav-chip nav-chip-danger">Р’С‹Р№С‚Рё</button>
         </form>
       {% else %}
-        <a class="btn btn-outline-light btn-sm" href="{% url 'login' %}">Войти</a>
+        <a class="nav-chip" href="{% url 'login' %}">Войти</a>
+        <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
       {% endif %}
     </div>
 
   </div>
 </nav>
 
-<!-- Offcanvas меню -->
+<!-- Offcanvas РјРµРЅСЋ -->
 <div class="offcanvas offcanvas-start f1-menu" tabindex="-1" id="mainMenu" aria-labelledby="mainMenuLabel">
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="mainMenuLabel">
@@ -321,22 +410,22 @@
   </div>
 
   <div class="offcanvas-body">
-    <div class="menu-title mb-2">Навигация</div>
+    <div class="menu-title mb-2">РќР°РІРёРіР°С†РёСЏ</div>
 
-    <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
-    <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
+    <a class="menu-item" href="{% url 'league:home' %}">Р“Р»Р°РІРЅР°СЏ</a>
+    <a class="menu-item" href="{% url 'league:leaderboard' %}">РўР°Р±Р»РёС†Р°</a>
 
     {% if user.is_staff %}
-      <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
+      <a class="menu-item" href="{% url 'admin:index' %}">РђРґРјРёРЅРєР°</a>
     {% endif %}
 
     <div class="menu-divider my-3"></div>
 
     {% if user.is_authenticated %}
-      <div class="menu-meta">Вошли как</div>
+      <div class="menu-meta">Р’РѕС€Р»Рё РєР°Рє</div>
       <div class="menu-user">{{ user.username }}</div>
     {% else %}
-      <div class="menu-meta">Гость</div>
+      <div class="menu-meta">Р“РѕСЃС‚СЊ</div>
     {% endif %}
   </div>
 </div>
@@ -358,7 +447,7 @@
 
 <footer class="mt-auto py-4 footer-minimal">
   <div class="container text-center small">
-    F1 Predictions League — сезон 2026
+    F1 Predictions League вЂ” СЃРµР·РѕРЅ 2026
   </div>
 </footer>
 
@@ -366,3 +455,5 @@
 
 </body>
 </html>
+
+
