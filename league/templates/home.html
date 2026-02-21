@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}Этапы — F1 Predictions 2026{% endblock %}
+{% block title %}Р­С‚Р°РїС‹ вЂ” F1 Predictions 2026{% endblock %}
 
 {% block content %}
 <div class="d-flex align-items-end justify-content-between mb-3">
   <div>
-    <h1 class="h3 mb-1">Этапы сезона</h1>
+    <h1 class="h3 mb-1">Р­С‚Р°РїС‹ СЃРµР·РѕРЅР°</h1>
   </div>
 </div>
 
@@ -25,26 +25,27 @@
             <span class="badge text-bg-primary">R{{ e.round_number }}</span>
           </div>
 
-          <div class="text-muted small mb-2">Дедлайн: {{ e.deadline }}</div>
+          <div class="text-muted small mb-2">Р”РµРґР»Р°Р№РЅ: {{ e.deadline|date:"d.m.Y H:i" }}</div>
 
           {% if e.status == "open" %}
-            <span class="badge text-bg-success">Открыто</span>
+            <span class="badge text-bg-success">РћС‚РєСЂС‹С‚Рѕ</span>
           {% elif e.status == "locked" %}
-            <span class="badge text-bg-warning">Закрыто</span>
+            <span class="badge text-bg-warning">Р—Р°РєСЂС‹С‚Рѕ</span>
           {% else %}
-            <span class="badge text-bg-secondary">Очки посчитаны</span>
+            <span class="badge text-bg-secondary">РћС‡РєРё РїРѕСЃС‡РёС‚Р°РЅС‹</span>
           {% endif %}
         </div>
 
         <div class="card-footer bg-transparent border-top-0">
           <a class="btn btn-outline-primary w-100" href="{% url 'league:event_detail' event_id=e.id %}">
-            Открыть этап
+            РћС‚РєСЂС‹С‚СЊ СЌС‚Р°Рї
           </a>
         </div>
       </div>
     </div>
   {% empty %}
-    <div class="text-muted">Пока этапов нет. Зайди в админку и добавь первый.</div>
+    <div class="text-muted">РџРѕРєР° СЌС‚Р°РїРѕРІ РЅРµС‚. Р—Р°Р№РґРё РІ Р°РґРјРёРЅРєСѓ Рё РґРѕР±Р°РІСЊ РїРµСЂРІС‹Р№.</div>
   {% endfor %}
 </div>
 {% endblock %}
+

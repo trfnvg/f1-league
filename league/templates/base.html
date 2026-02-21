@@ -275,35 +275,41 @@
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
 
-    .menu-title {
-      color: rgba(255,255,255,0.55);
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
     .menu-item {
       display: block;
-      padding: 12px 14px;
+      padding: 13px 14px;
       margin: 6px 0;
-      border-radius: 12px;
+      border-radius: 14px;
       text-decoration: none;
       color: rgba(255,255,255,0.88);
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.05);
-      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+
+    .menu-item:visited {
+      color: rgba(255,255,255,0.88);
     }
 
     .menu-item:hover {
       transform: translateX(2px);
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.95);
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+      border-color: rgba(255,255,255,0.16);
+      color: #fff;
     }
 
     .menu-item:focus {
       outline: none;
-      box-shadow: 0 0 0 3px rgba(225,6,0,0.25);
+      box-shadow: none;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+      border-color: rgba(255,255,255,0.16);
+      color: #fff;
+    }
+
+    .menu-item:active {
+      color: #fff;
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
+      border-color: rgba(255,255,255,0.2);
     }
 
     .menu-divider {
@@ -410,8 +416,6 @@
   </div>
 
   <div class="offcanvas-body">
-    <div class="menu-title mb-2">Навигация</div>
-
     <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
 
