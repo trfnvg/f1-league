@@ -10,6 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /app/
 
-RUN chmod +x /app/start.sh
-
-CMD ["/app/start.sh"]
+CMD gunicorn config.wsgi:application --bind 0.0.0.0:8000
