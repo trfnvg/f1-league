@@ -1,3 +1,10 @@
+def _normalize(s):
+    """Нормализация для сравнения (пробелы, регистр)."""
+    if s is None:
+        return ""
+    return str(s).strip().lower()
+
+
 def calculate_points(pred, res):
     points = 0
     breakdown = {}
@@ -7,13 +14,13 @@ def calculate_points(pred, res):
         points += pts
         breakdown[label] = pts
 
-    if pred.p1 == res.p1:
+    if _normalize(pred.p1) == _normalize(res.p1):
         add("P1", 10)
-    if pred.p2 == res.p2:
+    if _normalize(pred.p2) == _normalize(res.p2):
         add("P2", 6)
-    if pred.p3 == res.p3:
+    if _normalize(pred.p3) == _normalize(res.p3):
         add("P3", 4)
-    if pred.pole == res.pole:
+    if _normalize(pred.pole) == _normalize(res.pole):
         add("Pole", 3)
 
     return points, breakdown
