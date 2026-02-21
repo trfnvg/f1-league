@@ -36,6 +36,15 @@ class ResultAdmin(admin.ModelAdmin):
     list_select_related = ("event",)
 
 
+@admin.register(Prediction)
+class PredictionAdmin(admin.ModelAdmin):
+    list_display = ("event", "user", "p1", "p2", "p3", "pole", "created_at")
+    list_filter = ("event", "user")
+    search_fields = ("event__name", "user__username")
+    list_select_related = ("event", "user")
+    ordering = ("-created_at",)
+
+
 @admin.register(Score)
 class ScoreAdmin(admin.ModelAdmin):
     list_display = ("event", "user", "points")
