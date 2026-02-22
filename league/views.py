@@ -1,4 +1,4 @@
-from django.contrib import messages
+﻿from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models import Sum
@@ -43,7 +43,7 @@ def event_detail(request, event_id: int):
 
     if request.method == "POST":
         if not request.user.is_authenticated:
-            messages.error(request, "Нужно войти.")
+            messages.error(request, "Нужно войти в аккаунт.")
             return redirect("league:event_detail", event_id=event.id)
 
         state = event.voting_state()
@@ -51,11 +51,11 @@ def event_detail(request, event_id: int):
 
         if is_locked:
             if state == "soon":
-                messages.error(request, "Голосование ещё не началось. Откроется за 7 дней до гонки.")
+                messages.error(request, "Голосование еще не началось. Оно откроется за 7 дней до гонки.")
             elif state == "scored":
-                messages.error(request, "Очки уже посчитаны — прогнозы зафиксированы.")
+                messages.error(request, "Очки уже посчитаны, прогнозы зафиксированы.")
             else:
-                messages.error(request, "Дедлайн прошёл — прогнозы закрыты.")
+                messages.error(request, "Дедлайн прошел, прогнозы закрыты.")
             return redirect("league:event_detail", event_id=event.id)
 
         form = PredictionForm(request.POST, instance=prediction)
@@ -64,7 +64,7 @@ def event_detail(request, event_id: int):
             new_prediction.user = request.user
             new_prediction.event = event
             new_prediction.save()
-            messages.success(request, "Прогноз сохранён ✅")
+            messages.success(request, "Прогноз сохранен.")
             return redirect("league:event_detail", event_id=event.id)
     else:
         state = event.voting_state()
@@ -89,35 +89,22 @@ def event_detail(request, event_id: int):
 def leaderboard(request):
     events = Event.objects.all()
 
-    # Все очки по этапам
     scores = Score.objects.select_related("user", "event").all()
     scores_map = {(s.user_id, s.event_id): s for s in scores}
 
-    # Сумма очков по пользователю
-    totals_qs = (
-        Score.objects.values("user_id")
-        .annotate(total=Sum("points"))
-    )
+    totals_qs = Score.objects.values("user_id").annotate(total=Sum("points"))
     totals_map = {x["user_id"]: int(x["total"] or 0) for x in totals_qs}
 
-    # Игроки (не staff)
     users = list(User.objects.filter(is_staff=False))
-
-    # Сортировка по очкам (desc), затем по username (для стабильности)
     users_sorted = sorted(users, key=lambda u: (-totals_map.get(u.id, 0), u.username.lower()))
 
-    leader_score = totals_map.get(users_sorted[0].id, 0) if users_sorted else 0
-
-    # Готовим строки таблицы
     rows = []
-    for idx, u in enumerate(users_sorted, start=1):
-        total = totals_map.get(u.id, 0)
-        gap = leader_score - total
+    for idx, user in enumerate(users_sorted, start=1):
         rows.append({
-            "user": u,
+            "user": user,
             "rank": idx,
-            "total": total,
-            "is_leader": (idx == 1),
+            "total": totals_map.get(user.id, 0),
+            "is_leader": idx == 1,
         })
 
     return render(request, "leaderboard.html", {

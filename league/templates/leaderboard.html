@@ -4,57 +4,57 @@
 {% block title %}Таблица сезона - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-end justify-content-between mb-3">
-  <div>
-    <h1 class="h3 mb-1">Таблица сезона</h1>
-  </div>
-</div>
-
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <div class="table-responsive" style="max-height: 70vh;">
-      <table class="table table-sm align-middle mb-0 leaderboard-table">
-        <thead>
-          <tr>
-            <th class="sticky-head sticky-col">#</th>
-            <th class="sticky-head sticky-col" style="left: 44px;">Игрок</th>
-            <th class="sticky-head text-center">Итого</th>
-            {% for e in events %}
-              <th class="sticky-head text-center">R{{ e.round_number }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for r in rows %}
-            <tr class="{% if r.is_leader %}table-active{% endif %}">
-              <td class="sticky-col" style="width:44px;">{{ r.rank }}</td>
-
-              <td class="sticky-col fw-semibold" style="left: 44px;">
-                {{ r.user.username }}
-              </td>
-
-              <td class="text-center">
-                <span class="badge text-bg-primary">{{ r.total }}</span>
-              </td>
-
-              {% for e in events %}
-                <td class="text-center">
-                  {% score_for scores_map r.user.id e.id as s %}
-                  {% if s %}
-                    <span class="fw-semibold">{{ s.points }}</span>
-                  {% else %}
-                    <span class="text-muted">-</span>
-                  {% endif %}
-                </td>
-              {% endfor %}
-            </tr>
-          {% empty %}
-            <tr><td colspan="999" class="text-muted">Пока нет игроков.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<section class="glass-panel p-3 p-md-4 mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
+    <div>
+      <h1 class="section-title">Таблица сезона</h1>
+      <p class="section-subtitle">Общий рейтинг игроков по сумме очков за все этапы.</p>
+    </div>
+    <div class="deadline-chip">
+      <span>Игроков: {{ rows|length }}</span>
+      <span style="opacity:.45;">|</span>
+      <span>Этапов: {{ events|length }}</span>
     </div>
   </div>
-</div>
+</section>
+
+<section class="table-shell" style="animation: card-enter 360ms ease-out both;">
+  <div class="table-responsive" style="max-height: 72vh;">
+    <table class="table table-sm align-middle leaderboard-table">
+      <thead>
+        <tr>
+          <th class="sticky-col col-rank">#</th>
+          <th class="sticky-col-2 col-player">Игрок</th>
+          <th class="col-total text-center">Итого</th>
+          {% for e in events %}
+            <th class="text-center">R{{ e.round_number }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+          <tr class="{% if r.is_leader %}table-active{% endif %}">
+            <td class="sticky-col col-rank">{{ r.rank }}</td>
+            <td class="sticky-col-2 col-player fw-semibold">{{ r.user.username }}</td>
+            <td class="col-total text-center"><span class="badge text-bg-primary">{{ r.total }}</span></td>
+            {% for e in events %}
+              <td class="text-center">
+                {% score_for scores_map r.user.id e.id as s %}
+                {% if s %}
+                  <span class="fw-semibold">{{ s.points }}</span>
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="999" class="text-muted">Пока нет игроков.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 {% endblock %}
