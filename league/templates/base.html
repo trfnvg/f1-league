@@ -609,34 +609,64 @@
       }
     }
 
-    /* Final header spacing fix: remove extra space above brand on all pages */
+    /* Header canonical styles (single source of truth) */
     .navbar {
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      margin-top: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border-bottom: 2px solid #c50800 !important;
     }
 
     .navbar .container {
-      min-height: 52px !important;
+      min-height: 44px !important;
+      height: 44px !important;
+      display: flex !important;
       align-items: center !important;
+      justify-content: space-between !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
     }
 
     .navbar-brand {
-      margin: 0 0 0 0.45rem !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-      line-height: 1 !important;
+      margin: 0 0 0 0.4rem !important;
+      padding: 0 !important;
+      height: 100% !important;
       display: inline-flex !important;
       align-items: center !important;
+      line-height: 1 !important;
+      font-size: 1.22rem !important;
+      letter-spacing: 0.02em !important;
+    }
+
+    .navbar .btn-outline-light.btn-sm {
+      padding-top: 0.18rem !important;
+      padding-bottom: 0.18rem !important;
+      line-height: 1 !important;
+    }
+
+    .nav-actions {
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+
+    .nav-chip {
+      min-height: 30px !important;
+      line-height: 1 !important;
     }
 
     @media (max-width: 576px) {
       .navbar .container {
-        min-height: 48px !important;
+        min-height: 42px !important;
+        height: 42px !important;
       }
 
       .navbar-brand {
-        margin-left: 0.3rem !important;
+        font-size: 1rem !important;
+        margin-left: 0.28rem !important;
+      }
+
+      .nav-chip {
+        min-height: 28px !important;
       }
     }
 
