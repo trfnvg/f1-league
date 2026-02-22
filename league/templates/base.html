@@ -272,11 +272,22 @@
       margin: 14px 0;
     }
 
+    .leaderboard-table {
+      --bs-table-bg: transparent;
+      --bs-table-color: rgba(255, 255, 255, 0.92);
+      --bs-table-border-color: rgba(255, 255, 255, 0.08);
+      --bs-table-accent-bg: transparent;
+      --bs-table-hover-bg: rgba(255, 255, 255, 0.04);
+      --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
     .leaderboard-table th,
     .leaderboard-table td {
       padding: 14px 14px;
       white-space: nowrap;
       vertical-align: middle;
+      background: transparent;
     }
 
     .leaderboard-table thead th {
@@ -287,14 +298,15 @@
       position: sticky;
       top: 0;
       z-index: 4;
-      background: #1f2430;
+      background: rgba(33, 39, 51, 0.9);
+      backdrop-filter: blur(4px);
     }
 
     .sticky-col {
       position: sticky;
       left: 0;
       z-index: 3;
-      background: #1f2430;
+      background: rgba(33, 39, 51, 0.88);
     }
 
     .leaderboard-table tbody tr:hover {
