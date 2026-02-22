@@ -19,13 +19,14 @@
     .navbar {
       background-color: #111 !important;
       border-bottom: 3px solid var(--f1-red);
-      padding-top: 0.6rem;
-      padding-bottom: 0.6rem;
+      padding-top: 0;
+      padding-bottom: 0;
     }
 
     .navbar .container {
-      min-height: 64px;
+      min-height: 56px;
       flex-wrap: nowrap;
+      align-items: center;
     }
 
     .navbar-brand {
@@ -184,13 +185,8 @@
 
     /* Mobile styles */
     @media (min-width: 992px) {
-      .navbar {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-      }
-
       .navbar .container {
-        min-height: 72px;
+        min-height: 60px;
       }
 
       .navbar-brand {
@@ -210,13 +206,8 @@
         margin-left: 0.35rem !important;
       }
 
-      .navbar {
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
-      }
-
       .navbar .container {
-        min-height: 50px;
+        min-height: 52px;
       }
 
       .nav-actions {
