@@ -31,7 +31,10 @@
 
     .navbar-brand {
       margin-left: 0.55rem !important;
-      font-size: 1.08rem;
+      font-size: 1.26rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
       white-space: nowrap;
     }
 
@@ -154,6 +157,7 @@
     }
 
     body {
+        margin: 0;
         background: linear-gradient(180deg, #111 0%, #1c1f24 100%);
     }
 
@@ -186,11 +190,11 @@
     /* Mobile styles */
     @media (min-width: 992px) {
       .navbar .container {
-        min-height: 50px;
+        min-height: 54px;
       }
 
       .navbar-brand {
-        font-size: 1.16rem;
+        font-size: 1.42rem;
       }
 
       .nav-chip {
@@ -202,7 +206,7 @@
 
     @media (max-width: 576px) {
       .navbar-brand {
-        font-size: 0.92rem;
+        font-size: 1rem;
         margin-left: 0.35rem !important;
       }
 
