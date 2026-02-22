@@ -2,45 +2,201 @@
 <!doctype html>
 <html lang="ru">
 <head>
-
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cyborg/bootstrap.min.css">
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/cyborg/bootstrap.min.css">
   <title>{% block title %}F1 Predictions 2026{% endblock %}</title>
 
   <style>
     :root {
       --f1-red: #e10600;
+      --text-1: rgba(255, 255, 255, 0.95);
+      --text-2: rgba(255, 255, 255, 0.7);
+      --line-1: rgba(255, 255, 255, 0.1);
+      --line-2: rgba(255, 255, 255, 0.2);
+      --surface-1: #1a1f28;
+      --surface-2: #212733;
+      --header-h: 42px;
+      --page-max: 1120px;
     }
 
-    .navbar {
-      background-color: #111 !important;
-      border-bottom: 3px solid var(--f1-red);
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      color: var(--text-1);
+      background:
+        radial-gradient(1200px 500px at 100% -12%, rgba(225, 6, 0, 0.13), transparent 62%),
+        radial-gradient(900px 400px at -10% 0%, rgba(32, 62, 104, 0.16), transparent 64%),
+        linear-gradient(180deg, #10141b 0%, #161b24 56%, #1b212b 100%);
+      font-family: "Segoe UI", "Arial Nova", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    .site-header {
+      background: transparent !important;
+      border-bottom: 2px solid var(--f1-red);
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    .site-header > .container {
+      max-width: var(--page-max);
+      height: var(--header-h);
+      min-height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding-top: 0;
       padding-bottom: 0;
+      padding-left: 0.85rem;
+      padding-right: 0.85rem;
     }
 
-    .navbar .container {
-      min-height: 48px;
-      flex-wrap: nowrap;
+    .site-header-left {
+      display: flex;
       align-items: center;
+      gap: 0.5rem;
+      height: 100%;
     }
 
-    .navbar-brand {
-      margin-left: 0.55rem !important;
-      font-size: 1.26rem;
+    .site-menu-btn {
+      height: 26px;
+      min-height: 26px;
+      padding: 0 0.45rem;
       line-height: 1;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      border-color: rgba(255, 255, 255, 0.34);
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .site-menu-btn:hover,
+    .site-menu-btn:focus,
+    .site-menu-btn:active {
+      border-color: rgba(255, 255, 255, 0.52) !important;
+      color: #fff !important;
+      background: rgba(255, 255, 255, 0.14) !important;
+      box-shadow: none !important;
+      outline: none !important;
+    }
+
+    .site-brand {
+      margin: 0 0 0 0.35rem !important;
+      padding: 0 !important;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
+      height: 100%;
+      min-height: 0;
+      letter-spacing: 0.02em;
+      font-size: 1.12rem;
+      color: #fff !important;
+      text-decoration: none;
       white-space: nowrap;
+    }
+
+    .brand-f1 {
+      color: var(--f1-red);
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand-text {
+      color: #f4f6f8;
+      font-weight: 700;
+    }
+
+    .site-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      height: 100%;
+    }
+
+    .nav-chip {
+      height: 26px;
+      min-height: 26px;
+      padding: 0 0.62rem;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      line-height: 1;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .nav-chip:hover,
+    .nav-chip:focus,
+    .nav-chip:active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: none;
+      outline: none;
+      transform: translateY(-1px);
+    }
+
+    .nav-chip-danger {
+      background: rgba(225, 6, 0, 0.14);
+      border-color: rgba(225, 6, 0, 0.38);
+    }
+
+    .nav-chip-danger:hover,
+    .nav-chip-danger:focus,
+    .nav-chip-danger:active {
+      background: rgba(225, 6, 0, 0.24);
+      border-color: rgba(225, 6, 0, 0.56);
+    }
+
+    .main-content {
+      max-width: var(--page-max);
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+      padding-top: 1.2rem;
+      padding-bottom: 2rem;
+    }
+
+    .main-content > :first-child {
+      margin-top: 0 !important;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+      border: 1px solid var(--line-1);
+      border-radius: 16px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+      overflow: hidden;
+    }
+
+    .card-hover {
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .card-hover:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.46);
+      border-color: var(--line-2);
     }
 
     .btn-primary {
       background-color: var(--f1-red);
       border-color: var(--f1-red);
+      border-radius: 10px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
     }
 
     .btn-primary:hover {
@@ -48,211 +204,28 @@
       border-color: #ff1a1a;
     }
 
-    .nav-actions {
-      display: flex;
-      align-items: center;
-      gap: 0.35rem;
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      border: none;
-      flex-wrap: nowrap;
-    }
-
-    .nav-chip {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 30px;
-      padding: 0.32rem 0.72rem;
-      border-radius: 999px;
-      text-decoration: none;
-      font-size: 0.82rem;
-      color: rgba(255,255,255,0.92);
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-      line-height: 1;
-    }
-
-    .nav-chip:hover {
-      color: #fff;
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.2);
-      transform: translateY(-1px);
-    }
-
-    .nav-chip:focus,
-    .nav-chip:active {
-      color: #fff;
-      outline: none;
-      box-shadow: none;
-      background: rgba(255,255,255,0.12);
-      border-color: rgba(255,255,255,0.2);
-    }
-
-    .nav-chip-danger {
-      background: rgba(225, 6, 0, 0.14);
-      border-color: rgba(225, 6, 0, 0.34);
-    }
-
-    .nav-chip-danger:hover {
-      background: rgba(225, 6, 0, 0.22);
-      border-color: rgba(225, 6, 0, 0.56);
-    }
-
-    .nav-user-pill {
-      display: inline-flex;
-      align-items: center;
-      min-height: 30px;
-      padding: 0.28rem 0.62rem;
-      border-radius: 999px;
-      font-size: 0.78rem;
-      color: rgba(255,255,255,0.78);
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    .nav-actions form {
-      margin: 0;
-    }
-
-    .navbar .btn-outline-light {
-      border-color: rgba(255,255,255,0.35);
-      color: rgba(255,255,255,0.92);
-      background: rgba(255,255,255,0.04);
-    }
-
-    .navbar .btn-outline-light:hover {
-      border-color: rgba(255,255,255,0.5);
-      color: #fff;
-      background: rgba(255,255,255,0.12);
-    }
-
-    .navbar .btn-outline-light:focus,
-    .navbar .btn-outline-light:active {
-      box-shadow: none;
-      outline: none;
-      border-color: rgba(255,255,255,0.5);
-      color: #fff;
-      background: rgba(255,255,255,0.12);
-    }
-
     .badge.text-bg-primary {
       background-color: var(--f1-red) !important;
     }
 
-    .table thead {
-      border-bottom: 2px solid var(--f1-red);
+    .text-muted,
+    .score-subtitle,
+    .menu-meta {
+      color: var(--text-2) !important;
     }
-
-    /* Hover effect for cards */
-    .card-hover {
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .card-hover:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
-    }
-
-    body {
-        margin: 0;
-        background: linear-gradient(180deg, #111 0%, #1c1f24 100%);
-    }
-
-    .card {
-        background-color: #24262b;
-    }
-
-    footer {
-        background: linear-gradient(
-            to top,
-            rgba(0,0,0,0.4),
-            rgba(0,0,0,0)
-        );
-        padding-top: 40px;
-        padding-bottom: 40px;
-        margin-top: 60px;
-        border-top: none;
-        opacity: 0.8;
-    } 
-
-    .footer-minimal {
-    margin-top: 80px;
-    padding-top: 30px;
-    padding-bottom: 30px;
-    color: rgba(255,255,255,0.35);
-    border: none;
-    background: transparent;
-    }
-
-    /* Mobile styles */
-    @media (min-width: 992px) {
-      .navbar .container {
-        min-height: 54px;
-      }
-
-      .navbar-brand {
-        font-size: 1.42rem;
-      }
-
-      .nav-chip {
-        min-height: 32px;
-        padding: 0.36rem 0.8rem;
-        font-size: 0.84rem;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .navbar-brand {
-        font-size: 1rem;
-        margin-left: 0.35rem !important;
-      }
-
-      .navbar .container {
-        min-height: 46px;
-      }
-
-      .nav-actions {
-        padding: 0.14rem;
-      }
-
-      .nav-chip {
-        min-height: 28px;
-        padding: 0.3rem 0.64rem;
-        font-size: 0.78rem;
-      }
-
-      .main-content {
-        max-width: 92%;
-      }
-
-      .card {
-        border-radius: 14px;
-      }
 
     .voting-status {
       background: #1f2227;
-      border-left: 4px solid #e10600;
+      border-left: 4px solid var(--f1-red);
       padding: 12px 16px;
       border-radius: 8px;
-      color: rgba(255,255,255,0.85);
+      color: rgba(255, 255, 255, 0.85);
       font-size: 0.95rem;
     }
 
-    .points-positive {
-      color: #3ddc84;
-      font-weight: 600;
-    }
-
-    .breakdown-list {
-      margin-top: 6px;
-    }
-
     .score-card {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 16px;
     }
 
@@ -262,14 +235,9 @@
       letter-spacing: 0.5px;
     }
 
-    .score-subtitle {
-      color: rgba(255,255,255,0.55);
-      font-size: 0.9rem;
-    }
-
     .breakdown-box {
-      background: rgba(0,0,0,0.18);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(0, 0, 0, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 14px;
       padding: 12px 14px;
     }
@@ -277,8 +245,8 @@
     .breakdown-row {
       padding: 8px 10px;
       border-radius: 10px;
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.04);
     }
 
     .breakdown-row + .breakdown-row {
@@ -298,261 +266,51 @@
       color: #3ddc84;
     }
 
-    .points-chip::before {
-      content: "в–І";
-      font-size: 0.8rem;
-      opacity: 0.9;
-    }
-
     .kpi-divider {
       height: 1px;
-      background: rgba(255,255,255,0.06);
+      background: rgba(255, 255, 255, 0.06);
       margin: 14px 0;
-    }
-
-    .offcanvas {
-      border-right: none;
-    }
-
-    .list-group-item:hover {
-      background: rgba(255,255,255,0.06) !important;
-    }
-
-    /* F1-style offcanvas menu */
-    .offcanvas.f1-menu {
-      background: #14161a !important;
-      border-right: none;
-      border-left: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.45);
-    }
-
-    .offcanvas.f1-menu .offcanvas-header {
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .menu-item {
-      display: block;
-      padding: 13px 14px;
-      margin: 6px 0;
-      border-radius: 14px;
-      text-decoration: none;
-      color: rgba(255,255,255,0.88);
-      background: linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.025));
-      border: 1px solid rgba(255,255,255,0.08);
-      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-    }
-
-    .menu-item:visited {
-      color: rgba(255,255,255,0.88);
-    }
-
-    .menu-item:hover {
-      transform: translateX(2px);
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-      border-color: rgba(255,255,255,0.16);
-      color: #fff;
-    }
-
-    .menu-item:focus {
-      outline: none;
-      box-shadow: none;
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-      border-color: rgba(255,255,255,0.16);
-      color: #fff;
-    }
-
-    .menu-item:active {
-      color: #fff;
-      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-      border-color: rgba(255,255,255,0.2);
-    }
-
-    .menu-divider {
-      height: 1px;
-      background: rgba(255,255,255,0.06);
-    }
-
-    .menu-meta {
-      color: rgba(255,255,255,0.5);
-      font-size: 0.85rem;
-    }
-
-    .menu-user {
-      margin-top: 2px;
-      font-weight: 700;
-      color: rgba(255,255,255,0.9);
     }
 
     .leaderboard-table th,
     .leaderboard-table td {
-      padding: 18px 18px;
+      padding: 14px 14px;
       white-space: nowrap;
       vertical-align: middle;
     }
 
-    .leaderboard-table tbody tr {
-      height: 64px;
+    .leaderboard-table thead th {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255, 255, 255, 0.74);
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      background: #1f2430;
     }
 
-    .leaderboard-table tbody tr {
-      border-color: rgba(255,255,255,0.06);
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: #1f2430;
     }
 
     .leaderboard-table tbody tr:hover {
-      background: rgba(255,255,255,0.04);
-    }
-
-    .leaderboard-table thead th {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: rgba(255,255,255,0.7);
-    }
-
-    .offcanvas.f1-menu .offcanvas-body {
-      padding: 1rem 0.9rem 1.2rem;
-    }
-
-    .offcanvas.f1-menu .menu-item {
-      margin: 8px 0;
-    }
-
-}
-
-    /* Design refresh overrides */
-    :root {
-      --page-max: 1120px;
-      --surface-1: #191c22;
-      --surface-2: #21242c;
-      --surface-3: #2a2e38;
-      --text-1: rgba(255, 255, 255, 0.96);
-      --text-2: rgba(255, 255, 255, 0.7);
-      --line-1: rgba(255, 255, 255, 0.1);
-      --line-2: rgba(255, 255, 255, 0.18);
-      --shadow-1: 0 10px 28px rgba(0, 0, 0, 0.34);
-      --shadow-2: 0 18px 46px rgba(0, 0, 0, 0.46);
-    }
-
-    body {
-      font-family: "Segoe UI", "Arial Nova", "Arial", sans-serif;
-      color: var(--text-1);
-      background:
-        radial-gradient(1200px 500px at 100% -12%, rgba(225, 6, 0, 0.13), transparent 62%),
-        radial-gradient(900px 400px at -10% 0%, rgba(32, 62, 104, 0.16), transparent 64%),
-        linear-gradient(180deg, #10141b 0%, #161b24 56%, #1b212b 100%);
-      -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
-    }
-
-    .navbar {
-      background: transparent !important;
-      border-bottom: 2px solid #c50800;
-      box-shadow: none;
-      backdrop-filter: none;
-    }
-
-    .navbar .container {
-      min-height: 58px;
-      max-width: var(--page-max);
-      padding-left: 0.95rem;
-      padding-right: 0.95rem;
-    }
-
-    .navbar-brand {
-      margin-left: 0.45rem !important;
-      font-size: 1.3rem;
-      letter-spacing: 0.02em;
-      color: #fff !important;
-    }
-
-    .brand-f1 {
-      color: var(--f1-red);
-      font-weight: 800;
-      letter-spacing: 0.04em;
-    }
-
-    .brand-text {
-      color: #f3f5f7;
-      font-weight: 700;
-    }
-
-    .main-content {
-      max-width: var(--page-max);
-      width: 100%;
-      margin-left: auto;
-      margin-right: auto;
-      padding-top: 1.25rem;
-      padding-bottom: 2.2rem;
-    }
-
-    .main-content > :first-child {
-      margin-top: 0 !important;
-    }
-
-    .card {
-      background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
-      border: 1px solid var(--line-1);
-      border-radius: 16px;
-      box-shadow: var(--shadow-1);
-      overflow: hidden;
-    }
-
-    .card-hover {
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    }
-
-    .card-hover:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-2);
-      border-color: var(--line-2);
-    }
-
-    .card-footer {
-      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-    }
-
-    .text-muted,
-    .score-subtitle,
-    .menu-meta {
-      color: var(--text-2) !important;
-    }
-
-    .btn-primary {
-      border-radius: 10px;
-      font-weight: 600;
-      letter-spacing: 0.01em;
-    }
-
-    .btn-outline-primary,
-    .btn-outline-light,
-    .menu-item,
-    .nav-chip {
-      border-radius: 10px;
-    }
-
-    .nav-actions {
-      gap: 0.45rem;
-      align-items: center;
-    }
-
-    .nav-chip {
-      min-height: 34px;
-      padding: 0.4rem 0.9rem;
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.18);
-      font-size: 0.88rem;
-    }
-
-    .nav-chip:hover {
-      background: rgba(255, 255, 255, 0.14);
-      border-color: rgba(255, 255, 255, 0.26);
+      background: rgba(255, 255, 255, 0.04);
     }
 
     .offcanvas.f1-menu {
       width: min(86vw, 360px);
-      border-left: 1px solid var(--line-2);
-      box-shadow: var(--shadow-2);
       background: linear-gradient(180deg, #141820, #181d26) !important;
+      border-right: none;
+      border-left: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 18px 46px rgba(0, 0, 0, 0.46);
+    }
+
+    .offcanvas.f1-menu .offcanvas-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .offcanvas.f1-menu .offcanvas-body {
@@ -560,177 +318,138 @@
     }
 
     .menu-item {
-      border-radius: 12px;
-      border-color: rgba(255, 255, 255, 0.12);
+      display: block;
+      padding: 13px 14px;
       margin: 9px 0;
+      border-radius: 12px;
+      text-decoration: none;
+      color: rgba(255, 255, 255, 0.9);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
     }
 
-    .menu-item:hover {
+    .menu-item:hover,
+    .menu-item:focus,
+    .menu-item:active,
+    .menu-item:visited {
+      color: #fff;
+    }
+
+    .menu-item:hover,
+    .menu-item:focus,
+    .menu-item:active {
       transform: translateX(2px);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.06));
       border-color: rgba(255, 255, 255, 0.24);
+      outline: none;
+      box-shadow: none;
+    }
+
+    .menu-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    footer {
+      margin-top: 60px;
+      padding-top: 30px;
+      padding-bottom: 30px;
+      color: rgba(255, 255, 255, 0.35);
+      border: none;
+      background: transparent;
     }
 
     @media (min-width: 1200px) {
-      .navbar .container {
-        min-height: 62px;
+      :root {
+        --header-h: 44px;
       }
 
-      .navbar-brand {
-        font-size: 1.44rem;
-      }
-
-      .nav-chip {
-        font-size: 0.9rem;
-        min-height: 36px;
+      .site-brand {
+        font-size: 1.2rem;
       }
     }
 
     @media (max-width: 576px) {
-      .navbar .container {
-        min-height: 52px;
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+      :root {
+        --header-h: 38px;
       }
 
-      .navbar-brand {
-        font-size: 1.02rem;
-        margin-left: 0.3rem !important;
+      .site-header > .container {
+        padding-left: 0.7rem;
+        padding-right: 0.7rem;
+      }
+
+      .site-brand {
+        font-size: 0.98rem;
+        margin-left: 0.25rem !important;
+      }
+
+      .site-menu-btn,
+      .nav-chip {
+        min-height: 24px;
+        height: 24px;
+        font-size: 0.76rem;
       }
 
       .nav-chip {
-        min-height: 30px;
-        padding: 0.34rem 0.76rem;
-        font-size: 0.8rem;
+        padding: 0 0.56rem;
       }
 
       .main-content {
-        padding-top: 1.1rem;
-        padding-bottom: 1.8rem;
-      }
-    }
-
-    /* Header canonical styles (single source of truth) */
-    body > nav.navbar {
-      padding: 0 !important;
-      margin: 0 !important;
-      border-bottom: 2px solid #c50800 !important;
-    }
-
-    body > nav.navbar > .container {
-      min-height: 40px !important;
-      height: 40px !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      padding-top: 0 !important;
-      padding-bottom: 0 !important;
-    }
-
-    body > nav.navbar .navbar-brand {
-      margin: 0 0 0 0.35rem !important;
-      padding: 0 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      line-height: 1 !important;
-      font-size: 1.14rem !important;
-      letter-spacing: 0.02em !important;
-      height: auto !important;
-      min-height: 0 !important;
-    }
-
-    body > nav.navbar .btn-outline-light.btn-sm {
-      min-height: 26px !important;
-      height: 26px !important;
-      padding: 0 0.45rem !important;
-      line-height: 1 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-    }
-
-    body > nav.navbar .nav-actions {
-      height: 100% !important;
-      display: flex !important;
-      align-items: center !important;
-    }
-
-    body > nav.navbar .nav-chip {
-      min-height: 26px !important;
-      height: 26px !important;
-      padding: 0 0.62rem !important;
-      line-height: 1 !important;
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      font-size: 0.8rem !important;
-    }
-
-    @media (max-width: 576px) {
-      body > nav.navbar > .container {
-        min-height: 38px !important;
-        height: 38px !important;
+        padding-top: 1.05rem;
+        padding-bottom: 1.7rem;
+        max-width: 92%;
       }
 
-      body > nav.navbar .navbar-brand {
-        font-size: 0.98rem !important;
-        margin-left: 0.25rem !important;
+      .card {
+        border-radius: 14px;
       }
     }
-
   </style>
-
 </head>
 
 <body class="d-flex flex-column min-vh-100">
 
-<nav class="navbar navbar-dark" style="padding:0; margin:0; border-bottom:2px solid #c50800; background:transparent;">
-  <div class="container d-flex align-items-center justify-content-between" style="height:40px; min-height:40px; padding-top:0; padding-bottom:0;">
-
-    <div class="d-flex align-items-center gap-2" style="height:100%;">
-      <!-- Кнопка меню -->
-      <button class="btn btn-outline-light btn-sm"
+<nav class="navbar navbar-dark site-header">
+  <div class="container">
+    <div class="site-header-left">
+      <button class="btn btn-outline-light btn-sm site-menu-btn"
               type="button"
               data-bs-toggle="offcanvas"
               data-bs-target="#mainMenu"
-              aria-controls="mainMenu"
-              style="height:26px; min-height:26px; padding:0 0.45rem; line-height:1;">
+              aria-controls="mainMenu">
         &#9776;
       </button>
 
-      <!-- Лого -->
-      <a class="navbar-brand fw-bold text-uppercase m-0" href="{% url 'league:home' %}" style="margin:0 0 0 0.35rem; padding:0; line-height:1; display:inline-flex; align-items:center; height:100%; font-size:1.14rem;">
+      <a class="navbar-brand fw-bold text-uppercase m-0 site-brand" href="{% url 'league:home' %}">
         <span class="brand-f1">F1</span><span class="brand-text">&nbsp;Predictions 2026</span>
       </a>
     </div>
 
-    <div class="nav-actions" style="height:100%; display:flex; align-items:center;">
+    <div class="site-header-actions">
       {% if user.is_authenticated %}
         <form method="post" action="{% url 'logout' %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="nav-chip nav-chip-danger" style="height:26px; min-height:26px; padding:0 0.62rem; line-height:1; display:inline-flex; align-items:center; justify-content:center;">Выйти</button>
+          <button type="submit" class="nav-chip nav-chip-danger">Выйти</button>
         </form>
       {% else %}
-        <a class="nav-chip" href="{% url 'login' %}" style="height:26px; min-height:26px; padding:0 0.62rem; line-height:1; display:inline-flex; align-items:center; justify-content:center;">Войти</a>
-        <a class="nav-chip" href="{% url 'league:register' %}" style="height:26px; min-height:26px; padding:0 0.62rem; line-height:1; display:inline-flex; align-items:center; justify-content:center;">Регистрация</a>
+        <a class="nav-chip" href="{% url 'login' %}">Войти</a>
+        <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
       {% endif %}
     </div>
-
   </div>
 </nav>
 
-<!-- Offcanvas меню -->
 <div class="offcanvas offcanvas-start f1-menu" tabindex="-1" id="mainMenu" aria-labelledby="mainMenuLabel">
   <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="mainMenuLabel">
-      <span style="color:#e10600;">F1</span> Predictions
-    </h5>
+    <h5 class="offcanvas-title" id="mainMenuLabel"><span style="color:#e10600;">F1</span> Predictions</h5>
     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
 
   <div class="offcanvas-body">
     <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
-
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
     {% endif %}
@@ -746,7 +465,6 @@
   </div>
 </div>
 
-
 {% if messages %}
   <div class="container pt-3">
     {% for message in messages %}
@@ -761,15 +479,10 @@
   {% block content %}{% endblock %}
 </main>
 
-<footer class="mt-auto py-4 footer-minimal">
-  <div class="container text-center small">
-    F1 Predictions League - сезон 2026
-  </div>
+<footer class="mt-auto footer-minimal">
+  <div class="container text-center small">F1 Predictions League - сезон 2026</div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
-
-
