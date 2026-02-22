@@ -19,18 +19,18 @@
     .navbar {
       background-color: #111 !important;
       border-bottom: 3px solid var(--f1-red);
-      padding-top: 0.55rem;
-      padding-bottom: 0.55rem;
+      padding-top: 0.6rem;
+      padding-bottom: 0.6rem;
     }
 
     .navbar .container {
-      min-height: 58px;
+      min-height: 64px;
       flex-wrap: nowrap;
     }
 
     .navbar-brand {
-      margin-left: 0.5rem !important;
-      font-size: 1.1rem;
+      margin-left: 0.55rem !important;
+      font-size: 1.2rem;
       white-space: nowrap;
     }
 
@@ -59,11 +59,11 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 34px;
-      padding: 0.42rem 0.86rem;
+      min-height: 36px;
+      padding: 0.46rem 0.92rem;
       border-radius: 999px;
       text-decoration: none;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       color: rgba(255,255,255,0.92);
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.12);
@@ -100,10 +100,10 @@
     .nav-user-pill {
       display: inline-flex;
       align-items: center;
-      min-height: 34px;
-      padding: 0.38rem 0.8rem;
+      min-height: 36px;
+      padding: 0.4rem 0.86rem;
       border-radius: 999px;
-      font-size: 0.84rem;
+      font-size: 0.86rem;
       color: rgba(255,255,255,0.78);
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.08);
@@ -183,6 +183,27 @@
     }
 
     /* Mobile styles */
+    @media (min-width: 992px) {
+      .navbar {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+
+      .navbar .container {
+        min-height: 72px;
+      }
+
+      .navbar-brand {
+        font-size: 1.32rem;
+      }
+
+      .nav-chip {
+        min-height: 38px;
+        padding: 0.5rem 1rem;
+        font-size: 0.94rem;
+      }
+    }
+
     @media (max-width: 576px) {
       .navbar-brand {
         font-size: 0.92rem;
