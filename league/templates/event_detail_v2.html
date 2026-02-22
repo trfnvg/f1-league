@@ -7,12 +7,12 @@
   <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
   {% if event.cover_image %}
     <img src="{{ event.cover_image.url }}" class="card-img-top" style="max-height: 340px; object-fit: cover;" alt="{{ event.name }}">
   {% endif %}
   <div class="card-body">
-    <div class="d-flex align-items-center gap-2 mb-2">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
       <span class="badge text-bg-light">R{{ event.round_number }}</span>
       {% if state == "soon" %}
         <span class="badge text-bg-info">Скоро откроется</span>
@@ -23,13 +23,13 @@
       {% else %}
         <span class="badge text-bg-secondary">Очки посчитаны</span>
       {% endif %}
+      <span class="deadline-chip">Дедлайн: {{ event.deadline|date:"d.m.Y H:i" }}</span>
     </div>
-    <h1 class="h3 mb-1">{{ event.name }}</h1>
-    <div class="text-muted">Дедлайн предиктов: {{ event.deadline|date:"d.m.Y H:i" }}</div>
+    <h1 class="section-title mb-0">{{ event.name }}</h1>
   </div>
 </div>
 
-<div class="card shadow-sm mb-4">
+<div class="card mb-4 card-accent-top" style="animation: card-enter 340ms ease-out both;">
   <div class="card-body">
     <h2 class="h5 mb-3">Сделать прогноз</h2>
 
@@ -79,7 +79,7 @@
 </div>
 
 {% if user.is_authenticated %}
-  <div class="card shadow-sm mb-4 score-card">
+  <div class="score-card card mb-4" style="animation: card-enter 400ms ease-out both;">
     <div class="card-body">
       <div class="d-flex align-items-end justify-content-between">
         <div>
@@ -103,17 +103,17 @@
               <div class="score-subtitle">Очки</div>
             </div>
             {% for k, v in score.breakdown.items %}
-              <div class="breakdown-row d-flex align-items-center justify-content-between">
+              <div class="breakdown-row">
                 <div class="fw-semibold">{{ k }}</div>
                 <div class="points-chip">+{{ v }}</div>
               </div>
             {% endfor %}
           </div>
         {% else %}
-          <div class="text-muted">Очки есть, но разбор пустой.</div>
+          <div class="text-muted">Очки есть, но разбор пока пустой.</div>
         {% endif %}
       {% else %}
-        <div class="text-muted">Пока нет очков (результат еще не внесен или подсчет не запускали).</div>
+        <div class="text-muted">Пока нет очков. Результат еще не внесен или подсчет не запускался.</div>
       {% endif %}
     </div>
   </div>
@@ -123,15 +123,17 @@
 <div class="row g-3">
   {% for p in photos %}
     <div class="col-12 col-md-6 col-lg-4">
-      <div class="card shadow-sm h-100">
+      <div class="card h-100 card-hover card-accent-top">
         <img src="{{ p.image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="">
-        <div class="card-body">
-          <div class="small text-muted">{{ p.caption }}</div>
-        </div>
+        {% if p.caption %}
+          <div class="card-body">
+            <div class="small text-muted">{{ p.caption }}</div>
+          </div>
+        {% endif %}
       </div>
     </div>
   {% empty %}
-    <div class="text-muted">Пока нет фото в галерее.</div>
+    <div class="text-muted">Пока нет фотографий.</div>
   {% endfor %}
 </div>
 {% endblock %}

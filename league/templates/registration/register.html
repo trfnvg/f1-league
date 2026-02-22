@@ -1,14 +1,15 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Регистрация - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<div class="container" style="max-width: 520px;">
-  <div class="card shadow-sm">
-    <div class="card-body p-4">
-      <h1 class="h4 mb-3">Регистрация</h1>
+<div class="auth-shell py-3 py-md-4">
+  <div class="auth-card card card-accent-top">
+    <div class="card-body p-4 p-md-5">
+      <h1 class="auth-title">Регистрация</h1>
+      <p class="auth-note">Создай аккаунт, чтобы участвовать в прогнозах сезона.</p>
 
-      <form method="post">
+      <form method="post" novalidate>
         {% csrf_token %}
 
         <div class="mb-3">
@@ -42,7 +43,7 @@
         <button class="btn btn-primary w-100" type="submit">Создать аккаунт</button>
       </form>
 
-      <div class="small mt-3">
+      <div class="small mt-3 text-center">
         Уже есть аккаунт?
         <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Войти</a>
       </div>

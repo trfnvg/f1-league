@@ -1,20 +1,19 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
 {% block title %}Вход - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<div class="container py-5" style="max-width: 520px;">
-  <div class="card shadow-sm">
-    <div class="card-body p-4">
-      <h1 class="h4 mb-3">Войти</h1>
+<div class="auth-shell py-3 py-md-4">
+  <div class="auth-card card card-accent-top">
+    <div class="card-body p-4 p-md-5">
+      <h1 class="auth-title">Вход в аккаунт</h1>
+      <p class="auth-note">Авторизуйся, чтобы отправлять прогнозы и видеть свои очки.</p>
 
       {% if form.errors %}
-        <div class="alert alert-danger">
-          Неверный логин или пароль.
-        </div>
+        <div class="alert alert-danger">Неверный логин или пароль.</div>
       {% endif %}
 
-      <form method="post">
+      <form method="post" novalidate>
         {% csrf_token %}
 
         <div class="mb-3">

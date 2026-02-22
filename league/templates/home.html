@@ -3,48 +3,63 @@
 {% block title %}Этапы - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-end justify-content-between mb-3">
-  <div>
-    <h1 class="h3 mb-1">Этапы сезона</h1>
+<section class="glass-panel p-3 p-md-4 mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
+  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
+    <div>
+      <h1 class="section-title">Этапы сезона</h1>
+      <p class="section-subtitle">Выбирай гонку, отправляй прогноз и следи за очками в общем зачете.</p>
+    </div>
+    <div class="deadline-chip">
+      <span>Сезон 2026</span>
+      <span style="opacity:.45;">|</span>
+      <span>{{ events|length }} этапов</span>
+    </div>
   </div>
-</div>
+</section>
 
 <div class="row g-4">
   {% for e in events %}
-    <div class="col-12 col-md-6 col-lg-4">
-      <div class="card shadow-sm h-100 border-0 card-hover">
+    <div class="col-12 col-md-6 col-xl-4">
+      <article class="card h-100 card-hover card-accent-top" style="animation: card-enter 360ms ease-out both;">
         {% if e.cover_image %}
-          <img src="{{ e.cover_image.url }}" class="card-img-top" alt="{{ e.name }}">
+          <img src="{{ e.cover_image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ e.name }}">
         {% else %}
-          <div class="ratio ratio-16x9 bg-secondary-subtle"></div>
+          <div class="ratio ratio-16x9" style="background: linear-gradient(135deg, rgba(225, 6, 0, 0.2), rgba(68, 95, 132, 0.3));"></div>
         {% endif %}
 
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start">
-            <h5 class="card-title mb-1">{{ e.name }}</h5>
+        <div class="card-body d-flex flex-column">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <h2 class="h5 mb-0">{{ e.name }}</h2>
             <span class="badge text-bg-primary">R{{ e.round_number }}</span>
           </div>
 
-          <div class="text-muted small mb-2">Дедлайн: {{ e.deadline|date:"d.m.Y H:i" }}</div>
+          <div class="deadline-chip mb-3">
+            <span>Дедлайн:</span>
+            <span>{{ e.deadline|date:"d.m.Y H:i" }}</span>
+          </div>
 
-          {% if e.status == "open" %}
-            <span class="badge text-bg-success">Открыто</span>
-          {% elif e.status == "locked" %}
-            <span class="badge text-bg-warning">Закрыто</span>
-          {% else %}
-            <span class="badge text-bg-secondary">Очки посчитаны</span>
-          {% endif %}
+          <div class="mt-auto">
+            {% if e.status == "open" %}
+              <span class="badge text-bg-success">Открыто</span>
+            {% elif e.status == "locked" %}
+              <span class="badge text-bg-warning">Закрыто</span>
+            {% else %}
+              <span class="badge text-bg-secondary">Очки посчитаны</span>
+            {% endif %}
+          </div>
         </div>
 
-        <div class="card-footer bg-transparent border-top-0">
-          <a class="btn btn-outline-primary w-100" href="{% url 'league:event_detail' event_id=e.id %}">
-            Открыть этап
-          </a>
+        <div class="card-footer bg-transparent border-top-0 pt-0 pb-3 px-3">
+          <a class="btn btn-outline-primary w-100" href="{% url 'league:event_detail' event_id=e.id %}">Открыть этап</a>
         </div>
-      </div>
+      </article>
     </div>
   {% empty %}
-    <div class="text-muted">Пока этапов нет. Зайди в админку и добавь первый.</div>
+    <div class="col-12">
+      <div class="card card-accent-top">
+        <div class="card-body text-muted">Пока этапов нет. Добавь первый этап в админке.</div>
+      </div>
+    </div>
   {% endfor %}
 </div>
 {% endblock %}
