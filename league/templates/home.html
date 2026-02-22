@@ -3,7 +3,7 @@
 {% block title %}Этапы - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<section class="glass-panel p-3 p-md-4 mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
+<section class="glass-panel p-3 p-md-4 mb-4" style="animation: card-enter 280ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
       <h1 class="section-title">Этапы сезона</h1>
@@ -20,7 +20,7 @@
 <div class="row g-4">
   {% for e in events %}
     <div class="col-12 col-md-6 col-xl-4">
-      <article class="card h-100 card-hover card-accent-top" style="animation: card-enter 360ms ease-out both;">
+      <article class="card h-100 card-hover" style="animation: card-enter 360ms ease-out both;">
         {% if e.cover_image %}
           <img src="{{ e.cover_image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="{{ e.name }}">
         {% else %}
@@ -29,7 +29,7 @@
 
         <div class="card-body d-flex flex-column">
           <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-            <h2 class="h5 mb-0">{{ e.name }}</h2>
+            <h2 class="h5 mb-0 event-title">{{ e.name }}</h2>
             <span class="badge text-bg-primary">R{{ e.round_number }}</span>
           </div>
 
@@ -40,23 +40,23 @@
 
           <div class="mt-auto">
             {% if e.status == "open" %}
-              <span class="badge text-bg-success">Открыто</span>
+              <span class="status-pill status-open">Открыто</span>
             {% elif e.status == "locked" %}
-              <span class="badge text-bg-warning">Закрыто</span>
+              <span class="status-pill status-locked">Закрыто</span>
             {% else %}
-              <span class="badge text-bg-secondary">Очки посчитаны</span>
+              <span class="status-pill status-scored">Очки посчитаны</span>
             {% endif %}
           </div>
         </div>
 
         <div class="card-footer bg-transparent border-top-0 pt-0 pb-3 px-3">
-          <a class="btn btn-outline-primary w-100" href="{% url 'league:event_detail' event_id=e.id %}">Открыть этап</a>
+          <a class="open-event-btn w-100" href="{% url 'league:event_detail' event_id=e.id %}">Открыть этап</a>
         </div>
       </article>
     </div>
   {% empty %}
     <div class="col-12">
-      <div class="card card-accent-top">
+      <div class="card">
         <div class="card-body text-muted">Пока этапов нет. Добавь первый этап в админке.</div>
       </div>
     </div>
