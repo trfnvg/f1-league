@@ -609,6 +609,37 @@
       }
     }
 
+    /* Final header spacing fix: remove extra space above brand on all pages */
+    .navbar {
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-top: 0 !important;
+    }
+
+    .navbar .container {
+      min-height: 52px !important;
+      align-items: center !important;
+    }
+
+    .navbar-brand {
+      margin: 0 0 0 0.45rem !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      line-height: 1 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+    }
+
+    @media (max-width: 576px) {
+      .navbar .container {
+        min-height: 48px !important;
+      }
+
+      .navbar-brand {
+        margin-left: 0.3rem !important;
+      }
+    }
+
   </style>
 
 </head>
