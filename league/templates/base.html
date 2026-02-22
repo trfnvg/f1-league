@@ -610,15 +610,15 @@
     }
 
     /* Header canonical styles (single source of truth) */
-    .navbar {
+    body > nav.navbar {
       padding: 0 !important;
       margin: 0 !important;
       border-bottom: 2px solid #c50800 !important;
     }
 
-    .navbar .container {
-      min-height: 44px !important;
-      height: 44px !important;
+    body > nav.navbar > .container {
+      min-height: 40px !important;
+      height: 40px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: space-between !important;
@@ -626,47 +626,54 @@
       padding-bottom: 0 !important;
     }
 
-    .navbar-brand {
-      margin: 0 0 0 0.4rem !important;
+    body > nav.navbar .navbar-brand {
+      margin: 0 0 0 0.35rem !important;
       padding: 0 !important;
-      height: 100% !important;
       display: inline-flex !important;
       align-items: center !important;
       line-height: 1 !important;
-      font-size: 1.22rem !important;
+      font-size: 1.14rem !important;
       letter-spacing: 0.02em !important;
+      height: auto !important;
+      min-height: 0 !important;
     }
 
-    .navbar .btn-outline-light.btn-sm {
-      padding-top: 0.18rem !important;
-      padding-bottom: 0.18rem !important;
+    body > nav.navbar .btn-outline-light.btn-sm {
+      min-height: 26px !important;
+      height: 26px !important;
+      padding: 0 0.45rem !important;
       line-height: 1 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
-    .nav-actions {
+    body > nav.navbar .nav-actions {
       height: 100% !important;
       display: flex !important;
       align-items: center !important;
     }
 
-    .nav-chip {
-      min-height: 30px !important;
+    body > nav.navbar .nav-chip {
+      min-height: 26px !important;
+      height: 26px !important;
+      padding: 0 0.62rem !important;
       line-height: 1 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 0.8rem !important;
     }
 
     @media (max-width: 576px) {
-      .navbar .container {
-        min-height: 42px !important;
-        height: 42px !important;
+      body > nav.navbar > .container {
+        min-height: 38px !important;
+        height: 38px !important;
       }
 
-      .navbar-brand {
-        font-size: 1rem !important;
-        margin-left: 0.28rem !important;
-      }
-
-      .nav-chip {
-        min-height: 28px !important;
+      body > nav.navbar .navbar-brand {
+        font-size: 0.98rem !important;
+        margin-left: 0.25rem !important;
       }
     }
 
