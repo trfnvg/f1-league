@@ -4,7 +4,7 @@
 {% block title %}Таблица сезона - F1 Predictions 2026{% endblock %}
 
 {% block content %}
-<section class="glass-panel p-3 p-md-4 mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
+<section class="glass-panel p-3 p-md-4 mb-4" style="animation: card-enter 280ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
       <h1 class="section-title">Таблица сезона</h1>
@@ -33,10 +33,10 @@
       </thead>
       <tbody>
         {% for r in rows %}
-          <tr class="{% if r.is_leader %}table-active{% endif %}">
+          <tr class="{% if r.is_leader %}is-leader{% endif %}">
             <td class="sticky-col col-rank">{{ r.rank }}</td>
             <td class="sticky-col-2 col-player fw-semibold">{{ r.user.username }}</td>
-            <td class="col-total text-center"><span class="badge text-bg-primary">{{ r.total }}</span></td>
+            <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>
             {% for e in events %}
               <td class="text-center">
                 {% score_for scores_map r.user.id e.id as s %}
