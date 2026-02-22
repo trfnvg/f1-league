@@ -437,17 +437,18 @@
       font-family: "Segoe UI", "Arial Nova", "Arial", sans-serif;
       color: var(--text-1);
       background:
-        radial-gradient(1200px 500px at 100% -10%, rgba(225, 6, 0, 0.16), transparent 60%),
-        radial-gradient(900px 400px at -10% 0%, rgba(36, 68, 118, 0.2), transparent 62%),
-        linear-gradient(180deg, #0f1115 0%, #161a21 55%, #1a1f27 100%);
+        radial-gradient(1200px 500px at 100% -12%, rgba(225, 6, 0, 0.13), transparent 62%),
+        radial-gradient(900px 400px at -10% 0%, rgba(32, 62, 104, 0.16), transparent 64%),
+        linear-gradient(180deg, #10141b 0%, #161b24 56%, #1b212b 100%);
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
 
     .navbar {
-      background: rgba(14, 16, 20, 0.9) !important;
-      border-bottom: 2px solid var(--f1-red);
-      backdrop-filter: blur(6px);
+      background: transparent !important;
+      border-bottom: 2px solid #c50800;
+      box-shadow: none;
+      backdrop-filter: none;
     }
 
     .navbar .container {
@@ -480,7 +481,7 @@
       width: 100%;
       margin-left: auto;
       margin-right: auto;
-      padding-top: 1.4rem;
+      padding-top: 1.25rem;
       padding-bottom: 2.2rem;
     }
 
@@ -620,7 +621,7 @@
 
       <!-- Лого -->
       <a class="navbar-brand fw-bold text-uppercase m-0" href="{% url 'league:home' %}">
-        <span class="brand-f1">F1</span><span class="brand-text"> Predictions 2026</span>
+        <span class="brand-f1">F1</span><span class="brand-text">&nbsp;Predictions 2026</span>
       </a>
     </div>
 
