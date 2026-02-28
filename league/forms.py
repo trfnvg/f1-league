@@ -2,7 +2,7 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Prediction
+from .models import Prediction, SeasonPrediction
 
 
 class PredictionForm(forms.ModelForm):
@@ -50,6 +50,72 @@ class PredictionForm(forms.ModelForm):
         podium = [cleaned_data.get("p1"), cleaned_data.get("p2"), cleaned_data.get("p3")]
         if None not in podium and len(set(podium)) != 3:
             raise forms.ValidationError("P1, P2 и P3 должны быть разными гонщиками.")
+        return cleaned_data
+
+
+class SeasonPredictionForm(forms.ModelForm):
+    class Meta:
+        model = SeasonPrediction
+        fields = [
+            "hungary_driver_championship_leader",
+            "hungary_constructor_championship_leader",
+            "hadjar_best_finish",
+            "world_drivers_champion",
+            "constructors_champion",
+            "constructors_second",
+            "constructors_third",
+            "last_race_winner",
+            "season_pole_sitter",
+            "driver_change_happened",
+            "team_most_dnf",
+        ]
+        widgets = {
+            "hungary_driver_championship_leader": forms.Select(attrs={"class": "form-select"}),
+            "hungary_constructor_championship_leader": forms.Select(attrs={"class": "form-select"}),
+            "hadjar_best_finish": forms.NumberInput(attrs={"class": "form-control", "min": 1, "max": 22}),
+            "world_drivers_champion": forms.Select(attrs={"class": "form-select"}),
+            "constructors_champion": forms.Select(attrs={"class": "form-select"}),
+            "constructors_second": forms.Select(attrs={"class": "form-select"}),
+            "constructors_third": forms.Select(attrs={"class": "form-select"}),
+            "last_race_winner": forms.Select(attrs={"class": "form-select"}),
+            "season_pole_sitter": forms.Select(attrs={"class": "form-select"}),
+            "driver_change_happened": forms.Select(attrs={"class": "form-select"}),
+            "team_most_dnf": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        select_fields = (
+            "hungary_driver_championship_leader",
+            "hungary_constructor_championship_leader",
+            "world_drivers_champion",
+            "constructors_champion",
+            "constructors_second",
+            "constructors_third",
+            "last_race_winner",
+            "season_pole_sitter",
+            "driver_change_happened",
+            "team_most_dnf",
+        )
+        for field_name in select_fields:
+            base_choices = [(value, label) for value, label in self.fields[field_name].choices if value != ""]
+            self.fields[field_name].choices = [("", "Сделай выбор")] + base_choices
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        constructors = [
+            cleaned_data.get("constructors_champion"),
+            cleaned_data.get("constructors_second"),
+            cleaned_data.get("constructors_third"),
+        ]
+        if None not in constructors and "" not in constructors and len(set(constructors)) != 3:
+            raise forms.ValidationError("Топ-3 Кубка конструкторов должен состоять из трех разных команд.")
+
+        hadjar_best_finish = cleaned_data.get("hadjar_best_finish")
+        if hadjar_best_finish is not None and not 1 <= hadjar_best_finish <= 22:
+            self.add_error("hadjar_best_finish", "Укажи позицию от 1 до 22.")
+
         return cleaned_data
 
 

@@ -29,6 +29,25 @@ DRIVER_CHOICES = [
     ("bottas", "Боттас (Cadillac)"),
 ]
 
+CONSTRUCTOR_CHOICES = [
+    ("mclaren", "McLaren"),
+    ("mercedes", "Mercedes"),
+    ("red_bull", "Red Bull"),
+    ("ferrari", "Ferrari"),
+    ("williams", "Williams"),
+    ("racing_bulls", "Racing Bulls"),
+    ("aston_martin", "Aston Martin"),
+    ("haas", "Haas"),
+    ("audi", "Audi"),
+    ("alpine", "Alpine"),
+    ("cadillac", "Cadillac"),
+]
+
+YES_NO_CHOICES = [
+    ("yes", "Да"),
+    ("no", "Нет"),
+]
+
 
 class Event(models.Model):
     name = models.CharField("Название этапа", max_length=120)
@@ -123,6 +142,78 @@ class Result(models.Model):
 
     def __str__(self):
         return f"Результат - {self.event}"
+
+
+class SeasonPrediction(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="season_predictions")
+    season_year = models.PositiveSmallIntegerField("Сезон", default=2026)
+
+    # Промежуточные сезонные предикты
+    hungary_driver_championship_leader = models.CharField(
+        "Лидер чемпионата пилотов после этапа Венгрии",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    hungary_constructor_championship_leader = models.CharField(
+        "Лидер Кубка конструкторов после этапа Венгрии",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    hadjar_best_finish = models.PositiveSmallIntegerField("Самый высокий финиш Хаджара")
+
+    # Итоги сезона
+    world_drivers_champion = models.CharField(
+        "Чемпион мира среди пилотов",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    constructors_champion = models.CharField(
+        "Чемпион Кубка конструкторов",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    constructors_second = models.CharField(
+        "2 место Кубка конструкторов",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    constructors_third = models.CharField(
+        "3 место Кубка конструкторов",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+
+    # Дополнительные сезонные категории
+    last_race_winner = models.CharField(
+        "Победитель последней гонки сезона",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    season_pole_sitter = models.CharField(
+        "Pole-sitter сезона",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    driver_change_happened = models.CharField(
+        "Была ли смена пилота в сезоне",
+        max_length=3,
+        choices=YES_NO_CHOICES,
+    )
+    team_most_dnf = models.CharField(
+        "Команда-лидер по количеству DNF",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "season_year")
+        ordering = ("season_year", "user__username")
+
+    def __str__(self):
+        return f"{self.user} - сезон {self.season_year}"
 
 
 class Score(models.Model):
