@@ -2,7 +2,7 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .models import Prediction, SeasonPrediction
+from .models import Prediction, SeasonPrediction, UserProfile
 
 
 def _set_empty_select_option(field):
@@ -131,3 +131,12 @@ class RegisterForm(UserCreationForm):
         self.fields["username"].widget.attrs.update({"class": "form-control"})
         self.fields["password1"].widget.attrs.update({"class": "form-control"})
         self.fields["password2"].widget.attrs.update({"class": "form-control"})
+
+
+class AvatarUploadForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ("avatar",)
+        widgets = {
+            "avatar": forms.ClearableFileInput(attrs={"class": "form-control"}),
+        }
