@@ -1,11 +1,15 @@
-﻿from django.contrib import messages
+﻿from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
-from .forms import PredictionForm, RegisterForm
-from .models import Event, Prediction, Score
+from .forms import PredictionForm, RegisterForm, SeasonPredictionForm
+from .models import Event, Prediction, Score, SeasonPrediction
 
 
 def home(request):
@@ -14,7 +18,78 @@ def home(request):
 
 
 def season_predictions(request):
-    return render(request, "season_predictions.html")
+    season_year = 2026
+    deadline = datetime(2026, 3, 5, 23, 59, tzinfo=ZoneInfo("Europe/Moscow"))
+    now = timezone.now()
+    is_locked = now > deadline
+
+    category_groups = [
+        {
+            "title": "Промежуточные сезонные предикты",
+            "items": [
+                ("Лидер чемпионата пилотов после этапа Венгрии", 12),
+                ("Лидер Кубка конструкторов после этапа Венгрии", 10),
+                ("Самый высокий финиш Хаджара", 8),
+            ],
+        },
+        {
+            "title": "Итоги сезона",
+            "items": [
+                ("Чемпион мира среди пилотов", 25),
+                ("Чемпион Кубка конструкторов", 20),
+                ("2 место Кубка конструкторов", 12),
+                ("3 место Кубка конструкторов", 10),
+            ],
+        },
+        {
+            "title": "Дополнительные сезонные категории",
+            "items": [
+                ("Победитель последней гонки сезона", 10),
+                ("Pole-sitter сезона (наибольшее число поулов)", 12),
+                ("Была ли смена пилота в сезоне", 8),
+                ("Команда-лидер по количеству DNF", 12),
+            ],
+        },
+    ]
+
+    prediction = None
+    form = None
+
+    if request.user.is_authenticated:
+        prediction = SeasonPrediction.objects.filter(user=request.user, season_year=season_year).first()
+
+        if request.method == "POST":
+            if is_locked:
+                messages.error(request, "Дедлайн сезонных предиктов уже прошел.")
+                return redirect("league:season_predictions")
+
+            form = SeasonPredictionForm(request.POST, instance=prediction)
+            if form.is_valid():
+                prediction_obj = form.save(commit=False)
+                prediction_obj.user = request.user
+                prediction_obj.season_year = season_year
+                prediction_obj.save()
+                messages.success(request, "Сезонные предикты сохранены.")
+                return redirect("league:season_predictions")
+        else:
+            form = SeasonPredictionForm(instance=prediction)
+    else:
+        if request.method == "POST":
+            messages.error(request, "Нужно войти в аккаунт для отправки сезонных предиктов.")
+            return redirect("login")
+
+    return render(
+        request,
+        "season_predictions.html",
+        {
+            "season_year": season_year,
+            "deadline": deadline,
+            "is_locked": is_locked,
+            "form": form,
+            "prediction": prediction,
+            "category_groups": category_groups,
+        },
+    )
 
 
 def register(request):
@@ -79,15 +154,19 @@ def event_detail(request, event_id: int):
     if request.user.is_authenticated:
         score = Score.objects.filter(event=event, user=request.user).first()
 
-    return render(request, "event_detail_v2.html", {
-        "event": event,
-        "photos": photos,
-        "form": form,
-        "prediction": prediction,
-        "state": state,
-        "is_locked": is_locked,
-        "score": score,
-    })
+    return render(
+        request,
+        "event_detail_v2.html",
+        {
+            "event": event,
+            "photos": photos,
+            "form": form,
+            "prediction": prediction,
+            "state": state,
+            "is_locked": is_locked,
+            "score": score,
+        },
+    )
 
 
 def leaderboard(request):
@@ -104,15 +183,21 @@ def leaderboard(request):
 
     rows = []
     for idx, user in enumerate(users_sorted, start=1):
-        rows.append({
-            "user": user,
-            "rank": idx,
-            "total": totals_map.get(user.id, 0),
-            "is_leader": idx == 1,
-        })
+        rows.append(
+            {
+                "user": user,
+                "rank": idx,
+                "total": totals_map.get(user.id, 0),
+                "is_leader": idx == 1,
+            }
+        )
 
-    return render(request, "leaderboard.html", {
-        "events": events,
-        "rows": rows,
-        "scores_map": scores_map,
-    })
+    return render(
+        request,
+        "leaderboard.html",
+        {
+            "events": events,
+            "rows": rows,
+            "scores_map": scores_map,
+        },
+    )

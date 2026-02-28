@@ -1,6 +1,6 @@
 ﻿from django.contrib import admin
 
-from .models import Event, EventPhoto, Prediction, Result, Score
+from .models import Event, EventPhoto, Prediction, Result, Score, SeasonPrediction
 from .scoring import calculate_event_scores
 
 
@@ -81,3 +81,26 @@ class ScoreAdmin(admin.ModelAdmin):
     list_filter = ("event",)
     search_fields = ("user__username", "event__name")
     list_select_related = ("event", "user")
+
+
+@admin.register(SeasonPrediction)
+class SeasonPredictionAdmin(admin.ModelAdmin):
+    list_display = (
+        "season_year",
+        "user",
+        "hungary_driver_championship_leader",
+        "hungary_constructor_championship_leader",
+        "hadjar_best_finish",
+        "world_drivers_champion",
+        "constructors_champion",
+        "constructors_second",
+        "constructors_third",
+        "last_race_winner",
+        "season_pole_sitter",
+        "driver_change_happened",
+        "team_most_dnf",
+        "updated_at",
+    )
+    list_filter = ("season_year", "driver_change_happened", "constructors_champion")
+    search_fields = ("user__username",)
+    list_select_related = ("user",)

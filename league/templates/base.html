@@ -739,6 +739,20 @@
       box-shadow: none;
     }
 
+    .menu-item-danger {
+      color: #ffd1cf;
+      border-color: rgba(225, 6, 0, 0.42);
+      background: rgba(225, 6, 0, 0.18);
+    }
+
+    .menu-item-danger:hover,
+    .menu-item-danger:focus,
+    .menu-item-danger:active {
+      color: #fff;
+      border-color: rgba(225, 6, 0, 0.62);
+      background: rgba(225, 6, 0, 0.28);
+    }
+
     .menu-divider {
       height: 1px;
       background: rgba(255, 255, 255, 0.12);
@@ -933,12 +947,7 @@
     </div>
 
     <div class="site-header-actions">
-      {% if user.is_authenticated %}
-        <form method="post" action="{% url 'logout' %}" class="d-inline">
-          {% csrf_token %}
-          <button type="submit" class="nav-chip nav-chip-danger">Выйти</button>
-        </form>
-      {% else %}
+      {% if not user.is_authenticated %}
         <a class="nav-chip" href="{% url 'login' %}">Войти</a>
         <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
       {% endif %}
@@ -956,6 +965,7 @@
 
   <div class="offcanvas-body">
     <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
+    <a class="menu-item" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
     <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
@@ -966,6 +976,10 @@
     {% if user.is_authenticated %}
       <div class="menu-meta">Вошли как</div>
       <div class="menu-user">{{ user.username }}</div>
+      <form method="post" action="{% url 'logout' %}" class="mt-2">
+        {% csrf_token %}
+        <button type="submit" class="menu-item menu-item-danger w-100 text-start">Выйти</button>
+      </form>
     {% else %}
       <div class="menu-meta">Гость</div>
     {% endif %}
