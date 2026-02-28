@@ -987,6 +987,7 @@
     </div>
 
     <div class="site-header-actions">
+      <a class="nav-chip" href="{% url 'league:participants' %}">Участники</a>
       {% if not user.is_authenticated %}
         <a class="nav-chip" href="{% url 'login' %}">Войти</a>
         <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
@@ -1006,6 +1007,7 @@
   <div class="offcanvas-body">
     <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
+    <a class="menu-item" href="{% url 'league:participants' %}">Участники</a>
     <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>

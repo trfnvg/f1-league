@@ -9,6 +9,7 @@ from .models import (
     SeasonPrediction,
     SeasonResult,
     SeasonScore,
+    UserProfile,
 )
 from .scoring import calculate_event_scores, calculate_season_scores
 
@@ -150,5 +151,12 @@ class SeasonResultAdmin(admin.ModelAdmin):
 class SeasonScoreAdmin(admin.ModelAdmin):
     list_display = ("season_year", "user", "points", "updated_at")
     list_filter = ("season_year",)
+    search_fields = ("user__username",)
+    list_select_related = ("user",)
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "avatar", "updated_at")
     search_fields = ("user__username",)
     list_select_related = ("user",)

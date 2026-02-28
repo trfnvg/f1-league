@@ -101,6 +101,18 @@ class EventPhoto(models.Model):
         return f"Фото для {self.event}"
 
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
+    avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("user__username",)
+
+    def __str__(self):
+        return f"Профиль {self.user.username}"
+
+
 class Prediction(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="predictions")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
