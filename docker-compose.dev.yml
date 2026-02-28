@@ -1,0 +1,20 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    environment:
+      DEBUG: "True"
+      SECRET_KEY: "local-dev-secret-key"
+      ALLOWED_HOSTS: "127.0.0.1,localhost"
+      CSRF_TRUSTED_ORIGINS: "http://127.0.0.1:8000,http://localhost:8000"
+      USE_S3: "False"
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./:/app

@@ -13,6 +13,10 @@ def home(request):
     return render(request, "home.html", {"events": events})
 
 
+def season_predictions(request):
+    return render(request, "season_predictions.html")
+
+
 def register(request):
     next_url = request.GET.get("next") or request.POST.get("next") or "league:home"
 
