@@ -299,17 +299,23 @@ def leaderboard(request):
     totals_qs = Score.objects.values("user_id").annotate(total=Sum("points"))
     totals_map = {x["user_id"]: int(x["total"] or 0) for x in totals_qs}
 
-    users = list(User.objects.filter(is_staff=False))
+    users = list(User.objects.filter(is_staff=False, is_active=True))
     users_sorted = sorted(users, key=lambda u: (-totals_map.get(u.id, 0), u.username.lower()))
+    user_ids = [user.id for user in users_sorted]
+    profile_map = {
+        profile.user_id: profile for profile in UserProfile.objects.filter(user_id__in=user_ids)
+    }
 
     rows = []
     for idx, user in enumerate(users_sorted, start=1):
+        profile_obj = profile_map.get(user.id)
         rows.append(
             {
                 "user": user,
                 "rank": idx,
                 "total": totals_map.get(user.id, 0),
                 "is_leader": idx == 1,
+                "avatar_url": profile_obj.avatar.url if profile_obj and profile_obj.avatar else None,
             }
         )
 

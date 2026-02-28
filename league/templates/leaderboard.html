@@ -4,6 +4,115 @@
 {% block title %}Таблица сезона - F1 Predictions 2026{% endblock %}
 
 {% block content %}
+<style>
+  .leaderboard-luxe {
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow:
+      0 24px 54px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .leaderboard-luxe .table-responsive {
+    background: linear-gradient(180deg, rgba(17, 24, 33, 0.55), rgba(13, 18, 26, 0.62));
+  }
+
+  .rank-chip {
+    min-width: 30px;
+    min-height: 30px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.83rem;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+  }
+
+  .rank-chip.rank-1 {
+    border-color: rgba(255, 224, 147, 0.62);
+    background: linear-gradient(180deg, rgba(255, 214, 109, 0.2), rgba(255, 158, 79, 0.2));
+    color: #ffe6ad;
+  }
+
+  .rank-chip.rank-2 {
+    border-color: rgba(195, 214, 238, 0.58);
+    background: linear-gradient(180deg, rgba(191, 217, 248, 0.2), rgba(116, 147, 181, 0.2));
+    color: #deedff;
+  }
+
+  .rank-chip.rank-3 {
+    border-color: rgba(236, 173, 140, 0.6);
+    background: linear-gradient(180deg, rgba(236, 173, 140, 0.2), rgba(189, 114, 81, 0.2));
+    color: #ffd5bc;
+  }
+
+  .col-player {
+    min-width: 220px;
+  }
+
+  .player-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.56rem;
+    min-width: 0;
+  }
+
+  .table-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: linear-gradient(180deg, rgba(225, 6, 0, 0.78), rgba(140, 8, 5, 0.86));
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.84rem;
+    font-weight: 800;
+    flex: 0 0 auto;
+  }
+
+  .table-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .player-name {
+    line-height: 1.1;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+  }
+
+  .race-points {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    min-height: 24px;
+    padding: 0.1rem 0.38rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.07);
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.94);
+  }
+
+  .leaderboard-table tbody tr.is-leader td {
+    border-bottom-color: rgba(255, 226, 157, 0.26);
+  }
+
+  .leaderboard-table tbody tr.is-leader .sticky-col,
+  .leaderboard-table tbody tr.is-leader .sticky-col-2 {
+    background: rgba(37, 39, 44, 0.98);
+  }
+</style>
+
 <section class="glass-panel p-3 p-md-4 mb-4" style="animation: card-enter 280ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
@@ -18,7 +127,7 @@
   </div>
 </section>
 
-<section class="table-shell" style="animation: card-enter 360ms ease-out both;">
+<section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
   <div class="table-responsive" style="max-height: 72vh;">
     <table class="table table-sm align-middle leaderboard-table">
       <thead>
@@ -34,10 +143,19 @@
       <tbody>
         {% for r in rows %}
           <tr class="{% if r.is_leader %}is-leader{% endif %}">
-            <td class="sticky-col col-rank">{{ r.rank }}</td>
+            <td class="sticky-col col-rank">
+              <span class="rank-chip {% if r.rank == 1 %}rank-1{% elif r.rank == 2 %}rank-2{% elif r.rank == 3 %}rank-3{% endif %}">{{ r.rank }}</span>
+            </td>
             <td class="sticky-col-2 col-player fw-semibold">
-              <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link">
-                {{ r.user.username }}
+              <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link player-cell">
+                <span class="table-avatar">
+                  {% if r.avatar_url %}
+                    <img src="{{ r.avatar_url }}" alt="Аватар {{ r.user.username }}">
+                  {% else %}
+                    {{ r.user.username|slice:":1"|upper }}
+                  {% endif %}
+                </span>
+                <span class="player-name">{{ r.user.username }}</span>
               </a>
             </td>
             <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>
@@ -45,7 +163,7 @@
               <td class="text-center">
                 {% score_for scores_map r.user.id e.id as s %}
                 {% if s %}
-                  <span class="fw-semibold">{{ s.points }}</span>
+                  <span class="race-points">{{ s.points }}</span>
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
