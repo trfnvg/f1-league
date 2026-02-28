@@ -32,7 +32,7 @@ class PredictionForm(forms.ModelForm):
                 attrs={
                     "class": "form-control",
                     "rows": 3,
-                    "placeholder": "Свободный прогноз (оценит Судья после этапа)",
+                    "placeholder": "Свободный прогноз",
                 }
             ),
         }
