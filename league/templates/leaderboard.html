@@ -35,7 +35,11 @@
         {% for r in rows %}
           <tr class="{% if r.is_leader %}is-leader{% endif %}">
             <td class="sticky-col col-rank">{{ r.rank }}</td>
-            <td class="sticky-col-2 col-player fw-semibold">{{ r.user.username }}</td>
+            <td class="sticky-col-2 col-player fw-semibold">
+              <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link">
+                {{ r.user.username }}
+              </a>
+            </td>
             <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>
             {% for e in events %}
               <td class="text-center">

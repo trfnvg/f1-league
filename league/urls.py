@@ -8,5 +8,6 @@ urlpatterns = [
     path("season-predictions/", views.season_predictions, name="season_predictions"),
     path("register/", views.register, name="register"),
     path("events/<int:event_id>/", views.event_detail, name="event_detail"),
+    path("players/<int:user_id>/", views.player_profile, name="player_profile"),
     path("leaderboard/", views.leaderboard, name="leaderboard"),
 ]

@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import PredictionForm, RegisterForm, SeasonPredictionForm
-from .models import Event, Prediction, Score, SeasonPrediction
+from .models import Event, Prediction, Score, SeasonPrediction, SeasonResult, SeasonScore
 
 
 def home(request):
@@ -165,6 +165,65 @@ def event_detail(request, event_id: int):
             "state": state,
             "is_locked": is_locked,
             "score": score,
+        },
+    )
+
+
+def player_profile(request, user_id: int):
+    player = get_object_or_404(User, id=user_id, is_active=True)
+
+    events = list(Event.objects.all().order_by("round_number"))
+    predictions = Prediction.objects.filter(user=player).select_related("event")
+    scores = Score.objects.filter(user=player).select_related("event")
+
+    prediction_map = {p.event_id: p for p in predictions}
+    score_map = {s.event_id: s for s in scores}
+
+    event_cards = []
+    for event in events:
+        event_cards.append(
+            {
+                "event": event,
+                "prediction": prediction_map.get(event.id),
+                "score": score_map.get(event.id),
+            }
+        )
+
+    season_predictions = list(SeasonPrediction.objects.filter(user=player).order_by("-season_year"))
+    season_years = [item.season_year for item in season_predictions]
+    season_score_map = {
+        s.season_year: s for s in SeasonScore.objects.filter(user=player, season_year__in=season_years)
+    }
+    season_result_map = {
+        r.season_year: r for r in SeasonResult.objects.filter(season_year__in=season_years)
+    }
+
+    season_cards = []
+    for prediction in season_predictions:
+        season_cards.append(
+            {
+                "prediction": prediction,
+                "score": season_score_map.get(prediction.season_year),
+                "result": season_result_map.get(prediction.season_year),
+            }
+        )
+
+    event_points_total = sum(item.points for item in scores)
+    season_points_total = sum(item.points for item in season_score_map.values())
+    total_points = event_points_total + season_points_total
+
+    return render(
+        request,
+        "player_profile.html",
+        {
+            "player": player,
+            "event_cards": event_cards,
+            "season_cards": season_cards,
+            "event_points_total": event_points_total,
+            "season_points_total": season_points_total,
+            "total_points": total_points,
+            "events_count": len(events),
+            "submitted_events_count": len(prediction_map),
         },
     )
 
