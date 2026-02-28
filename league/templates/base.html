@@ -218,6 +218,84 @@
       font-weight: 500;
     }
 
+    .season-priority-banner {
+      position: relative;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background:
+        radial-gradient(520px 180px at 88% 0%, rgba(225, 6, 0, 0.34), transparent 68%),
+        linear-gradient(135deg, rgba(31, 43, 59, 0.96), rgba(18, 24, 34, 0.98));
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.38);
+      overflow: hidden;
+    }
+
+    .season-priority-banner::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--f1-red), transparent);
+      opacity: 0.95;
+    }
+
+    .season-banner-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 0.3rem 0.7rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .season-banner-title {
+      font-size: clamp(1.35rem, 2vw, 2rem);
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      margin: 0.45rem 0 0.35rem;
+      color: #ffffff;
+    }
+
+    .season-banner-subtitle {
+      color: rgba(248, 250, 252, 0.8);
+      max-width: 680px;
+      margin-bottom: 0;
+    }
+
+    .season-banner-cta {
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(225, 6, 0, 0.86), rgba(186, 4, 0, 0.9));
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      min-height: 44px;
+      padding: 0 1.05rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      box-shadow: 0 12px 24px rgba(225, 6, 0, 0.24);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    .season-banner-cta:hover,
+    .season-banner-cta:focus,
+    .season-banner-cta:active {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.42);
+      box-shadow: 0 16px 28px rgba(225, 6, 0, 0.28);
+      transform: translateY(-1px);
+      outline: none;
+      text-decoration: none;
+    }
+
     .glass-panel {
       position: relative;
       border-radius: var(--radius-lg);

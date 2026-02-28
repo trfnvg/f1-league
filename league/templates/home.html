@@ -3,6 +3,23 @@
 {% block title %}Этапы - F1 Predictions 2026{% endblock %}
 
 {% block content %}
+<section class="season-priority-banner p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
+  <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
+    <div>
+      <span class="season-banner-badge">Важно до старта сезона</span>
+      <h2 class="season-banner-title">Сезонные предикты 2026</h2>
+      <p class="season-banner-subtitle">
+        Сделай единый прогноз на весь сезон заранее. Этот блок приоритетный, чтобы никто не пропустил дедлайн.
+      </p>
+    </div>
+    <div class="d-flex align-items-center">
+      <a class="season-banner-cta" href="{% url 'league:season_predictions' %}">
+        Перейти к сезонным предиктам
+      </a>
+    </div>
+  </div>
+</section>
+
 <section class="glass-panel p-3 p-md-4 mb-4" style="animation: card-enter 280ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
