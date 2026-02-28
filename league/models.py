@@ -216,6 +216,90 @@ class SeasonPrediction(models.Model):
         return f"{self.user} - сезон {self.season_year}"
 
 
+class SeasonResult(models.Model):
+    season_year = models.PositiveSmallIntegerField("Сезон", unique=True, default=2026)
+
+    # Промежуточные сезонные факты
+    hungary_driver_championship_leader = models.CharField(
+        "Лидер чемпионата пилотов после этапа Венгрии (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    hungary_constructor_championship_leader = models.CharField(
+        "Лидер Кубка конструкторов после этапа Венгрии (факт)",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    hadjar_best_finish = models.PositiveSmallIntegerField("Самый высокий финиш Хаджара (факт)")
+
+    # Итоги сезона
+    world_drivers_champion = models.CharField(
+        "Чемпион мира среди пилотов (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    constructors_champion = models.CharField(
+        "Чемпион Кубка конструкторов (факт)",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    constructors_second = models.CharField(
+        "2 место Кубка конструкторов (факт)",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+    constructors_third = models.CharField(
+        "3 место Кубка конструкторов (факт)",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+
+    # Дополнительные сезонные факты
+    last_race_winner = models.CharField(
+        "Победитель последней гонки сезона (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    season_pole_sitter = models.CharField(
+        "Pole-sitter сезона (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+    )
+    driver_change_happened = models.CharField(
+        "Была ли смена пилота в сезоне (факт)",
+        max_length=3,
+        choices=YES_NO_CHOICES,
+    )
+    team_most_dnf = models.CharField(
+        "Команда-лидер по количеству DNF (факт)",
+        max_length=50,
+        choices=CONSTRUCTOR_CHOICES,
+    )
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("season_year",)
+
+    def __str__(self):
+        return f"Фактические итоги сезона {self.season_year}"
+
+
+class SeasonScore(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="season_scores")
+    season_year = models.PositiveSmallIntegerField("Сезон", default=2026)
+    points = models.IntegerField(default=0)
+    breakdown = models.JSONField(default=dict, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "season_year")
+        ordering = ("season_year", "-points", "user__username")
+
+    def __str__(self):
+        return f"{self.user} - сезон {self.season_year}: {self.points}"
+
+
 class Score(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="scores")
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE)

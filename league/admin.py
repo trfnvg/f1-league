@@ -1,7 +1,16 @@
 ﻿from django.contrib import admin
 
-from .models import Event, EventPhoto, Prediction, Result, Score, SeasonPrediction
-from .scoring import calculate_event_scores
+from .models import (
+    Event,
+    EventPhoto,
+    Prediction,
+    Result,
+    Score,
+    SeasonPrediction,
+    SeasonResult,
+    SeasonScore,
+)
+from .scoring import calculate_event_scores, calculate_season_scores
 
 
 class EventPhotoInline(admin.TabularInline):
@@ -102,5 +111,44 @@ class SeasonPredictionAdmin(admin.ModelAdmin):
         "updated_at",
     )
     list_filter = ("season_year", "driver_change_happened", "constructors_champion")
+    search_fields = ("user__username",)
+    list_select_related = ("user",)
+
+
+@admin.register(SeasonResult)
+class SeasonResultAdmin(admin.ModelAdmin):
+    list_display = (
+        "season_year",
+        "hungary_driver_championship_leader",
+        "hungary_constructor_championship_leader",
+        "hadjar_best_finish",
+        "world_drivers_champion",
+        "constructors_champion",
+        "constructors_second",
+        "constructors_third",
+        "last_race_winner",
+        "season_pole_sitter",
+        "driver_change_happened",
+        "team_most_dnf",
+        "updated_at",
+    )
+    actions = ("recalculate_season_scores",)
+
+    def recalculate_season_scores(self, request, queryset):
+        total = 0
+        seasons = 0
+        for season_result in queryset:
+            total += calculate_season_scores(season_result.season_year)
+            seasons += 1
+
+        self.message_user(request, f"Пересчитано сезонных прогнозов: {total} (сезонов: {seasons})")
+
+    recalculate_season_scores.short_description = "Посчитать сезонные очки"
+
+
+@admin.register(SeasonScore)
+class SeasonScoreAdmin(admin.ModelAdmin):
+    list_display = ("season_year", "user", "points", "updated_at")
+    list_filter = ("season_year",)
     search_fields = ("user__username",)
     list_select_related = ("user",)

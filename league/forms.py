@@ -5,6 +5,11 @@ from django.contrib.auth.models import User
 from .models import Prediction, SeasonPrediction
 
 
+def _set_empty_select_option(field):
+    cleaned_choices = [(value, label) for value, label in field.choices if value != ""]
+    field.choices = [("", "")] + cleaned_choices
+
+
 class PredictionForm(forms.ModelForm):
     class Meta:
         model = Prediction
@@ -39,6 +44,8 @@ class PredictionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        for field_name in ("p1", "p2", "p3", "pole", "fastest_lap", "driver_of_day"):
+            _set_empty_select_option(self.fields[field_name])
         self.fields["fastest_lap"].required = True
         self.fields["driver_of_day"].required = True
 
@@ -79,6 +86,22 @@ class SeasonPredictionForm(forms.ModelForm):
             "driver_change_happened": forms.Select(attrs={"class": "form-select"}),
             "team_most_dnf": forms.Select(attrs={"class": "form-select"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name in (
+            "hungary_driver_championship_leader",
+            "hungary_constructor_championship_leader",
+            "world_drivers_champion",
+            "constructors_champion",
+            "constructors_second",
+            "constructors_third",
+            "last_race_winner",
+            "season_pole_sitter",
+            "driver_change_happened",
+            "team_most_dnf",
+        ):
+            _set_empty_select_option(self.fields[field_name])
 
     def clean(self):
         cleaned_data = super().clean()
