@@ -59,46 +59,69 @@
             {{ form.non_field_errors }}
           </div>
         {% endif %}
-        <div class="small text-muted mb-3">
-          Очки начисляются только за точное совпадение. Частичные совпадения не учитываются.
-        </div>
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">P1</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">P1</label>
+              <span class="field-points-badge">10 очков</span>
+            </div>
             {{ form.p1 }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">P2</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">P2</label>
+              <span class="field-points-badge">6 очков</span>
+            </div>
             {{ form.p2 }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">P3</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">P3</label>
+              <span class="field-points-badge">4 очка</span>
+            </div>
             {{ form.p3 }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Поул</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Поул</label>
+              <span class="field-points-badge">4 очка</span>
+            </div>
             {{ form.pole }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Fastest Lap</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Fastest Lap</label>
+              <span class="field-points-badge">3 очка</span>
+            </div>
             {{ form.fastest_lap }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Driver of the Day</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Driver of the Day</label>
+              <span class="field-points-badge">3 очка</span>
+            </div>
             {{ form.driver_of_day }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Количество Safety Car</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Количество Safety Car</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
             {{ form.safety_car_count }}
           </div>
           <div class="col-md-6">
-            <label class="form-label">Количество DNF</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Количество DNF</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
             {{ form.dnf_count }}
           </div>
           <div class="col-12">
-            <label class="form-label">Crazy Prediction</label>
+            <div class="field-label-row">
+              <label class="form-label mb-0">Crazy Prediction</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
             {{ form.crazy_prediction }}
-            
           </div>
         </div>
         <button type="submit" class="btn btn-primary mt-3">Сохранить прогноз</button>

@@ -39,9 +39,6 @@ class PredictionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for field_name in ("p1", "p2", "p3", "pole", "fastest_lap", "driver_of_day"):
-            base_choices = [(value, label) for value, label in self.fields[field_name].choices if value != ""]
-            self.fields[field_name].choices = [("", "Выбери гонщика")] + base_choices
         self.fields["fastest_lap"].required = True
         self.fields["driver_of_day"].required = True
 
@@ -82,24 +79,6 @@ class SeasonPredictionForm(forms.ModelForm):
             "driver_change_happened": forms.Select(attrs={"class": "form-select"}),
             "team_most_dnf": forms.Select(attrs={"class": "form-select"}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        select_fields = (
-            "hungary_driver_championship_leader",
-            "hungary_constructor_championship_leader",
-            "world_drivers_champion",
-            "constructors_champion",
-            "constructors_second",
-            "constructors_third",
-            "last_race_winner",
-            "season_pole_sitter",
-            "driver_change_happened",
-            "team_most_dnf",
-        )
-        for field_name in select_fields:
-            base_choices = [(value, label) for value, label in self.fields[field_name].choices if value != ""]
-            self.fields[field_name].choices = [("", "Сделай выбор")] + base_choices
 
     def clean(self):
         cleaned_data = super().clean()
