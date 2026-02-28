@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль {{ player.username }} - F1 Predictions 2026{% endblock %}
+
+{% block content %}
+<style>
+  .profile-hero {
+    position: relative;
+    border-radius: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background:
+      radial-gradient(540px 200px at 100% 0%, rgba(225, 6, 0, 0.28), transparent 68%),
+      linear-gradient(145deg, rgba(34, 46, 62, 0.96), rgba(18, 25, 35, 0.98));
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
+    overflow: hidden;
+  }
+
+  .profile-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(110deg, rgba(255, 255, 255, 0.1), transparent 40%);
+    opacity: 0.35;
+  }
+
+  .profile-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .profile-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    color: #ffffff;
+  }
+
+  .profile-name {
+    font-size: clamp(1.5rem, 2.2vw, 2rem);
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 0.7rem;
+  }
+
+  .stat-box {
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 0.7rem 0.85rem;
+  }
+
+  .stat-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-top: 0.15rem;
+  }
+
+  .profile-section-title {
+    font-size: 1.12rem;
+    font-weight: 800;
+    margin-bottom: 0.7rem;
+  }
+
+  .prediction-card {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(30, 40, 54, 0.9), rgba(18, 24, 33, 0.95));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+  }
+
+  .prediction-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.85rem 0.95rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .prediction-round {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .prediction-event {
+    font-weight: 700;
+    margin-top: 0.1rem;
+  }
+
+  .score-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    min-width: 40px;
+    padding: 0.2rem 0.58rem;
+    border-radius: 999px;
+    border: 1px solid rgba(120, 204, 161, 0.45);
+    background: rgba(120, 204, 161, 0.16);
+    color: #b8f3d8;
+    font-weight: 800;
+    font-size: 0.88rem;
+  }
+
+  .prediction-body {
+    padding: 0.9rem 0.95rem 1rem;
+  }
+
+  .prediction-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .prediction-item {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.5rem 0.62rem;
+  }
+
+  .prediction-item-label {
+    font-size: 0.73rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin-bottom: 0.1rem;
+  }
+
+  .prediction-item-value {
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .prediction-empty {
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.92rem;
+  }
+
+  .season-fact {
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.62);
+  }
+
+  @media (max-width: 992px) {
+    .stats-grid {
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+  }
+
+  @media (max-width: 576px) {
+    .prediction-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .profile-avatar {
+      width: 40px;
+      height: 40px;
+    }
+  }
+</style>
+
+<div class="mb-3">
+  <a href="{% url 'league:leaderboard' %}" class="text-decoration-none">&larr; Назад к таблице</a>
+</div>
+
+<section class="profile-hero p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
+  <div class="d-flex flex-column gap-3">
+    <div class="profile-user">
+      <div class="profile-avatar">{{ player.username|slice:":1"|upper }}</div>
+      <div>
+        <h1 class="profile-name">{{ player.username }}</h1>
+        <div class="text-muted">Профиль участника лиги прогнозов</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-label">Общие очки</div>
+        <div class="stat-value">{{ total_points }}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Очки за этапы</div>
+        <div class="stat-value">{{ event_points_total }}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Сезонные очки</div>
+        <div class="stat-value">{{ season_points_total }}</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Этапов с прогнозом</div>
+        <div class="stat-value">{{ submitted_events_count }}/{{ events_count }}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="row g-4">
+  <div class="col-12 col-xl-8">
+    <section class="glass-panel p-3 p-md-4" style="animation: card-enter 280ms ease-out both;">
+      <h2 class="profile-section-title">Предикты по этапам</h2>
+
+      <div class="d-flex flex-column gap-3">
+        {% for row in event_cards %}
+          <article class="prediction-card">
+            <div class="prediction-head">
+              <div>
+                <div class="prediction-round">R{{ row.event.round_number }}</div>
+                <div class="prediction-event">{{ row.event.name }}</div>
+              </div>
+              {% if row.score %}
+                <span class="score-pill">{{ row.score.points }}</span>
+              {% else %}
+                <span class="deadline-chip">-</span>
+              {% endif %}
+            </div>
+            <div class="prediction-body">
+              {% if row.prediction %}
+                <div class="prediction-grid">
+                  <div class="prediction-item"><div class="prediction-item-label">P1</div><div class="prediction-item-value">{{ row.prediction.get_p1_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">P2</div><div class="prediction-item-value">{{ row.prediction.get_p2_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">P3</div><div class="prediction-item-value">{{ row.prediction.get_p3_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">Поул</div><div class="prediction-item-value">{{ row.prediction.get_pole_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">Fastest Lap</div><div class="prediction-item-value">{{ row.prediction.get_fastest_lap_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">Driver of the Day</div><div class="prediction-item-value">{{ row.prediction.get_driver_of_day_display }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">Safety Car</div><div class="prediction-item-value">{{ row.prediction.safety_car_count }}</div></div>
+                  <div class="prediction-item"><div class="prediction-item-label">DNF</div><div class="prediction-item-value">{{ row.prediction.dnf_count }}</div></div>
+                  <div class="prediction-item" style="grid-column: 1 / -1;">
+                    <div class="prediction-item-label">Crazy Prediction</div>
+                    <div class="prediction-item-value">{{ row.prediction.crazy_prediction|default:"-" }}</div>
+                  </div>
+                </div>
+              {% else %}
+                <div class="prediction-empty">Прогноз на этот этап не отправлен.</div>
+              {% endif %}
+            </div>
+          </article>
+        {% empty %}
+          <div class="prediction-empty">Этапов пока нет.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <div class="col-12 col-xl-4">
+    <section class="glass-panel p-3 p-md-4" style="animation: card-enter 320ms ease-out both;">
+      <h2 class="profile-section-title">Сезонные предикты</h2>
+
+      <div class="d-flex flex-column gap-3">
+        {% for row in season_cards %}
+          <article class="prediction-card">
+            <div class="prediction-head">
+              <div>
+                <div class="prediction-round">Сезон {{ row.prediction.season_year }}</div>
+                <div class="prediction-event">Сезонный прогноз</div>
+              </div>
+              {% if row.score %}
+                <span class="score-pill">{{ row.score.points }}</span>
+              {% else %}
+                <span class="deadline-chip">-</span>
+              {% endif %}
+            </div>
+            <div class="prediction-body">
+              <div class="prediction-grid">
+                <div class="prediction-item"><div class="prediction-item-label">Лидер пилотов после Венгрии</div><div class="prediction-item-value">{{ row.prediction.get_hungary_driver_championship_leader_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_hungary_driver_championship_leader_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Лидер конструкторов после Венгрии</div><div class="prediction-item-value">{{ row.prediction.get_hungary_constructor_championship_leader_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_hungary_constructor_championship_leader_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Лучший финиш Хаджара</div><div class="prediction-item-value">{{ row.prediction.hadjar_best_finish }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.hadjar_best_finish }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Чемпион пилотов</div><div class="prediction-item-value">{{ row.prediction.get_world_drivers_champion_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_world_drivers_champion_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Чемпион конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_champion_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_constructors_champion_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">2 место конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_second_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_constructors_second_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">3 место конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_third_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_constructors_third_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Победитель последней гонки</div><div class="prediction-item-value">{{ row.prediction.get_last_race_winner_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_last_race_winner_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Pole-sitter сезона</div><div class="prediction-item-value">{{ row.prediction.get_season_pole_sitter_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_season_pole_sitter_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Смена пилота</div><div class="prediction-item-value">{{ row.prediction.get_driver_change_happened_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_driver_change_happened_display }}</div>{% endif %}</div>
+                <div class="prediction-item"><div class="prediction-item-label">Команда-лидер по DNF</div><div class="prediction-item-value">{{ row.prediction.get_team_most_dnf_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_team_most_dnf_display }}</div>{% endif %}</div>
+              </div>
+            </div>
+          </article>
+        {% empty %}
+          <div class="prediction-empty">Сезонные предикты пока не отправлены.</div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}
