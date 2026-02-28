@@ -1,8 +1,33 @@
-from datetime import timedelta
+﻿from datetime import timedelta
 
+from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
-from django.contrib.auth.models import User
+
+DRIVER_CHOICES = [
+    ("norris", "Норрис (McLaren)"),
+    ("piastri", "Пиастри (McLaren)"),
+    ("russell", "Рассел (Mercedes)"),
+    ("antonelli", "Антонелли (Mercedes)"),
+    ("verstappen", "Ферстаппен (Red Bull)"),
+    ("hadjar", "Хаджар (Red Bull)"),
+    ("leclerc", "Леклер (Ferrari)"),
+    ("hamilton", "Хэмильтон (Ferrari)"),
+    ("albon", "Албон (Williams)"),
+    ("sainz", "Сайнс (Williams)"),
+    ("lindblad", "Линдблад (Racing Bulls)"),
+    ("lawson", "Лоусон (Racing Bulls)"),
+    ("stroll", "Стролл (Aston Martin)"),
+    ("alonso", "Алонсо (Aston Martin)"),
+    ("ocon", "Окон (Haas)"),
+    ("bearman", "Берман (Haas)"),
+    ("hulkenberg", "Хюлкенберг (Audi)"),
+    ("bortoleto", "Бортолето (Audi)"),
+    ("gasly", "Гасли (Alpine)"),
+    ("colapinto", "Колапинто (Alpine)"),
+    ("perez", "Перес (Cadillac)"),
+    ("bottas", "Боттас (Cadillac)"),
+]
 
 
 class Event(models.Model):
@@ -23,7 +48,7 @@ class Event(models.Model):
         ordering = ["round_number"]
 
     def __str__(self):
-        return f"R{self.round_number} — {self.name}"
+        return f"R{self.round_number} - {self.name}"
 
     def voting_state(self):
         """
@@ -34,10 +59,9 @@ class Event(models.Model):
 
         now = timezone.now()
 
-        # если race_datetime не заполнена — будем fallback'ать на deadline
+        # if race_datetime not set, fallback to deadline
         base = self.race_datetime or self.deadline
         if base is None or self.deadline is None:
-            # если чего-то нет, безопаснее считать закрытым
             return "closed"
 
         open_at = base - timedelta(days=7)
@@ -62,10 +86,16 @@ class Prediction(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="predictions")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    p1 = models.CharField("Победитель (P1)", max_length=50)
-    p2 = models.CharField("P2", max_length=50)
-    p3 = models.CharField("P3", max_length=50)
-    pole = models.CharField("Поул", max_length=50)
+    p1 = models.CharField("Победитель (P1)", max_length=50, choices=DRIVER_CHOICES)
+    p2 = models.CharField("P2", max_length=50, choices=DRIVER_CHOICES)
+    p3 = models.CharField("P3", max_length=50, choices=DRIVER_CHOICES)
+    pole = models.CharField("Пол-позиция", max_length=50, choices=DRIVER_CHOICES)
+    fastest_lap = models.CharField("Fastest Lap", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
+    driver_of_day = models.CharField("Driver of the Day", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
+    crazy_prediction = models.TextField("Crazy Prediction", blank=True, default="")
+    safety_car_count = models.PositiveSmallIntegerField("Количество Safety Car", default=0)
+    dnf_count = models.PositiveSmallIntegerField("Количество DNF", default=0)
+    crazy_prediction_approved = models.BooleanField("Crazy Prediction засчитан судьей", default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -76,19 +106,23 @@ class Prediction(models.Model):
         return self.event.deadline < timezone.now()
 
     def __str__(self):
-        return f"{self.user} — {self.event}"
+        return f"{self.user} - {self.event}"
 
 
 class Result(models.Model):
     event = models.OneToOneField(Event, on_delete=models.CASCADE, related_name="result")
 
-    p1 = models.CharField("P1 (факт)", max_length=50)
-    p2 = models.CharField("P2 (факт)", max_length=50)
-    p3 = models.CharField("P3 (факт)", max_length=50)
-    pole = models.CharField("Поул (факт)", max_length=50)
+    p1 = models.CharField("P1 (факт)", max_length=50, choices=DRIVER_CHOICES)
+    p2 = models.CharField("P2 (факт)", max_length=50, choices=DRIVER_CHOICES)
+    p3 = models.CharField("P3 (факт)", max_length=50, choices=DRIVER_CHOICES)
+    pole = models.CharField("Пол-позиция (факт)", max_length=50, choices=DRIVER_CHOICES)
+    fastest_lap = models.CharField("Fastest Lap (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
+    driver_of_day = models.CharField("Driver of the Day (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
+    safety_car_count = models.PositiveSmallIntegerField("Количество Safety Car (факт)", default=0)
+    dnf_count = models.PositiveSmallIntegerField("Количество DNF (факт)", default=0)
 
     def __str__(self):
-        return f"Результат — {self.event}"
+        return f"Результат - {self.event}"
 
 
 class Score(models.Model):
@@ -102,4 +136,4 @@ class Score(models.Model):
         unique_together = ("event", "user")
 
     def __str__(self):
-        return f"{self.user} — {self.event}: {self.points}"
+        return f"{self.user} - {self.event}: {self.points}"
