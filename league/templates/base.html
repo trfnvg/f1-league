@@ -23,6 +23,7 @@
       --surface-2: #1c2532;
       --surface-3: #253243;
       --header-h: 62px;
+      --header-offset: var(--header-h);
       --page-max: 1180px;
       --radius-lg: 18px;
       --radius-md: 13px;
@@ -39,7 +40,7 @@
     }
 
     html {
-      scroll-padding-top: calc(var(--header-h) + 8px);
+      scroll-padding-top: calc(var(--header-offset) + 8px);
     }
 
     body {
@@ -50,7 +51,7 @@
         radial-gradient(900px 360px at -10% 2%, rgba(34, 76, 121, 0.22), transparent 74%),
         linear-gradient(180deg, #0e131a 0%, #141a22 58%, #191f29 100%);
       min-height: 100vh;
-      padding-top: var(--header-h);
+      padding-top: var(--header-offset);
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
@@ -92,7 +93,7 @@
     }
 
     .site-header.is-hidden {
-      transform: translate3d(0, calc(-1 * var(--header-h) - 4px), 0);
+      transform: translate3d(0, calc(-1 * var(--header-offset) - 4px), 0);
     }
 
     body.menu-open .site-header {
@@ -1075,6 +1076,13 @@
     const HIDE_THRESHOLD = 80;
     const DELTA = 6;
 
+    const syncHeaderOffset = () => {
+      const headerHeight = Math.ceil(header.getBoundingClientRect().height || 0);
+      if (headerHeight > 0) {
+        document.documentElement.style.setProperty("--header-offset", `${headerHeight}px`);
+      }
+    };
+
     const onScroll = () => {
       const currentY = window.scrollY || 0;
       const diff = currentY - lastY;
@@ -1101,6 +1109,10 @@
       ticking = false;
     };
 
+    syncHeaderOffset();
+    window.addEventListener("resize", syncHeaderOffset, { passive: true });
+    window.addEventListener("orientationchange", syncHeaderOffset, { passive: true });
+
     window.addEventListener(
       "scroll",
       () => {
@@ -1116,12 +1128,14 @@
         menuOpen = true;
         document.body.classList.add("menu-open");
         header.classList.remove("is-hidden");
+        syncHeaderOffset();
       });
 
       offcanvasEl.addEventListener("hidden.bs.offcanvas", () => {
         menuOpen = false;
         document.body.classList.remove("menu-open");
         lastY = window.scrollY || 0;
+        syncHeaderOffset();
       });
     }
   })();
