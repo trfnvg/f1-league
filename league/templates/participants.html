@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}РЈС‡Р°СЃС‚РЅРёРєРё - F1 Predictions 2026{% endblock %}
+{% block title %}Участники - F1 Predictions 2026{% endblock %}
 
 {% block content %}
 <style>
@@ -136,11 +136,11 @@
 <section class="participants-hero p-3 p-md-4 mb-4" style="animation: card-enter 260ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
-      <h1 class="section-title">РЈС‡Р°СЃС‚РЅРёРєРё</h1>
-      <p class="section-subtitle mb-0">РЎРїРёСЃРѕРє РёРіСЂРѕРєРѕРІ, РєРѕС‚РѕСЂС‹Рµ РґРµР»Р°СЋС‚ РїСЂРµРґРёРєС‚С‹, Рё Р±С‹СЃС‚СЂС‹Р№ РїРµСЂРµС…РѕРґ РІ РёС… РїСЂРѕС„РёР»Рё.</p>
+      <h1 class="section-title">Участники</h1>
+      <p class="section-subtitle mb-0">Список игроков, которые делают предикты, и быстрый переход в их профили.</p>
     </div>
     <div class="deadline-chip">
-      <span>РџСЂРѕС„РёР»РµР№: {{ rows|length }}</span>
+      <span>Профилей: {{ rows|length }}</span>
     </div>
   </div>
 </section>
@@ -152,7 +152,7 @@
         <div class="participant-head">
           <div class="participant-avatar">
             {% if row.avatar_url %}
-              <img src="{{ row.avatar_url }}" alt="РђРІР°С‚Р°СЂ {{ row.user.username }}">
+              <img src="{{ row.avatar_url }}" alt="Аватар {{ row.user.username }}">
             {% else %}
               {{ row.user.username|slice:":1"|upper }}
             {% endif %}
@@ -164,17 +164,17 @@
                 <span class="wpc-badge">WPC</span>
               {% endif %}
             </div>
-            <div class="participant-meta">РћС‚РєСЂС‹С‚СЊ РїСЂРѕС„РёР»СЊ СѓС‡Р°СЃС‚РЅРёРєР°</div>
+            <div class="participant-meta">Открыть профиль участника</div>
           </div>
         </div>
 
         <div class="participant-stats">
           <div class="participant-stat">
-            <div class="participant-stat-label">РћС‡РєРё</div>
+            <div class="participant-stat-label">Очки</div>
             <div class="participant-stat-value">{{ row.total_points }}</div>
           </div>
           <div class="participant-stat">
-            <div class="participant-stat-label">Р­С‚Р°РїС‹</div>
+            <div class="participant-stat-label">Этапы</div>
             <div class="participant-stat-value">{{ row.event_count }}</div>
           </div>
         </div>
@@ -183,7 +183,7 @@
   </section>
 {% else %}
   <section class="glass-panel p-4">
-    <div class="text-muted">РџРѕРєР° РЅРµС‚ СѓС‡Р°СЃС‚РЅРёРєРѕРІ СЃ РѕС‚РїСЂР°РІР»РµРЅРЅС‹РјРё РїСЂРµРґРёРєС‚Р°РјРё.</div>
+    <div class="text-muted">Пока нет участников с отправленными предиктами.</div>
   </section>
 {% endif %}
 {% endblock %}
