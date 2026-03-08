@@ -184,13 +184,20 @@
     background: rgba(255, 122, 114, 0.13);
   }
 
-  .event-cover-image {
+  .event-cover-image-upcoming {
     width: 100%;
-    height: min(56vw, 440px);
-    min-height: 280px;
+    height: min(62vw, 520px);
+    min-height: 300px;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .event-cover-image-past {
+    width: 100%;
+    height: auto;
     object-fit: contain;
     object-position: center;
-    background: linear-gradient(180deg, rgba(10, 14, 20, 0.92), rgba(16, 22, 31, 0.96));
     display: block;
   }
 
@@ -203,7 +210,7 @@
       grid-template-columns: 1fr;
     }
 
-    .event-cover-image {
+    .event-cover-image-upcoming {
       height: 300px;
       min-height: 300px;
     }
@@ -216,7 +223,11 @@
 
 <div class="card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
   {% if event.cover_image %}
-    <img src="{{ event.cover_image.url }}" class="card-img-top event-cover-image" alt="{{ event.name }}">
+    <img
+      src="{{ event.cover_image.url }}"
+      class="card-img-top {% if is_past_event %}event-cover-image-past{% else %}event-cover-image-upcoming{% endif %}"
+      alt="{{ event.name }}"
+    >
   {% endif %}
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
