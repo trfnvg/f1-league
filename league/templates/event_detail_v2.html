@@ -3,13 +3,125 @@
 {% block title %}{{ event.name }} - F1 Predictions 2026{% endblock %}
 
 {% block content %}
+<style>
+  .result-facts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .result-facts-item {
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.58rem 0.7rem;
+  }
+
+  .result-facts-label {
+    font-size: 0.73rem;
+    color: rgba(255, 255, 255, 0.68);
+    margin-bottom: 0.1rem;
+  }
+
+  .result-facts-value {
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+
+  .comparison-table thead th {
+    border-color: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.76);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .comparison-table td {
+    border-color: rgba(255, 255, 255, 0.08);
+    vertical-align: middle;
+  }
+
+  .comparison-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 23px;
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .comparison-status-hit {
+    color: #9ff1c8;
+    background: rgba(63, 184, 126, 0.2);
+    border: 1px solid rgba(63, 184, 126, 0.42);
+  }
+
+  .comparison-status-partial {
+    color: #ffe2a0;
+    background: rgba(255, 184, 46, 0.18);
+    border: 1px solid rgba(255, 184, 46, 0.42);
+  }
+
+  .comparison-status-miss {
+    color: #ffc1bd;
+    background: rgba(225, 6, 0, 0.18);
+    border: 1px solid rgba(225, 6, 0, 0.42);
+  }
+
+  .comparison-note {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.62);
+    margin-top: 0.2rem;
+  }
+
+  .comparison-points {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 26px;
+    min-width: 62px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    font-weight: 800;
+    font-size: 0.82rem;
+  }
+
+  .event-cover-image {
+    width: 100%;
+    height: min(56vw, 440px);
+    min-height: 280px;
+    object-fit: contain;
+    object-position: center;
+    background: linear-gradient(180deg, rgba(10, 14, 20, 0.92), rgba(16, 22, 31, 0.96));
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    .result-facts-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .event-cover-image {
+      height: 300px;
+      min-height: 300px;
+    }
+  }
+</style>
+
 <div class="mb-3">
   <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
 </div>
 
 <div class="card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
   {% if event.cover_image %}
-    <img src="{{ event.cover_image.url }}" class="card-img-top" style="max-height: 340px; object-fit: cover;" alt="{{ event.name }}">
+    <img src="{{ event.cover_image.url }}" class="card-img-top event-cover-image" alt="{{ event.name }}">
   {% endif %}
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -164,9 +276,83 @@
         {% else %}
           <div class="text-muted">Очки есть, но разбор пока пустой.</div>
         {% endif %}
+      {% elif comparison_rows %}
+        <div class="text-muted">Очки в таблице пока не пересчитаны. По факту у тебя сейчас {{ comparison_total }}.</div>
       {% else %}
         <div class="text-muted">Пока нет очков. Результат еще не внесен или подсчет не запускался.</div>
       {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+{% if factual_rows %}
+  <div class="card mb-4 card-accent-top" style="animation: card-enter 440ms ease-out both;">
+    <div class="card-body">
+      <h2 class="h5 mb-3">Фактические результаты этапа</h2>
+      <div class="result-facts-grid">
+        {% for row in factual_rows %}
+          <div class="result-facts-item">
+            <div class="result-facts-label">{{ row.label }}</div>
+            <div class="result-facts-value">{{ row.value }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% if user.is_authenticated and prediction and comparison_rows %}
+  <div class="card mb-4 card-accent-top" style="animation: card-enter 480ms ease-out both;">
+    <div class="card-body">
+      <div class="d-flex align-items-end justify-content-between mb-3 gap-2">
+        <div>
+          <h2 class="h5 mb-1">Твой прогноз vs факт</h2>
+          <div class="score-subtitle">По каждой категории видно, где очки получены, а где нет.</div>
+        </div>
+        <div class="text-end">
+          <div class="score-subtitle">По факту</div>
+          <div class="score-total">{{ comparison_total }}</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle comparison-table mb-0">
+          <thead>
+            <tr>
+              <th>Категория</th>
+              <th>Твой прогноз</th>
+              <th>Факт</th>
+              <th class="text-end">Очки</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in comparison_rows %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="fw-semibold">{{ row.label }}</span>
+                    {% if row.status == "hit" %}
+                      <span class="comparison-status comparison-status-hit">Зачтено</span>
+                    {% elif row.status == "partial" %}
+                      <span class="comparison-status comparison-status-partial">Частично</span>
+                    {% else %}
+                      <span class="comparison-status comparison-status-miss">Мимо</span>
+                    {% endif %}
+                  </div>
+                  {% if row.note %}
+                    <div class="comparison-note">{{ row.note }}</div>
+                  {% endif %}
+                </td>
+                <td>{{ row.predicted }}</td>
+                <td>{{ row.actual }}</td>
+                <td class="text-end">
+                  <span class="comparison-points">+{{ row.points }} / {{ row.max_points }}</span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 {% endif %}
