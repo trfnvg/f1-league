@@ -101,6 +101,25 @@ class EventPhoto(models.Model):
         return f"Фото для {self.event}"
 
 
+class HomeResultImage(models.Model):
+    title = models.CharField("Заголовок", max_length=120, blank=True)
+    image = models.ImageField("Изображение", upload_to="home_results/", max_length=255)
+    caption = models.CharField("Подпись", max_length=220, blank=True)
+    is_active = models.BooleanField("Показывать на главной", default=True)
+    sort_order = models.PositiveIntegerField("Порядок", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("sort_order", "-created_at")
+        verbose_name = "Фото результатов (главная)"
+        verbose_name_plural = "Фото результатов (главная)"
+
+    def __str__(self):
+        if self.title:
+            return self.title
+        return f"Фото результатов #{self.id}"
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
     avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)

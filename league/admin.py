@@ -3,6 +3,7 @@
 from .models import (
     Event,
     EventPhoto,
+    HomeResultImage,
     Prediction,
     Result,
     Score,
@@ -43,6 +44,15 @@ class EventAdmin(admin.ModelAdmin):
         self.message_user(request, f"Пересчитано прогнозов: {total}")
 
     recalculate_scores.short_description = "Посчитать очки"
+
+
+@admin.register(HomeResultImage)
+class HomeResultImageAdmin(admin.ModelAdmin):
+    list_display = ("id", "title", "is_active", "sort_order", "created_at")
+    list_filter = ("is_active",)
+    list_editable = ("is_active", "sort_order")
+    search_fields = ("title", "caption")
+    ordering = ("sort_order", "-created_at")
 
 
 @admin.register(Result)
