@@ -28,19 +28,91 @@
     font-size: 0.92rem;
   }
 
-  .comparison-table thead th {
-    border-color: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.76);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-size: 0.72rem;
-    font-weight: 700;
-    background: rgba(255, 255, 255, 0.03);
+  .comparison-shell {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+      radial-gradient(600px 200px at 100% 0%, rgba(225, 6, 0, 0.16), transparent 70%),
+      linear-gradient(165deg, rgba(26, 35, 48, 0.9), rgba(14, 20, 29, 0.95));
+    padding: 0.9rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
 
-  .comparison-table td {
-    border-color: rgba(255, 255, 255, 0.08);
-    vertical-align: middle;
+  .comparison-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+  }
+
+  .comparison-row {
+    border-radius: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.72rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .comparison-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    border-radius: 4px;
+    opacity: 0.9;
+  }
+
+  .comparison-row-hit::before {
+    background: linear-gradient(180deg, #4ad08f, #2b8e60);
+  }
+
+  .comparison-row-partial::before {
+    background: linear-gradient(180deg, #ffc14d, #c98f24);
+  }
+
+  .comparison-row-miss::before {
+    background: linear-gradient(180deg, #ff7a72, #c0443d);
+  }
+
+  .comparison-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    margin-bottom: 0.58rem;
+  }
+
+  .comparison-category {
+    font-weight: 800;
+    letter-spacing: 0.01em;
+    font-size: 0.95rem;
+  }
+
+  .comparison-values {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .comparison-value-card {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 0.48rem 0.58rem;
+  }
+
+  .comparison-value-label {
+    color: rgba(255, 255, 255, 0.66);
+    font-size: 0.72rem;
+    margin-bottom: 0.08rem;
+  }
+
+  .comparison-value-text {
+    font-weight: 700;
+    font-size: 0.9rem;
+    word-break: break-word;
   }
 
   .comparison-status {
@@ -90,7 +162,26 @@
     border: 1px solid rgba(255, 255, 255, 0.2);
     background: rgba(255, 255, 255, 0.06);
     font-weight: 800;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .comparison-points-hit {
+    border-color: rgba(74, 208, 143, 0.48);
+    color: #b9f5d7;
+    background: rgba(74, 208, 143, 0.16);
+  }
+
+  .comparison-points-partial {
+    border-color: rgba(255, 193, 77, 0.48);
+    color: #ffe5b0;
+    background: rgba(255, 193, 77, 0.16);
+  }
+
+  .comparison-points-miss {
+    border-color: rgba(255, 122, 114, 0.45);
+    color: #ffc8c4;
+    background: rgba(255, 122, 114, 0.13);
   }
 
   .event-cover-image {
@@ -105,6 +196,10 @@
 
   @media (max-width: 768px) {
     .result-facts-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .comparison-values {
       grid-template-columns: 1fr;
     }
 
@@ -315,43 +410,41 @@
         </div>
       </div>
 
-      <div class="table-responsive">
-        <table class="table table-sm align-middle comparison-table mb-0">
-          <thead>
-            <tr>
-              <th>Категория</th>
-              <th>Твой прогноз</th>
-              <th>Факт</th>
-              <th class="text-end">Очки</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in comparison_rows %}
-              <tr>
-                <td>
-                  <div class="d-flex align-items-center gap-2">
-                    <span class="fw-semibold">{{ row.label }}</span>
-                    {% if row.status == "hit" %}
-                      <span class="comparison-status comparison-status-hit">Зачтено</span>
-                    {% elif row.status == "partial" %}
-                      <span class="comparison-status comparison-status-partial">Частично</span>
-                    {% else %}
-                      <span class="comparison-status comparison-status-miss">Мимо</span>
-                    {% endif %}
-                  </div>
-                  {% if row.note %}
-                    <div class="comparison-note">{{ row.note }}</div>
+      <div class="comparison-shell">
+        <div class="comparison-list">
+          {% for row in comparison_rows %}
+            <article class="comparison-row comparison-row-{{ row.status }}">
+              <div class="comparison-row-top">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                  <span class="comparison-category">{{ row.label }}</span>
+                  {% if row.status == "hit" %}
+                    <span class="comparison-status comparison-status-hit">Зачтено</span>
+                  {% elif row.status == "partial" %}
+                    <span class="comparison-status comparison-status-partial">Частично</span>
+                  {% else %}
+                    <span class="comparison-status comparison-status-miss">Мимо</span>
                   {% endif %}
-                </td>
-                <td>{{ row.predicted }}</td>
-                <td>{{ row.actual }}</td>
-                <td class="text-end">
-                  <span class="comparison-points">+{{ row.points }} / {{ row.max_points }}</span>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+                </div>
+                <span class="comparison-points comparison-points-{{ row.status }}">+{{ row.points }} / {{ row.max_points }}</span>
+              </div>
+
+              <div class="comparison-values">
+                <div class="comparison-value-card">
+                  <div class="comparison-value-label">Твой прогноз</div>
+                  <div class="comparison-value-text">{{ row.predicted }}</div>
+                </div>
+                <div class="comparison-value-card">
+                  <div class="comparison-value-label">Фактический результат</div>
+                  <div class="comparison-value-text">{{ row.actual }}</div>
+                </div>
+              </div>
+
+              {% if row.note %}
+                <div class="comparison-note">{{ row.note }}</div>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
       </div>
     </div>
   </div>

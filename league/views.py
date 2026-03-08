@@ -458,6 +458,7 @@ def participants(request):
                 "event_count": event_count,
                 "season_count": season_count,
                 "total_points": total_points,
+                "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
             }
         )
 
@@ -492,6 +493,7 @@ def leaderboard(request):
                 "total": totals_map.get(user.id, 0),
                 "is_leader": idx == 1,
                 "avatar_url": profile_obj.avatar.url if profile_obj and profile_obj.avatar else None,
+                "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
             }
         )
 

@@ -70,6 +70,13 @@
     letter-spacing: 0.01em;
   }
 
+  .player-name-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    min-width: 0;
+  }
+
   .race-points {
     display: inline-flex;
     align-items: center;
@@ -134,7 +141,12 @@
                     {{ r.user.username|slice:":1"|upper }}
                   {% endif %}
                 </span>
-                <span class="player-name">{{ r.user.username }}</span>
+                <span class="player-name-wrap">
+                  <span class="player-name">{{ r.user.username }}</span>
+                  {% if r.is_wpc %}
+                    <span class="wpc-badge">WPC</span>
+                  {% endif %}
+                </span>
               </a>
             </td>
             <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>

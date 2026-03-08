@@ -230,6 +230,8 @@ class SeasonScoreAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "avatar", "updated_at")
+    list_display = ("user", "is_world_predict_champion", "avatar", "updated_at")
+    list_filter = ("is_world_predict_champion",)
+    list_editable = ("is_world_predict_champion",)
     search_fields = ("user__username",)
     list_select_related = ("user",)
