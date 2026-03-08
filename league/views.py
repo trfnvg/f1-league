@@ -165,6 +165,8 @@ def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
     photos = event.photos.all()
     result_obj = getattr(event, "result", None)
+    event_time = event.race_datetime or event.deadline
+    is_past_event = event.status == Event.Status.SCORED or (event_time and event_time < timezone.now())
 
     prediction = None
     if request.user.is_authenticated:
@@ -337,6 +339,7 @@ def event_detail(request, event_id: int):
             "result_obj": result_obj,
             "factual_rows": factual_rows,
             "state": state,
+            "is_past_event": is_past_event,
             "is_locked": is_locked,
             "score": score,
             "comparison_rows": comparison_rows,
