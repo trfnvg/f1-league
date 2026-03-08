@@ -82,7 +82,21 @@
       box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
       min-height: var(--header-h);
       padding: 0;
-      transform: translateZ(0);
+      transform: translate3d(0, 0, 0);
+      transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease;
+      will-change: transform;
+    }
+
+    .site-header.is-scrolled {
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.36);
+    }
+
+    .site-header.is-hidden {
+      transform: translate3d(0, calc(-1 * var(--header-h) - 4px), 0);
+    }
+
+    body.menu-open .site-header {
+      transform: translate3d(0, 0, 0) !important;
     }
 
     .site-header > .container {
@@ -1047,5 +1061,70 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function () {
+    const header = document.querySelector(".site-header");
+    if (!header) return;
+
+    const offcanvasEl = document.getElementById("mainMenu");
+    let lastY = window.scrollY || 0;
+    let ticking = false;
+    let menuOpen = false;
+
+    const TOP_THRESHOLD = 8;
+    const HIDE_THRESHOLD = 80;
+    const DELTA = 6;
+
+    const onScroll = () => {
+      const currentY = window.scrollY || 0;
+      const diff = currentY - lastY;
+
+      if (currentY <= TOP_THRESHOLD) {
+        header.classList.remove("is-hidden");
+        header.classList.remove("is-scrolled");
+        lastY = currentY;
+        ticking = false;
+        return;
+      }
+
+      header.classList.add("is-scrolled");
+
+      if (!menuOpen) {
+        if (diff > DELTA && currentY > HIDE_THRESHOLD) {
+          header.classList.add("is-hidden");
+        } else if (diff < -DELTA) {
+          header.classList.remove("is-hidden");
+        }
+      }
+
+      lastY = currentY;
+      ticking = false;
+    };
+
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (ticking) return;
+        ticking = true;
+        window.requestAnimationFrame(onScroll);
+      },
+      { passive: true }
+    );
+
+    if (offcanvasEl) {
+      offcanvasEl.addEventListener("shown.bs.offcanvas", () => {
+        menuOpen = true;
+        document.body.classList.add("menu-open");
+        header.classList.remove("is-hidden");
+      });
+
+      offcanvasEl.addEventListener("hidden.bs.offcanvas", () => {
+        menuOpen = false;
+        document.body.classList.remove("menu-open");
+        lastY = window.scrollY || 0;
+      });
+    }
+  })();
+</script>
 </body>
 </html>

@@ -30,24 +30,6 @@
     color: #ffffff;
   }
 
-  .rank-chip.rank-1 {
-    border-color: rgba(255, 224, 147, 0.62);
-    background: linear-gradient(180deg, rgba(255, 214, 109, 0.2), rgba(255, 158, 79, 0.2));
-    color: #ffe6ad;
-  }
-
-  .rank-chip.rank-2 {
-    border-color: rgba(195, 214, 238, 0.58);
-    background: linear-gradient(180deg, rgba(191, 217, 248, 0.2), rgba(116, 147, 181, 0.2));
-    color: #deedff;
-  }
-
-  .rank-chip.rank-3 {
-    border-color: rgba(236, 173, 140, 0.6);
-    background: linear-gradient(180deg, rgba(236, 173, 140, 0.2), rgba(189, 114, 81, 0.2));
-    color: #ffd5bc;
-  }
-
   .col-player {
     min-width: 220px;
   }
@@ -60,8 +42,8 @@
   }
 
   .table-avatar {
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.25);
@@ -70,7 +52,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.84rem;
+    font-size: 1rem;
     font-weight: 800;
     flex: 0 0 auto;
   }
@@ -103,13 +85,10 @@
     color: rgba(255, 255, 255, 0.94);
   }
 
-  .leaderboard-table tbody tr.is-leader td {
-    border-bottom-color: rgba(255, 226, 157, 0.26);
-  }
-
-  .leaderboard-table tbody tr.is-leader .sticky-col,
-  .leaderboard-table tbody tr.is-leader .sticky-col-2 {
-    background: rgba(37, 39, 44, 0.98);
+  .leaderboard-table .sticky-col {
+    z-index: 7;
+    background: rgba(24, 31, 42, 0.98);
+    box-shadow: 8px 0 14px rgba(0, 0, 0, 0.24);
   }
 </style>
 
@@ -133,7 +112,7 @@
       <thead>
         <tr>
           <th class="sticky-col col-rank">#</th>
-          <th class="sticky-col-2 col-player">Игрок</th>
+          <th class="col-player">Игрок</th>
           <th class="col-total text-center">Итого</th>
           {% for e in events %}
             <th class="text-center">R{{ e.round_number }}</th>
@@ -142,11 +121,11 @@
       </thead>
       <tbody>
         {% for r in rows %}
-          <tr class="{% if r.is_leader %}is-leader{% endif %}">
+          <tr>
             <td class="sticky-col col-rank">
-              <span class="rank-chip {% if r.rank == 1 %}rank-1{% elif r.rank == 2 %}rank-2{% elif r.rank == 3 %}rank-3{% endif %}">{{ r.rank }}</span>
+              <span class="rank-chip">{{ r.rank }}</span>
             </td>
-            <td class="sticky-col-2 col-player fw-semibold">
+            <td class="col-player fw-semibold">
               <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link player-cell">
                 <span class="table-avatar">
                   {% if r.avatar_url %}
