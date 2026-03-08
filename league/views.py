@@ -9,7 +9,37 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import AvatarUploadForm, PredictionForm, RegisterForm, SeasonPredictionForm
-from .models import Event, HomeResultImage, Prediction, Score, SeasonPrediction, SeasonResult, SeasonScore, UserProfile
+from .models import (
+    DRIVER_CHOICES,
+    Event,
+    HomeResultImage,
+    Prediction,
+    Score,
+    SeasonPrediction,
+    SeasonResult,
+    SeasonScore,
+    UserProfile,
+)
+
+
+DRIVER_LABELS = dict(DRIVER_CHOICES)
+
+
+def _normalize(value):
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
+def _driver_label(value):
+    if not value:
+        return "—"
+    return DRIVER_LABELS.get(value, value)
+
+
+def _driver_of_day_values(result):
+    values = result.driver_of_day_multiple or ([result.driver_of_day] if result.driver_of_day else [])
+    return [value for value in values if value]
 
 
 def home(request):
@@ -134,6 +164,7 @@ def register(request):
 def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
     photos = event.photos.all()
+    result_obj = getattr(event, "result", None)
 
     prediction = None
     if request.user.is_authenticated:
@@ -176,6 +207,125 @@ def event_detail(request, event_id: int):
     if request.user.is_authenticated:
         score = Score.objects.filter(event=event, user=request.user).first()
 
+    factual_rows = []
+    if result_obj:
+        driver_of_day_values = _driver_of_day_values(result_obj)
+        factual_rows = [
+            {"label": "P1", "value": _driver_label(result_obj.p1)},
+            {"label": "P2", "value": _driver_label(result_obj.p2)},
+            {"label": "P3", "value": _driver_label(result_obj.p3)},
+            {"label": "Поул", "value": _driver_label(result_obj.pole)},
+            {"label": "Fastest Lap", "value": _driver_label(result_obj.fastest_lap)},
+            {
+                "label": "Driver of the Day",
+                "value": ", ".join(_driver_label(value) for value in driver_of_day_values) or "—",
+            },
+            {"label": "Safety Car", "value": result_obj.safety_car_count},
+            {"label": "DNF", "value": result_obj.dnf_count},
+        ]
+
+    comparison_rows = []
+    comparison_total = 0
+    if prediction and result_obj:
+        actual_podium = {
+            "p1": _normalize(result_obj.p1),
+            "p2": _normalize(result_obj.p2),
+            "p3": _normalize(result_obj.p3),
+        }
+        actual_top3 = {value for value in actual_podium.values() if value}
+        actual_driver_of_day = {_normalize(value) for value in _driver_of_day_values(result_obj)}
+
+        def add_row(label, predicted, actual, points, max_points, status, note=""):
+            nonlocal comparison_total
+            comparison_total += points
+            comparison_rows.append(
+                {
+                    "label": label,
+                    "predicted": predicted,
+                    "actual": actual,
+                    "points": points,
+                    "max_points": max_points,
+                    "status": status,
+                    "note": note,
+                }
+            )
+
+        for field_name, label, exact_points in (("p1", "P1", 10), ("p2", "P2", 6), ("p3", "P3", 4)):
+            predicted_code = getattr(prediction, field_name)
+            predicted_norm = _normalize(predicted_code)
+            actual_norm = actual_podium[field_name]
+            points = 0
+            status = "miss"
+            note = ""
+
+            if predicted_norm and predicted_norm == actual_norm:
+                points = exact_points
+                status = "hit"
+            elif predicted_norm and predicted_norm in actual_top3:
+                points = 3
+                status = "partial"
+                note = "Угадан пилот в топ-3, но не точная позиция."
+
+            add_row(
+                label=label,
+                predicted=_driver_label(predicted_code),
+                actual=_driver_label(getattr(result_obj, field_name)),
+                points=points,
+                max_points=exact_points,
+                status=status,
+                note=note,
+            )
+
+        def add_exact_driver_row(label, predicted_code, actual_code, max_points):
+            points = max_points if _normalize(predicted_code) == _normalize(actual_code) else 0
+            add_row(
+                label=label,
+                predicted=_driver_label(predicted_code),
+                actual=_driver_label(actual_code),
+                points=points,
+                max_points=max_points,
+                status="hit" if points else "miss",
+            )
+
+        add_exact_driver_row("Поул", prediction.pole, result_obj.pole, 4)
+        add_exact_driver_row("Fastest Lap", prediction.fastest_lap, result_obj.fastest_lap, 3)
+
+        predicted_dod = _normalize(prediction.driver_of_day)
+        dod_points = 3 if predicted_dod and predicted_dod in actual_driver_of_day else 0
+        add_row(
+            label="Driver of the Day",
+            predicted=_driver_label(prediction.driver_of_day),
+            actual=", ".join(_driver_label(value) for value in _driver_of_day_values(result_obj)) or "—",
+            points=dod_points,
+            max_points=3,
+            status="hit" if dod_points else "miss",
+        )
+
+        add_row(
+            label="Safety Car",
+            predicted=prediction.safety_car_count,
+            actual=result_obj.safety_car_count,
+            points=5 if prediction.safety_car_count == result_obj.safety_car_count else 0,
+            max_points=5,
+            status="hit" if prediction.safety_car_count == result_obj.safety_car_count else "miss",
+        )
+        add_row(
+            label="DNF",
+            predicted=prediction.dnf_count,
+            actual=result_obj.dnf_count,
+            points=5 if prediction.dnf_count == result_obj.dnf_count else 0,
+            max_points=5,
+            status="hit" if prediction.dnf_count == result_obj.dnf_count else "miss",
+        )
+        add_row(
+            label="Crazy Prediction",
+            predicted=prediction.crazy_prediction or "—",
+            actual="Засчитано судьей" if prediction.crazy_prediction_approved else "Не засчитано судьей",
+            points=5 if prediction.crazy_prediction_approved else 0,
+            max_points=5,
+            status="hit" if prediction.crazy_prediction_approved else "miss",
+        )
+
     return render(
         request,
         "event_detail_v2.html",
@@ -184,9 +334,13 @@ def event_detail(request, event_id: int):
             "photos": photos,
             "form": form,
             "prediction": prediction,
+            "result_obj": result_obj,
+            "factual_rows": factual_rows,
             "state": state,
             "is_locked": is_locked,
             "score": score,
+            "comparison_rows": comparison_rows,
+            "comparison_total": comparison_total,
         },
     )
 
