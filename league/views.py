@@ -13,9 +13,30 @@ from .models import Event, HomeResultImage, Prediction, Score, SeasonPrediction,
 
 
 def home(request):
-    events = Event.objects.all()
+    now = timezone.now()
+    events = list(Event.objects.all())
+    upcoming_events = []
+    past_events = []
+
+    for event in events:
+        event_time = event.race_datetime or event.deadline
+        is_past = event.status == Event.Status.SCORED or (event_time and event_time < now)
+        if is_past:
+            past_events.append(event)
+        else:
+            upcoming_events.append(event)
+
     result_images = list(HomeResultImage.objects.filter(is_active=True))
-    return render(request, "home.html", {"events": events, "result_images": result_images})
+    return render(
+        request,
+        "home.html",
+        {
+            "upcoming_events": upcoming_events,
+            "past_events": past_events,
+            "total_events": len(events),
+            "result_images": result_images,
+        },
+    )
 
 
 def season_predictions(request):
