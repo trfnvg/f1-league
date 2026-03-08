@@ -168,6 +168,7 @@ class Result(models.Model):
     pole = models.CharField("Пол-позиция (факт)", max_length=50, choices=DRIVER_CHOICES)
     fastest_lap = models.CharField("Fastest Lap (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
     driver_of_day = models.CharField("Driver of the Day (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
+    driver_of_day_multiple = models.JSONField("Driver of the Day (факт, несколько)", default=list, blank=True)
     safety_car_count = models.PositiveSmallIntegerField("Количество Safety Car (факт)", default=0)
     dnf_count = models.PositiveSmallIntegerField("Количество DNF (факт)", default=0)
 

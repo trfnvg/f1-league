@@ -1,6 +1,8 @@
-﻿from django.contrib import admin
+﻿from django import forms
+from django.contrib import admin
 
 from .models import (
+    DRIVER_CHOICES,
     Event,
     EventPhoto,
     HomeResultImage,
@@ -15,6 +17,58 @@ from .models import (
 from .scoring import calculate_event_scores, calculate_season_scores
 
 
+class ResultAdminForm(forms.ModelForm):
+    driver_of_day_multi = forms.MultipleChoiceField(
+        label="Driver of the Day (факт, можно несколько)",
+        required=False,
+        choices=DRIVER_CHOICES,
+        widget=forms.SelectMultiple(attrs={"size": 8}),
+        help_text="Выбери одного или нескольких пилотов.",
+    )
+
+    class Meta:
+        model = Result
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        initial_values = []
+        if self.instance and self.instance.pk:
+            initial_values = list(self.instance.driver_of_day_multiple or [])
+            if not initial_values and self.instance.driver_of_day:
+                initial_values = [self.instance.driver_of_day]
+        self.fields["driver_of_day_multi"].initial = initial_values
+
+        # Legacy single field is kept for compatibility and backfill
+        self.fields["driver_of_day"].widget = forms.HiddenInput()
+        self.fields["driver_of_day"].required = False
+        self.fields["driver_of_day_multiple"].widget = forms.HiddenInput()
+        self.fields["driver_of_day_multiple"].required = False
+
+    def clean_driver_of_day_multi(self):
+        values = self.cleaned_data.get("driver_of_day_multi") or []
+        unique_values = []
+        seen = set()
+        for value in values:
+            if value and value not in seen:
+                seen.add(value)
+                unique_values.append(value)
+        return unique_values
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        selected = self.cleaned_data.get("driver_of_day_multi") or []
+        instance.driver_of_day_multiple = selected
+        instance.driver_of_day = selected[0] if selected else ""
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+
+        return instance
+
+
 class EventPhotoInline(admin.TabularInline):
     model = EventPhoto
     extra = 1
@@ -22,6 +76,7 @@ class EventPhotoInline(admin.TabularInline):
 
 class ResultInline(admin.StackedInline):
     model = Result
+    form = ResultAdminForm
     extra = 0
     max_num = 1
 
@@ -57,6 +112,7 @@ class HomeResultImageAdmin(admin.ModelAdmin):
 
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
+    form = ResultAdminForm
     list_display = (
         "event",
         "p1",
@@ -64,12 +120,19 @@ class ResultAdmin(admin.ModelAdmin):
         "p3",
         "pole",
         "fastest_lap",
-        "driver_of_day",
+        "driver_of_day_multiple_display",
         "safety_car_count",
         "dnf_count",
     )
     search_fields = ("event__name",)
     list_select_related = ("event",)
+
+    def driver_of_day_multiple_display(self, obj):
+        values = obj.driver_of_day_multiple or ([obj.driver_of_day] if obj.driver_of_day else [])
+        labels = dict(DRIVER_CHOICES)
+        return ", ".join(labels.get(value, value) for value in values) if values else "-"
+
+    driver_of_day_multiple_display.short_description = "Driver of the Day"
 
 
 @admin.register(Prediction)
