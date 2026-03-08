@@ -13,57 +13,19 @@
     overflow: hidden;
   }
 
-  .home-results-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.7rem;
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .home-results-title {
-    font-size: 0.92rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.9);
-  }
-
   .home-results-carousel .carousel-item {
     position: relative;
-    min-height: 260px;
+    background: rgba(8, 12, 17, 0.72);
   }
 
   .home-results-image {
     width: 100%;
-    height: min(52vw, 480px);
-    min-height: 260px;
-    object-fit: cover;
+    height: min(60vw, 560px);
+    min-height: 300px;
+    object-fit: contain;
+    object-position: center;
+    background: linear-gradient(180deg, rgba(9, 13, 18, 0.92), rgba(14, 20, 28, 0.94));
     display: block;
-  }
-
-  .home-results-caption {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 0.8rem 1rem 0.95rem;
-    background: linear-gradient(180deg, transparent, rgba(10, 14, 20, 0.88));
-  }
-
-  .home-results-caption-title {
-    font-size: 1rem;
-    font-weight: 800;
-    color: #fff;
-    margin-bottom: 0.15rem;
-  }
-
-  .home-results-caption-text {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 0.9rem;
   }
 
   .home-results-carousel .carousel-control-prev,
@@ -82,38 +44,19 @@
 
   @media (max-width: 576px) {
     .home-results-image {
-      height: 260px;
-      min-height: 260px;
-    }
-
-    .home-results-caption-title {
-      font-size: 0.95rem;
+      height: 300px;
+      min-height: 300px;
     }
   }
 </style>
 
 {% if result_images %}
   <section class="home-results-shell mb-4" style="animation: card-enter 240ms ease-out both;">
-    <div class="home-results-header">
-      <div class="home-results-title">Фото результатов этапов</div>
-      <div class="deadline-chip">{{ result_images|length }} фото</div>
-    </div>
-
     <div id="homeResultsCarousel" class="carousel slide home-results-carousel" data-bs-ride="false">
       <div class="carousel-inner">
         {% for item in result_images %}
           <div class="carousel-item {% if forloop.first %}active{% endif %}">
             <img src="{{ item.image.url }}" class="home-results-image" alt="{{ item.title|default:'Результаты этапа' }}">
-            {% if item.title or item.caption %}
-              <div class="home-results-caption">
-                {% if item.title %}
-                  <div class="home-results-caption-title">{{ item.title }}</div>
-                {% endif %}
-                {% if item.caption %}
-                  <p class="home-results-caption-text">{{ item.caption }}</p>
-                {% endif %}
-              </div>
-            {% endif %}
           </div>
         {% endfor %}
       </div>
