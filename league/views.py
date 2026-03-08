@@ -9,12 +9,13 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from .forms import AvatarUploadForm, PredictionForm, RegisterForm, SeasonPredictionForm
-from .models import Event, Prediction, Score, SeasonPrediction, SeasonResult, SeasonScore, UserProfile
+from .models import Event, HomeResultImage, Prediction, Score, SeasonPrediction, SeasonResult, SeasonScore, UserProfile
 
 
 def home(request):
     events = Event.objects.all()
-    return render(request, "home.html", {"events": events})
+    result_images = list(HomeResultImage.objects.filter(is_active=True))
+    return render(request, "home.html", {"events": events, "result_images": result_images})
 
 
 def season_predictions(request):
