@@ -21,6 +21,19 @@ def _normalize(value):
     return str(value).strip().lower()
 
 
+def _driver_of_day_actual_values(result):
+    values = getattr(result, "driver_of_day_multiple", None)
+    if isinstance(values, list):
+        normalized = {_normalize(v) for v in values if _normalize(v)}
+        if normalized:
+            return normalized
+
+    legacy_value = _normalize(getattr(result, "driver_of_day", ""))
+    if legacy_value:
+        return {legacy_value}
+    return set()
+
+
 def calculate_points(pred, res):
     points = 0
     breakdown = {}
@@ -30,17 +43,28 @@ def calculate_points(pred, res):
         points += pts
         breakdown[label] = pts
 
-    if _normalize(pred.p1) == _normalize(res.p1):
-        add("P1", 10)
-    if _normalize(pred.p2) == _normalize(res.p2):
-        add("P2", 6)
-    if _normalize(pred.p3) == _normalize(res.p3):
-        add("P3", 4)
+    actual_podium = {
+        "p1": _normalize(res.p1),
+        "p2": _normalize(res.p2),
+        "p3": _normalize(res.p3),
+    }
+    actual_top3 = {value for value in actual_podium.values() if value}
+
+    for field_name, label, exact_points in (("p1", "P1", 10), ("p2", "P2", 6), ("p3", "P3", 4)):
+        predicted_value = _normalize(getattr(pred, field_name))
+        if not predicted_value:
+            continue
+
+        if predicted_value == actual_podium[field_name]:
+            add(label, exact_points)
+        elif predicted_value in actual_top3:
+            add(f"{label} (Top-3)", 3)
     if _normalize(pred.pole) == _normalize(res.pole):
         add("Pole Position", 4)
     if _normalize(pred.fastest_lap) == _normalize(res.fastest_lap):
         add("Fastest Lap", 3)
-    if _normalize(pred.driver_of_day) == _normalize(res.driver_of_day):
+    predicted_driver_of_day = _normalize(pred.driver_of_day)
+    if predicted_driver_of_day and predicted_driver_of_day in _driver_of_day_actual_values(res):
         add("Driver of the Day", 3)
     if pred.crazy_prediction_approved:
         add("Crazy Prediction", 5)
