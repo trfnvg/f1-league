@@ -309,6 +309,10 @@
                   <div class="prediction-item"><div class="prediction-item-label">P2</div><div class="prediction-item-value">{{ row.prediction.get_p2_display }}</div></div>
                   <div class="prediction-item"><div class="prediction-item-label">P3</div><div class="prediction-item-value">{{ row.prediction.get_p3_display }}</div></div>
                   <div class="prediction-item"><div class="prediction-item-label">Поул</div><div class="prediction-item-value">{{ row.prediction.get_pole_display }}</div></div>
+                  {% if row.event.has_sprint %}
+                    <div class="prediction-item"><div class="prediction-item-label">Квалификация к спринту</div><div class="prediction-item-value">{{ row.prediction.get_sprint_qualifying_winner_display }}</div></div>
+                    <div class="prediction-item"><div class="prediction-item-label">Победитель спринта</div><div class="prediction-item-value">{{ row.prediction.get_sprint_winner_display }}</div></div>
+                  {% endif %}
                   <div class="prediction-item"><div class="prediction-item-label">Fastest Lap</div><div class="prediction-item-value">{{ row.prediction.get_fastest_lap_display }}</div></div>
                   <div class="prediction-item"><div class="prediction-item-label">Driver of the Day</div><div class="prediction-item-value">{{ row.prediction.get_driver_of_day_display }}</div></div>
                   <div class="prediction-item"><div class="prediction-item-label">Safety Car</div><div class="prediction-item-value">{{ row.prediction.safety_car_count }}</div></div>
