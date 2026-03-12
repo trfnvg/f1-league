@@ -306,6 +306,22 @@
             </div>
             {{ form.pole }}
           </div>
+          {% if event.has_sprint %}
+            <div class="col-md-6">
+              <div class="field-label-row">
+                <label class="form-label mb-0">Квалификация к спринту</label>
+                <span class="field-points-badge">3 очка</span>
+              </div>
+              {{ form.sprint_qualifying_winner }}
+            </div>
+            <div class="col-md-6">
+              <div class="field-label-row">
+                <label class="form-label mb-0">Победитель спринта</label>
+                <span class="field-points-badge">5 очков</span>
+              </div>
+              {{ form.sprint_winner }}
+            </div>
+          {% endif %}
           <div class="col-md-6">
             <div class="field-label-row">
               <label class="form-label mb-0">Fastest Lap</label>

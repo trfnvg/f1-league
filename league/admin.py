@@ -83,11 +83,11 @@ class ResultInline(admin.StackedInline):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ("round_number", "name", "status", "deadline")
-    list_filter = ("status",)
+    list_display = ("round_number", "name", "has_sprint", "status", "deadline")
+    list_filter = ("has_sprint", "status")
     search_fields = ("name",)
     inlines = [EventPhotoInline, ResultInline]
-    fields = ("name", "round_number", "status", "deadline", "race_datetime", "cover_image")
+    fields = ("name", "round_number", "has_sprint", "status", "deadline", "race_datetime", "cover_image")
 
     actions = ["recalculate_scores"]
 
@@ -119,6 +119,8 @@ class ResultAdmin(admin.ModelAdmin):
         "p2",
         "p3",
         "pole",
+        "sprint_qualifying_winner",
+        "sprint_winner",
         "fastest_lap",
         "driver_of_day_multiple_display",
         "safety_car_count",
@@ -144,6 +146,8 @@ class PredictionAdmin(admin.ModelAdmin):
         "p2",
         "p3",
         "pole",
+        "sprint_qualifying_winner",
+        "sprint_winner",
         "fastest_lap",
         "driver_of_day",
         "safety_car_count",

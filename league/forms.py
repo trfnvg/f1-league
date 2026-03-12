@@ -18,6 +18,8 @@ class PredictionForm(forms.ModelForm):
             "p2",
             "p3",
             "pole",
+            "sprint_qualifying_winner",
+            "sprint_winner",
             "fastest_lap",
             "driver_of_day",
             "safety_car_count",
@@ -29,6 +31,8 @@ class PredictionForm(forms.ModelForm):
             "p2": forms.Select(attrs={"class": "form-select"}),
             "p3": forms.Select(attrs={"class": "form-select"}),
             "pole": forms.Select(attrs={"class": "form-select"}),
+            "sprint_qualifying_winner": forms.Select(attrs={"class": "form-select"}),
+            "sprint_winner": forms.Select(attrs={"class": "form-select"}),
             "fastest_lap": forms.Select(attrs={"class": "form-select"}),
             "driver_of_day": forms.Select(attrs={"class": "form-select"}),
             "safety_car_count": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
@@ -43,9 +47,28 @@ class PredictionForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        event = kwargs.pop("event", None)
         super().__init__(*args, **kwargs)
-        for field_name in ("p1", "p2", "p3", "pole", "fastest_lap", "driver_of_day"):
-            _set_empty_select_option(self.fields[field_name])
+        for field_name in (
+            "p1",
+            "p2",
+            "p3",
+            "pole",
+            "sprint_qualifying_winner",
+            "sprint_winner",
+            "fastest_lap",
+            "driver_of_day",
+        ):
+            if field_name in self.fields:
+                _set_empty_select_option(self.fields[field_name])
+
+        if event and not event.has_sprint:
+            self.fields.pop("sprint_qualifying_winner", None)
+            self.fields.pop("sprint_winner", None)
+        elif event and event.has_sprint:
+            self.fields["sprint_qualifying_winner"].required = True
+            self.fields["sprint_winner"].required = True
+
         self.fields["fastest_lap"].required = True
         self.fields["driver_of_day"].required = True
 

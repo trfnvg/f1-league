@@ -37,6 +37,7 @@ def _driver_of_day_actual_values(result):
 def calculate_points(pred, res):
     points = 0
     breakdown = {}
+    is_sprint_weekend = bool(getattr(getattr(res, "event", None), "has_sprint", False))
 
     def add(label, pts):
         nonlocal points
@@ -61,6 +62,10 @@ def calculate_points(pred, res):
             add(f"{label} (Top-3)", 3)
     if _normalize(pred.pole) == _normalize(res.pole):
         add("Pole Position", 4)
+    if is_sprint_weekend and _normalize(pred.sprint_qualifying_winner) == _normalize(res.sprint_qualifying_winner):
+        add("Sprint Qualifying Winner", 3)
+    if is_sprint_weekend and _normalize(pred.sprint_winner) == _normalize(res.sprint_winner):
+        add("Sprint Winner", 5)
     if _normalize(pred.fastest_lap) == _normalize(res.fastest_lap):
         add("Fastest Lap", 3)
     predicted_driver_of_day = _normalize(pred.driver_of_day)

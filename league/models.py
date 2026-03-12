@@ -56,6 +56,7 @@ class Event(models.Model):
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
+    has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
 
     class Status(models.TextChoices):
@@ -149,6 +150,20 @@ class Prediction(models.Model):
     p2 = models.CharField("P2", max_length=50, choices=DRIVER_CHOICES)
     p3 = models.CharField("P3", max_length=50, choices=DRIVER_CHOICES)
     pole = models.CharField("Пол-позиция", max_length=50, choices=DRIVER_CHOICES)
+    sprint_qualifying_winner = models.CharField(
+        "Победитель квалификации к спринту",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
+    )
+    sprint_winner = models.CharField(
+        "Победитель спринта",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
+    )
     fastest_lap = models.CharField("Fastest Lap", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
     driver_of_day = models.CharField("Driver of the Day", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
     crazy_prediction = models.TextField("Crazy Prediction", blank=True, default="")
@@ -175,6 +190,20 @@ class Result(models.Model):
     p2 = models.CharField("P2 (факт)", max_length=50, choices=DRIVER_CHOICES)
     p3 = models.CharField("P3 (факт)", max_length=50, choices=DRIVER_CHOICES)
     pole = models.CharField("Пол-позиция (факт)", max_length=50, choices=DRIVER_CHOICES)
+    sprint_qualifying_winner = models.CharField(
+        "Победитель квалификации к спринту (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
+    )
+    sprint_winner = models.CharField(
+        "Победитель спринта (факт)",
+        max_length=50,
+        choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
+    )
     fastest_lap = models.CharField("Fastest Lap (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
     driver_of_day = models.CharField("Driver of the Day (факт)", max_length=50, choices=DRIVER_CHOICES, blank=True, default="")
     driver_of_day_multiple = models.JSONField("Driver of the Day (факт, несколько)", default=list, blank=True)

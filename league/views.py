@@ -192,7 +192,7 @@ def event_detail(request, event_id: int):
                 messages.error(request, "Дедлайн прошел, прогнозы закрыты.")
             return redirect("league:event_detail", event_id=event.id)
 
-        form = PredictionForm(request.POST, instance=prediction)
+        form = PredictionForm(request.POST, instance=prediction, event=event)
         if form.is_valid():
             new_prediction = form.save(commit=False)
             new_prediction.user = request.user
@@ -203,7 +203,7 @@ def event_detail(request, event_id: int):
     else:
         state = event.voting_state()
         is_locked = state != "open"
-        form = PredictionForm(instance=prediction)
+        form = PredictionForm(instance=prediction, event=event)
 
     score = None
     if request.user.is_authenticated:
@@ -225,6 +225,13 @@ def event_detail(request, event_id: int):
             {"label": "Safety Car", "value": result_obj.safety_car_count},
             {"label": "DNF", "value": result_obj.dnf_count},
         ]
+        if event.has_sprint:
+            factual_rows.extend(
+                [
+                    {"label": "Квалификация к спринту", "value": _driver_label(result_obj.sprint_qualifying_winner)},
+                    {"label": "Спринт", "value": _driver_label(result_obj.sprint_winner)},
+                ]
+            )
 
     comparison_rows = []
     comparison_total = 0
@@ -279,7 +286,9 @@ def event_detail(request, event_id: int):
             )
 
         def add_exact_driver_row(label, predicted_code, actual_code, max_points):
-            points = max_points if _normalize(predicted_code) == _normalize(actual_code) else 0
+            predicted_norm = _normalize(predicted_code)
+            actual_norm = _normalize(actual_code)
+            points = max_points if predicted_norm and actual_norm and predicted_norm == actual_norm else 0
             add_row(
                 label=label,
                 predicted=_driver_label(predicted_code),
@@ -290,6 +299,14 @@ def event_detail(request, event_id: int):
             )
 
         add_exact_driver_row("Поул", prediction.pole, result_obj.pole, 4)
+        if event.has_sprint:
+            add_exact_driver_row(
+                "Квалификация к спринту",
+                prediction.sprint_qualifying_winner,
+                result_obj.sprint_qualifying_winner,
+                3,
+            )
+            add_exact_driver_row("Спринт", prediction.sprint_winner, result_obj.sprint_winner, 5)
         add_exact_driver_row("Fastest Lap", prediction.fastest_lap, result_obj.fastest_lap, 3)
 
         predicted_dod = _normalize(prediction.driver_of_day)
