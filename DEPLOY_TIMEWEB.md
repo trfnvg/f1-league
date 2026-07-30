@@ -42,8 +42,29 @@
 | `ALLOWED_HOSTS` или `DJANGO_ALLOWED_HOSTS` | Да | Домен приложения Timeweb, например: `your-app-12345.twc1.net` или `*` для любого хоста |
 | `DEBUG` | Нет | В проде лучше `False` |
 | `DATABASE_URL` | Рекомендуется в проде | На App Platform файловая система часто временная/только для чтения — SQLite может не работать. Создай PostgreSQL в панели Timeweb и подставь строку подключения. |
+| `TELEGRAM_BOT_TOKEN` | Для Telegram | Токен от `@BotFather`. Храни только в переменных окружения, не добавляй в Git. |
+| `TELEGRAM_BOT_USERNAME` | Нет | Username бота без `@`, например `f1_predictions_bot`. Если не указать, сайт определит его через Telegram API. |
+| `SITE_URL` | Для кнопки в сообщении | Публичный адрес сайта, например `https://f1.example.com`. |
 
 Важно: в `ALLOWED_HOSTS` должен быть **реальный хост**, который отдаёт Timeweb (вид в адресной строке после деплоя). Иначе Django вернёт 500 (DisallowedHost).
+
+### Telegram-уведомления
+
+После добавления `TELEGRAM_BOT_TOKEN` Docker-запуск из `start.sh` автоматически запускает фоновый процесс:
+
+```bash
+python manage.py telegram_bot_worker --interval 60
+```
+
+Он получает команды бота и раз в минуту проверяет этапы, до дедлайна которых осталось не более трёх часов. Webhook и отдельный cron для этой реализации не нужны.
+
+Если приложение запускается без Docker, добавь запуск воркера в Run command перед gunicorn:
+
+```bash
+python manage.py migrate --noinput; python manage.py collectstatic --noinput; python manage.py telegram_bot_worker --interval 60 & gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}
+```
+
+Пользователь подключает Telegram кнопкой в своём профиле. В Telegram также доступны команды `/stop` и `/resume`.
 
 ### 3. Рабочая директория
 

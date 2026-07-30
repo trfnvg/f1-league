@@ -1,8 +1,10 @@
 ﻿from datetime import datetime
 from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Count, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -20,6 +22,7 @@ from .models import (
     SeasonScore,
     UserProfile,
 )
+from .telegram_bot import bot_is_configured, get_bot_username
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -159,6 +162,21 @@ def register(request):
         form = RegisterForm()
 
     return render(request, "registration/register.html", {"form": form, "next": next_url})
+
+
+@login_required(login_url="login")
+def connect_telegram(request):
+    bot_username = get_bot_username()
+    if not bot_username:
+        messages.error(request, "Telegram-бот ещё не настроен администрацией сайта.")
+        return redirect("league:player_profile", user_id=request.user.id)
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    connect_url = (
+        f"https://t.me/{bot_username}"
+        f"?start={profile.telegram_link_token}"
+    )
+    return redirect(connect_url)
 
 
 def event_detail(request, event_id: int):
@@ -440,6 +458,7 @@ def player_profile(request, user_id: int):
             "profile_obj": profile_obj,
             "can_edit_avatar": can_edit_avatar,
             "avatar_form": avatar_form,
+            "telegram_bot_configured": bot_is_configured(),
         },
     )
 

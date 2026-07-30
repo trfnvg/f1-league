@@ -262,6 +262,22 @@
       </form>
     {% endif %}
 
+    {% if can_edit_avatar and telegram_bot_configured %}
+      <div class="telegram-connect-card">
+        <div>
+          <div class="telegram-connect-title">Telegram-уведомления</div>
+          {% if profile_obj.telegram_chat_id %}
+            <div class="telegram-connect-note">Telegram подключён. Напоминания включены.</div>
+          {% else %}
+            <div class="telegram-connect-note">Подключи бота, чтобы не пропускать дедлайны предиктов.</div>
+          {% endif %}
+        </div>
+        <a class="btn btn-primary" href="{% url 'league:telegram_connect' %}">
+          {% if profile_obj.telegram_chat_id %}Переподключить{% else %}Подключить Telegram{% endif %}
+        </a>
+      </div>
+    {% endif %}
+
     <div class="stats-grid">
       <div class="stat-box">
         <div class="stat-label">Общие очки</div>

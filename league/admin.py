@@ -12,6 +12,8 @@ from .models import (
     SeasonPrediction,
     SeasonResult,
     SeasonScore,
+    TelegramBotState,
+    TelegramReminder,
     UserProfile,
 )
 from .scoring import calculate_event_scores, calculate_season_scores
@@ -274,8 +276,29 @@ class SeasonScoreAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "is_world_predict_champion", "avatar", "updated_at")
-    list_filter = ("is_world_predict_champion",)
+    list_display = (
+        "user",
+        "is_world_predict_champion",
+        "telegram_chat_id",
+        "telegram_notifications",
+        "avatar",
+        "updated_at",
+    )
+    list_filter = ("is_world_predict_champion", "telegram_notifications")
     list_editable = ("is_world_predict_champion",)
     search_fields = ("user__username",)
     list_select_related = ("user",)
+
+
+@admin.register(TelegramReminder)
+class TelegramReminderAdmin(admin.ModelAdmin):
+    list_display = ("event", "user", "sent_at")
+    list_filter = ("event",)
+    search_fields = ("event__name", "user__username")
+    list_select_related = ("event", "user")
+
+
+@admin.register(TelegramBotState)
+class TelegramBotStateAdmin(admin.ModelAdmin):
+    list_display = ("key", "update_offset", "updated_at")
+    readonly_fields = ("key", "updated_at")
