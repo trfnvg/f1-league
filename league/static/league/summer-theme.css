@@ -1,0 +1,702 @@
+:root {
+  --f1-red: #ff5a3c;
+  --f1-red-soft: rgba(255, 90, 60, 0.18);
+  --ink-1: #183246;
+  --ink-2: #647786;
+  --line-1: rgba(40, 82, 101, 0.13);
+  --line-2: rgba(40, 82, 101, 0.24);
+  --surface-0: #fff9eb;
+  --surface-1: #ffffff;
+  --surface-2: #fff3d5;
+  --surface-3: #dff4ee;
+  --summer-sun: #ffc84a;
+  --summer-coral: #ff7357;
+  --summer-teal: #16857f;
+  --summer-sky: #58b8d9;
+  --summer-shadow: 0 18px 50px rgba(105, 79, 36, 0.12);
+}
+
+body.summer-theme {
+  color: var(--ink-1);
+  background:
+    radial-gradient(760px 420px at 90% -5%, rgba(255, 202, 78, 0.48), transparent 68%),
+    radial-gradient(660px 420px at -8% 26%, rgba(86, 193, 190, 0.2), transparent 70%),
+    radial-gradient(620px 360px at 78% 78%, rgba(255, 132, 98, 0.14), transparent 72%),
+    linear-gradient(180deg, #fffdf6 0%, #fff8e8 48%, #f7fbf4 100%);
+}
+
+body.summer-theme::before {
+  background:
+    radial-gradient(circle at center, rgba(255, 190, 53, 0.18) 0 1.5px, transparent 1.8px),
+    linear-gradient(112deg, rgba(27, 129, 125, 0.035) 0 1px, transparent 1px 100%);
+  background-size: 26px 26px, 240px 240px;
+  opacity: 0.5;
+}
+
+body.summer-theme::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  top: 92px;
+  right: clamp(-84px, -4vw, -40px);
+  width: 210px;
+  height: 210px;
+  border: 1px solid rgba(255, 183, 41, 0.2);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 26px rgba(255, 196, 65, 0.05),
+    0 0 0 56px rgba(255, 196, 65, 0.035);
+  pointer-events: none;
+}
+
+body.summer-theme a {
+  color: #d94a31;
+}
+
+body.summer-theme a:hover {
+  color: #b73722;
+}
+
+body.summer-theme .site-header {
+  background: rgba(255, 253, 247, 0.88);
+  border-bottom: 1px solid rgba(238, 147, 47, 0.26);
+  box-shadow: 0 10px 30px rgba(99, 74, 26, 0.09);
+  backdrop-filter: blur(16px) saturate(135%);
+  -webkit-backdrop-filter: blur(16px) saturate(135%);
+}
+
+body.summer-theme .site-header > .container {
+  flex-wrap: nowrap;
+}
+
+body.summer-theme .site-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 -1px;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--summer-sun),
+    var(--summer-coral) 42%,
+    var(--summer-teal) 78%,
+    transparent
+  );
+}
+
+body.summer-theme .site-header.is-scrolled {
+  background: rgba(255, 253, 247, 0.96);
+  box-shadow: 0 14px 34px rgba(99, 74, 26, 0.13);
+}
+
+body.summer-theme .site-menu-btn {
+  color: #275066;
+  border-color: rgba(32, 91, 111, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 5px 15px rgba(77, 66, 40, 0.07);
+}
+
+body.summer-theme .site-menu-btn:hover,
+body.summer-theme .site-menu-btn:focus,
+body.summer-theme .site-menu-btn:active {
+  color: #17394c !important;
+  border-color: rgba(255, 113, 78, 0.4) !important;
+  background: #fff7df !important;
+}
+
+body.summer-theme .brand-f1 {
+  color: var(--summer-coral);
+  text-shadow: 0 3px 12px rgba(255, 108, 79, 0.18);
+}
+
+body.summer-theme .brand-text {
+  color: #21465a;
+}
+
+body.summer-theme .nav-chip {
+  color: #275066;
+  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(32, 91, 111, 0.15);
+  box-shadow: 0 4px 14px rgba(77, 66, 40, 0.05);
+}
+
+body.summer-theme .nav-chip:hover,
+body.summer-theme .nav-chip:focus,
+body.summer-theme .nav-chip:active {
+  color: #183b4e;
+  background: #fff2c9;
+  border-color: rgba(238, 160, 53, 0.38);
+}
+
+body.summer-theme .nav-chip-danger {
+  color: #bc402e;
+  background: #fff0eb;
+  border-color: rgba(220, 75, 50, 0.2);
+}
+
+body.summer-theme .section-title,
+body.summer-theme .auth-title,
+body.summer-theme .profile-name {
+  color: #193d52;
+}
+
+body.summer-theme .section-title::after {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 4px;
+  margin-top: 0.46rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--summer-coral), var(--summer-sun));
+}
+
+body.summer-theme .glass-panel {
+  border-color: rgba(46, 100, 111, 0.12);
+  background:
+    radial-gradient(380px 130px at 100% 0%, rgba(255, 205, 91, 0.14), transparent 70%),
+    rgba(255, 255, 255, 0.78);
+  box-shadow: var(--summer-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+body.summer-theme .glass-panel::after {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.72), transparent 42%);
+  opacity: 0.28;
+}
+
+body.summer-theme .card {
+  border-color: rgba(52, 101, 111, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink-1);
+  box-shadow: 0 14px 38px rgba(105, 79, 36, 0.11);
+}
+
+body.summer-theme .card-hover:hover {
+  border-color: rgba(255, 139, 79, 0.34);
+  box-shadow: 0 22px 50px rgba(105, 79, 36, 0.16);
+}
+
+body.summer-theme .event-title {
+  color: #193d52 !important;
+  text-shadow: none;
+}
+
+body.summer-theme .badge.text-bg-primary {
+  color: #733614 !important;
+  background: linear-gradient(135deg, #ffd363, #ffb347) !important;
+  box-shadow: 0 5px 14px rgba(237, 161, 41, 0.22);
+}
+
+body.summer-theme .badge.text-bg-success {
+  background: var(--summer-teal) !important;
+}
+
+body.summer-theme .btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #ff7b55, #ef563c);
+  border-color: #ef6347;
+  box-shadow: 0 9px 20px rgba(230, 80, 51, 0.18);
+}
+
+body.summer-theme .btn-primary:hover,
+body.summer-theme .btn-primary:focus,
+body.summer-theme .btn-primary:active {
+  background: linear-gradient(135deg, #f66b48, #d9442e) !important;
+  border-color: #dc4a33 !important;
+  box-shadow: 0 12px 24px rgba(230, 80, 51, 0.23) !important;
+}
+
+body.summer-theme .btn-outline-primary {
+  color: #cf4e36;
+  border-color: rgba(226, 83, 55, 0.46);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+body.summer-theme .btn-outline-primary:hover,
+body.summer-theme .btn-outline-primary:focus,
+body.summer-theme .btn-outline-primary:active {
+  color: #9f311f;
+  border-color: rgba(226, 83, 55, 0.62);
+  background: #fff0e9;
+}
+
+body.summer-theme .open-event-btn {
+  color: #17645f;
+  background: linear-gradient(135deg, #e1f5e9, #d2efe8);
+  border-color: rgba(27, 132, 122, 0.25);
+  box-shadow: 0 8px 18px rgba(22, 133, 127, 0.08);
+}
+
+body.summer-theme .open-event-btn:hover,
+body.summer-theme .open-event-btn:focus,
+body.summer-theme .open-event-btn:active {
+  color: #10534f;
+  border-color: rgba(27, 132, 122, 0.4);
+  background: linear-gradient(135deg, #d7f1e3, #bfe9df);
+}
+
+body.summer-theme .status-open {
+  color: #116b5c;
+  background: #def5e8;
+  border-color: rgba(24, 137, 111, 0.25);
+}
+
+body.summer-theme .status-locked {
+  color: #8a5a12;
+  background: #fff2c7;
+  border-color: rgba(210, 151, 34, 0.28);
+}
+
+body.summer-theme .status-scored {
+  color: #3b6878;
+  background: #e9f3f4;
+  border-color: rgba(55, 111, 127, 0.2);
+}
+
+body.summer-theme .deadline-chip {
+  color: #617684;
+  background: rgba(255, 250, 235, 0.86);
+  border-color: rgba(196, 143, 52, 0.16);
+}
+
+body.summer-theme .wpc-badge {
+  color: #875916;
+  border-color: rgba(218, 153, 36, 0.35);
+  background: linear-gradient(180deg, #fff0a9, #ffda6d);
+  box-shadow: inset 0 1px 0 #fff9d9, 0 4px 12px rgba(181, 123, 24, 0.13);
+}
+
+body.summer-theme .season-priority-banner {
+  border-color: rgba(212, 142, 37, 0.18);
+  background:
+    radial-gradient(440px 190px at 92% 5%, rgba(255, 119, 82, 0.18), transparent 68%),
+    radial-gradient(420px 170px at 4% 100%, rgba(37, 160, 150, 0.12), transparent 70%),
+    linear-gradient(135deg, #fff9df, #fff4d0);
+  box-shadow: 0 20px 48px rgba(119, 86, 29, 0.13);
+}
+
+body.summer-theme .season-priority-banner::before {
+  background: linear-gradient(90deg, var(--summer-sun), var(--summer-coral), var(--summer-teal));
+}
+
+body.summer-theme .season-banner-badge {
+  color: #8a5a16;
+  border-color: rgba(204, 142, 37, 0.24);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+body.summer-theme .season-banner-title {
+  color: #193d52;
+}
+
+body.summer-theme .season-banner-subtitle {
+  color: #667887;
+}
+
+body.summer-theme .season-banner-cta {
+  color: #fff;
+  border-color: rgba(223, 80, 52, 0.28);
+  background: linear-gradient(135deg, #ff7b55, #ef563c);
+  box-shadow: 0 12px 24px rgba(229, 86, 55, 0.17);
+}
+
+body.summer-theme .voting-status {
+  color: #36596b;
+  border-left-color: var(--summer-coral);
+  background: #fff6de;
+}
+
+body.summer-theme .score-card {
+  border-color: rgba(36, 126, 118, 0.14);
+  background: linear-gradient(145deg, #f1fbf7, #e5f5ee);
+}
+
+body.summer-theme .kpi-divider {
+  background: rgba(42, 100, 110, 0.11);
+}
+
+body.summer-theme .breakdown-box {
+  border-color: rgba(42, 100, 110, 0.11);
+  background: #fffaf0;
+}
+
+body.summer-theme .breakdown-row {
+  border-color: rgba(42, 100, 110, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+body.summer-theme .points-chip {
+  color: #176b61;
+  background: #def5e8;
+  border-color: rgba(31, 138, 113, 0.22);
+}
+
+body.summer-theme .form-control,
+body.summer-theme .form-select {
+  color: #24475a;
+  background-color: rgba(255, 255, 255, 0.92);
+  border-color: rgba(51, 105, 117, 0.2);
+}
+
+body.summer-theme .form-control:focus,
+body.summer-theme .form-select:focus {
+  color: #183d52;
+  background-color: #fff;
+  border-color: rgba(255, 110, 77, 0.68);
+  box-shadow: 0 0 0 0.2rem rgba(255, 126, 85, 0.14);
+}
+
+body.summer-theme .form-control::placeholder {
+  color: #98a7ae;
+}
+
+body.summer-theme .form-label {
+  color: #294e61;
+}
+
+body.summer-theme .field-points-badge {
+  color: #74601d;
+  border-color: rgba(211, 160, 47, 0.25);
+  background: #fff4c9;
+}
+
+body.summer-theme .auth-card {
+  border-color: rgba(53, 105, 115, 0.13);
+  background:
+    radial-gradient(340px 130px at 100% 0%, rgba(255, 202, 74, 0.18), transparent 72%),
+    rgba(255, 255, 255, 0.95);
+  box-shadow: 0 22px 54px rgba(105, 79, 36, 0.14);
+}
+
+body.summer-theme .alert {
+  border-radius: 13px;
+  border-width: 1px;
+  box-shadow: 0 10px 24px rgba(92, 71, 38, 0.08);
+}
+
+body.summer-theme .offcanvas.f1-menu {
+  background:
+    radial-gradient(400px 210px at 0% 0%, rgba(255, 199, 74, 0.25), transparent 72%),
+    linear-gradient(180deg, #fffdf7 0%, #fff8e8 100%) !important;
+  border-right-color: rgba(52, 101, 111, 0.13);
+  box-shadow: 18px 0 46px rgba(83, 70, 42, 0.16);
+}
+
+body.summer-theme .offcanvas.f1-menu .offcanvas-header {
+  border-bottom-color: rgba(52, 101, 111, 0.12);
+}
+
+body.summer-theme .menu-brand-text,
+body.summer-theme .menu-user {
+  color: #21465a;
+}
+
+body.summer-theme .menu-item,
+body.summer-theme .menu-item:visited {
+  color: #31566a;
+  border-color: rgba(52, 101, 111, 0.12);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+body.summer-theme .menu-item:hover,
+body.summer-theme .menu-item:focus,
+body.summer-theme .menu-item:active {
+  color: #173d52;
+  border-color: rgba(231, 157, 45, 0.26);
+  background: #fff1c6;
+}
+
+body.summer-theme .menu-item-danger,
+body.summer-theme .menu-item-danger:visited {
+  color: #b8402b;
+  border-color: rgba(218, 75, 49, 0.2);
+  background: #fff0ea;
+}
+
+body.summer-theme .menu-divider {
+  background: rgba(52, 101, 111, 0.12);
+}
+
+body.summer-theme footer {
+  color: #82919a;
+  border-top-color: rgba(46, 100, 111, 0.1);
+  background: rgba(255, 253, 247, 0.58);
+}
+
+/* Главная */
+body.summer-theme .home-results-shell {
+  border-color: rgba(57, 107, 116, 0.13);
+  background: #fff;
+  box-shadow: 0 22px 48px rgba(105, 79, 36, 0.14);
+}
+
+body.summer-theme .home-results-carousel .carousel-item,
+body.summer-theme .home-results-image {
+  background: linear-gradient(180deg, #fffdf8, #fff8e9);
+}
+
+/* Участники */
+body.summer-theme .participants-hero {
+  border-color: rgba(212, 142, 37, 0.16);
+  background:
+    radial-gradient(470px 190px at 100% 0%, rgba(255, 116, 81, 0.17), transparent 68%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 246, 216, 0.92));
+  box-shadow: 0 20px 46px rgba(105, 79, 36, 0.12);
+}
+
+body.summer-theme .participant-card,
+body.summer-theme .participant-card:visited {
+  color: #24475a;
+  border-color: rgba(51, 102, 113, 0.12);
+  background:
+    radial-gradient(190px 90px at 100% 0%, rgba(255, 207, 91, 0.16), transparent 75%),
+    rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 30px rgba(105, 79, 36, 0.1);
+}
+
+body.summer-theme .participant-card:hover,
+body.summer-theme .participant-card:focus,
+body.summer-theme .participant-card:active {
+  color: #183d52;
+  border-color: rgba(255, 125, 82, 0.3);
+  box-shadow: 0 20px 42px rgba(105, 79, 36, 0.15);
+}
+
+body.summer-theme .participant-avatar,
+body.summer-theme .profile-avatar,
+body.summer-theme .table-avatar {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.78);
+  background: linear-gradient(145deg, #ffbf48, #ff7357 72%);
+  box-shadow: 0 7px 18px rgba(221, 102, 51, 0.18);
+}
+
+body.summer-theme .participant-meta,
+body.summer-theme .participant-stat-label {
+  color: #71838e;
+}
+
+body.summer-theme .participant-stat {
+  border-color: rgba(42, 100, 110, 0.1);
+  background: #fff9e9;
+}
+
+body.summer-theme .participant-stat-value {
+  color: #1d5967;
+}
+
+/* Профиль */
+body.summer-theme .profile-hero {
+  border-color: rgba(212, 142, 37, 0.16);
+  background:
+    radial-gradient(520px 210px at 100% 0%, rgba(255, 114, 81, 0.18), transparent 68%),
+    radial-gradient(380px 180px at 0% 100%, rgba(35, 159, 149, 0.11), transparent 72%),
+    linear-gradient(145deg, #fffef9, #fff4d5);
+  box-shadow: 0 22px 48px rgba(105, 79, 36, 0.13);
+}
+
+body.summer-theme .profile-hero::before {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.7), transparent 42%);
+}
+
+body.summer-theme .avatar-editor {
+  border-color: rgba(46, 100, 111, 0.12);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+body.summer-theme .stat-box {
+  border-color: rgba(46, 100, 111, 0.11);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+body.summer-theme .stat-label,
+body.summer-theme .prediction-round,
+body.summer-theme .prediction-item-label,
+body.summer-theme .prediction-empty,
+body.summer-theme .season-fact {
+  color: #71838e;
+}
+
+body.summer-theme .stat-value {
+  color: #196d70;
+}
+
+body.summer-theme .prediction-card {
+  border-color: rgba(46, 100, 111, 0.11);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 28px rgba(105, 79, 36, 0.09);
+}
+
+body.summer-theme .prediction-head {
+  border-bottom-color: rgba(46, 100, 111, 0.09);
+  background: linear-gradient(90deg, #fff9e8, #f0faf5);
+}
+
+body.summer-theme .prediction-item {
+  border-color: rgba(46, 100, 111, 0.09);
+  background: #fffaf0;
+}
+
+body.summer-theme .score-pill {
+  color: #17695e;
+  border-color: rgba(27, 132, 114, 0.22);
+  background: #ddf4e7;
+}
+
+/* Таблица */
+body.summer-theme .table-shell {
+  border-color: rgba(46, 100, 111, 0.12);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 44px rgba(105, 79, 36, 0.12);
+}
+
+body.summer-theme .leaderboard-luxe {
+  border-color: rgba(46, 100, 111, 0.12);
+  box-shadow: 0 22px 52px rgba(105, 79, 36, 0.13);
+}
+
+body.summer-theme .leaderboard-luxe .table-responsive {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 250, 237, 0.9));
+}
+
+body.summer-theme .leaderboard-table {
+  --bs-table-color: #24475a;
+  --bs-table-border-color: rgba(46, 100, 111, 0.09);
+  --bs-table-hover-bg: rgba(255, 206, 91, 0.12);
+  --bs-table-striped-bg: rgba(255, 246, 218, 0.45);
+  --bs-table-active-bg: rgba(55, 164, 151, 0.1);
+  --bs-table-active-color: #183d52;
+}
+
+body.summer-theme .leaderboard-table thead th {
+  color: #637986;
+  background: rgba(255, 248, 226, 0.98);
+  border-bottom-color: rgba(46, 100, 111, 0.12);
+}
+
+body.summer-theme .leaderboard-table td {
+  border-color: rgba(46, 100, 111, 0.07);
+}
+
+body.summer-theme .leaderboard-table tbody tr:hover {
+  background-color: rgba(255, 206, 91, 0.1);
+}
+
+body.summer-theme .leaderboard-table tbody tr.is-leader {
+  background: linear-gradient(90deg, rgba(255, 207, 91, 0.2), rgba(255, 246, 218, 0.22));
+}
+
+body.summer-theme .leaderboard-table .sticky-col,
+body.summer-theme .sticky-col,
+body.summer-theme .sticky-col-2 {
+  background: rgba(255, 251, 240, 0.98);
+  box-shadow: 8px 0 14px rgba(96, 77, 42, 0.06);
+}
+
+body.summer-theme .rank-chip {
+  color: #6d521d;
+  border-color: rgba(213, 155, 43, 0.25);
+  background: #fff1bd;
+}
+
+body.summer-theme .race-points {
+  color: #31596b;
+  border-color: rgba(46, 100, 111, 0.13);
+  background: #edf7f3;
+}
+
+body.summer-theme .total-chip {
+  color: #17695f;
+  border-color: rgba(27, 132, 114, 0.22);
+  background: #dff5e9;
+}
+
+body.summer-theme .player-link,
+body.summer-theme .player-link:visited {
+  color: #24475a;
+}
+
+body.summer-theme .player-link:hover,
+body.summer-theme .player-link:focus,
+body.summer-theme .player-link:active {
+  color: #cf4e36;
+  border-bottom-color: rgba(207, 78, 54, 0.3);
+}
+
+/* Страница этапа */
+body.summer-theme .result-facts-item,
+body.summer-theme .comparison-row,
+body.summer-theme .comparison-value-card {
+  border-color: rgba(46, 100, 111, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+body.summer-theme .result-facts-label,
+body.summer-theme .comparison-value-label,
+body.summer-theme .comparison-note {
+  color: #73858f;
+}
+
+body.summer-theme .comparison-shell {
+  border-color: rgba(46, 100, 111, 0.11);
+  background:
+    radial-gradient(520px 190px at 100% 0%, rgba(255, 199, 75, 0.17), transparent 70%),
+    linear-gradient(165deg, #fffdf7, #f3faf6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+body.summer-theme .comparison-status-hit,
+body.summer-theme .comparison-points-hit {
+  color: #126958;
+  background: #def4e6;
+  border-color: rgba(37, 145, 113, 0.25);
+}
+
+body.summer-theme .comparison-status-partial,
+body.summer-theme .comparison-points-partial {
+  color: #865913;
+  background: #fff1bf;
+  border-color: rgba(210, 151, 34, 0.28);
+}
+
+body.summer-theme .comparison-status-miss,
+body.summer-theme .comparison-points-miss {
+  color: #a83d2b;
+  background: #ffebe4;
+  border-color: rgba(218, 75, 49, 0.24);
+}
+
+body.summer-theme .comparison-points {
+  border-color: rgba(46, 100, 111, 0.15);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+@media (max-width: 576px) {
+  body.summer-theme::after {
+    width: 140px;
+    height: 140px;
+    top: 84px;
+  }
+
+  body.summer-theme .site-header-actions .nav-chip:first-child {
+    display: none;
+  }
+
+  body.summer-theme .brand-year {
+    display: none;
+  }
+
+  body.summer-theme .site-header > .container {
+    gap: 0.35rem;
+  }
+
+  body.summer-theme .site-header-actions {
+    gap: 0.28rem;
+  }
+
+  body.summer-theme .nav-chip {
+    padding-right: 0.62rem;
+    padding-left: 0.62rem;
+    font-size: 0.73rem;
+  }
+}

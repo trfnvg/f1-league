@@ -211,6 +211,46 @@ class SeasonResultAdmin(admin.ModelAdmin):
         "updated_at",
     )
     actions = ("recalculate_season_scores",)
+    fieldsets = (
+        (
+            "Промежуточные итоги — можно заполнить после первой половины сезона",
+            {
+                "fields": (
+                    "season_year",
+                    "hungary_driver_championship_leader",
+                    "hungary_constructor_championship_leader",
+                    "hadjar_best_finish",
+                ),
+                "description": (
+                    "Заполни эти поля после этапа Венгрии. "
+                    "Финальные поля ниже можно оставить пустыми до завершения сезона."
+                ),
+            },
+        ),
+        (
+            "Финальные итоги сезона — заполняются позднее",
+            {
+                "fields": (
+                    "world_drivers_champion",
+                    "constructors_champion",
+                    "constructors_second",
+                    "constructors_third",
+                    "last_race_winner",
+                    "season_pole_sitter",
+                    "driver_change_happened",
+                    "team_most_dnf",
+                ),
+            },
+        ),
+    )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        total = calculate_season_scores(obj.season_year)
+        self.message_user(
+            request,
+            f"Сохранено. Текущие сезонные очки пересчитаны для {total} участников.",
+        )
 
     def recalculate_season_scores(self, request, queryset):
         total = 0

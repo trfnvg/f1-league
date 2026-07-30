@@ -385,7 +385,7 @@ def player_profile(request, user_id: int):
     elif can_edit_avatar:
         avatar_form = AvatarUploadForm(instance=profile_obj)
 
-    events = list(Event.objects.all().order_by("round_number"))
+    events = list(Event.objects.all().order_by("-round_number"))
     predictions = Prediction.objects.filter(user=player).select_related("event")
     scores = Score.objects.filter(user=player).select_related("event")
 

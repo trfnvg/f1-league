@@ -89,6 +89,11 @@ def calculate_season_points(prediction, result):
         predicted_value = getattr(prediction, field_name)
         actual_value = getattr(result, field_name)
 
+        # Итоги сезона заполняются по мере появления фактических данных.
+        # Незавершенная категория не должна ни давать очки, ни считаться ошибкой.
+        if actual_value is None or (isinstance(actual_value, str) and not _normalize(actual_value)):
+            continue
+
         if isinstance(predicted_value, str) or isinstance(actual_value, str):
             is_match = _normalize(predicted_value) == _normalize(actual_value)
         else:

@@ -307,21 +307,29 @@ class SeasonResult(models.Model):
         "Чемпион мира среди пилотов (факт)",
         max_length=50,
         choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
     )
     constructors_champion = models.CharField(
         "Чемпион Кубка конструкторов (факт)",
         max_length=50,
         choices=CONSTRUCTOR_CHOICES,
+        blank=True,
+        default="",
     )
     constructors_second = models.CharField(
         "2 место Кубка конструкторов (факт)",
         max_length=50,
         choices=CONSTRUCTOR_CHOICES,
+        blank=True,
+        default="",
     )
     constructors_third = models.CharField(
         "3 место Кубка конструкторов (факт)",
         max_length=50,
         choices=CONSTRUCTOR_CHOICES,
+        blank=True,
+        default="",
     )
 
     # Дополнительные сезонные факты
@@ -329,21 +337,29 @@ class SeasonResult(models.Model):
         "Победитель последней гонки сезона (факт)",
         max_length=50,
         choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
     )
     season_pole_sitter = models.CharField(
         "Pole-sitter сезона (факт)",
         max_length=50,
         choices=DRIVER_CHOICES,
+        blank=True,
+        default="",
     )
     driver_change_happened = models.CharField(
         "Была ли смена пилота в сезоне (факт)",
         max_length=3,
         choices=YES_NO_CHOICES,
+        blank=True,
+        default="",
     )
     team_most_dnf = models.CharField(
         "Команда-лидер по количеству DNF (факт)",
         max_length=50,
         choices=CONSTRUCTOR_CHOICES,
+        blank=True,
+        default="",
     )
 
     updated_at = models.DateTimeField(auto_now=True)
