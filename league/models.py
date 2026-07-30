@@ -1,4 +1,5 @@
-﻿from datetime import timedelta
+﻿import uuid
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -127,6 +128,14 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
     avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)
     is_world_predict_champion = models.BooleanField("World Predict Champion", default=False)
+    telegram_chat_id = models.BigIntegerField("Telegram chat ID", null=True, blank=True)
+    telegram_notifications = models.BooleanField("Telegram-уведомления", default=True)
+    telegram_link_token = models.UUIDField(
+        "Токен привязки Telegram",
+        default=uuid.uuid4,
+        db_index=True,
+        editable=False,
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -398,3 +407,25 @@ class Score(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.event}: {self.points}"
+
+
+class TelegramReminder(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="telegram_reminders")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="telegram_reminders")
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("event", "user")
+        ordering = ("-sent_at",)
+
+    def __str__(self):
+        return f"Telegram reminder: {self.user} - {self.event}"
+
+
+class TelegramBotState(models.Model):
+    key = models.CharField(max_length=32, unique=True, default="default", editable=False)
+    update_offset = models.BigIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Telegram bot state: {self.key}"

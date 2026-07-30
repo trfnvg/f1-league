@@ -504,6 +504,39 @@ body.summer-theme .avatar-editor {
   background: rgba(255, 255, 255, 0.6);
 }
 
+body.summer-theme .telegram-connect-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid rgba(27, 132, 122, 0.17);
+  border-radius: 13px;
+  background: linear-gradient(105deg, #eaf9f0, #fff9df);
+}
+
+body.summer-theme .telegram-connect-title {
+  color: #176c68;
+  font-weight: 800;
+}
+
+body.summer-theme .telegram-connect-note {
+  margin-top: 0.18rem;
+  color: #71838e;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 576px) {
+  body.summer-theme .telegram-connect-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.summer-theme .telegram-connect-card .btn {
+    width: 100%;
+  }
+}
+
 body.summer-theme .stat-box {
   border-color: rgba(46, 100, 111, 0.11);
   background: rgba(255, 255, 255, 0.7);

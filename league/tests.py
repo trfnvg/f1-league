@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.forms import modelform_factory
@@ -6,8 +7,9 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Event, SeasonPrediction, SeasonResult, SeasonScore
+from .models import Event, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
 from .scoring import calculate_season_points, calculate_season_scores
+from .telegram_bot import _handle_start, send_due_reminders
 
 
 TEST_STORAGES = {
@@ -104,3 +106,57 @@ class SummerThemeTests(TestCase):
 
         self.assertContains(response, "league/summer-theme.css")
         self.assertContains(response, 'class="summer-theme d-flex flex-column min-vh-100"')
+
+
+@override_settings(
+    TELEGRAM_BOT_TOKEN="test-token",
+    TELEGRAM_BOT_USERNAME="f1_predictions_test",
+    SITE_URL="https://f1.example",
+)
+class TelegramTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="telegram-player", password="test")
+        self.profile = UserProfile.objects.get(user=self.user)
+
+    def test_authenticated_user_gets_deep_link_for_current_profile(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("league:telegram_connect"))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("https://t.me/f1_predictions_test?start="))
+        self.assertIn(str(self.profile.telegram_link_token), response["Location"])
+
+    def test_profile_shows_telegram_connection_button(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("league:player_profile", args=[self.user.id]))
+
+        self.assertContains(response, "Подключить Telegram")
+
+    @patch("league.telegram_bot.send_message")
+    def test_start_command_links_chat_and_rotates_token(self, send_message):
+        old_token = self.profile.telegram_link_token
+
+        _handle_start(987654, str(old_token))
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.telegram_chat_id, 987654)
+        self.assertTrue(self.profile.telegram_notifications)
+        self.assertNotEqual(self.profile.telegram_link_token, old_token)
+        send_message.assert_called_once()
+
+    @patch("league.telegram_bot.send_message")
+    def test_due_reminder_is_sent_once_only_when_prediction_is_missing(self, send_message):
+        event = Event.objects.create(
+            name="Тестовый этап",
+            round_number=99,
+            deadline=timezone.now() + timedelta(hours=2),
+        )
+        self.profile.telegram_chat_id = 123456
+        self.profile.save(update_fields=("telegram_chat_id", "updated_at"))
+
+        self.assertEqual(send_due_reminders(), 1)
+        self.assertTrue(TelegramReminder.objects.filter(event=event, user=self.user).exists())
+        self.assertEqual(send_due_reminders(), 0)
+        send_message.assert_called_once()

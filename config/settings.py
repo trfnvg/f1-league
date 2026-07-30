@@ -42,6 +42,12 @@ else:
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-fallback-secret-key")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
+# Telegram bot settings. The token is supplied in Timeweb environment variables,
+# never committed to the repository.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
+SITE_URL = os.getenv("SITE_URL", "").strip()
+
 # Timeweb App Platform передаёт DJANGO_ALLOWED_HOSTS; можно задать и ALLOWED_HOSTS
 _allowed = os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS") or "*"
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
