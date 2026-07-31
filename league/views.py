@@ -47,7 +47,10 @@ def _driver_of_day_values(result):
 
 def home(request):
     now = timezone.now()
-    events = list(Event.objects.all())
+    # The most recent rounds should always be closest to the top of the page.
+    # Splitting this already ordered list preserves the same direction in both
+    # the upcoming and completed sections.
+    events = list(Event.objects.all().order_by("-round_number"))
     upcoming_events = []
     past_events = []
 
@@ -507,9 +510,9 @@ def participants(request):
 
 
 def leaderboard(request):
-    events = Event.objects.all()
+    events = list(Event.objects.all())
 
-    scores = Score.objects.select_related("user", "event").all()
+    scores = list(Score.objects.select_related("user", "event").all())
     scores_map = {(s.user_id, s.event_id): s for s in scores}
 
     totals_qs = Score.objects.values("user_id").annotate(total=Sum("points"))
@@ -523,6 +526,10 @@ def leaderboard(request):
     }
 
     rows = []
+    chart_series = []
+    scored_event_ids = {score.event_id for score in scores}
+    chart_events = [event for event in events if event.id in scored_event_ids]
+
     for idx, user in enumerate(users_sorted, start=1):
         profile_obj = profile_map.get(user.id)
         rows.append(
@@ -536,6 +543,36 @@ def leaderboard(request):
             }
         )
 
+        cumulative_points = 0
+        points_by_round = []
+        for event in chart_events:
+            score = scores_map.get((user.id, event.id))
+            cumulative_points += score.points if score else 0
+            points_by_round.append(cumulative_points)
+
+        # A golden-angle hue keeps colours stable for each user even when the
+        # leaderboard order changes after a newly scored round.
+        hue = round((user.id * 137.508) % 360)
+        chart_series.append(
+            {
+                "user_id": user.id,
+                "name": user.username,
+                "color": f"hsl({hue} 68% 46%)",
+                "points": points_by_round,
+            }
+        )
+
+    leaderboard_chart = {
+        "events": [
+            {
+                "round": event.round_number,
+                "name": event.name,
+            }
+            for event in chart_events
+        ],
+        "series": chart_series,
+    }
+
     return render(
         request,
         "leaderboard.html",
@@ -543,5 +580,6 @@ def leaderboard(request):
             "events": events,
             "rows": rows,
             "scores_map": scores_map,
+            "leaderboard_chart": leaderboard_chart,
         },
     )

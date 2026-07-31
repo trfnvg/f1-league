@@ -1,5 +1,5 @@
 ﻿{% extends "base.html" %}
-{% load league_extras %}
+{% load league_extras static %}
 
 {% block title %}Таблица сезона - F1 Predictions 2026{% endblock %}
 
@@ -170,4 +170,47 @@
     </table>
   </div>
 </section>
+
+{% if leaderboard_chart.events %}
+  <section class="points-chart-shell mt-4" style="animation: card-enter 420ms ease-out both;">
+    <div class="points-chart-head">
+      <div>
+        <span class="points-chart-kicker">Ход сезона</span>
+        <h2 class="points-chart-title">Динамика очков</h2>
+        <p class="points-chart-subtitle">Накопительный результат после каждого завершённого этапа.</p>
+      </div>
+      <div class="points-chart-summary">
+        <span>{{ leaderboard_chart.events|length }}</span>
+        <small>этапов на графике</small>
+      </div>
+    </div>
+
+    <div class="points-chart-viewport" id="pointsChartViewport">
+      <div class="points-chart-canvas" id="pointsChartCanvas">
+        <svg
+          id="pointsChart"
+          class="points-chart"
+          role="img"
+          aria-labelledby="pointsChartTitle pointsChartDescription"
+        >
+          <title id="pointsChartTitle">Динамика очков игроков по этапам</title>
+          <desc id="pointsChartDescription">Линейный график накопленных очков каждого игрока.</desc>
+        </svg>
+        <div class="points-chart-tooltip" id="pointsChartTooltip" hidden></div>
+      </div>
+    </div>
+
+    <div class="points-chart-legend" id="pointsChartLegend" aria-label="Игроки на графике"></div>
+    <p class="points-chart-note mb-0">Нажми на имя игрока, чтобы скрыть или вернуть его линию.</p>
+  </section>
+
+  {{ leaderboard_chart|json_script:"leaderboard-chart-data" }}
+  <script src="{% static 'league/leaderboard-chart.js' %}"></script>
+{% else %}
+  <section class="points-chart-shell points-chart-empty mt-4" style="animation: card-enter 420ms ease-out both;">
+    <span class="points-chart-kicker">Ход сезона</span>
+    <h2 class="points-chart-title">Динамика очков</h2>
+    <p class="points-chart-subtitle mb-0">График появится после подсчёта очков за первый этап.</p>
+  </section>
+{% endif %}
 {% endblock %}
