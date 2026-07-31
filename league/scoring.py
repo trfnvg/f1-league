@@ -1,4 +1,8 @@
-﻿from .models import Prediction, Score, SeasonPrediction, SeasonResult, SeasonScore
+﻿from django.db import transaction
+from django.db.models import Max
+from django.utils import timezone
+
+from .models import Event, Prediction, Score, ScoreRevision, SeasonPrediction, SeasonResult, SeasonScore
 
 SEASON_SCORING_WEIGHTS = {
     "hungary_driver_championship_leader": ("Лидер пилотского зачета после Венгрии", 12),
@@ -60,13 +64,21 @@ def calculate_points(pred, res):
             add(label, exact_points)
         elif predicted_value in actual_top3:
             add(f"{label} (Top-3)", 3)
-    if _normalize(pred.pole) == _normalize(res.pole):
+    if _normalize(res.pole) and _normalize(pred.pole) == _normalize(res.pole):
         add("Pole Position", 4)
-    if is_sprint_weekend and _normalize(pred.sprint_qualifying_winner) == _normalize(res.sprint_qualifying_winner):
+    if (
+        is_sprint_weekend
+        and _normalize(res.sprint_qualifying_winner)
+        and _normalize(pred.sprint_qualifying_winner) == _normalize(res.sprint_qualifying_winner)
+    ):
         add("Sprint Qualifying Winner", 3)
-    if is_sprint_weekend and _normalize(pred.sprint_winner) == _normalize(res.sprint_winner):
+    if (
+        is_sprint_weekend
+        and _normalize(res.sprint_winner)
+        and _normalize(pred.sprint_winner) == _normalize(res.sprint_winner)
+    ):
         add("Sprint Winner", 5)
-    if _normalize(pred.fastest_lap) == _normalize(res.fastest_lap):
+    if _normalize(res.fastest_lap) and _normalize(pred.fastest_lap) == _normalize(res.fastest_lap):
         add("Fastest Lap", 3)
     predicted_driver_of_day = _normalize(pred.driver_of_day)
     if predicted_driver_of_day and predicted_driver_of_day in _driver_of_day_actual_values(res):
@@ -129,6 +141,104 @@ def calculate_event_scores(event):
         total_updates += 1
 
     return total_updates
+
+
+def preview_event_scores(event):
+    if not hasattr(event, "result"):
+        return []
+
+    previous_scores = {score.user_id: score for score in Score.objects.filter(event=event)}
+    rows = []
+    predictions = Prediction.objects.filter(event=event).select_related("user").order_by("user__username")
+    for prediction in predictions:
+        points, breakdown = calculate_points(prediction, event.result)
+        previous = previous_scores.get(prediction.user_id)
+        rows.append(
+            {
+                "user_id": prediction.user_id,
+                "username": prediction.user.username,
+                "previous_points": previous.points if previous else None,
+                "points": points,
+                "delta": points - (previous.points if previous else 0),
+                "breakdown": breakdown,
+            }
+        )
+    return rows
+
+
+@transaction.atomic
+def publish_event_scores(event, user=None):
+    if not hasattr(event, "result"):
+        raise ValueError("Сначала внеси фактический результат этапа.")
+
+    rows = preview_event_scores(event)
+    Score.objects.filter(event=event).delete()
+    Score.objects.bulk_create(
+        [
+            Score(
+                event=event,
+                user_id=row["user_id"],
+                points=row["points"],
+                breakdown=row["breakdown"],
+            )
+            for row in rows
+        ]
+    )
+
+    latest_revision = (
+        ScoreRevision.objects.filter(event=event).aggregate(value=Max("revision"))["value"] or 0
+    )
+    revision = ScoreRevision.objects.create(
+        event=event,
+        revision=latest_revision + 1,
+        scores=[
+            {
+                "user_id": row["user_id"],
+                "points": row["points"],
+                "breakdown": row["breakdown"],
+            }
+            for row in rows
+        ],
+        created_by=user if getattr(user, "is_authenticated", False) else None,
+    )
+
+    event.status = Event.Status.SCORED
+    event.save(update_fields=("status",))
+    result = event.result
+    result.published_at = timezone.now()
+    result.published_by = user if getattr(user, "is_authenticated", False) else None
+    result.save(update_fields=("published_at", "published_by"))
+    return revision, rows
+
+
+@transaction.atomic
+def restore_score_revision(revision, user=None):
+    event = revision.event
+    Score.objects.filter(event=event).delete()
+    Score.objects.bulk_create(
+        [
+            Score(
+                event=event,
+                user_id=row["user_id"],
+                points=row["points"],
+                breakdown=row.get("breakdown", {}),
+            )
+            for row in revision.scores
+        ]
+    )
+
+    latest_revision = (
+        ScoreRevision.objects.filter(event=event).aggregate(value=Max("revision"))["value"] or 0
+    )
+    restored = ScoreRevision.objects.create(
+        event=event,
+        revision=latest_revision + 1,
+        scores=revision.scores,
+        created_by=user if getattr(user, "is_authenticated", False) else None,
+    )
+    event.status = Event.Status.SCORED
+    event.save(update_fields=("status",))
+    return restored
 
 
 def calculate_season_scores(season_year):

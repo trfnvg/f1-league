@@ -1,0 +1,50 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <p>Проверь изменения. После публикации будет создана версия, которую можно восстановить через раздел «Версии подсчёта».</p>
+
+    {% for preview in previews %}
+      <section style="margin: 24px 0; padding: 18px; border: 1px solid #d7d7d7; border-radius: 8px;">
+        <h2>{{ preview.event }}</h2>
+        {% if not preview.has_result %}
+          <p class="errornote">Фактический результат этапа не заполнен.</p>
+        {% else %}
+          <table>
+            <thead>
+              <tr><th>Игрок</th><th>Было</th><th>Станет</th><th>Изменение</th><th>Разбор</th></tr>
+            </thead>
+            <tbody>
+              {% for row in preview.rows %}
+                <tr>
+                  <td>{{ row.username }}</td>
+                  <td>{{ row.previous_points|default_if_none:"—" }}</td>
+                  <td><strong>{{ row.points }}</strong></td>
+                  <td>{% if row.delta > 0 %}+{% endif %}{{ row.delta }}</td>
+                  <td>
+                    {% for label, points in row.breakdown.items %}
+                      {{ label }}: +{{ points }}{% if not forloop.last %}, {% endif %}
+                    {% empty %}Нет попаданий{% endfor %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5">На этот этап нет прогнозов.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+      </section>
+    {% endfor %}
+
+    <form method="post">
+      {% csrf_token %}
+      {% for item in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ item.pk }}">
+      {% endfor %}
+      <input type="hidden" name="action" value="preview_and_publish_scores">
+      <input type="hidden" name="publish_confirmed" value="1">
+      <input type="submit" value="Опубликовать результаты" class="default">
+      <a href="../" class="button cancel-link">Отмена</a>
+    </form>
+  </div>
+{% endblock %}

@@ -14,7 +14,8 @@ from django.db import IntegrityError
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Event, Prediction, TelegramBotState, TelegramReminder, UserProfile
+from .models import Event, Prediction, Score, Season, TelegramBotState, TelegramReminder, UserProfile
+from .services import build_leaderboard
 
 
 logger = logging.getLogger(__name__)
@@ -219,8 +220,42 @@ def _handle_start(chat_id, token):
     send_message(
         chat_id,
         f"Готово, {profile.user.username}! Telegram подключён к твоему аккаунту. "
-        "Я напишу за 3 часа до дедлайна, если предикт ещё не отправлен.\n\n"
-        "Команды: /stop — отключить уведомления, /resume — включить снова.",
+        "Я напомню за сутки и за 3 часа до дедлайна, если предикт ещё не отправлен.\n\n"
+        "Команды: /next — следующий этап, /status — статус предикта, "
+        "/table — топ-5, /stop — отключить уведомления.",
+    )
+
+
+def _linked_profile(chat_id):
+    return (
+        UserProfile.objects.select_related("user")
+        .filter(telegram_chat_id=chat_id, user__is_active=True)
+        .first()
+    )
+
+
+def _next_event():
+    season = Season.get_active()
+    return (
+        Event.objects.filter(
+            season_year=season.year,
+            deadline__gt=timezone.now(),
+        )
+        .exclude(status=Event.Status.SCORED)
+        .order_by("deadline")
+        .first()
+    )
+
+
+def _command_help():
+    return (
+        "Команды бота:\n"
+        "/next — следующий этап и дедлайн\n"
+        "/status — отправлен ли твой предикт\n"
+        "/my — состав твоего предикта\n"
+        "/table — первая пятёрка чемпионата\n"
+        "/stop — отключить уведомления\n"
+        "/resume — включить уведомления"
     )
 
 
@@ -232,9 +267,69 @@ def _handle_command(chat_id, command, argument=""):
         else:
             profile = UserProfile.objects.filter(telegram_chat_id=chat_id).first()
             if profile:
-                send_message(chat_id, "Telegram уже подключён к твоему аккаунту.")
+                send_message(chat_id, "Telegram уже подключён к твоему аккаунту.\n\n" + _command_help())
             else:
                 send_message(chat_id, "Открой кнопку подключения Telegram в профиле на сайте.")
+    elif command in ("/help", "/commands"):
+        send_message(chat_id, _command_help())
+    elif command == "/next":
+        event = _next_event()
+        if event:
+            send_message(
+                chat_id,
+                f"🏁 Следующий этап: {event.name}\n"
+                f"Раунд: R{event.round_number}\n"
+                f"Дедлайн: {_deadline_text(event)}",
+                event=event,
+            )
+        else:
+            send_message(chat_id, "Сейчас нет открытых этапов.")
+    elif command in ("/status", "/my"):
+        profile = _linked_profile(chat_id)
+        if not profile:
+            send_message(chat_id, "Сначала подключи Telegram в своём профиле на сайте.")
+            return
+        event = _next_event()
+        if not event:
+            send_message(chat_id, "Сейчас нет открытых этапов.")
+            return
+        prediction = Prediction.objects.filter(event=event, user=profile.user).first()
+        if prediction and command == "/my":
+            send_message(
+                chat_id,
+                f"Твой предикт на «{event.name}»:\n\n"
+                f"P1 — {prediction.get_p1_display()}\n"
+                f"P2 — {prediction.get_p2_display()}\n"
+                f"P3 — {prediction.get_p3_display()}\n"
+                f"Поул — {prediction.get_pole_display()}\n\n"
+                f"Дедлайн: {_deadline_text(event)}",
+                event=event,
+            )
+        elif prediction:
+            send_message(
+                chat_id,
+                f"✅ Предикт на «{event.name}» принят.\n"
+                f"P1: {prediction.get_p1_display()}\n"
+                f"Дедлайн: {_deadline_text(event)}",
+                event=event,
+            )
+        else:
+            send_message(
+                chat_id,
+                f"⏳ Предикт на «{event.name}» ещё не отправлен.\n"
+                f"Дедлайн: {_deadline_text(event)}",
+                event=event,
+            )
+    elif command == "/table":
+        season = Season.get_active()
+        rows = build_leaderboard(season.year)["rows"][:5]
+        if not rows:
+            send_message(chat_id, "Таблица пока пуста.")
+            return
+        lines = [f"🏆 Топ-5 · сезон {season.year}"]
+        for row in rows:
+            lines.append(f"{row['rank']}. {row['user'].username} — {row['total']} очков")
+        send_message(chat_id, "\n".join(lines))
     elif command == "/stop":
         updated = UserProfile.objects.filter(telegram_chat_id=chat_id).update(telegram_notifications=False)
         send_message(
@@ -247,6 +342,8 @@ def _handle_command(chat_id, command, argument=""):
             chat_id,
             "Уведомления снова включены." if updated else "Этот Telegram ещё не подключён к аккаунту.",
         )
+    else:
+        send_message(chat_id, "Не знаю такую команду.\n\n" + _command_help())
 
 
 def process_update(update):
@@ -292,23 +389,34 @@ def send_due_reminders(now=None):
             user__is_staff=False,
         ).select_related("user")
     )
-    events = Event.objects.filter(
+    events = list(Event.objects.filter(
         deadline__gt=now,
-        deadline__lte=now + timedelta(hours=3),
-    ).exclude(status=Event.Status.SCORED)
+        deadline__lte=now + timedelta(hours=24),
+    ).exclude(status=Event.Status.SCORED))
     sent = 0
 
     for event in events:
+        remaining = event.deadline - now
+        reminder_kind = (
+            TelegramReminder.Kind.THREE_HOURS
+            if remaining <= timedelta(hours=3)
+            else TelegramReminder.Kind.DAY
+        )
+        time_label = "около 3 часов" if reminder_kind == TelegramReminder.Kind.THREE_HOURS else "меньше суток"
         predicted_user_ids = set(Prediction.objects.filter(event=event).values_list("user_id", flat=True))
         for profile in profiles:
             if profile.user_id in predicted_user_ids:
                 continue
-            if TelegramReminder.objects.filter(event=event, user=profile.user).exists():
+            if TelegramReminder.objects.filter(
+                event=event,
+                user=profile.user,
+                kind=reminder_kind,
+            ).exists():
                 continue
 
             text = (
                 "🏎 Напоминание о предикте\n\n"
-                f"До дедлайна этапа «{event.name}» осталось около 3 часов.\n"
+                f"До дедлайна этапа «{event.name}» осталось {time_label}.\n"
                 f"Дедлайн: {_deadline_text(event)}\n\n"
                 "Ты ещё не отправил прогноз."
             )
@@ -322,11 +430,105 @@ def send_due_reminders(now=None):
                 continue
 
             try:
-                TelegramReminder.objects.create(event=event, user=profile.user)
+                TelegramReminder.objects.create(
+                    event=event,
+                    user=profile.user,
+                    kind=reminder_kind,
+                )
             except IntegrityError:
                 continue
             sent += 1
 
+    return sent
+
+
+def notify_prediction_saved(prediction):
+    profile = getattr(prediction.user, "league_profile", None)
+    if not profile or not profile.telegram_chat_id or not profile.telegram_notifications:
+        return False
+    send_message(
+        profile.telegram_chat_id,
+        "✅ Предикт сохранён\n\n"
+        f"{prediction.event.name} · R{prediction.event.round_number}\n"
+        f"P1: {prediction.get_p1_display()}\n"
+        f"P2: {prediction.get_p2_display()}\n"
+        f"P3: {prediction.get_p3_display()}\n"
+        f"Дедлайн: {_deadline_text(prediction.event)}",
+        event=prediction.event,
+    )
+    return True
+
+
+def send_result_notifications():
+    profiles = list(
+        UserProfile.objects.filter(
+            telegram_chat_id__isnull=False,
+            telegram_notifications=True,
+            user__is_active=True,
+            user__is_staff=False,
+        ).select_related("user")
+    )
+    if not profiles:
+        return 0
+
+    events = list(
+        Event.objects.filter(
+            status=Event.Status.SCORED,
+            result__published_at__isnull=False,
+        ).order_by("round_number")
+    )
+    sent = 0
+    leaderboards = {}
+    for event in events:
+        if event.season_year not in leaderboards:
+            leaderboards[event.season_year] = {
+                row["user"].id: row
+                for row in build_leaderboard(event.season_year)["rows"]
+            }
+        score_map = {
+            score.user_id: score
+            for score in Score.objects.filter(event=event)
+        }
+        for profile in profiles:
+            if TelegramReminder.objects.filter(
+                event=event,
+                user=profile.user,
+                kind=TelegramReminder.Kind.RESULT,
+            ).exists():
+                continue
+            score = score_map.get(profile.user_id)
+            points = score.points if score else 0
+            row = leaderboards[event.season_year].get(profile.user_id)
+            rank_line = ""
+            if row:
+                movement = row["movement"]
+                movement_text = f" · {'↑' if movement > 0 else '↓'}{abs(movement)}" if movement else ""
+                rank_line = f"Место в чемпионате: {row['rank']}{movement_text}\n"
+            try:
+                send_message(
+                    profile.telegram_chat_id,
+                    "🏁 Результаты опубликованы\n\n"
+                    f"{event.name} · R{event.round_number}\n"
+                    f"Твой результат: {points} очков.\n"
+                    f"{rank_line}"
+                    "Открой этап, чтобы увидеть подробный разбор.",
+                    event=event,
+                )
+            except TelegramAPIError as exc:
+                if exc.error_code == 403:
+                    profile.telegram_notifications = False
+                    profile.save(update_fields=("telegram_notifications", "updated_at"))
+                logger.warning("Could not send result to Telegram chat %s: %s", profile.telegram_chat_id, exc)
+                continue
+            try:
+                TelegramReminder.objects.create(
+                    event=event,
+                    user=profile.user,
+                    kind=TelegramReminder.Kind.RESULT,
+                )
+            except IntegrityError:
+                continue
+            sent += 1
     return sent
 
 
@@ -339,8 +541,14 @@ def run_worker(interval=60, once=False):
         try:
             processed = poll_updates()
             sent = send_due_reminders()
-            if processed or sent:
-                logger.info("Telegram worker: processed updates=%s, reminders sent=%s", processed, sent)
+            result_sent = send_result_notifications()
+            if processed or sent or result_sent:
+                logger.info(
+                    "Telegram worker: processed updates=%s, reminders sent=%s, results sent=%s",
+                    processed,
+                    sent,
+                    result_sent,
+                )
         except Exception:
             logger.exception("Telegram worker iteration failed")
 

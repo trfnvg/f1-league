@@ -6,9 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&family=Russo+One&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
-  <title>{% block title %}F1 Predictions 2026{% endblock %}</title>
+  <title>{% block title %}F1 Predictions {{ current_season.year }}{% endblock %}</title>
 
   <style>
     :root {
@@ -999,9 +999,10 @@
     }
   </style>
   <link rel="stylesheet" href="{% static 'league/summer-theme.css' %}">
+  <link rel="stylesheet" href="{% static 'league/editorial-rework.css' %}">
 </head>
 
-<body class="summer-theme d-flex flex-column min-vh-100">
+<body class="summer-theme editorial-theme d-flex flex-column min-vh-100">
 
 <nav class="navbar navbar-dark site-header">
   <div class="container">
@@ -1016,15 +1017,24 @@
       </button>
 
       <a class="navbar-brand site-brand" href="{% url 'league:home' %}">
-        <span class="brand-f1">F1</span><span class="brand-text">Predictions <span class="brand-year">2026</span></span>
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-f1">F1</span><span class="brand-text">Predictions <span class="brand-year">{{ current_season.year }}</span></span>
       </a>
     </div>
 
+    <div class="desktop-nav" aria-label="Основная навигация">
+      <a href="{% url 'league:home' %}">Этапы</a>
+      <a href="{% url 'league:leaderboard' %}">Таблица</a>
+      <a href="{% url 'league:participants' %}">Пилоты</a>
+      <a href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
+    </div>
+
     <div class="site-header-actions">
-      <a class="nav-chip" href="{% url 'league:participants' %}">Участники</a>
-      {% if not user.is_authenticated %}
+      {% if user.is_authenticated %}
+        <a class="nav-chip nav-chip-primary" href="{% url 'league:player_profile' user_id=user.id %}">{{ user.username }}</a>
+      {% else %}
         <a class="nav-chip" href="{% url 'login' %}">Войти</a>
-        <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
+        <a class="nav-chip nav-chip-primary" href="{% url 'league:register' %}">Вступить</a>
       {% endif %}
     </div>
   </div>
@@ -1048,6 +1058,16 @@
     {% endif %}
 
     <div class="menu-divider"></div>
+
+    {% if available_seasons %}
+      <div class="menu-meta">Архив сезонов</div>
+      <div class="season-switcher">
+        {% for item in available_seasons %}
+          <a href="{% url 'league:home' %}?season={{ item.year }}" class="season-switcher-link {% if item.year == current_season.year %}is-current{% endif %}">{{ item.year }}</a>
+        {% endfor %}
+      </div>
+      <div class="menu-divider"></div>
+    {% endif %}
 
     {% if user.is_authenticated %}
       <div class="menu-meta">Вошли как</div>
@@ -1077,7 +1097,10 @@
 </main>
 
 <footer class="mt-auto">
-  <div class="container text-center small">F1 Predictions League - сезон 2026</div>
+  <div class="container footer-inner">
+    <span>F1 Predictions League</span>
+    <span>Сезон {{ current_season.year }}</span>
+  </div>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

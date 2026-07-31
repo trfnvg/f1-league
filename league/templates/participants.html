@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Участники - F1 Predictions 2026{% endblock %}
+{% block title %}Участники · F1 Predictions {{ season.year }}{% endblock %}
 
 {% block content %}
 <style>
@@ -136,11 +136,15 @@
 <section class="participants-hero p-3 p-md-4 mb-4" style="animation: card-enter 260ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
+      <div class="page-kicker">The grid</div>
       <h1 class="section-title">Участники</h1>
-      <p class="section-subtitle mb-0">Список игроков, которые делают предикты, и быстрый переход в их профили.</p>
+      <p class="section-subtitle mb-0">Вся стартовая решётка: позиция, очки, активность и достижения.</p>
     </div>
-    <div class="deadline-chip">
-      <span>Профилей: {{ rows|length }}</span>
+    <div>
+      <div class="season-tabs mb-2">
+        {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
+      </div>
+      <div class="deadline-chip"><span>Профилей: {{ rows|length }}</span></div>
     </div>
   </div>
 </section>
@@ -163,8 +167,12 @@
               {% if row.is_wpc %}
                 <span class="wpc-badge">WPC</span>
               {% endif %}
+              {% if row.achievement_count %}<span class="achievement-count">✦ {{ row.achievement_count }}</span>{% endif %}
             </div>
-            <div class="participant-meta">Открыть профиль участника</div>
+            <div class="participant-meta">
+              {% if row.rank %}P{{ row.rank }} в чемпионате{% else %}Дебютант{% endif %}
+              {% if row.movement > 0 %}<span class="movement movement-up"> · ▲ {{ row.movement }}</span>{% elif row.movement < 0 %}<span class="movement movement-down"> · ▼ {{ row.movement|stringformat:"d"|slice:"1:" }}</span>{% endif %}
+            </div>
           </div>
         </div>
 
@@ -176,6 +184,14 @@
           <div class="participant-stat">
             <div class="participant-stat-label">Этапы</div>
             <div class="participant-stat-value">{{ row.event_count }}</div>
+          </div>
+          <div class="participant-stat">
+            <div class="participant-stat-label">Сезонный предикт</div>
+            <div class="participant-stat-value">{% if row.season_count %}Готов{% else %}—{% endif %}</div>
+          </div>
+          <div class="participant-stat">
+            <div class="participant-stat-label">Профиль</div>
+            <div class="participant-stat-value">Открыть →</div>
           </div>
         </div>
       </a>

@@ -1,4 +1,5 @@
-﻿from datetime import datetime
+﻿import logging
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -22,10 +23,12 @@ from .models import (
     SeasonScore,
     UserProfile,
 )
-from .telegram_bot import bot_is_configured, get_bot_username
+from .services import build_achievements, build_leaderboard, build_player_statistics, get_selected_season
+from .telegram_bot import TelegramAPIError, bot_is_configured, get_bot_username, notify_prediction_saved
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
+logger = logging.getLogger(__name__)
 
 
 def _normalize(value):
@@ -47,10 +50,8 @@ def _driver_of_day_values(result):
 
 def home(request):
     now = timezone.now()
-    # The most recent rounds should always be closest to the top of the page.
-    # Splitting this already ordered list preserves the same direction in both
-    # the upcoming and completed sections.
-    events = list(Event.objects.all().order_by("-round_number"))
+    season = get_selected_season(request)
+    events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
     upcoming_events = []
     past_events = []
 
@@ -62,22 +63,67 @@ def home(request):
         else:
             upcoming_events.append(event)
 
-    result_images = list(HomeResultImage.objects.filter(is_active=True))
+    result_images = list(
+        HomeResultImage.objects.filter(is_active=True, season_year=season.year)
+    )
+    leaderboard_data = build_leaderboard(season.year)
+    personal_dashboard = None
+    next_event = min(
+        (event for event in events if event.deadline > now and event.status != Event.Status.SCORED),
+        key=lambda event: event.deadline,
+        default=None,
+    )
+    if request.user.is_authenticated:
+        user_row = next(
+            (row for row in leaderboard_data["rows"] if row["user"].id == request.user.id),
+            None,
+        )
+        latest_event = leaderboard_data["latest_event"]
+        personal_dashboard = {
+            "next_event": next_event,
+            "next_prediction": (
+                Prediction.objects.filter(event=next_event, user=request.user).first()
+                if next_event
+                else None
+            ),
+            "rank": user_row["rank"] if user_row else None,
+            "movement": user_row["movement"] if user_row else 0,
+            "total": user_row["total"] if user_row else 0,
+            "latest_event": latest_event,
+            "latest_score": (
+                Score.objects.filter(event=latest_event, user=request.user).first()
+                if latest_event
+                else None
+            ),
+        }
+
     return render(
         request,
         "home.html",
         {
+            "events": events,
             "upcoming_events": upcoming_events,
             "past_events": past_events,
             "total_events": len(events),
             "result_images": result_images,
+            "season": season,
+            "personal_dashboard": personal_dashboard,
+            "leaderboard_top": leaderboard_data["rows"][:3],
         },
     )
 
 
 def season_predictions(request):
-    season_year = 2026
-    deadline = datetime(2026, 3, 5, 23, 59, tzinfo=ZoneInfo("Europe/Moscow"))
+    season = get_selected_season(request)
+    season_year = season.year
+    deadline = season.predictions_deadline or datetime(
+        season.year,
+        3,
+        5,
+        23,
+        59,
+        tzinfo=ZoneInfo("Europe/Moscow"),
+    )
     now = timezone.now()
     is_locked = now > deadline
 
@@ -141,6 +187,7 @@ def season_predictions(request):
         "season_predictions.html",
         {
             "season_year": season_year,
+            "season": season,
             "deadline": deadline,
             "is_locked": is_locked,
             "form": form,
@@ -219,6 +266,11 @@ def event_detail(request, event_id: int):
             new_prediction.user = request.user
             new_prediction.event = event
             new_prediction.save()
+            try:
+                notify_prediction_saved(new_prediction)
+            except TelegramAPIError:
+                # Telegram must never prevent the prediction itself from being saved.
+                logger.exception("Could not send prediction confirmation for prediction %s", new_prediction.pk)
             messages.success(request, "Прогноз сохранен.")
             return redirect("league:event_detail", event_id=event.id)
     else:
@@ -366,6 +418,27 @@ def event_detail(request, event_id: int):
             status="hit" if prediction.crazy_prediction_approved else "miss",
         )
 
+    can_view_community = state in ("closed", "scored")
+    community_predictions = []
+    if can_view_community:
+        public_predictions = list(
+            Prediction.objects.filter(event=event, user__is_active=True, user__is_staff=False)
+            .select_related("user", "user__league_profile")
+            .order_by("user__username")
+        )
+        public_scores = {
+            item.user_id: item
+            for item in Score.objects.filter(event=event)
+        }
+        community_predictions = [
+            {
+                "prediction": item,
+                "profile": getattr(item.user, "league_profile", None),
+                "score": public_scores.get(item.user_id),
+            }
+            for item in public_predictions
+        ]
+
     return render(
         request,
         "event_detail_v2.html",
@@ -382,6 +455,8 @@ def event_detail(request, event_id: int):
             "score": score,
             "comparison_rows": comparison_rows,
             "comparison_total": comparison_total,
+            "can_view_community": can_view_community,
+            "community_predictions": community_predictions,
         },
     )
 
@@ -390,6 +465,7 @@ def player_profile(request, user_id: int):
     player = get_object_or_404(User, id=user_id, is_active=True)
     profile_obj, _ = UserProfile.objects.get_or_create(user=player)
     can_edit_avatar = request.user.is_authenticated and request.user.id == player.id
+    season = get_selected_season(request)
 
     avatar_form = None
     if request.method == "POST":
@@ -406,24 +482,36 @@ def player_profile(request, user_id: int):
     elif can_edit_avatar:
         avatar_form = AvatarUploadForm(instance=profile_obj)
 
-    events = list(Event.objects.all().order_by("-round_number"))
-    predictions = Prediction.objects.filter(user=player).select_related("event")
-    scores = Score.objects.filter(user=player).select_related("event")
+    events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
+    predictions = list(
+        Prediction.objects.filter(user=player, event__season_year=season.year).select_related("event")
+    )
+    scores = list(Score.objects.filter(user=player, event__season_year=season.year).select_related("event"))
 
     prediction_map = {p.event_id: p for p in predictions}
     score_map = {s.event_id: s for s in scores}
 
     event_cards = []
     for event in events:
+        can_view_prediction = can_edit_avatar or event.voting_state() in ("closed", "scored")
         event_cards.append(
             {
                 "event": event,
-                "prediction": prediction_map.get(event.id),
+                "prediction": prediction_map.get(event.id) if can_view_prediction else None,
+                "prediction_hidden": bool(prediction_map.get(event.id)) and not can_view_prediction,
                 "score": score_map.get(event.id),
             }
         )
 
-    season_predictions = list(SeasonPrediction.objects.filter(user=player).order_by("-season_year"))
+    season_deadline = season.predictions_deadline or datetime(
+        season.year, 3, 5, 23, 59, tzinfo=ZoneInfo("Europe/Moscow")
+    )
+    can_view_season_prediction = can_edit_avatar or timezone.now() > season_deadline
+    season_predictions = list(
+        SeasonPrediction.objects.filter(user=player, season_year=season.year)
+        if can_view_season_prediction
+        else SeasonPrediction.objects.none()
+    )
     season_years = [item.season_year for item in season_predictions]
     season_score_map = {
         s.season_year: s for s in SeasonScore.objects.filter(user=player, season_year__in=season_years)
@@ -445,6 +533,9 @@ def player_profile(request, user_id: int):
     event_points_total = sum(item.points for item in scores)
     season_points_total = sum(item.points for item in season_score_map.values())
     total_points = event_points_total + season_points_total
+    leaderboard_data = build_leaderboard(season.year)
+    player_statistics = build_player_statistics(player, season.year, leaderboard=leaderboard_data)
+    achievements = build_achievements(player, player_statistics)
 
     return render(
         request,
@@ -453,6 +544,10 @@ def player_profile(request, user_id: int):
             "player": player,
             "event_cards": event_cards,
             "season_cards": season_cards,
+            "season_prediction_hidden": (
+                not can_view_season_prediction
+                and SeasonPrediction.objects.filter(user=player, season_year=season.year).exists()
+            ),
             "event_points_total": event_points_total,
             "season_points_total": season_points_total,
             "total_points": total_points,
@@ -462,18 +557,22 @@ def player_profile(request, user_id: int):
             "can_edit_avatar": can_edit_avatar,
             "avatar_form": avatar_form,
             "telegram_bot_configured": bot_is_configured(),
+            "season": season,
+            "player_statistics": player_statistics,
+            "achievements": achievements,
         },
     )
 
 
 def participants(request):
-    event_totals_qs = Score.objects.values("user_id").annotate(total=Sum("points"))
-    season_totals_qs = SeasonScore.objects.values("user_id").annotate(total=Sum("points"))
+    season = get_selected_season(request)
+    event_totals_qs = Score.objects.filter(event__season_year=season.year).values("user_id").annotate(total=Sum("points"))
+    season_totals_qs = SeasonScore.objects.filter(season_year=season.year).values("user_id").annotate(total=Sum("points"))
     event_totals = {item["user_id"]: int(item["total"] or 0) for item in event_totals_qs}
     season_totals = {item["user_id"]: int(item["total"] or 0) for item in season_totals_qs}
 
-    event_submissions_qs = Prediction.objects.values("user_id").annotate(total=Count("id"))
-    season_submissions_qs = SeasonPrediction.objects.values("user_id").annotate(total=Count("id"))
+    event_submissions_qs = Prediction.objects.filter(event__season_year=season.year).values("user_id").annotate(total=Count("id"))
+    season_submissions_qs = SeasonPrediction.objects.filter(season_year=season.year).values("user_id").annotate(total=Count("id"))
     event_submissions = {item["user_id"]: int(item["total"] or 0) for item in event_submissions_qs}
     season_submissions = {item["user_id"]: int(item["total"] or 0) for item in season_submissions_qs}
 
@@ -482,6 +581,8 @@ def participants(request):
     profile_map = {
         profile.user_id: profile for profile in UserProfile.objects.filter(user_id__in=user_ids)
     }
+    leaderboard_data = build_leaderboard(season.year)
+    leaderboard_rows = {row["user"].id: row for row in leaderboard_data["rows"]}
 
     rows = []
     for user in users:
@@ -493,6 +594,7 @@ def participants(request):
         profile_obj = profile_map.get(user.id)
         avatar_url = profile_obj.avatar.url if profile_obj and profile_obj.avatar else None
         total_points = event_totals.get(user.id, 0) + season_totals.get(user.id, 0)
+        statistics = build_player_statistics(user, season.year, leaderboard=leaderboard_data)
         rows.append(
             {
                 "user": user,
@@ -501,85 +603,30 @@ def participants(request):
                 "season_count": season_count,
                 "total_points": total_points,
                 "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
+                "rank": leaderboard_rows.get(user.id, {}).get("rank"),
+                "movement": leaderboard_rows.get(user.id, {}).get("movement", 0),
+                "achievement_count": len(build_achievements(user, statistics)),
             }
         )
 
     rows.sort(key=lambda item: (-item["total_points"], item["user"].username.lower()))
 
-    return render(request, "participants.html", {"rows": rows})
+    return render(request, "participants.html", {"rows": rows, "season": season})
 
 
 def leaderboard(request):
-    events = list(Event.objects.all())
-
-    scores = list(Score.objects.select_related("user", "event").all())
-    scores_map = {(s.user_id, s.event_id): s for s in scores}
-
-    totals_qs = Score.objects.values("user_id").annotate(total=Sum("points"))
-    totals_map = {x["user_id"]: int(x["total"] or 0) for x in totals_qs}
-
-    users = list(User.objects.filter(is_staff=False, is_active=True))
-    users_sorted = sorted(users, key=lambda u: (-totals_map.get(u.id, 0), u.username.lower()))
-    user_ids = [user.id for user in users_sorted]
-    profile_map = {
-        profile.user_id: profile for profile in UserProfile.objects.filter(user_id__in=user_ids)
-    }
-
-    rows = []
-    chart_series = []
-    scored_event_ids = {score.event_id for score in scores}
-    chart_events = [event for event in events if event.id in scored_event_ids]
-
-    for idx, user in enumerate(users_sorted, start=1):
-        profile_obj = profile_map.get(user.id)
-        rows.append(
-            {
-                "user": user,
-                "rank": idx,
-                "total": totals_map.get(user.id, 0),
-                "is_leader": idx == 1,
-                "avatar_url": profile_obj.avatar.url if profile_obj and profile_obj.avatar else None,
-                "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
-            }
-        )
-
-        cumulative_points = 0
-        points_by_round = []
-        for event in chart_events:
-            score = scores_map.get((user.id, event.id))
-            cumulative_points += score.points if score else 0
-            points_by_round.append(cumulative_points)
-
-        # A golden-angle hue keeps colours stable for each user even when the
-        # leaderboard order changes after a newly scored round.
-        hue = round((user.id * 137.508) % 360)
-        chart_series.append(
-            {
-                "user_id": user.id,
-                "name": user.username,
-                "color": f"hsl({hue} 68% 46%)",
-                "points": points_by_round,
-            }
-        )
-
-    leaderboard_chart = {
-        "events": [
-            {
-                "round": event.round_number,
-                "name": event.name,
-            }
-            for event in chart_events
-        ],
-        "series": chart_series,
-    }
+    season = get_selected_season(request)
+    data = build_leaderboard(season.year)
 
     return render(
         request,
         "leaderboard.html",
         {
-            "events": events,
-            "rows": rows,
-            "scores_map": scores_map,
-            "leaderboard_chart": leaderboard_chart,
+            "events": data["events"],
+            "rows": data["rows"],
+            "scores_map": data["scores_map"],
+            "leaderboard_chart": data["chart"],
+            "latest_event": data["latest_event"],
+            "season": season,
         },
     )

@@ -1,6 +1,6 @@
 ﻿{% extends "base.html" %}
 
-{% block title %}{{ event.name }} - F1 Predictions 2026{% endblock %}
+{% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
 {% block content %}
 <style>
@@ -221,13 +221,15 @@
   <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
 </div>
 
-<div class="card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
+<div class="card event-hero-card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
   {% if event.cover_image %}
     <img
       src="{{ event.cover_image.url }}"
       class="card-img-top {% if is_past_event %}event-cover-image-past{% else %}event-cover-image-upcoming{% endif %}"
       alt="{{ event.name }}"
     >
+  {% else %}
+    <div class="event-detail-placeholder" aria-hidden="true"><span>R{{ event.round_number }}</span></div>
   {% endif %}
   <div class="card-body">
     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -247,9 +249,10 @@
   </div>
 </div>
 
-<div class="card mb-4 card-accent-top" style="animation: card-enter 340ms ease-out both;">
+<div class="card prediction-workbench mb-4 card-accent-top" style="animation: card-enter 340ms ease-out both;">
   <div class="card-body">
     <h2 class="h5 mb-3">Сделать прогноз</h2>
+    {% if state == "open" %}<p class="workbench-note">Твой выбор виден только тебе. Предикты всех участников откроются после дедлайна.</p>{% endif %}
 
     {% if not user.is_authenticated %}
       <div class="voting-status mb-0">
@@ -358,7 +361,10 @@
             {{ form.crazy_prediction }}
           </div>
         </div>
-        <button type="submit" class="btn btn-primary mt-3">Сохранить прогноз</button>
+        <div class="prediction-submit-bar">
+          <span>Проверь состав — до дедлайна прогноз можно изменить.</span>
+          <button type="submit" class="btn btn-primary">{% if prediction %}Обновить прогноз{% else %}Сохранить прогноз{% endif %}</button>
+        </div>
       </form>
     {% endif %}
   </div>
@@ -477,9 +483,45 @@
   </div>
 {% endif %}
 
-<h2 class="h4 mb-3">Галерея</h2>
-<div class="row g-3">
-  {% for p in photos %}
+{% if can_view_community %}
+  <section class="community-shell mb-4" style="animation: card-enter 500ms ease-out both;">
+    <div class="community-head">
+      <div class="community-kicker">Parc fermé</div>
+      <h2 class="community-title">Предикты участников</h2>
+      <p class="community-copy">После дедлайна прогнозы открываются для всех — сравни стратегии игроков.</p>
+    </div>
+    <div class="table-responsive">
+      <table class="table community-table align-middle">
+        <thead>
+          <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th><th>Crazy prediction</th><th>Очки</th></tr>
+        </thead>
+        <tbody>
+          {% for row in community_predictions %}
+            <tr>
+              <td>
+                <a class="player-link fw-bold" href="{% url 'league:player_profile' user_id=row.prediction.user.id %}?season={{ event.season_year }}">{{ row.prediction.user.username }}</a>
+              </td>
+              <td>{{ row.prediction.get_p1_display }}</td>
+              <td>{{ row.prediction.get_p2_display }}</td>
+              <td>{{ row.prediction.get_p3_display }}</td>
+              <td>{{ row.prediction.get_pole_display }}</td>
+              <td>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
+              <td>{{ row.prediction.crazy_prediction|default:"—" }}</td>
+              <td>{% if row.score %}<span class="score-pill">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="8" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+
+{% if photos %}
+  <h2 class="h4 mb-3">Галерея</h2>
+  <div class="row g-3">
+    {% for p in photos %}
     <div class="col-12 col-md-6 col-lg-4">
       <div class="card h-100 card-hover card-accent-top">
         <img src="{{ p.image.url }}" class="card-img-top" style="height: 220px; object-fit: cover;" alt="">
@@ -490,8 +532,7 @@
         {% endif %}
       </div>
     </div>
-  {% empty %}
-    <div class="text-muted">Пока нет фотографий.</div>
-  {% endfor %}
-</div>
+    {% endfor %}
+  </div>
+{% endif %}
 {% endblock %}

@@ -11,8 +11,26 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Event, Score, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
-from .scoring import calculate_season_points, calculate_season_scores
+from .models import (
+    Event,
+    Prediction,
+    Result,
+    Score,
+    ScoreRevision,
+    Season,
+    SeasonPrediction,
+    SeasonResult,
+    SeasonScore,
+    TelegramReminder,
+    UserProfile,
+)
+from .scoring import (
+    calculate_season_points,
+    calculate_season_scores,
+    preview_event_scores,
+    publish_event_scores,
+    restore_score_revision,
+)
 from .telegram_bot import (
     TelegramAPIError,
     _IPv4HTTPSConnection,
@@ -21,6 +39,7 @@ from .telegram_bot import (
     _create_ipv4_connection,
     _handle_start,
     send_due_reminders,
+    send_result_notifications,
 )
 
 
@@ -120,8 +139,8 @@ class HomeEventOrderingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["upcoming_events"], [upcoming_new, upcoming_old])
         self.assertEqual(response.context["past_events"], [past_new, past_old])
-        self.assertContains(response, 'class="card h-100 card-hover event-card"')
-        self.assertContains(response, 'class="event-cover-placeholder"')
+        self.assertContains(response, 'class="event-editorial-card"')
+        self.assertContains(response, 'class="event-media-placeholder"')
 
 
 @override_settings(STORAGES=TEST_STORAGES)
@@ -194,10 +213,12 @@ class SummerThemeTests(TestCase):
         response = self.client.get(reverse("league:home"))
 
         self.assertContains(response, "league/summer-theme.css")
-        self.assertContains(response, 'class="summer-theme d-flex flex-column min-vh-100"')
+        self.assertContains(response, "league/editorial-rework.css")
+        self.assertContains(response, 'class="summer-theme editorial-theme d-flex flex-column min-vh-100"')
 
 
 @override_settings(
+    STORAGES=TEST_STORAGES,
     TELEGRAM_BOT_TOKEN="test-token",
     TELEGRAM_BOT_USERNAME="f1_predictions_test",
     SITE_URL="https://f1.example",
@@ -322,3 +343,156 @@ class TelegramTests(TestCase):
         self.assertTrue(TelegramReminder.objects.filter(event=event, user=self.user).exists())
         self.assertEqual(send_due_reminders(), 0)
         send_message.assert_called_once()
+
+    @patch("league.telegram_bot.send_message")
+    def test_bot_sends_day_and_three_hour_reminders(self, send_message):
+        now = timezone.now()
+        event = Event.objects.create(
+            name="Двойное напоминание",
+            round_number=98,
+            deadline=now + timedelta(hours=20),
+        )
+        self.profile.telegram_chat_id = 123456
+        self.profile.save(update_fields=("telegram_chat_id", "updated_at"))
+
+        self.assertEqual(send_due_reminders(now=now), 1)
+        self.assertTrue(
+            TelegramReminder.objects.filter(
+                event=event, user=self.user, kind=TelegramReminder.Kind.DAY
+            ).exists()
+        )
+        self.assertEqual(send_due_reminders(now=event.deadline - timedelta(hours=2)), 1)
+        self.assertTrue(
+            TelegramReminder.objects.filter(
+                event=event, user=self.user, kind=TelegramReminder.Kind.THREE_HOURS
+            ).exists()
+        )
+        self.assertEqual(send_message.call_count, 2)
+
+    @patch("league.telegram_bot.send_message")
+    def test_published_result_notification_is_sent_once(self, send_message):
+        event = Event.objects.create(
+            name="Готовый этап",
+            round_number=97,
+            deadline=timezone.now() - timedelta(days=1),
+            status=Event.Status.SCORED,
+        )
+        Result.objects.create(
+            event=event,
+            p1="norris",
+            p2="piastri",
+            p3="russell",
+            pole="norris",
+            published_at=timezone.now(),
+        )
+        Score.objects.create(event=event, user=self.user, points=21)
+        self.profile.telegram_chat_id = 123456
+        self.profile.save(update_fields=("telegram_chat_id", "updated_at"))
+
+        self.assertEqual(send_result_notifications(), 1)
+        self.assertEqual(send_result_notifications(), 0)
+        self.assertTrue(
+            TelegramReminder.objects.filter(
+                event=event, user=self.user, kind=TelegramReminder.Kind.RESULT
+            ).exists()
+        )
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class SeasonAndPrivacyTests(TestCase):
+    def setUp(self):
+        self.player = User.objects.create_user(username="hidden-player", password="test")
+        self.viewer = User.objects.create_user(username="viewer", password="test")
+
+    def test_selected_season_filters_calendar(self):
+        Season.objects.create(year=2025, title="Season 2025")
+        old_event = Event.objects.create(
+            season_year=2025,
+            name="Архивный этап",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=300),
+        )
+        Event.objects.create(
+            season_year=2026,
+            name="Новый этап",
+            round_number=1,
+            deadline=timezone.now() + timedelta(days=3),
+        )
+
+        response = self.client.get(reverse("league:home"), {"season": 2025})
+
+        self.assertEqual(response.context["events"], [old_event])
+        self.assertEqual(response.context["season"].year, 2025)
+
+    def test_other_players_prediction_is_hidden_until_deadline(self):
+        event = Event.objects.create(
+            name="Секретный этап",
+            round_number=2,
+            deadline=timezone.now() + timedelta(days=2),
+            race_datetime=timezone.now() + timedelta(days=3),
+        )
+        Prediction.objects.create(
+            event=event,
+            user=self.player,
+            p1="norris",
+            p2="piastri",
+            p3="russell",
+            pole="norris",
+        )
+        self.client.force_login(self.viewer)
+
+        response = self.client.get(reverse("league:player_profile", args=[self.player.id]))
+        self.assertContains(response, "Предикт скрыт до дедлайна")
+        self.assertNotContains(response, "Норрис (McLaren)")
+
+        event.deadline = timezone.now() - timedelta(minutes=1)
+        event.save(update_fields=("deadline",))
+        response = self.client.get(reverse("league:player_profile", args=[self.player.id]))
+        self.assertContains(response, "Норрис (McLaren)")
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class SafeScorePublicationTests(TestCase):
+    def test_publish_preview_and_restore_revision(self):
+        admin_user = User.objects.create_superuser(username="judge", password="test")
+        player = User.objects.create_user(username="scored-player", password="test")
+        event = Event.objects.create(
+            name="Этап для подсчёта",
+            round_number=8,
+            deadline=timezone.now() - timedelta(days=1),
+        )
+        Prediction.objects.create(
+            event=event,
+            user=player,
+            p1="norris",
+            p2="piastri",
+            p3="russell",
+            pole="norris",
+        )
+        Result.objects.create(
+            event=event,
+            p1="norris",
+            p2="piastri",
+            p3="russell",
+            pole="norris",
+        )
+        Score.objects.create(event=event, user=player, points=1, breakdown={"old": 1})
+
+        preview = preview_event_scores(event)
+        self.assertEqual(preview[0]["points"], 34)
+        self.assertEqual(preview[0]["delta"], 33)
+        first_revision, _ = publish_event_scores(event, admin_user)
+
+        event.refresh_from_db()
+        event.result.refresh_from_db()
+        self.assertEqual(event.status, Event.Status.SCORED)
+        self.assertIsNotNone(event.result.published_at)
+        self.assertEqual(event.result.published_by, admin_user)
+        self.assertEqual(Score.objects.get(event=event, user=player).points, 34)
+        self.assertEqual(first_revision.revision, 1)
+
+        Score.objects.filter(event=event, user=player).update(points=2)
+        restored = restore_score_revision(first_revision, admin_user)
+        self.assertEqual(restored.revision, 2)
+        self.assertEqual(Score.objects.get(event=event, user=player).points, 34)
+        self.assertEqual(ScoreRevision.objects.filter(event=event).count(), 2)
