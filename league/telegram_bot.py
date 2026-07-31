@@ -18,6 +18,7 @@ from .models import Event, Prediction, TelegramBotState, TelegramReminder, UserP
 
 
 logger = logging.getLogger(__name__)
+TELEGRAM_API_URL = "https://api.telegram.org"
 
 
 class TelegramAPIError(RuntimeError):
@@ -110,12 +111,29 @@ def _api_call(method, data=None):
     if not token:
         raise TelegramAPIError("TELEGRAM_BOT_TOKEN is not configured")
 
-    url = f"https://api.telegram.org/bot{token}/{method}"
+    api_base_url = (
+        getattr(settings, "TELEGRAM_API_BASE_URL", TELEGRAM_API_URL).strip().rstrip("/")
+        or TELEGRAM_API_URL
+    )
+    proxy_secret = getattr(settings, "TELEGRAM_PROXY_SECRET", "").strip()
+    uses_proxy = api_base_url != TELEGRAM_API_URL
+    if uses_proxy and not proxy_secret:
+        raise TelegramAPIError(
+            "TELEGRAM_PROXY_SECRET must be configured when TELEGRAM_API_BASE_URL uses a proxy"
+        )
+
+    # When the protected proxy is enabled, the bot token is kept out of the
+    # request URL. The Cloudflare Worker stores the same token as a secret and
+    # adds it only when forwarding the request to Telegram.
+    url = f"{api_base_url}/{method}" if uses_proxy else f"{TELEGRAM_API_URL}/bot{token}/{method}"
     payload = urllib.parse.urlencode(data or {}).encode("utf-8")
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    if uses_proxy:
+        headers["X-Proxy-Secret"] = proxy_secret
     request = urllib.request.Request(
         url,
         data=payload,
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        headers=headers,
         method="POST",
     )
     try:

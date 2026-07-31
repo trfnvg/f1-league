@@ -1,4 +1,5 @@
 from io import StringIO
+import json
 import socket
 from datetime import timedelta
 from unittest.mock import Mock, patch
@@ -12,7 +13,15 @@ from django.utils import timezone
 
 from .models import Event, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
 from .scoring import calculate_season_points, calculate_season_scores
-from .telegram_bot import _IPv4HTTPSConnection, _IPv4HTTPSHandler, _create_ipv4_connection, _handle_start, send_due_reminders
+from .telegram_bot import (
+    TelegramAPIError,
+    _IPv4HTTPSConnection,
+    _IPv4HTTPSHandler,
+    _api_call,
+    _create_ipv4_connection,
+    _handle_start,
+    send_due_reminders,
+)
 
 
 TEST_STORAGES = {
@@ -154,6 +163,34 @@ class TelegramTests(TestCase):
             request,
             context=getattr(handler, "_context", None),
         )
+
+    @override_settings(
+        TELEGRAM_API_BASE_URL="https://f1-telegram-proxy.example.workers.dev/",
+        TELEGRAM_PROXY_SECRET="proxy-test-secret",
+    )
+    @patch("league.telegram_bot._TELEGRAM_OPENER.open")
+    def test_api_call_can_use_protected_proxy_without_token_in_url(self, open_request):
+        response = Mock()
+        response.read.return_value = json.dumps({"ok": True, "result": {"id": 123}}).encode()
+        open_request.return_value.__enter__.return_value = response
+
+        self.assertEqual(_api_call("getMe"), {"id": 123})
+
+        request = open_request.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "https://f1-telegram-proxy.example.workers.dev/getMe",
+        )
+        self.assertNotIn("test-token", request.full_url)
+        self.assertEqual(request.get_header("X-proxy-secret"), "proxy-test-secret")
+
+    @override_settings(
+        TELEGRAM_API_BASE_URL="https://f1-telegram-proxy.example.workers.dev",
+        TELEGRAM_PROXY_SECRET="",
+    )
+    def test_proxy_requires_a_shared_secret(self):
+        with self.assertRaisesMessage(TelegramAPIError, "TELEGRAM_PROXY_SECRET"):
+            _api_call("getMe")
 
     @override_settings(TELEGRAM_WORKER_ENABLED=False)
     @patch("league.management.commands.telegram_bot_worker.run_worker")
