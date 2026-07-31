@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Профиль {{ player.username }} - F1 Predictions 2026{% endblock %}
+{% block title %}{{ player.username }} · F1 Predictions {{ season.year }}{% endblock %}
 
 {% block content %}
 <style>
@@ -224,8 +224,11 @@
   }
 </style>
 
-<div class="mb-3">
-  <a href="{% url 'league:leaderboard' %}" class="text-decoration-none">&larr; Назад к таблице</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <a href="{% url 'league:leaderboard' %}?season={{ season.year }}" class="text-decoration-none">&larr; Назад к таблице</a>
+  <div class="season-tabs">
+    {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
+  </div>
 </div>
 
 <section class="profile-hero p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
@@ -278,26 +281,49 @@
       </div>
     {% endif %}
 
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-label">Общие очки</div>
-        <div class="stat-value">{{ total_points }}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Очки за этапы</div>
-        <div class="stat-value">{{ event_points_total }}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Сезонные очки</div>
-        <div class="stat-value">{{ season_points_total }}</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Этапов с прогнозом</div>
-        <div class="stat-value">{{ submitted_events_count }}/{{ events_count }}</div>
-      </div>
+    <div class="profile-stat-grid">
+      <div class="profile-stat-card"><small>Позиция</small><strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong></div>
+      <div class="profile-stat-card"><small>Очки за этапы</small><strong>{{ player_statistics.total }}</strong></div>
+      <div class="profile-stat-card"><small>Среднее за этап</small><strong>{{ player_statistics.average }}</strong></div>
+      <div class="profile-stat-card"><small>Лучший результат</small><strong>{{ player_statistics.best }}</strong></div>
+      <div class="profile-stat-card"><small>Победы на этапах</small><strong>{{ player_statistics.stage_wins }}</strong></div>
+      <div class="profile-stat-card"><small>Точные попадания</small><strong>{{ player_statistics.exact_hits }}</strong></div>
     </div>
   </div>
 </section>
+
+<div class="row g-4 mb-4">
+  <div class="col-12 col-xl-7">
+    <section class="glass-panel p-3 p-md-4 h-100">
+      <div class="achievement-kicker">Driver telemetry</div>
+      <h2 class="profile-section-title">Динамика сезона</h2>
+      {% if player_statistics.trend %}
+        <svg class="mini-trend" id="playerTrend" viewBox="0 0 700 200" role="img" aria-label="Динамика очков {{ player.username }}"></svg>
+        {{ player_statistics.trend|json_script:"player-trend-data" }}
+      {% else %}
+        <div class="prediction-empty">График появится после первого подсчитанного этапа.</div>
+      {% endif %}
+    </section>
+  </div>
+  <div class="col-12 col-xl-5">
+    <section class="glass-panel p-3 p-md-4 h-100">
+      <div class="achievement-kicker">Trophy cabinet</div>
+      <h2 class="profile-section-title">Достижения</h2>
+      {% if achievements %}
+        <div class="achievement-grid">
+          {% for item in achievements %}
+            <article class="achievement-card">
+              <span class="achievement-icon">{{ item.icon }}</span>
+              <span><strong>{{ item.title }}</strong><small>{{ item.description }}</small></span>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="prediction-empty">Первый трофей появится после яркого результата.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
 
 <div class="row g-4">
   <div class="col-12 col-xl-8">
@@ -338,6 +364,8 @@
                     <div class="prediction-item-value">{{ row.prediction.crazy_prediction|default:"-" }}</div>
                   </div>
                 </div>
+              {% elif row.prediction_hidden %}
+                <div class="prediction-empty">🔒 Предикт скрыт до дедлайна этапа.</div>
               {% else %}
                 <div class="prediction-empty">Прогноз на этот этап не отправлен.</div>
               {% endif %}
@@ -385,10 +413,43 @@
             </div>
           </article>
         {% empty %}
-          <div class="prediction-empty">Сезонные предикты пока не отправлены.</div>
+          <div class="prediction-empty">{% if season_prediction_hidden %}🔒 Сезонный прогноз скрыт до дедлайна.{% else %}Сезонный предикт пока не отправлен.{% endif %}</div>
         {% endfor %}
       </div>
     </section>
   </div>
 </div>
+
+{% if player_statistics.trend %}
+<script>
+  (() => {
+    const svg = document.getElementById("playerTrend");
+    const data = JSON.parse(document.getElementById("player-trend-data").textContent);
+    if (!svg || !data.length) return;
+    const ns = "http://www.w3.org/2000/svg";
+    const width = 700, height = 200, padX = 42, padY = 28;
+    const maxPoints = Math.max(...data.map((item) => item.points), 1);
+    const x = (index) => data.length === 1 ? width / 2 : padX + index * (width - padX * 2) / (data.length - 1);
+    const y = (value) => height - padY - value * (height - padY * 2) / maxPoints;
+    [0, .5, 1].forEach((ratio) => {
+      const line = document.createElementNS(ns, "line");
+      const lineY = padY + ratio * (height - padY * 2);
+      line.setAttribute("x1", padX); line.setAttribute("x2", width - padX);
+      line.setAttribute("y1", lineY); line.setAttribute("y2", lineY);
+      line.setAttribute("stroke", "rgba(22,72,87,.12)"); line.setAttribute("stroke-dasharray", "4 7");
+      svg.appendChild(line);
+    });
+    const polyline = document.createElementNS(ns, "polyline");
+    polyline.setAttribute("points", data.map((item, index) => `${x(index)},${y(item.points)}`).join(" "));
+    svg.appendChild(polyline);
+    data.forEach((item, index) => {
+      const dot = document.createElementNS(ns, "circle");
+      dot.setAttribute("cx", x(index)); dot.setAttribute("cy", y(item.points)); dot.setAttribute("r", 5);
+      dot.setAttribute("fill", "#fff"); dot.setAttribute("stroke", "#f0442f"); dot.setAttribute("stroke-width", 3);
+      const title = document.createElementNS(ns, "title"); title.textContent = `R${item.round}: ${item.points} очков`;
+      dot.appendChild(title); svg.appendChild(dot);
+    });
+  })();
+</script>
+{% endif %}
 {% endblock %}

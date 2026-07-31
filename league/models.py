@@ -52,7 +52,47 @@ YES_NO_CHOICES = [
 ]
 
 
+class Season(models.Model):
+    year = models.PositiveSmallIntegerField("Год", unique=True)
+    title = models.CharField("Название", max_length=120, blank=True)
+    is_active = models.BooleanField("Активный сезон", default=False)
+    predictions_deadline = models.DateTimeField("Дедлайн сезонных предиктов", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-year",)
+        verbose_name = "Сезон"
+        verbose_name_plural = "Сезоны"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_active:
+            Season.objects.exclude(pk=self.pk).filter(is_active=True).update(is_active=False)
+
+    @classmethod
+    def get_active(cls):
+        season = cls.objects.filter(is_active=True).first()
+        if season:
+            return season
+        season = cls.objects.order_by("-year").first()
+        if season is None:
+            year = timezone.localdate().year
+            season = cls.objects.create(
+                year=year,
+                title=f"F1 Predictions {year}",
+                is_active=True,
+            )
+        else:
+            season.is_active = True
+            season.save(update_fields=("is_active",))
+        return season
+
+    def __str__(self):
+        return self.title or f"Сезон {self.year}"
+
+
 class Event(models.Model):
+    season_year = models.PositiveSmallIntegerField("Сезон", default=2026, db_index=True)
     name = models.CharField("Название этапа", max_length=120)
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
@@ -68,7 +108,13 @@ class Event(models.Model):
     status = models.CharField("Статус", max_length=10, choices=Status.choices, default=Status.OPEN)
 
     class Meta:
-        ordering = ["round_number"]
+        ordering = ["season_year", "round_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("season_year", "round_number"),
+                name="unique_event_round_per_season",
+            )
+        ]
 
     def __str__(self):
         return f"R{self.round_number} - {self.name}"
@@ -79,6 +125,8 @@ class Event(models.Model):
         """
         if self.status == self.Status.SCORED:
             return "scored"
+        if self.status == self.Status.LOCKED:
+            return "closed"
 
         now = timezone.now()
 
@@ -106,6 +154,7 @@ class EventPhoto(models.Model):
 
 
 class HomeResultImage(models.Model):
+    season_year = models.PositiveSmallIntegerField("Сезон", default=2026, db_index=True)
     title = models.CharField("Заголовок", max_length=120, blank=True)
     image = models.ImageField("Изображение", upload_to="home_results/", max_length=255)
     caption = models.CharField("Подпись", max_length=220, blank=True)
@@ -218,6 +267,15 @@ class Result(models.Model):
     driver_of_day_multiple = models.JSONField("Driver of the Day (факт, несколько)", default=list, blank=True)
     safety_car_count = models.PositiveSmallIntegerField("Количество Safety Car (факт)", default=0)
     dnf_count = models.PositiveSmallIntegerField("Количество DNF (факт)", default=0)
+    published_at = models.DateTimeField("Опубликовано", null=True, blank=True, editable=False)
+    published_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        editable=False,
+        related_name="published_results",
+    )
 
     def __str__(self):
         return f"Результат - {self.event}"
@@ -409,13 +467,47 @@ class Score(models.Model):
         return f"{self.user} - {self.event}: {self.points}"
 
 
+class ScoreRevision(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="score_revisions")
+    revision = models.PositiveIntegerField()
+    scores = models.JSONField(default=list)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="score_revisions",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "revision"),
+                name="unique_score_revision_per_event",
+            )
+        ]
+        verbose_name = "Версия подсчёта"
+        verbose_name_plural = "Версии подсчёта"
+
+    def __str__(self):
+        return f"{self.event} — версия {self.revision}"
+
+
 class TelegramReminder(models.Model):
+    class Kind(models.TextChoices):
+        DAY = "24h", "За 24 часа"
+        THREE_HOURS = "3h", "За 3 часа"
+        RESULT = "result", "Результат этапа"
+
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="telegram_reminders")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="telegram_reminders")
+    kind = models.CharField("Тип", max_length=10, choices=Kind.choices, default=Kind.THREE_HOURS)
     sent_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("event", "user")
+        unique_together = ("event", "user", "kind")
         ordering = ("-sent_at",)
 
     def __str__(self):

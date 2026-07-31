@@ -1,11 +1,12 @@
 ﻿{% extends "base.html" %}
 
-{% block title %}Сезонные предикты - F1 Predictions 2026{% endblock %}
+{% block title %}Сезонные предикты {{ season.year }} — F1 Predictions{% endblock %}
 
 {% block content %}
 <section class="season-priority-banner p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
   <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
     <div>
+      <div class="page-kicker">Long game · season {{ season.year }}</div>
       <span class="season-banner-badge">До старта сезона</span>
       <h1 class="season-banner-title">Сезонные предикты {{ season_year }}</h1>
       <p class="season-banner-subtitle mb-0">

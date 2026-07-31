@@ -1,5 +1,6 @@
 ﻿from django import forms
 from django.contrib import admin
+from django.template.response import TemplateResponse
 
 from .models import (
     DRIVER_CHOICES,
@@ -9,6 +10,8 @@ from .models import (
     Prediction,
     Result,
     Score,
+    ScoreRevision,
+    Season,
     SeasonPrediction,
     SeasonResult,
     SeasonScore,
@@ -16,7 +19,12 @@ from .models import (
     TelegramReminder,
     UserProfile,
 )
-from .scoring import calculate_event_scores, calculate_season_scores
+from .scoring import (
+    calculate_season_scores,
+    preview_event_scores,
+    publish_event_scores,
+    restore_score_revision,
+)
 
 
 class ResultAdminForm(forms.ModelForm):
@@ -85,28 +93,74 @@ class ResultInline(admin.StackedInline):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ("round_number", "name", "has_sprint", "status", "deadline")
-    list_filter = ("has_sprint", "status")
+    list_display = ("season_year", "round_number", "name", "has_sprint", "status", "deadline")
+    list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
     inlines = [EventPhotoInline, ResultInline]
-    fields = ("name", "round_number", "has_sprint", "status", "deadline", "race_datetime", "cover_image")
+    fields = ("season_year", "name", "round_number", "has_sprint", "status", "deadline", "race_datetime", "cover_image")
 
-    actions = ["recalculate_scores"]
+    actions = ["preview_and_publish_scores"]
 
-    def recalculate_scores(self, request, queryset):
-        total = 0
-        for event in queryset:
-            total += calculate_event_scores(event)
+    def preview_and_publish_scores(self, request, queryset):
+        if "publish_confirmed" in request.POST:
+            published = 0
+            revisions = []
+            for event in queryset:
+                if not hasattr(event, "result"):
+                    self.message_user(request, f"{event}: фактический результат не заполнен.", level="error")
+                    continue
+                revision, rows = publish_event_scores(event, request.user)
+                revisions.append(f"R{event.round_number} v{revision.revision}")
+                published += len(rows)
+            if revisions:
+                self.message_user(
+                    request,
+                    f"Результаты опубликованы: {', '.join(revisions)}. Пересчитано прогнозов: {published}.",
+                )
+            return None
 
-        self.message_user(request, f"Пересчитано прогнозов: {total}")
+        previews = [
+            {
+                "event": event,
+                "has_result": hasattr(event, "result"),
+                "rows": preview_event_scores(event),
+            }
+            for event in queryset
+        ]
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Проверка перед публикацией результатов",
+            "previews": previews,
+            "queryset": queryset,
+            "action_checkbox_name": admin.helpers.ACTION_CHECKBOX_NAME,
+        }
+        return TemplateResponse(request, "admin/score_publish_preview.html", context)
 
-    recalculate_scores.short_description = "Посчитать очки"
+    preview_and_publish_scores.short_description = "Проверить и опубликовать очки"
+
+
+@admin.register(Season)
+class SeasonAdmin(admin.ModelAdmin):
+    list_display = ("year", "title", "is_active", "predictions_deadline")
+    ordering = ("-year",)
+    actions = ("make_active",)
+
+    def make_active(self, request, queryset):
+        if queryset.count() != 1:
+            self.message_user(request, "Выбери ровно один сезон.", level="error")
+            return
+        season = queryset.get()
+        season.is_active = True
+        season.save(update_fields=("is_active",))
+        self.message_user(request, f"Активный сезон: {season}.")
+
+    make_active.short_description = "Сделать выбранный сезон активным"
 
 
 @admin.register(HomeResultImage)
 class HomeResultImageAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "is_active", "sort_order", "created_at")
-    list_filter = ("is_active",)
+    list_display = ("id", "title", "season_year", "is_active", "sort_order", "created_at")
+    list_filter = ("season_year", "is_active")
     list_editable = ("is_active", "sort_order")
     search_fields = ("title", "caption")
     ordering = ("sort_order", "-created_at")
@@ -127,6 +181,7 @@ class ResultAdmin(admin.ModelAdmin):
         "driver_of_day_multiple_display",
         "safety_car_count",
         "dnf_count",
+        "published_at",
     )
     search_fields = ("event__name",)
     list_select_related = ("event",)
@@ -170,6 +225,26 @@ class ScoreAdmin(admin.ModelAdmin):
     list_filter = ("event",)
     search_fields = ("user__username", "event__name")
     list_select_related = ("event", "user")
+
+
+@admin.register(ScoreRevision)
+class ScoreRevisionAdmin(admin.ModelAdmin):
+    list_display = ("event", "revision", "created_by", "created_at")
+    list_filter = ("event__season_year", "event")
+    readonly_fields = ("event", "revision", "scores", "created_by", "created_at")
+    actions = ("restore_selected_revision",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def restore_selected_revision(self, request, queryset):
+        restored = []
+        for revision in queryset.select_related("event"):
+            new_revision = restore_score_revision(revision, request.user)
+            restored.append(f"{revision.event} → v{new_revision.revision}")
+        self.message_user(request, "Восстановлено: " + ", ".join(restored))
+
+    restore_selected_revision.short_description = "Восстановить выбранную версию"
 
 
 @admin.register(SeasonPrediction)
@@ -292,8 +367,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(TelegramReminder)
 class TelegramReminderAdmin(admin.ModelAdmin):
-    list_display = ("event", "user", "sent_at")
-    list_filter = ("event",)
+    list_display = ("event", "user", "kind", "sent_at")
+    list_filter = ("kind", "event")
     search_fields = ("event__name", "user__username")
     list_select_related = ("event", "user")
 

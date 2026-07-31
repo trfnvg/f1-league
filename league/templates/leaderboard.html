@@ -1,7 +1,7 @@
 ﻿{% extends "base.html" %}
 {% load league_extras static %}
 
-{% block title %}Таблица сезона - F1 Predictions 2026{% endblock %}
+{% block title %}Таблица сезона {{ season.year }} · F1 Predictions{% endblock %}
 
 {% block content %}
 <style>
@@ -102,13 +102,19 @@
 <section class="glass-panel p-3 p-md-4 mb-4" style="animation: card-enter 280ms ease-out both;">
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
+      <div class="page-kicker">Championship standings</div>
       <h1 class="section-title">Таблица сезона</h1>
-      <p class="section-subtitle">Общий рейтинг игроков по сумме очков за все этапы.</p>
+      <p class="section-subtitle">Общий рейтинг игроков, движение позиций и очки за каждый этап.</p>
     </div>
-    <div class="deadline-chip">
-      <span>Игроков: {{ rows|length }}</span>
-      <span style="opacity:.45;">|</span>
-      <span>Этапов: {{ events|length }}</span>
+    <div>
+      <div class="season-tabs mb-2">
+        {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
+      </div>
+      <div class="deadline-chip">
+        <span>Игроков: {{ rows|length }}</span>
+        <span style="opacity:.45;">|</span>
+        <span>{% if latest_event %}После R{{ latest_event.round_number }} · {{ latest_event.name }}{% else %}Ожидаем первый этап{% endif %}</span>
+      </div>
     </div>
   </div>
 </section>
@@ -131,6 +137,7 @@
           <tr>
             <td class="sticky-col col-rank">
               <span class="rank-chip">{{ r.rank }}</span>
+              {% if r.movement > 0 %}<span class="movement movement-up d-block mt-1">▲ {{ r.movement }}</span>{% elif r.movement < 0 %}<span class="movement movement-down d-block mt-1">▼ {{ r.movement|stringformat:"d"|slice:"1:" }}</span>{% else %}<span class="movement movement-flat d-block mt-1">—</span>{% endif %}
             </td>
             <td class="col-player fw-semibold">
               <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link player-cell">
@@ -145,6 +152,9 @@
                   <span class="player-name">{{ r.user.username }}</span>
                   {% if r.is_wpc %}
                     <span class="wpc-badge">WPC</span>
+                  {% endif %}
+                  {% if r.is_round_winner %}
+                    <span class="round-winner-badge">🏁 этап</span>
                   {% endif %}
                 </span>
               </a>
