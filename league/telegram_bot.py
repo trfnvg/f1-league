@@ -81,6 +81,10 @@ _TELEGRAM_OPENER = urllib.request.build_opener(
     urllib.request.ProxyHandler({}),
     _IPv4HTTPSHandler(),
 )
+# A custom API endpoint (for example, Cloudflare Workers) must use the normal
+# system networking stack. Unlike the direct Telegram connection, it may be
+# reachable through a proxy supplied by the hosting platform.
+_PROXY_OPENER = urllib.request.build_opener()
 
 
 def bot_is_configured():
@@ -136,8 +140,9 @@ def _api_call(method, data=None):
         headers=headers,
         method="POST",
     )
+    opener = _PROXY_OPENER if uses_proxy else _TELEGRAM_OPENER
     try:
-        with _TELEGRAM_OPENER.open(request, timeout=15) as response:
+        with opener.open(request, timeout=15) as response:
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         try:
