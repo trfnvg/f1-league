@@ -72,8 +72,7 @@ class _IPv4HTTPSHandler(urllib.request.HTTPSHandler):
         return self.do_open(
             _IPv4HTTPSConnection,
             request,
-            context=self._context,
-            check_hostname=self._check_hostname,
+            context=getattr(self, "_context", None),
         )
 
 

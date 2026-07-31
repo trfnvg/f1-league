@@ -10,7 +10,7 @@ from django.utils import timezone
 
 from .models import Event, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
 from .scoring import calculate_season_points, calculate_season_scores
-from .telegram_bot import _create_ipv4_connection, _handle_start, send_due_reminders
+from .telegram_bot import _IPv4HTTPSConnection, _IPv4HTTPSHandler, _create_ipv4_connection, _handle_start, send_due_reminders
 
 
 TEST_STORAGES = {
@@ -138,6 +138,20 @@ class TelegramTests(TestCase):
             type=socket.SOCK_STREAM,
         )
         connection.connect.assert_called_once_with(("149.154.167.220", 443))
+
+    def test_ipv4_https_handler_is_compatible_with_python_312(self):
+        handler = _IPv4HTTPSHandler()
+        request = Mock()
+
+        with patch.object(handler, "do_open", return_value="response") as do_open:
+            response = handler.https_open(request)
+
+        self.assertEqual(response, "response")
+        do_open.assert_called_once_with(
+            _IPv4HTTPSConnection,
+            request,
+            context=getattr(handler, "_context", None),
+        )
 
     def test_authenticated_user_gets_deep_link_for_current_profile(self):
         self.client.force_login(self.user)
