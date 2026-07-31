@@ -1,8 +1,10 @@
+from io import StringIO
 import socket
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.forms import modelform_factory
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -152,6 +154,16 @@ class TelegramTests(TestCase):
             request,
             context=getattr(handler, "_context", None),
         )
+
+    @override_settings(TELEGRAM_WORKER_ENABLED=False)
+    @patch("league.management.commands.telegram_bot_worker.run_worker")
+    def test_worker_can_be_disabled_without_removing_bot_token(self, run_worker):
+        output = StringIO()
+
+        call_command("telegram_bot_worker", stdout=output)
+
+        run_worker.assert_not_called()
+        self.assertIn("Telegram worker is disabled", output.getvalue())
 
     def test_authenticated_user_gets_deep_link_for_current_profile(self):
         self.client.force_login(self.user)
