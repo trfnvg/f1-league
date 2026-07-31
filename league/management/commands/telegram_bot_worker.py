@@ -1,7 +1,7 @@
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
-from league.telegram_bot import run_worker
+from league.telegram_bot import TelegramAPIError, get_bot_info, run_worker
 
 
 class Command(BaseCommand):
@@ -19,10 +19,26 @@ class Command(BaseCommand):
             action="store_true",
             help="Run one iteration and exit",
         )
+        parser.add_argument(
+            "--check",
+            action="store_true",
+            help="Check the token with Telegram and exit",
+        )
 
     def handle(self, *args, **options):
         if not getattr(settings, "TELEGRAM_BOT_TOKEN", "").strip():
+            if options["check"]:
+                raise CommandError("TELEGRAM_BOT_TOKEN is not configured")
             self.stdout.write(self.style.WARNING("TELEGRAM_BOT_TOKEN is not configured; Telegram worker is disabled."))
+            return
+
+        if options["check"]:
+            try:
+                info = get_bot_info()
+            except TelegramAPIError as exc:
+                raise CommandError(str(exc)) from exc
+            username = info.get("username") or "без username"
+            self.stdout.write(self.style.SUCCESS(f"Telegram token works: @{username}"))
             return
 
         self.stdout.write(self.style.SUCCESS("Telegram worker started."))

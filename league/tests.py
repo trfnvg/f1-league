@@ -1,5 +1,6 @@
+import socket
 from datetime import timedelta
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth.models import User
 from django.forms import modelform_factory
@@ -9,7 +10,7 @@ from django.utils import timezone
 
 from .models import Event, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
 from .scoring import calculate_season_points, calculate_season_scores
-from .telegram_bot import _handle_start, send_due_reminders
+from .telegram_bot import _create_ipv4_connection, _handle_start, send_due_reminders
 
 
 TEST_STORAGES = {
@@ -117,6 +118,26 @@ class TelegramTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="telegram-player", password="test")
         self.profile = UserProfile.objects.get(user=self.user)
+
+    @patch("league.telegram_bot.socket.socket")
+    @patch("league.telegram_bot.socket.getaddrinfo")
+    def test_telegram_connection_uses_ipv4_only(self, getaddrinfo, socket_factory):
+        connection = Mock()
+        socket_factory.return_value = connection
+        getaddrinfo.return_value = [
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("149.154.167.220", 443))
+        ]
+
+        result = _create_ipv4_connection(("api.telegram.org", 443), timeout=5)
+
+        self.assertIs(result, connection)
+        getaddrinfo.assert_called_once_with(
+            "api.telegram.org",
+            443,
+            family=socket.AF_INET,
+            type=socket.SOCK_STREAM,
+        )
+        connection.connect.assert_called_once_with(("149.154.167.220", 443))
 
     def test_authenticated_user_gets_deep_link_for_current_profile(self):
         self.client.force_login(self.user)
