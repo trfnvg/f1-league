@@ -1,5 +1,7 @@
+import http.client
 import json
 import logging
+import socket
 import time
 import urllib.error
 import urllib.parse
@@ -24,6 +26,63 @@ class TelegramAPIError(RuntimeError):
         self.error_code = error_code
 
 
+def _create_ipv4_connection(address, timeout=socket._GLOBAL_DEFAULT_TIMEOUT, source_address=None):
+    """Create an outbound connection using IPv4 only.
+
+    Some App Platform containers advertise IPv6 DNS results without having a
+    usable IPv6 route. Telegram has IPv4 endpoints, so preferring IPv4 avoids
+    ``Errno 99: Cannot assign requested address`` in that environment.
+    """
+    host, port = address
+    last_error = None
+
+    for family, socktype, proto, _, sockaddr in socket.getaddrinfo(
+        host,
+        port,
+        family=socket.AF_INET,
+        type=socket.SOCK_STREAM,
+    ):
+        connection = None
+        try:
+            connection = socket.socket(family, socktype, proto)
+            if timeout is not socket._GLOBAL_DEFAULT_TIMEOUT:
+                connection.settimeout(timeout)
+            if source_address:
+                connection.bind(source_address)
+            connection.connect(sockaddr)
+            return connection
+        except OSError as exc:
+            last_error = exc
+            if connection is not None:
+                connection.close()
+
+    if last_error is not None:
+        raise last_error
+    raise OSError(f"Could not resolve an IPv4 address for {host}")
+
+
+class _IPv4HTTPSConnection(http.client.HTTPSConnection):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._create_connection = _create_ipv4_connection
+
+
+class _IPv4HTTPSHandler(urllib.request.HTTPSHandler):
+    def https_open(self, request):
+        return self.do_open(
+            _IPv4HTTPSConnection,
+            request,
+            context=self._context,
+            check_hostname=self._check_hostname,
+        )
+
+
+_TELEGRAM_OPENER = urllib.request.build_opener(
+    urllib.request.ProxyHandler({}),
+    _IPv4HTTPSHandler(),
+)
+
+
 def bot_is_configured():
     return bool(getattr(settings, "TELEGRAM_BOT_TOKEN", "").strip())
 
@@ -43,6 +102,10 @@ def get_bot_username():
     return (result.get("username") or "").strip().lstrip("@")
 
 
+def get_bot_info():
+    return _api_call("getMe") or {}
+
+
 def _api_call(method, data=None):
     token = getattr(settings, "TELEGRAM_BOT_TOKEN", "").strip()
     if not token:
@@ -57,7 +120,7 @@ def _api_call(method, data=None):
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with _TELEGRAM_OPENER.open(request, timeout=15) as response:
             body = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         try:
