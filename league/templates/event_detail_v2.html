@@ -222,30 +222,33 @@
 </div>
 
 <div class="card event-hero-card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
-  {% if event.cover_image %}
-    <img
-      src="{{ event.cover_image.url }}"
-      class="card-img-top {% if is_past_event %}event-cover-image-past{% else %}event-cover-image-upcoming{% endif %}"
-      alt="{{ event.name }}"
-    >
-  {% else %}
-    <div class="event-detail-placeholder" aria-hidden="true"><span>R{{ event.round_number }}</span></div>
-  {% endif %}
-  <div class="card-body">
-    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-      <span class="badge text-bg-light">R{{ event.round_number }}</span>
-      {% if state == "soon" %}
-        <span class="badge text-bg-info">Скоро откроется</span>
-      {% elif state == "open" %}
-        <span class="badge text-bg-success">Открыто</span>
-      {% elif state == "closed" %}
-        <span class="badge text-bg-warning">Закрыто</span>
+  <div class="event-hero-layout">
+    <div class="event-hero-media">
+      {% if event.cover_image %}
+        <img src="{{ event.cover_image.url }}" class="event-hero-image" alt="{{ event.name }}">
       {% else %}
-        <span class="badge text-bg-secondary">Очки посчитаны</span>
+        <div class="event-detail-placeholder" aria-hidden="true"><span>R{{ event.round_number }}</span></div>
       {% endif %}
-      <span class="deadline-chip">Дедлайн: {{ event.deadline|date:"d.m.Y H:i" }}</span>
     </div>
-    <h1 class="section-title mb-0">{{ event.name }}</h1>
+    <div class="card-body event-hero-copy">
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="badge text-bg-light">R{{ event.round_number }}</span>
+        {% if state == "soon" %}
+          <span class="badge text-bg-info">Скоро откроется</span>
+        {% elif state == "open" %}
+          <span class="badge text-bg-success">Открыто</span>
+        {% elif state == "closed" %}
+          <span class="badge text-bg-warning">Закрыто</span>
+        {% else %}
+          <span class="badge text-bg-secondary">Очки посчитаны</span>
+        {% endif %}
+      </div>
+      <h1 class="section-title mb-3">{{ event.name }}</h1>
+      <div class="event-hero-deadline">
+        <small>Дедлайн предиктов</small>
+        <strong>{{ event.deadline|date:"d.m.Y · H:i" }} МСК</strong>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -226,21 +226,47 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <a href="{% url 'league:leaderboard' %}?season={{ season.year }}" class="text-decoration-none">&larr; Назад к таблице</a>
-  <div class="season-tabs">
-    {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
+  <div class="profile-page-controls">
+    <div class="season-tabs">
+      {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
+    </div>
+    {% if can_edit_avatar %}
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="profile-logout-btn" aria-label="Выйти из аккаунта">Выйти</button>
+      </form>
+    {% endif %}
   </div>
 </div>
 
 <section class="profile-hero p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
   <div class="d-flex flex-column gap-3">
     <div class="profile-user">
-      <div class="profile-avatar">
-        {% if profile_obj.avatar %}
-          <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
-        {% else %}
-          {{ player.username|slice:":1"|upper }}
-        {% endif %}
-      </div>
+      {% if can_edit_avatar %}
+        <form method="post" enctype="multipart/form-data" class="profile-avatar-form" id="avatarUploadForm">
+          {% csrf_token %}
+          <label class="profile-avatar profile-avatar-editable" for="{{ avatar_form.avatar.id_for_label }}" title="Изменить аватар">
+            {% if profile_obj.avatar %}
+              <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
+            {% else %}
+              <span>{{ player.username|slice:":1"|upper }}</span>
+            {% endif %}
+            <span class="profile-avatar-overlay" aria-hidden="true">
+              <span class="profile-avatar-camera">+</span>
+              <small>Изменить</small>
+            </span>
+          </label>
+          {{ avatar_form.avatar }}
+        </form>
+      {% else %}
+        <div class="profile-avatar">
+          {% if profile_obj.avatar %}
+            <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
+          {% else %}
+            {{ player.username|slice:":1"|upper }}
+          {% endif %}
+        </div>
+      {% endif %}
       <div>
         <div class="profile-name-row">
           <h1 class="profile-name">{{ player.username }}</h1>
@@ -249,21 +275,10 @@
           {% endif %}
         </div>
         <div class="text-muted">Профиль участника лиги прогнозов</div>
+        {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы заменить фото</div>{% endif %}
+        {% if avatar_form.avatar.errors %}<div class="avatar-upload-error">{{ avatar_form.avatar.errors }}</div>{% endif %}
       </div>
     </div>
-
-    {% if can_edit_avatar %}
-      <form method="post" enctype="multipart/form-data" class="avatar-editor">
-        {% csrf_token %}
-        <div class="avatar-editor-row">
-          <div>
-            <label for="{{ avatar_form.avatar.id_for_label }}" class="form-label mb-2">Аватар профиля</label>
-            {{ avatar_form.avatar }}
-          </div>
-          <button type="submit" class="btn btn-primary">Сохранить аватар</button>
-        </div>
-      </form>
-    {% endif %}
 
     {% if can_edit_avatar and telegram_bot_configured %}
       <div class="telegram-connect-card">
@@ -448,6 +463,18 @@
       dot.setAttribute("fill", "#fff"); dot.setAttribute("stroke", "#f0442f"); dot.setAttribute("stroke-width", 3);
       const title = document.createElementNS(ns, "title"); title.textContent = `R${item.round}: ${item.points} очков`;
       dot.appendChild(title); svg.appendChild(dot);
+    });
+  })();
+</script>
+{% endif %}
+{% if can_edit_avatar %}
+<script>
+  (() => {
+    const input = document.getElementById("{{ avatar_form.avatar.id_for_label }}");
+    const form = document.getElementById("avatarUploadForm");
+    if (!input || !form) return;
+    input.addEventListener("change", () => {
+      if (input.files && input.files.length) form.submit();
     });
   })();
 </script>

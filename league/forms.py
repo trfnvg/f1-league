@@ -161,5 +161,10 @@ class AvatarUploadForm(forms.ModelForm):
         model = UserProfile
         fields = ("avatar",)
         widgets = {
-            "avatar": forms.ClearableFileInput(attrs={"class": "form-control"}),
+            "avatar": forms.FileInput(
+                attrs={
+                    "class": "profile-avatar-input",
+                    "accept": "image/jpeg,image/png,image/webp,image/gif",
+                }
+            ),
         }

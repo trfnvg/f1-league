@@ -16,6 +16,7 @@ from .models import (
     UserProfile,
 )
 from .scoring import publish_event_scores, restore_score_revision
+from .services import build_achievements, build_leaderboard
 from .telegram_bot import send_due_reminders, send_result_notifications
 
 
@@ -201,3 +202,40 @@ class ExpandedTelegramTests(TestCase):
                 kind=TelegramReminder.Kind.RESULT,
             ).exists()
         )
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class InterfaceRefinementTests(TestCase):
+    def test_own_profile_has_clickable_avatar_and_logout(self):
+        user = User.objects.create_user("profile-owner", password="test")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("league:player_profile", args=[user.id]))
+
+        self.assertContains(response, "profile-avatar-editable")
+        self.assertContains(response, "Нажми на аватар")
+        self.assertContains(response, "profile-logout-btn")
+        self.assertNotContains(response, 'class="avatar-editor"')
+
+    def test_chart_uses_unique_curated_colors(self):
+        users = [User.objects.create_user(f"driver-{index}") for index in range(12)]
+
+        colors = [item["color"] for item in build_leaderboard(2026)["chart"]["series"]]
+
+        self.assertEqual(len(colors), len(users))
+        self.assertEqual(len(set(colors)), len(colors))
+
+    def test_stable_pace_uses_correct_russian_plural(self):
+        user = User.objects.create_user("consistent-driver")
+        statistics = {
+            "stage_wins": 0,
+            "perfect_podiums": 0,
+            "pole_hits": 0,
+            "crazy_hits": 0,
+            "points": [1] * 11,
+        }
+
+        achievements = build_achievements(user, statistics)
+
+        stable_pace = next(item for item in achievements if item["code"] == "streak")
+        self.assertEqual(stable_pace["description"], "11 этапов подряд с очками")
