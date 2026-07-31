@@ -4,6 +4,39 @@ from django.contrib.auth.models import User
 from .models import Event, Prediction, Score, Season, SeasonScore, UserProfile
 
 
+CHART_COLORS = (
+    "#E6392F",  # racing red
+    "#1473E6",  # vivid blue
+    "#159D73",  # emerald
+    "#8E44D6",  # violet
+    "#F28C18",  # orange
+    "#00A6B4",  # cyan
+    "#D62F8A",  # magenta
+    "#687A16",  # olive
+    "#223A75",  # navy
+    "#C55A11",  # burnt orange
+    "#6D3B9C",  # deep purple
+    "#008A9A",  # teal
+    "#B02A37",  # crimson
+    "#548C2F",  # leaf green
+    "#B66A00",  # amber
+    "#3D7C98",  # steel blue
+    "#A23B72",  # berry
+    "#5E6AD2",  # indigo
+)
+
+
+def _russian_plural(value, forms):
+    value = abs(int(value))
+    if value % 100 in range(11, 15):
+        return forms[2]
+    if value % 10 == 1:
+        return forms[0]
+    if value % 10 in range(2, 5):
+        return forms[1]
+    return forms[2]
+
+
 def get_selected_season(request=None):
     active = Season.get_active()
     if request is None:
@@ -62,6 +95,10 @@ def build_leaderboard(season_year):
 
     rows = []
     chart_series = []
+    chart_color_index = {
+        user.id: index
+        for index, user in enumerate(sorted(users, key=lambda item: item.id))
+    }
     for rank, user in enumerate(users_sorted, start=1):
         profile = profiles.get(user.id)
         previous_rank = previous_ranks.get(user.id, rank)
@@ -95,12 +132,12 @@ def build_leaderboard(season_year):
             if index == len(scored_events) - 1:
                 cumulative += season_bonuses.get(user.id, 0)
             points.append(cumulative)
-        hue = round((user.id * 137.508) % 360)
+        color = CHART_COLORS[chart_color_index[user.id] % len(CHART_COLORS)]
         chart_series.append(
             {
                 "user_id": user.id,
                 "name": user.username,
-                "color": f"hsl({hue} 68% 46%)",
+                "color": color,
                 "points": points,
             }
         )
@@ -221,5 +258,6 @@ def build_achievements(player, statistics):
         else:
             positive_streak = 0
     if longest_streak >= 3:
-        add("streak", "Стабильный темп", f"{longest_streak} этапа подряд с очками", "↗")
+        stage_word = _russian_plural(longest_streak, ("этап", "этапа", "этапов"))
+        add("streak", "Стабильный темп", f"{longest_streak} {stage_word} подряд с очками", "↗")
     return achievements

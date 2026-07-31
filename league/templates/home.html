@@ -4,7 +4,10 @@
 
 {% block content %}
 <section class="home-command mb-4">
-  <div class="home-command-main">
+  <div
+    class="home-command-main {% if personal_dashboard.next_event.cover_image %}has-event-cover{% endif %}"
+    {% if personal_dashboard.next_event.cover_image %}style="--next-event-cover: url('{{ personal_dashboard.next_event.cover_image.url }}');"{% endif %}
+  >
     <div class="eyebrow"><span class="live-dot"></span> F1 Predictions · Season {{ season.year }}</div>
     {% if personal_dashboard %}
       {% if personal_dashboard.next_event %}
@@ -104,7 +107,6 @@
     <div>
       <span class="eyebrow">Календарь {{ season.year }}</span>
       <h2>Все этапы</h2>
-      <p>От новых к старым — результаты последней гонки всегда наверху.</p>
     </div>
     <span class="section-count">{{ total_events }} этапов</span>
   </div>
