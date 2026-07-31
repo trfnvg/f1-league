@@ -183,6 +183,7 @@ class TelegramTests(TestCase):
         )
         self.assertNotIn("test-token", request.full_url)
         self.assertEqual(request.get_header("X-proxy-secret"), "proxy-test-secret")
+        self.assertTrue(request.get_header("User-agent").startswith("Mozilla/5.0"))
 
     @override_settings(
         TELEGRAM_API_BASE_URL="https://f1-telegram-proxy.example.workers.dev",
