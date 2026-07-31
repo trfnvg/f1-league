@@ -168,7 +168,7 @@ class TelegramTests(TestCase):
         TELEGRAM_API_BASE_URL="https://f1-telegram-proxy.example.workers.dev/",
         TELEGRAM_PROXY_SECRET="proxy-test-secret",
     )
-    @patch("league.telegram_bot._TELEGRAM_OPENER.open")
+    @patch("league.telegram_bot._PROXY_OPENER.open")
     def test_api_call_can_use_protected_proxy_without_token_in_url(self, open_request):
         response = Mock()
         response.read.return_value = json.dumps({"ok": True, "result": {"id": 123}}).encode()
