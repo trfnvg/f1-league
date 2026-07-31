@@ -32,6 +32,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("TELEGRAM_BOT_TOKEN is not configured; Telegram worker is disabled."))
             return
 
+        if not options["check"] and not getattr(settings, "TELEGRAM_WORKER_ENABLED", True):
+            self.stdout.write(self.style.WARNING("TELEGRAM_WORKER_ENABLED is false; Telegram worker is disabled."))
+            return
+
         if options["check"]:
             try:
                 info = get_bot_info()

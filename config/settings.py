@@ -46,6 +46,7 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 # never committed to the repository.
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
+TELEGRAM_WORKER_ENABLED = os.getenv("TELEGRAM_WORKER_ENABLED", "True").lower() == "true"
 SITE_URL = os.getenv("SITE_URL", "").strip()
 
 # Timeweb App Platform передаёт DJANGO_ALLOWED_HOSTS; можно задать и ALLOWED_HOSTS
