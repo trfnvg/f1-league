@@ -134,6 +134,12 @@ def _api_call(method, data=None):
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     if uses_proxy:
         headers["X-Proxy-Secret"] = proxy_secret
+        # Cloudflare Browser Integrity Check rejects urllib's default
+        # ``Python-urllib/x.y`` signature with error 1010 before the request
+        # reaches the Worker.
+        headers["User-Agent"] = (
+            "Mozilla/5.0 (compatible; F1LeagueTelegramBot/1.0; +https://f1-league.ru)"
+        )
     request = urllib.request.Request(
         url,
         data=payload,
