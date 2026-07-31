@@ -11,7 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import Event, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
+from .models import Event, Score, SeasonPrediction, SeasonResult, SeasonScore, TelegramReminder, UserProfile
 from .scoring import calculate_season_points, calculate_season_scores
 from .telegram_bot import (
     TelegramAPIError,
@@ -86,6 +86,83 @@ class PartialSeasonScoringTests(TestCase):
         score = SeasonScore.objects.get(user=self.user, season_year=2026)
         self.assertEqual(score.points, 30)
         self.assertEqual(score.breakdown, breakdown)
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class HomeEventOrderingTests(TestCase):
+    def test_home_lists_each_event_section_from_newest_round_to_oldest(self):
+        now = timezone.now()
+        upcoming_old = Event.objects.create(
+            name="Ближайший ранний этап",
+            round_number=3,
+            deadline=now + timedelta(days=3),
+        )
+        upcoming_new = Event.objects.create(
+            name="Ближайший поздний этап",
+            round_number=4,
+            deadline=now + timedelta(days=10),
+        )
+        past_old = Event.objects.create(
+            name="Прошедший ранний этап",
+            round_number=1,
+            deadline=now - timedelta(days=10),
+            status=Event.Status.SCORED,
+        )
+        past_new = Event.objects.create(
+            name="Прошедший поздний этап",
+            round_number=2,
+            deadline=now - timedelta(days=3),
+            status=Event.Status.SCORED,
+        )
+
+        response = self.client.get(reverse("league:home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["upcoming_events"], [upcoming_new, upcoming_old])
+        self.assertEqual(response.context["past_events"], [past_new, past_old])
+        self.assertContains(response, 'class="card h-100 card-hover event-card"')
+        self.assertContains(response, 'class="event-cover-placeholder"')
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class LeaderboardChartTests(TestCase):
+    def test_chart_uses_cumulative_scores_in_chronological_round_order(self):
+        first_player = User.objects.create_user(username="Алексей", password="test")
+        second_player = User.objects.create_user(username="Борис", password="test")
+        now = timezone.now()
+        first_event = Event.objects.create(
+            name="Первый этап",
+            round_number=1,
+            deadline=now - timedelta(days=20),
+            status=Event.Status.SCORED,
+        )
+        second_event = Event.objects.create(
+            name="Второй этап",
+            round_number=2,
+            deadline=now - timedelta(days=10),
+            status=Event.Status.SCORED,
+        )
+        Event.objects.create(
+            name="Будущий этап без очков",
+            round_number=3,
+            deadline=now + timedelta(days=10),
+        )
+        Score.objects.create(user=first_player, event=first_event, points=10)
+        Score.objects.create(user=first_player, event=second_event, points=4)
+        Score.objects.create(user=second_player, event=first_event, points=2)
+        Score.objects.create(user=second_player, event=second_event, points=20)
+
+        response = self.client.get(reverse("league:leaderboard"))
+
+        self.assertEqual(response.status_code, 200)
+        chart = response.context["leaderboard_chart"]
+        self.assertEqual([event["round"] for event in chart["events"]], [1, 2])
+        series = {item["name"]: item for item in chart["series"]}
+        self.assertEqual(series["Алексей"]["points"], [10, 14])
+        self.assertEqual(series["Борис"]["points"], [2, 22])
+        self.assertEqual([row["user"].username for row in response.context["rows"]], ["Борис", "Алексей"])
+        self.assertContains(response, 'id="pointsChart"')
+        self.assertContains(response, "league/leaderboard-chart.js")
 
 
 @override_settings(STORAGES=TEST_STORAGES)
