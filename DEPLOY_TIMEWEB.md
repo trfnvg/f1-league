@@ -45,6 +45,8 @@
 | `TELEGRAM_BOT_TOKEN` | Для Telegram | Токен от `@BotFather`. Храни только в переменных окружения, не добавляй в Git. |
 | `TELEGRAM_BOT_USERNAME` | Нет | Username бота без `@`, например `f1_predictions_bot`. Если не указать, сайт определит его через Telegram API. |
 | `TELEGRAM_WORKER_ENABLED` | Нет | `True` по умолчанию. Укажи `False`, если воркер запущен отдельно, а сайт должен только показывать кнопку подключения Telegram. |
+| `TELEGRAM_API_BASE_URL` | Только при прокси | URL собственного Cloudflare Worker, если Timeweb не может подключиться к `api.telegram.org`. |
+| `TELEGRAM_PROXY_SECRET` | Только при прокси | Общий случайный секрет для защиты Cloudflare Worker. |
 | `SITE_URL` | Для кнопки в сообщении | Публичный адрес сайта, например `https://f1.example.com`. |
 
 Важно: в `ALLOWED_HOSTS` должен быть **реальный хост**, который отдаёт Timeweb (вид в адресной строке после деплоя). Иначе Django вернёт 500 (DisallowedHost).
@@ -66,6 +68,22 @@ python manage.py migrate --noinput; python manage.py collectstatic --noinput; py
 ```
 
 Пользователь подключает Telegram кнопкой в своём профиле. В Telegram также доступны команды `/stop` и `/resume`.
+
+#### Если Timeweb не подключается к Telegram
+
+Не нужен отдельный облачный сервер. Можно использовать бесплатный защищённый
+Cloudflare Worker как мост:
+
+1. Создай Worker и вставь код из `deploy/cloudflare-telegram-proxy.js`.
+2. Добавь в Worker два зашифрованных секрета:
+   `TELEGRAM_BOT_TOKEN` и `PROXY_SECRET`.
+3. В Timeweb добавь `TELEGRAM_API_BASE_URL` с адресом Worker и
+   `TELEGRAM_PROXY_SECRET` с тем же значением `PROXY_SECRET`.
+4. Оставь `TELEGRAM_WORKER_ENABLED=True` только в одном приложении Timeweb и
+   перезапусти деплой.
+
+Прокси принимает только `getMe`, `getUpdates` и `sendMessage`, а все запросы
+без правильного `PROXY_SECRET` отклоняет.
 
 ### 3. Рабочая директория
 
