@@ -1,7 +1,17 @@
 from collections import Counter, defaultdict
 
 from django.contrib.auth.models import User
-from .models import DRIVER_CHOICES, Event, Prediction, Score, Season, SeasonScore, UserProfile
+from .models import (
+    DRIVER_CHOICES,
+    DuelChallenge,
+    Event,
+    Prediction,
+    Result,
+    Score,
+    Season,
+    SeasonScore,
+    UserProfile,
+)
 
 
 CHART_COLORS = (
@@ -166,6 +176,7 @@ def build_leaderboard(season_year):
         "series": chart_series,
     }
     return {
+        "season_year": season_year,
         "events": events,
         "scored_events": scored_events,
         "latest_event": latest_event,
@@ -449,18 +460,69 @@ def build_duel(player_a, player_b, season_year, leaderboard=None):
     }
 
 
-def build_activity_feed(leaderboard, limit=6):
+def build_activity_feed(leaderboard, limit=10):
     users = [row["user"] for row in leaderboard["rows"]]
     if not users:
         return []
 
+    season_year = leaderboard["season_year"]
+    scored_events = leaderboard["scored_events"]
+    event_ids = [event.id for event in scored_events]
+    user_ids = [user.id for user in users]
+    predictions = {
+        (prediction.user_id, prediction.event_id): prediction
+        for prediction in Prediction.objects.filter(
+            event_id__in=event_ids,
+            user_id__in=user_ids,
+        )
+    }
+    results = {
+        result.event_id: result
+        for result in Result.objects.filter(event_id__in=event_ids)
+    }
+
+    def event_timestamp(event):
+        result = results.get(event.id)
+        return (
+            (result.published_at if result else None)
+            or event.race_datetime
+            or event.deadline
+        )
+
+    def add_event(
+        entries,
+        *,
+        event,
+        activity_type,
+        icon,
+        text,
+        meta,
+        user_id,
+        link_to_event=False,
+        anchor="",
+    ):
+        entries.append(
+            {
+                "type": activity_type,
+                "icon": icon,
+                "text": text,
+                "meta": meta,
+                "user_id": user_id,
+                "event_id": event.id if link_to_event else None,
+                "anchor": anchor,
+                "occurred_at": event_timestamp(event),
+            }
+        )
+
     cumulative = defaultdict(int)
+    personal_bests = {}
     previous_ranks = {
         user.id: index
         for index, user in enumerate(sorted(users, key=lambda item: item.username.lower()), start=1)
     }
-    event_activity = []
-    for event_index, event in enumerate(leaderboard["scored_events"]):
+    previous_leader_id = None
+    feed = []
+    for event_index, event in enumerate(scored_events):
         event_scores = {}
         for user in users:
             score = leaderboard["scores_map"].get((user.id, event.id))
@@ -475,14 +537,72 @@ def build_activity_feed(leaderboard, limit=6):
         if best_points > 0:
             for winner in users:
                 if event_scores[winner.id] == best_points:
-                    entries.append(
-                        {
-                            "type": "winner",
-                            "icon": "🏁",
-                            "text": f"{winner.username} выиграл этап",
-                            "meta": f"R{event.round_number} · {event.name} · {best_points} очков",
-                            "user_id": winner.id,
-                        }
+                    add_event(
+                        entries,
+                        event=event,
+                        activity_type="winner",
+                        icon="🏁",
+                        text=f"{winner.username} выиграл этап",
+                        meta=f"R{event.round_number} · {event.name} · {best_points} очков",
+                        user_id=winner.id,
+                        link_to_event=True,
+                    )
+
+        unique_leader_id = None
+        if ordered:
+            leader_points = cumulative[ordered[0].id]
+            runner_up_points = cumulative[ordered[1].id] if len(ordered) > 1 else None
+            if runner_up_points is None or leader_points > runner_up_points:
+                unique_leader_id = ordered[0].id
+        if event_index and unique_leader_id and unique_leader_id != previous_leader_id:
+            leader = next(user for user in users if user.id == unique_leader_id)
+            add_event(
+                entries,
+                event=event,
+                activity_type="leader",
+                icon="P1",
+                text=f"{leader.username} стал новым лидером чемпионата",
+                meta=f"После R{event.round_number} · {cumulative[leader.id]} очков",
+                user_id=leader.id,
+            )
+
+        for user in users:
+            score = leaderboard["scores_map"].get((user.id, event.id))
+            if not score:
+                continue
+            previous_best = personal_bests.get(user.id)
+            if previous_best is not None and score.points > previous_best:
+                add_event(
+                    entries,
+                    event=event,
+                    activity_type="record",
+                    icon="PB",
+                    text=f"{user.username} обновил личный рекорд",
+                    meta=f"R{event.round_number} · {event.name} · {score.points} очков",
+                    user_id=user.id,
+                )
+            personal_bests[user.id] = max(previous_best or score.points, score.points)
+
+        result = results.get(event.id)
+        if result:
+            for user in users:
+                prediction = predictions.get((user.id, event.id))
+                if not prediction:
+                    continue
+                if all(
+                    _normalize(getattr(prediction, field_name))
+                    == _normalize(getattr(result, field_name))
+                    for field_name in ("p1", "p2", "p3")
+                ):
+                    add_event(
+                        entries,
+                        event=event,
+                        activity_type="perfect-podium",
+                        icon="123",
+                        text=f"{user.username} идеально угадал подиум",
+                        meta=f"R{event.round_number} · {event.name} · P1, P2 и P3 точно",
+                        user_id=user.id,
+                        link_to_event=True,
                     )
 
         if event_index:
@@ -494,23 +614,72 @@ def build_activity_feed(leaderboard, limit=6):
             if movers:
                 movement, mover = max(movers, key=lambda item: (item[0], event_scores[item[1].id]))
                 place_word = _russian_plural(movement, ("место", "места", "мест"))
-                entries.append(
-                    {
-                        "type": "movement",
-                        "icon": "↗",
-                        "text": f"{mover.username} поднялся на {movement} {place_word}",
-                        "meta": f"После R{event.round_number} · теперь P{current_ranks[mover.id]}",
-                        "user_id": mover.id,
-                    }
+                add_event(
+                    entries,
+                    event=event,
+                    activity_type="movement",
+                    icon="↗",
+                    text=f"{mover.username} поднялся на {movement} {place_word}",
+                    meta=f"После R{event.round_number} · теперь P{current_ranks[mover.id]}",
+                    user_id=mover.id,
                 )
-        event_activity.append(entries)
-        previous_ranks = current_ranks
-
-    feed = []
-    for entries in reversed(event_activity):
         feed.extend(entries)
-        if len(feed) >= limit:
-            break
+        previous_ranks = current_ranks
+        previous_leader_id = unique_leader_id
+
+    duels = (
+        DuelChallenge.objects.filter(
+            event__season_year=season_year,
+            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
+        )
+        .select_related("event", "challenger", "opponent", "winner")
+        .order_by("responded_at", "id")
+    )
+    for duel in duels:
+        stake_word = _russian_plural(duel.stake, ("очко", "очка", "очков"))
+        if duel.responded_at:
+            feed.append(
+                {
+                    "type": "duel-accepted",
+                    "icon": "VS",
+                    "text": f"Дуэль {duel.challenger.username} — {duel.opponent.username} принята",
+                    "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
+                    "user_id": duel.opponent_id,
+                    "event_id": duel.event_id,
+                    "anchor": "#event-duel",
+                    "occurred_at": duel.responded_at,
+                }
+            )
+        if duel.status == DuelChallenge.Status.SETTLED and duel.settled_at and duel.winner_id:
+            feed.append(
+                {
+                    "type": "duel-result",
+                    "icon": "+",
+                    "text": f"{duel.winner.username} выиграл дуэль",
+                    "meta": (
+                        f"R{duel.event.round_number} · {duel.challenger.username} — "
+                        f"{duel.opponent.username} · +{duel.stake} {stake_word}"
+                    ),
+                    "user_id": duel.winner_id,
+                    "event_id": duel.event_id,
+                    "anchor": "#event-duel",
+                    "occurred_at": duel.settled_at,
+                }
+            )
+
+    type_priority = {
+        "duel-result": 100,
+        "winner": 95,
+        "leader": 90,
+        "duel-accepted": 85,
+        "movement": 80,
+        "perfect-podium": 75,
+        "record": 70,
+    }
+    feed.sort(
+        key=lambda item: (item["occurred_at"], type_priority.get(item["type"], 0)),
+        reverse=True,
+    )
     return feed[:limit]
 
 

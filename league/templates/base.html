@@ -1035,8 +1035,8 @@
       {% if user.is_authenticated %}
         <a class="nav-chip nav-chip-primary" href="{% url 'league:player_profile' user_id=user.id %}">{{ user.username }}</a>
       {% else %}
-        <a class="nav-chip" href="{% url 'login' %}">Войти</a>
-        <a class="nav-chip nav-chip-primary" href="{% url 'league:register' %}">Вступить</a>
+        <a class="nav-chip nav-chip-primary" href="{% url 'login' %}">Войти</a>
+        <a class="nav-chip" href="{% url 'league:register' %}">Регистрация</a>
       {% endif %}
     </div>
   </div>
@@ -1052,7 +1052,6 @@
 
   <div class="offcanvas-body">
     <a class="menu-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Главная</a>
-    <a class="menu-item {% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
@@ -1061,16 +1060,6 @@
     {% endif %}
 
     <div class="menu-divider"></div>
-
-    {% if available_seasons %}
-      <div class="menu-meta">Архив сезонов</div>
-      <div class="season-switcher">
-        {% for item in available_seasons %}
-          <a href="{% url 'league:home' %}?season={{ item.year }}" class="season-switcher-link {% if item.year == current_season.year %}is-current{% endif %}">{{ item.year }}</a>
-        {% endfor %}
-      </div>
-      <div class="menu-divider"></div>
-    {% endif %}
 
     {% if user.is_authenticated %}
       <div class="menu-account">
