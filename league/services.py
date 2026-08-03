@@ -509,6 +509,7 @@ def build_activity_feed(leaderboard, limit=10):
                 "meta": meta,
                 "user_id": user_id,
                 "event_id": event.id if link_to_event else None,
+                "source_event_id": event.id,
                 "anchor": anchor,
                 "occurred_at": event_timestamp(event),
             }
@@ -646,6 +647,7 @@ def build_activity_feed(leaderboard, limit=10):
                     "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
                     "user_id": duel.opponent_id,
                     "event_id": duel.event_id,
+                    "source_event_id": duel.event_id,
                     "anchor": "#event-duel",
                     "occurred_at": duel.responded_at,
                 }
@@ -662,6 +664,7 @@ def build_activity_feed(leaderboard, limit=10):
                     ),
                     "user_id": duel.winner_id,
                     "event_id": duel.event_id,
+                    "source_event_id": duel.event_id,
                     "anchor": "#event-duel",
                     "occurred_at": duel.settled_at,
                 }
@@ -676,6 +679,8 @@ def build_activity_feed(leaderboard, limit=10):
         "perfect-podium": 75,
         "record": 70,
     }
+    latest_event_id = scored_events[-1].id if scored_events else None
+    feed = [item for item in feed if item["source_event_id"] == latest_event_id]
     feed.sort(
         key=lambda item: (item["occurred_at"], type_priority.get(item["type"], 0)),
         reverse=True,

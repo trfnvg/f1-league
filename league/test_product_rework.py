@@ -379,6 +379,8 @@ class CompetitiveFeaturesTests(TestCase):
 
         self.assertTrue(any(item["text"] == "Alice выиграл этап" for item in feed))
         self.assertTrue(any("Alice поднялся на 1 место" == item["text"] for item in feed))
+        self.assertTrue(all(item["source_event_id"] == second_event.id for item in feed))
+        self.assertFalse(any("Opening GP" in item["meta"] for item in feed))
 
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, "Последние события")
