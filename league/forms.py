@@ -2,6 +2,7 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
+from .duels import available_opponents
 from .models import Prediction, SeasonPrediction, UserProfile
 
 
@@ -168,3 +169,30 @@ class AvatarUploadForm(forms.ModelForm):
                 }
             ),
         }
+
+
+class DuelChallengeForm(forms.Form):
+    opponent = forms.ModelChoiceField(
+        label="Соперник",
+        queryset=User.objects.none(),
+        empty_label="Выбери участника",
+        widget=forms.Select(attrs={"class": "form-select western-duel-select"}),
+    )
+    stake = forms.IntegerField(
+        label="Ставка",
+        min_value=1,
+        max_value=10,
+        initial=5,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-control western-duel-stake",
+                "min": 1,
+                "max": 10,
+                "inputmode": "numeric",
+            }
+        ),
+    )
+
+    def __init__(self, *args, event, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["opponent"].queryset = available_opponents(event, user)

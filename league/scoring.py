@@ -1,8 +1,19 @@
 ﻿from django.db import transaction
+from collections import defaultdict
+
 from django.db.models import Max
 from django.utils import timezone
 
-from .models import Event, Prediction, Score, ScoreRevision, SeasonPrediction, SeasonResult, SeasonScore
+from .models import (
+    DuelChallenge,
+    Event,
+    Prediction,
+    Score,
+    ScoreRevision,
+    SeasonPrediction,
+    SeasonResult,
+    SeasonScore,
+)
 
 SEASON_SCORING_WEIGHTS = {
     "hungary_driver_championship_leader": ("Лидер пилотского зачета после Венгрии", 12),
@@ -118,29 +129,112 @@ def calculate_season_points(prediction, result):
     return points, breakdown
 
 
+def _build_event_score_rows(event):
+    predictions = list(
+        Prediction.objects.filter(event=event).select_related("user").order_by("user__username")
+    )
+    prediction_points = {}
+    breakdowns = {}
+    users = {}
+    for prediction in predictions:
+        points, breakdown = calculate_points(prediction, event.result)
+        prediction_points[prediction.user_id] = points
+        breakdowns[prediction.user_id] = breakdown
+        users[prediction.user_id] = prediction.user
+
+    duels = list(
+        DuelChallenge.objects.filter(
+            event=event,
+            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
+        ).select_related("challenger", "opponent")
+    )
+    adjustments = defaultdict(int)
+    duel_participant_ids = set()
+    outcomes = []
+    for duel in duels:
+        challenger_points = prediction_points.get(duel.challenger_id, 0)
+        opponent_points = prediction_points.get(duel.opponent_id, 0)
+        users[duel.challenger_id] = duel.challenger
+        users[duel.opponent_id] = duel.opponent
+        duel_participant_ids.update((duel.challenger_id, duel.opponent_id))
+
+        winner_id = None
+        if challenger_points > opponent_points:
+            winner_id = duel.challenger_id
+            adjustments[duel.challenger_id] += duel.stake
+            adjustments[duel.opponent_id] -= duel.stake
+        elif opponent_points > challenger_points:
+            winner_id = duel.opponent_id
+            adjustments[duel.opponent_id] += duel.stake
+            adjustments[duel.challenger_id] -= duel.stake
+
+        outcomes.append(
+            {
+                "duel_id": duel.id,
+                "winner_id": winner_id,
+                "challenger_points": challenger_points,
+                "opponent_points": opponent_points,
+            }
+        )
+
+    rows = []
+    for user_id, player in sorted(users.items(), key=lambda item: item[1].username.lower()):
+        base_points = prediction_points.get(user_id, 0)
+        duel_adjustment = adjustments[user_id]
+        breakdown = dict(breakdowns.get(user_id, {}))
+        if user_id in duel_participant_ids:
+            breakdown["Дуэль"] = duel_adjustment
+        rows.append(
+            {
+                "user_id": user_id,
+                "username": player.username,
+                "prediction_points": base_points,
+                "duel_adjustment": duel_adjustment,
+                "points": base_points + duel_adjustment,
+                "breakdown": breakdown,
+            }
+        )
+    return rows, outcomes
+
+
+def _apply_duel_outcomes(event, outcomes):
+    now = timezone.now()
+    DuelChallenge.objects.filter(
+        event=event,
+        status=DuelChallenge.Status.PENDING,
+    ).update(status=DuelChallenge.Status.EXPIRED, responded_at=now, updated_at=now)
+
+    for outcome in outcomes:
+        DuelChallenge.objects.filter(pk=outcome["duel_id"]).update(
+            status=DuelChallenge.Status.SETTLED,
+            winner_id=outcome["winner_id"],
+            challenger_prediction_points=outcome["challenger_points"],
+            opponent_prediction_points=outcome["opponent_points"],
+            settled_at=now,
+            updated_at=now,
+        )
+
+
 def calculate_event_scores(event):
     if not hasattr(event, "result"):
         return 0
 
-    res = event.result
-    preds = Prediction.objects.filter(event=event)
-
-    total_updates = 0
-
-    for pred in preds:
-        pts, breakdown = calculate_points(pred, res)
-
+    rows, outcomes = _build_event_score_rows(event)
+    for row in rows:
         Score.objects.update_or_create(
             event=event,
-            user=pred.user,
+            user_id=row["user_id"],
             defaults={
-                "points": pts,
-                "breakdown": breakdown,
+                "points": row["points"],
+                "prediction_points": row["prediction_points"],
+                "duel_adjustment": row["duel_adjustment"],
+                "breakdown": row["breakdown"],
             },
         )
-        total_updates += 1
-
-    return total_updates
+    user_ids = [row["user_id"] for row in rows]
+    Score.objects.filter(event=event).exclude(user_id__in=user_ids).delete()
+    _apply_duel_outcomes(event, outcomes)
+    return len(rows)
 
 
 def preview_event_scores(event):
@@ -148,21 +242,11 @@ def preview_event_scores(event):
         return []
 
     previous_scores = {score.user_id: score for score in Score.objects.filter(event=event)}
-    rows = []
-    predictions = Prediction.objects.filter(event=event).select_related("user").order_by("user__username")
-    for prediction in predictions:
-        points, breakdown = calculate_points(prediction, event.result)
-        previous = previous_scores.get(prediction.user_id)
-        rows.append(
-            {
-                "user_id": prediction.user_id,
-                "username": prediction.user.username,
-                "previous_points": previous.points if previous else None,
-                "points": points,
-                "delta": points - (previous.points if previous else 0),
-                "breakdown": breakdown,
-            }
-        )
+    rows, _ = _build_event_score_rows(event)
+    for row in rows:
+        previous = previous_scores.get(row["user_id"])
+        row["previous_points"] = previous.points if previous else None
+        row["delta"] = row["points"] - (previous.points if previous else 0)
     return rows
 
 
@@ -171,7 +255,13 @@ def publish_event_scores(event, user=None):
     if not hasattr(event, "result"):
         raise ValueError("Сначала внеси фактический результат этапа.")
 
-    rows = preview_event_scores(event)
+    rows, outcomes = _build_event_score_rows(event)
+    previous_scores = {score.user_id: score for score in Score.objects.filter(event=event)}
+    for row in rows:
+        previous = previous_scores.get(row["user_id"])
+        row["previous_points"] = previous.points if previous else None
+        row["delta"] = row["points"] - (previous.points if previous else 0)
+
     Score.objects.filter(event=event).delete()
     Score.objects.bulk_create(
         [
@@ -179,6 +269,8 @@ def publish_event_scores(event, user=None):
                 event=event,
                 user_id=row["user_id"],
                 points=row["points"],
+                prediction_points=row["prediction_points"],
+                duel_adjustment=row["duel_adjustment"],
                 breakdown=row["breakdown"],
             )
             for row in rows
@@ -195,12 +287,15 @@ def publish_event_scores(event, user=None):
             {
                 "user_id": row["user_id"],
                 "points": row["points"],
+                "prediction_points": row["prediction_points"],
+                "duel_adjustment": row["duel_adjustment"],
                 "breakdown": row["breakdown"],
             }
             for row in rows
         ],
         created_by=user if getattr(user, "is_authenticated", False) else None,
     )
+    _apply_duel_outcomes(event, outcomes)
 
     event.status = Event.Status.SCORED
     event.save(update_fields=("status",))
@@ -221,6 +316,8 @@ def restore_score_revision(revision, user=None):
                 event=event,
                 user_id=row["user_id"],
                 points=row["points"],
+                prediction_points=row.get("prediction_points", row["points"]),
+                duel_adjustment=row.get("duel_adjustment", 0),
                 breakdown=row.get("breakdown", {}),
             )
             for row in revision.scores
@@ -236,6 +333,33 @@ def restore_score_revision(revision, user=None):
         scores=revision.scores,
         created_by=user if getattr(user, "is_authenticated", False) else None,
     )
+
+    restored_base_points = {
+        row["user_id"]: row.get("prediction_points", row["points"])
+        for row in revision.scores
+    }
+    outcomes = []
+    for duel in DuelChallenge.objects.filter(
+        event=event,
+        status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
+    ):
+        challenger_points = restored_base_points.get(duel.challenger_id, 0)
+        opponent_points = restored_base_points.get(duel.opponent_id, 0)
+        winner_id = None
+        if challenger_points > opponent_points:
+            winner_id = duel.challenger_id
+        elif opponent_points > challenger_points:
+            winner_id = duel.opponent_id
+        outcomes.append(
+            {
+                "duel_id": duel.id,
+                "winner_id": winner_id,
+                "challenger_points": challenger_points,
+                "opponent_points": opponent_points,
+            }
+        )
+    _apply_duel_outcomes(event, outcomes)
+
     event.status = Event.Status.SCORED
     event.save(update_fields=("status",))
     return restored

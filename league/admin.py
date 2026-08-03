@@ -4,6 +4,7 @@ from django.template.response import TemplateResponse
 
 from .models import (
     DRIVER_CHOICES,
+    DuelChallenge,
     Event,
     EventPhoto,
     HomeResultImage,
@@ -97,7 +98,17 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
     inlines = [EventPhotoInline, ResultInline]
-    fields = ("season_year", "name", "round_number", "has_sprint", "status", "deadline", "race_datetime", "cover_image")
+    fields = (
+        "season_year",
+        "name",
+        "round_number",
+        "has_sprint",
+        "status",
+        "deadline",
+        "race_datetime",
+        "cover_image",
+        "duel_cover_image",
+    )
 
     actions = ["preview_and_publish_scores"]
 
@@ -221,10 +232,36 @@ class PredictionAdmin(admin.ModelAdmin):
 
 @admin.register(Score)
 class ScoreAdmin(admin.ModelAdmin):
-    list_display = ("event", "user", "points")
+    list_display = ("event", "user", "prediction_points", "duel_adjustment", "points")
     list_filter = ("event",)
     search_fields = ("user__username", "event__name")
     list_select_related = ("event", "user")
+
+
+@admin.register(DuelChallenge)
+class DuelChallengeAdmin(admin.ModelAdmin):
+    list_display = (
+        "event",
+        "challenger",
+        "opponent",
+        "stake",
+        "status",
+        "winner",
+        "created_at",
+    )
+    list_filter = ("status", "event__season_year", "event")
+    search_fields = ("challenger__username", "opponent__username", "event__name")
+    list_select_related = ("event", "challenger", "opponent", "winner")
+    readonly_fields = (
+        "status",
+        "winner",
+        "challenger_prediction_points",
+        "opponent_prediction_points",
+        "created_at",
+        "updated_at",
+        "responded_at",
+        "settled_at",
+    )
 
 
 @admin.register(ScoreRevision)

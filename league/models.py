@@ -2,7 +2,9 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import F, Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -99,6 +101,14 @@ class Event(models.Model):
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
     has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
+    duel_cover_image = models.ImageField(
+        "Обложка дуэлей",
+        upload_to="event_duels/",
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="Необязательная иллюстрация F1 × Wild West для блока дуэлей.",
+    )
 
     class Status(models.TextChoices):
         OPEN = "open", "Открыто"
@@ -458,6 +468,8 @@ class Score(models.Model):
     user = models.ForeignKey("auth.User", on_delete=models.CASCADE)
 
     points = models.IntegerField(default=0)
+    prediction_points = models.IntegerField("Очки прогноза", default=0)
+    duel_adjustment = models.IntegerField("Поправка за дуэль", default=0)
     breakdown = models.JSONField(default=dict, blank=True)
 
     class Meta:
@@ -465,6 +477,89 @@ class Score(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.event}: {self.points}"
+
+
+class DuelChallenge(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ожидает ответа"
+        ACCEPTED = "accepted", "Принята"
+        DECLINED = "declined", "Отклонена"
+        CANCELLED = "cancelled", "Отменена"
+        EXPIRED = "expired", "Истекла"
+        SETTLED = "settled", "Рассчитана"
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="duel_challenges")
+    challenger = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="duel_challenges_sent",
+        verbose_name="Инициатор",
+    )
+    opponent = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="duel_challenges_received",
+        verbose_name="Соперник",
+    )
+    stake = models.PositiveSmallIntegerField(
+        "Ставка",
+        validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
+    status = models.CharField(
+        "Статус",
+        max_length=10,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    winner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="duel_challenges_won",
+        verbose_name="Победитель",
+        null=True,
+        blank=True,
+    )
+    challenger_prediction_points = models.IntegerField("Очки инициатора", null=True, blank=True)
+    opponent_prediction_points = models.IntegerField("Очки соперника", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    responded_at = models.DateTimeField("Ответ получен", null=True, blank=True)
+    settled_at = models.DateTimeField("Рассчитана", null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        verbose_name = "Дуэль"
+        verbose_name_plural = "Дуэли"
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(stake__gte=1, stake__lte=10),
+                name="duel_stake_between_1_and_10",
+            ),
+            models.CheckConstraint(
+                condition=~Q(challenger=F("opponent")),
+                name="duel_players_must_differ",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("event", "status"), name="duel_event_status_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.challenger} vs {self.opponent} — {self.event} ({self.stake})"
+
+    def involves(self, user):
+        return bool(user and user.id in (self.challenger_id, self.opponent_id))
+
+    def opponent_for(self, user):
+        if not self.involves(user):
+            return None
+        return self.opponent if user.id == self.challenger_id else self.challenger
+
+    def adjustment_for(self, user):
+        if self.status != self.Status.SETTLED or not self.winner_id or not self.involves(user):
+            return 0
+        return self.stake if self.winner_id == user.id else -self.stake
 
 
 class ScoreRevision(models.Model):

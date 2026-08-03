@@ -12,23 +12,25 @@
         {% else %}
           <table>
             <thead>
-              <tr><th>Игрок</th><th>Было</th><th>Станет</th><th>Изменение</th><th>Разбор</th></tr>
+              <tr><th>Игрок</th><th>Прогноз</th><th>Дуэль</th><th>Было</th><th>Станет</th><th>Изменение</th><th>Разбор</th></tr>
             </thead>
             <tbody>
               {% for row in preview.rows %}
                 <tr>
                   <td>{{ row.username }}</td>
+                  <td>{{ row.prediction_points }}</td>
+                  <td>{% if row.duel_adjustment > 0 %}+{% endif %}{{ row.duel_adjustment }}</td>
                   <td>{{ row.previous_points|default_if_none:"—" }}</td>
                   <td><strong>{{ row.points }}</strong></td>
                   <td>{% if row.delta > 0 %}+{% endif %}{{ row.delta }}</td>
                   <td>
                     {% for label, points in row.breakdown.items %}
-                      {{ label }}: +{{ points }}{% if not forloop.last %}, {% endif %}
+                      {{ label }}: {% if points > 0 %}+{% endif %}{{ points }}{% if not forloop.last %}, {% endif %}
                     {% empty %}Нет попаданий{% endfor %}
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="5">На этот этап нет прогнозов.</td></tr>
+                <tr><td colspan="7">На этот этап нет прогнозов и принятых дуэлей.</td></tr>
               {% endfor %}
             </tbody>
           </table>

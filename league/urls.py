@@ -11,6 +11,9 @@ urlpatterns = [
     path("register/", views.register, name="register"),
     path("telegram/connect/", views.connect_telegram, name="telegram_connect"),
     path("events/<int:event_id>/", views.event_detail, name="event_detail"),
+    path("events/<int:event_id>/duels/create/", views.create_event_duel, name="create_event_duel"),
+    path("duels/<int:duel_id>/cancel/", views.cancel_event_duel, name="cancel_event_duel"),
+    path("duels/<int:duel_id>/<str:action>/", views.respond_event_duel, name="respond_event_duel"),
     path("players/<int:user_id>/", views.player_profile, name="player_profile"),
     path("leaderboard/", views.leaderboard, name="leaderboard"),
 ]
