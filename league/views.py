@@ -48,6 +48,25 @@ def _driver_of_day_values(result):
     return [value for value in values if value]
 
 
+def _community_prediction_correctness(prediction, result):
+    driver_fields = ("p1", "p2", "p3", "pole", "fastest_lap")
+    correct = {
+        field_name: bool(
+            result
+            and _normalize(getattr(prediction, field_name))
+            and _normalize(getattr(prediction, field_name))
+            == _normalize(getattr(result, field_name))
+        )
+        for field_name in driver_fields
+    }
+    correct["crazy_prediction"] = bool(
+        result
+        and (prediction.crazy_prediction or "").strip()
+        and prediction.crazy_prediction_approved
+    )
+    return correct
+
+
 def home(request):
     now = timezone.now()
     season = get_selected_season(request)
@@ -435,6 +454,7 @@ def event_detail(request, event_id: int):
                 "prediction": item,
                 "profile": getattr(item.user, "league_profile", None),
                 "score": public_scores.get(item.user_id),
+                "correct": _community_prediction_correctness(item, result_obj),
             }
             for item in public_predictions
         ]

@@ -504,13 +504,13 @@
               <td>
                 <a class="player-link fw-bold" href="{% url 'league:player_profile' user_id=row.prediction.user.id %}?season={{ event.season_year }}">{{ row.prediction.user.username }}</a>
               </td>
-              <td>{{ row.prediction.get_p1_display }}</td>
-              <td>{{ row.prediction.get_p2_display }}</td>
-              <td>{{ row.prediction.get_p3_display }}</td>
-              <td>{{ row.prediction.get_pole_display }}</td>
-              <td>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
-              <td>{{ row.prediction.crazy_prediction|default:"—" }}</td>
-              <td>{% if row.score %}<span class="score-pill">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
+              <td{% if row.correct.p1 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p1_display }}</td>
+              <td{% if row.correct.p2 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p2_display }}</td>
+              <td{% if row.correct.p3 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p3_display }}</td>
+              <td{% if row.correct.pole %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_pole_display }}</td>
+              <td{% if row.correct.fastest_lap %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
+              <td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}</td>
+              <td>{% if row.score %}<span class="community-score">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
             </tr>
           {% empty %}
             <tr><td colspan="8" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>

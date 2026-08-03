@@ -245,17 +245,28 @@
       {% if can_edit_avatar %}
         <form method="post" enctype="multipart/form-data" class="profile-avatar-form" id="avatarUploadForm">
           {% csrf_token %}
-          <label class="profile-avatar profile-avatar-editable" for="{{ avatar_form.avatar.id_for_label }}" title="Изменить аватар">
+          <button class="profile-avatar profile-avatar-editable"
+                  type="button"
+                  id="avatarMenuButton"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="avatarUploadMenu"
+                  title="Открыть меню аватара">
             {% if profile_obj.avatar %}
               <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
             {% else %}
               <span>{{ player.username|slice:":1"|upper }}</span>
             {% endif %}
-            <span class="profile-avatar-overlay" aria-hidden="true">
-              <span class="profile-avatar-camera">+</span>
-              <small>Изменить</small>
-            </span>
-          </label>
+          </button>
+          <div class="profile-avatar-menu" id="avatarUploadMenu" role="menu" hidden>
+            <button class="profile-avatar-menu-action" id="avatarUploadAction" type="button" role="menuitem">
+              <span class="profile-avatar-menu-icon" aria-hidden="true">↑</span>
+              <span>
+                <strong>Загрузить аватар</strong>
+                <small>JPG, PNG или WebP</small>
+              </span>
+            </button>
+          </div>
           {{ avatar_form.avatar }}
         </form>
       {% else %}
@@ -275,7 +286,7 @@
           {% endif %}
         </div>
         <div class="text-muted">Профиль участника лиги прогнозов</div>
-        {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы заменить фото</div>{% endif %}
+        {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы открыть меню</div>{% endif %}
         {% if avatar_form.avatar.errors %}<div class="avatar-upload-error">{{ avatar_form.avatar.errors }}</div>{% endif %}
       </div>
     </div>
@@ -472,7 +483,32 @@
   (() => {
     const input = document.getElementById("{{ avatar_form.avatar.id_for_label }}");
     const form = document.getElementById("avatarUploadForm");
-    if (!input || !form) return;
+    const button = document.getElementById("avatarMenuButton");
+    const menu = document.getElementById("avatarUploadMenu");
+    const uploadAction = document.getElementById("avatarUploadAction");
+    if (!input || !form || !button || !menu || !uploadAction) return;
+
+    const setMenuOpen = (isOpen) => {
+      menu.hidden = !isOpen;
+      button.setAttribute("aria-expanded", String(isOpen));
+    };
+
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setMenuOpen(menu.hidden);
+    });
+    menu.addEventListener("click", (event) => event.stopPropagation());
+    uploadAction.addEventListener("click", () => {
+      setMenuOpen(false);
+      input.click();
+    });
+    document.addEventListener("click", () => setMenuOpen(false));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !menu.hidden) {
+        setMenuOpen(false);
+        button.focus();
+      }
+    });
     input.addEventListener("change", () => {
       if (input.files && input.files.length) form.submit();
     });

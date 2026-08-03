@@ -140,9 +140,12 @@
     const deadline = new Date(node.dataset.deadline).getTime();
     const render = () => {
       const distance = Math.max(0, deadline - Date.now());
-      const hours = Math.floor(distance / 3600000);
+      const days = Math.floor(distance / 86400000);
+      const hours = Math.floor((distance % 86400000) / 3600000);
       const minutes = Math.floor((distance % 3600000) / 60000);
-      output.textContent = distance ? `${hours}ч ${minutes}м` : "закрыто";
+      output.textContent = distance
+        ? `${days} дн · ${String(hours).padStart(2, "0")} ч · ${String(minutes).padStart(2, "0")} мин`
+        : "закрыто";
     };
     render();
     window.setInterval(render, 60000);

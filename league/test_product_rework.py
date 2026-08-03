@@ -122,6 +122,19 @@ class PredictionPrivacyTests(TestCase):
         self.assertContains(response, "Предикты участников")
         self.assertContains(response, self.owner.username)
 
+        create_result(self.event)
+        Score.objects.create(event=self.event, user=self.owner, points=34)
+        response = self.client.get(reverse("league:event_detail", args=[self.event.id]))
+        correct = response.context["community_predictions"][0]["correct"]
+        self.assertTrue(correct["p1"])
+        self.assertTrue(correct["p2"])
+        self.assertTrue(correct["p3"])
+        self.assertTrue(correct["pole"])
+        self.assertFalse(correct["fastest_lap"])
+        self.assertContains(response, 'class="community-prediction-correct"', count=4)
+        self.assertContains(response, 'class="community-score"')
+        self.assertNotContains(response, '<span class="score-pill">34</span>')
+
 
 @override_settings(STORAGES=TEST_STORAGES)
 class SeasonArchiveTests(TestCase):
@@ -213,9 +226,18 @@ class InterfaceRefinementTests(TestCase):
         response = self.client.get(reverse("league:player_profile", args=[user.id]))
 
         self.assertContains(response, "profile-avatar-editable")
-        self.assertContains(response, "Нажми на аватар")
+        self.assertContains(response, "Загрузить аватар")
+        self.assertContains(response, "avatarUploadMenu")
         self.assertContains(response, "profile-logout-btn")
+        self.assertNotContains(response, "profile-avatar-overlay")
         self.assertNotContains(response, 'class="avatar-editor"')
+
+    def test_home_countdown_uses_days_hours_and_minutes(self):
+        response = self.client.get(reverse("league:home"))
+
+        self.assertContains(response, "86400000")
+        self.assertContains(response, "дн ·")
+        self.assertContains(response, "мин`")
 
     def test_chart_uses_unique_curated_colors(self):
         users = [User.objects.create_user(f"driver-{index}") for index in range(12)]
