@@ -27,6 +27,21 @@
         {% if personal_dashboard.next_prediction %}
           <div class="prediction-confirmed"><span>✓</span> Прогноз сохранён — его можно изменить до дедлайна</div>
         {% endif %}
+        {% if personal_dashboard.next_duel %}
+          <a class="home-duel-alert is-{{ personal_dashboard.next_duel.status }}" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}#event-duel">
+            <span class="home-duel-alert-icon">✦</span>
+            <span>
+              {% if personal_dashboard.next_duel.status == "pending" and personal_dashboard.next_duel.opponent_id == user.id %}
+                <small>Тебе бросили вызов</small><strong>{{ personal_dashboard.next_duel.challenger.username }} · ставка {{ personal_dashboard.next_duel.stake }}</strong>
+              {% elif personal_dashboard.next_duel.status == "pending" %}
+                <small>Ожидаем ответ</small><strong>{{ personal_dashboard.next_duel.opponent.username }} · ставка {{ personal_dashboard.next_duel.stake }}</strong>
+              {% else %}
+                <small>Дуэль принята</small><strong>{% if personal_dashboard.next_duel.challenger_id == user.id %}{{ personal_dashboard.next_duel.opponent.username }}{% else %}{{ personal_dashboard.next_duel.challenger.username }}{% endif %} · {{ personal_dashboard.next_duel.stake }} очков</strong>
+              {% endif %}
+            </span>
+            <b>Открыть →</b>
+          </a>
+        {% endif %}
       {% else %}
         <p class="display-kicker">Сезон {{ season.year }}</p>
         <h1>Все предикты приняты</h1>
@@ -56,7 +71,7 @@
       </div>
       <div class="dashboard-stats">
         <div><small>Очки</small><strong>{{ personal_dashboard.total }}</strong></div>
-        <div><small>Последний этап</small><strong>{% if personal_dashboard.latest_score %}+{{ personal_dashboard.latest_score.points }}{% else %}—{% endif %}</strong></div>
+        <div><small>Последний этап</small><strong>{% if personal_dashboard.latest_score %}{% if personal_dashboard.latest_score.points > 0 %}+{% endif %}{{ personal_dashboard.latest_score.points }}{% else %}—{% endif %}</strong></div>
       </div>
     {% else %}
       <div class="dashboard-label">Топ чемпионата</div>

@@ -7,13 +7,23 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Count, Sum
+from django.db.models import Count, Q, Sum
+from django.http import HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
-from .forms import AvatarUploadForm, PredictionForm, RegisterForm, SeasonPredictionForm
+from .duels import (
+    DuelActionError,
+    cancel_duel_challenge,
+    create_duel_challenge,
+    get_user_event_duel,
+    respond_to_duel,
+)
+from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, RegisterForm, SeasonPredictionForm
 from .models import (
     DRIVER_CHOICES,
+    DuelChallenge,
     Event,
     HomeResultImage,
     Prediction,
@@ -138,6 +148,7 @@ def home(request):
                 if latest_event
                 else None
             ),
+            "next_duel": get_user_event_duel(next_event, request.user) if next_event else None,
         }
 
     return render(
@@ -493,6 +504,49 @@ def event_detail(request, event_id: int):
             for item in public_predictions
         ]
 
+    own_duel = get_user_event_duel(event, request.user)
+    duel_form = None
+    if request.user.is_authenticated and state == "open" and own_duel is None:
+        initial = {}
+        try:
+            counter_id = int(request.GET.get("counter", ""))
+            counter_stake = int(request.GET.get("stake", ""))
+        except (TypeError, ValueError):
+            counter_id = None
+            counter_stake = None
+        if counter_id:
+            initial["opponent"] = counter_id
+        if counter_stake and 1 <= counter_stake <= 10:
+            initial["stake"] = counter_stake
+        duel_form = DuelChallengeForm(event=event, user=request.user, initial=initial)
+
+    event_duels = list(
+        DuelChallenge.objects.filter(
+            event=event,
+            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
+        ).select_related(
+            "challenger",
+            "opponent",
+            "winner",
+            "challenger__league_profile",
+            "opponent__league_profile",
+        )
+    )
+    duel_history = []
+    if request.user.is_authenticated:
+        duel_history = list(
+            DuelChallenge.objects.filter(event=event)
+            .filter(Q(challenger=request.user) | Q(opponent=request.user))
+            .filter(
+                status__in=(
+                    DuelChallenge.Status.DECLINED,
+                    DuelChallenge.Status.CANCELLED,
+                    DuelChallenge.Status.EXPIRED,
+                )
+            )
+            .select_related("challenger", "opponent")[:3]
+        )
+
     return render(
         request,
         "event_detail_v2.html",
@@ -511,8 +565,79 @@ def event_detail(request, event_id: int):
             "comparison_total": comparison_total,
             "can_view_community": can_view_community,
             "community_predictions": community_predictions,
+            "own_duel": own_duel,
+            "duel_form": duel_form,
+            "event_duels": event_duels,
+            "duel_history": duel_history,
         },
     )
+
+
+@login_required(login_url="login")
+def create_event_duel(request, event_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(("POST",))
+    event = get_object_or_404(Event, id=event_id)
+    form = DuelChallengeForm(request.POST, event=event, user=request.user)
+    if not form.is_valid():
+        error = next(iter(form.errors.values()))[0] if form.errors else "Проверь данные вызова."
+        messages.error(request, str(error))
+        return redirect("league:event_detail", event_id=event.id)
+    try:
+        duel = create_duel_challenge(
+            event,
+            request.user,
+            form.cleaned_data["opponent"],
+            form.cleaned_data["stake"],
+        )
+    except DuelActionError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(
+            request,
+            f"Вызов отправлен игроку {duel.opponent.username}. Ставка — {duel.stake} очков.",
+        )
+    return redirect(f"{reverse('league:event_detail', args=(event.id,))}#event-duel")
+
+
+@login_required(login_url="login")
+def respond_event_duel(request, duel_id: int, action: str):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(("POST",))
+    duel = get_object_or_404(DuelChallenge.objects.select_related("event", "challenger"), id=duel_id)
+    if action not in ("accept", "decline"):
+        messages.error(request, "Неизвестное действие с дуэлью.")
+        return redirect("league:event_detail", event_id=duel.event_id)
+    try:
+        respond_to_duel(duel, request.user, accept=action == "accept")
+    except DuelActionError as exc:
+        messages.error(request, str(exc))
+        return redirect(f"{reverse('league:event_detail', args=(duel.event_id,))}#event-duel")
+
+    if action == "accept":
+        messages.success(request, f"Дуэль принята. На кону {duel.stake} очков.")
+        target = reverse("league:event_detail", args=(duel.event_id,))
+    else:
+        messages.info(request, "Вызов отклонён. Можешь сразу предложить свою ставку.")
+        target = (
+            f"{reverse('league:event_detail', args=(duel.event_id,))}"
+            f"?counter={duel.challenger_id}&stake={duel.stake}#event-duel"
+        )
+    return redirect(target)
+
+
+@login_required(login_url="login")
+def cancel_event_duel(request, duel_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(("POST",))
+    duel = get_object_or_404(DuelChallenge.objects.select_related("event"), id=duel_id)
+    try:
+        cancel_duel_challenge(duel, request.user)
+    except DuelActionError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.info(request, "Вызов отменён.")
+    return redirect(f"{reverse('league:event_detail', args=(duel.event_id,))}#event-duel")
 
 
 def player_profile(request, user_id: int):

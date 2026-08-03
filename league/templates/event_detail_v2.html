@@ -254,6 +254,105 @@
   </div>
 </div>
 
+<section
+  id="event-duel"
+  class="western-duel mb-4{% if event.duel_cover_image %} has-duel-art{% endif %}"
+  {% if event.duel_cover_image %}style="--western-duel-art:url('{{ event.duel_cover_image.url }}');"{% endif %}
+>
+  <div class="western-duel-heading">
+    <div>
+      <span class="western-duel-kicker">F1 · Wild West</span>
+      <h2>Вызов на дуэль</h2>
+      <p>Сравниваются чистые очки прогноза. Победитель забирает ставку, проигравший теряет столько же.</p>
+    </div>
+    <div class="western-duel-limit"><small>Максимальная ставка</small><strong>10</strong><span>очков</span></div>
+  </div>
+
+  {% if not user.is_authenticated %}
+    <div class="western-duel-empty">
+      <span>✦</span>
+      <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войди в аккаунт</a>, чтобы бросить вызов участнику.</p>
+    </div>
+  {% elif own_duel %}
+    <article class="western-showdown is-{{ own_duel.status }}">
+      <div class="western-fighter">
+        <span class="western-avatar">
+          {% if own_duel.challenger.league_profile.avatar %}<img src="{{ own_duel.challenger.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.challenger.username|slice:":1"|upper }}{% endif %}
+        </span>
+        <strong>{{ own_duel.challenger.username }}</strong>
+        <small>Бросил вызов</small>
+      </div>
+      <div class="western-stake-seal"><small>На кону</small><strong>{{ own_duel.stake }}</strong><span>очков</span></div>
+      <div class="western-fighter is-opponent">
+        <span class="western-avatar">
+          {% if own_duel.opponent.league_profile.avatar %}<img src="{{ own_duel.opponent.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.opponent.username|slice:":1"|upper }}{% endif %}
+        </span>
+        <strong>{{ own_duel.opponent.username }}</strong>
+        <small>Принимает бой</small>
+      </div>
+
+      <div class="western-duel-state">
+        {% if own_duel.status == "pending" and own_duel.opponent_id == user.id %}
+          <div><span class="western-state-label">Тебе бросили вызов</span><strong>Принимаешь бой?</strong></div>
+          <div class="western-duel-actions">
+            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='accept' %}">{% csrf_token %}<button class="western-btn is-accept" type="submit">Принять</button></form>
+            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='decline' %}">{% csrf_token %}<button class="western-btn is-decline" type="submit">Отклонить и предложить своё</button></form>
+          </div>
+        {% elif own_duel.status == "pending" %}
+          <div><span class="western-state-label">Вызов отправлен</span><strong>Ждём ответа от {{ own_duel.opponent.username }}</strong></div>
+          <form method="post" action="{% url 'league:cancel_event_duel' duel_id=own_duel.id %}">{% csrf_token %}<button class="western-btn is-quiet" type="submit">Отменить вызов</button></form>
+        {% else %}
+          <div><span class="western-state-label">Дуэль принята</span><strong>Решение — после подсчёта этапа</strong></div>
+          <span class="western-locked-mark">Ставка зафиксирована</span>
+        {% endif %}
+      </div>
+    </article>
+  {% elif duel_form %}
+    <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="western-challenge-form">
+      {% csrf_token %}
+      <div class="western-form-intro"><span>✦</span><div><strong>Назначить дуэль</strong><small>У каждого игрока может быть только одна активная дуэль на этап.</small></div></div>
+      <label><span>Кого вызываем</span>{{ duel_form.opponent }}</label>
+      <label class="western-stake-field"><span>Сколько очков</span>{{ duel_form.stake }}<small>от 1 до 10</small></label>
+      <button type="submit" class="western-btn is-challenge">Бросить вызов <span>→</span></button>
+    </form>
+  {% elif state != "open" %}
+    <div class="western-duel-empty"><span>⌛</span><p>Приём новых вызовов закрыт вместе с дедлайном прогнозов.</p></div>
+  {% else %}
+    <div class="western-duel-empty"><span>✦</span><p>Свободных соперников сейчас нет — все уже участвуют в дуэлях.</p></div>
+  {% endif %}
+
+  {% if event_duels %}
+    <div class="western-duel-roster">
+      <div class="western-roster-title"><span>Showdowns</span><strong>Дуэли этапа</strong></div>
+      <div class="western-roster-grid">
+        {% for duel in event_duels %}
+          {% if not own_duel or duel.id != own_duel.id %}
+            <article class="western-roster-card">
+              <div class="western-roster-players"><strong{% if duel.winner_id == duel.challenger_id %} class="is-winner"{% endif %}>{{ duel.challenger.username }}</strong><span>VS</span><strong{% if duel.winner_id == duel.opponent_id %} class="is-winner"{% endif %}>{{ duel.opponent.username }}</strong></div>
+              <div class="western-roster-result">
+                {% if duel.status == "settled" %}
+                  <span>{{ duel.challenger_prediction_points }} : {{ duel.opponent_prediction_points }}</span>
+                  {% if duel.winner %}<strong>{{ duel.winner.username }} · +{{ duel.stake }}</strong>{% else %}<strong>Ничья · без обмена</strong>{% endif %}
+                {% else %}
+                  <span>Ставка {{ duel.stake }}</span><strong>Бой принят</strong>
+                {% endif %}
+              </div>
+            </article>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if duel_history and not own_duel %}
+    <div class="western-duel-history">
+      {% for duel in duel_history %}
+        <span>{{ duel.challenger.username }} → {{ duel.opponent.username }} · {{ duel.get_status_display }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+
 <div class="card prediction-workbench mb-4 card-accent-top" style="animation: card-enter 340ms ease-out both;">
   <div class="card-body">
     <h2 class="h5 mb-3">Сделать прогноз</h2>
@@ -402,7 +501,7 @@
             {% for k, v in score.breakdown.items %}
               <div class="breakdown-row">
                 <div class="fw-semibold">{{ k }}</div>
-                <div class="points-chip">+{{ v }}</div>
+                <div class="points-chip{% if v < 0 %} is-negative{% endif %}">{% if v > 0 %}+{% endif %}{{ v }}</div>
               </div>
             {% endfor %}
           </div>
