@@ -643,7 +643,21 @@ body.editorial-theme footer { color:#6f7c82; border-color:var(--race-line); back
 .community-table { min-width:920px; margin:0; }
 .community-table th { font-size:.64rem; letter-spacing:.06em; text-transform:uppercase; }
 .community-table td { font-size:.78rem; }
-.footer-inner { display:flex; align-items:center; justify-content:space-between; padding-top:1rem; padding-bottom:1rem; font-size:.72rem; font-weight:800; }
+.footer-inner { display:flex; align-items:center; justify-content:center; padding-top:1rem; padding-bottom:1rem; text-align:center; }
+.footer-signature { display:flex; flex-direction:column; align-items:center; gap:.22rem; }
+.footer-brand { color:#4f626b; font-family:"Barlow Condensed",sans-serif; font-size:.82rem; font-weight:800; letter-spacing:.075em; text-transform:uppercase; }
+.footer-brand strong { color:var(--race-red); font-weight:800; }
+.footer-season { color:#8a989e; font-size:.64rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; }
+
+.menu-account { padding:.72rem .76rem; border:1px solid rgba(19,44,59,.12); border-radius:4px 14px 4px 4px; background:rgba(255,255,255,.66); box-shadow:0 8px 22px rgba(44,59,62,.06); }
+.menu-account .menu-meta { margin:0 0 .28rem; color:#829097; font-size:.61rem; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+.menu-account-row { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+.menu-account .menu-user { min-width:0; margin:0; overflow:hidden; color:var(--race-ink); font-size:.86rem; font-weight:800; text-overflow:ellipsis; white-space:nowrap; }
+.menu-account form { flex:0 0 auto; margin:0; }
+.menu-logout-btn { display:inline-flex; min-height:31px; align-items:center; gap:.42rem; padding:.3rem .48rem .3rem .58rem; border:1px solid rgba(19,44,59,.15); border-radius:3px 8px 3px 3px; color:#566a73; background:#fffdf8; font-size:.66rem; font-weight:800; letter-spacing:.035em; text-transform:uppercase; box-shadow:0 3px 10px rgba(40,55,60,.06); transition:color 150ms ease,border-color 150ms ease,background 150ms ease,transform 150ms ease; }
+.menu-logout-btn:hover,.menu-logout-btn:focus-visible { color:var(--race-ink); border-color:rgba(19,44,59,.28); background:#f5f1e6; outline:0; transform:translateY(-1px); }
+.menu-logout-arrow { color:var(--race-red); font-size:.9rem; line-height:1; transition:transform 150ms ease; }
+.menu-logout-btn:hover .menu-logout-arrow,.menu-logout-btn:focus-visible .menu-logout-arrow { transform:translateX(2px); }
 
 @media (max-width: 992px) { .profile-stat-grid { grid-template-columns:repeat(3,1fr); } }
 @media (max-width: 576px) { .profile-stat-grid { grid-template-columns:repeat(2,1fr); } .season-tabs { justify-content:flex-start; } }

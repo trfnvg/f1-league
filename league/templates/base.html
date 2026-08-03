@@ -1070,12 +1070,19 @@
     {% endif %}
 
     {% if user.is_authenticated %}
-      <div class="menu-meta">Вошли как</div>
-      <div class="menu-user">{{ user.username }}</div>
-      <form method="post" action="{% url 'logout' %}" class="mt-2">
-        {% csrf_token %}
-        <button type="submit" class="menu-item menu-item-danger w-100 text-start">Выйти</button>
-      </form>
+      <div class="menu-account">
+        <div class="menu-meta">Вошли как</div>
+        <div class="menu-account-row">
+          <div class="menu-user">{{ user.username }}</div>
+          <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="menu-logout-btn">
+              <span>Выйти</span>
+              <span class="menu-logout-arrow" aria-hidden="true">→</span>
+            </button>
+          </form>
+        </div>
+      </div>
     {% else %}
       <div class="menu-meta">Гость</div>
     {% endif %}
@@ -1098,8 +1105,10 @@
 
 <footer class="mt-auto">
   <div class="container footer-inner">
-    <span>F1 Predictions League</span>
-    <span>Сезон {{ current_season.year }}</span>
+    <div class="footer-signature">
+      <span class="footer-brand"><strong>F1</strong> Predictions League</span>
+      <span class="footer-season">Сезон {{ current_season.year }}</span>
+    </div>
   </div>
 </footer>
 
