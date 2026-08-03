@@ -1000,9 +1000,10 @@
   </style>
   <link rel="stylesheet" href="{% static 'league/summer-theme.css' %}">
   <link rel="stylesheet" href="{% static 'league/editorial-rework.css' %}">
+  <link rel="stylesheet" href="{% static 'league/apex-night.css' %}">
 </head>
 
-<body class="summer-theme editorial-theme d-flex flex-column min-vh-100">
+<body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
 
 <nav class="navbar navbar-dark site-header">
   <div class="container">
@@ -1023,11 +1024,11 @@
     </div>
 
     <div class="desktop-nav" aria-label="Основная навигация">
-      <a href="{% url 'league:home' %}">Этапы</a>
-      <a href="{% url 'league:leaderboard' %}">Таблица</a>
-      <a href="{% url 'league:participants' %}">Участники</a>
-      <a href="{% url 'league:duel' %}">Дуэль</a>
-      <a href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
+      <a class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Этапы</a>
+      <a class="{% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
+      <a class="{% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
+      <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
+      <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
     </div>
 
     <div class="site-header-actions">
@@ -1050,11 +1051,11 @@
   </div>
 
   <div class="offcanvas-body">
-    <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
-    <a class="menu-item" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
-    <a class="menu-item" href="{% url 'league:participants' %}">Участники</a>
-    <a class="menu-item" href="{% url 'league:duel' %}">Дуэль участников</a>
-    <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Главная</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
     {% endif %}

@@ -1,0 +1,1962 @@
+/*
+ * Apex Night — the final visual layer for F1 Predictions.
+ * Loaded after the legacy themes so every section speaks one design language.
+ */
+
+:root {
+  --apex-bg: #05070a;
+  --apex-bg-soft: #080c12;
+  --apex-surface: #0d1219;
+  --apex-surface-2: #111821;
+  --apex-surface-3: #17212c;
+  --apex-raised: #1c2835;
+  --apex-ink: #f5f7fa;
+  --apex-ink-soft: #bdc6d2;
+  --apex-muted: #7d8997;
+  --apex-line: rgba(213, 224, 237, 0.12);
+  --apex-line-strong: rgba(213, 224, 237, 0.23);
+  --apex-red: #ff3326;
+  --apex-red-deep: #d61f17;
+  --apex-blue: #4c8dff;
+  --apex-cyan: #35d5dc;
+  --apex-green: #55d69e;
+  --apex-amber: #ffc857;
+  --apex-shadow: 0 22px 60px rgba(0, 0, 0, 0.36);
+  --apex-shadow-soft: 0 12px 32px rgba(0, 0, 0, 0.24);
+  --apex-corner: 3px 22px 3px 3px;
+  --apex-corner-sm: 2px 13px 2px 2px;
+  --page-max: 1240px;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--apex-bg);
+}
+
+body.apex-night-theme.editorial-theme {
+  --race-red: var(--apex-red);
+  --race-red-dark: var(--apex-red-deep);
+  --race-yellow: var(--apex-amber);
+  --race-mint: #17342a;
+  --race-blue: #172536;
+  --race-ink: var(--apex-ink);
+  --race-muted: var(--apex-muted);
+  --race-paper: var(--apex-surface);
+  --race-line: var(--apex-line);
+  --race-shadow: var(--apex-shadow);
+  --bs-body-color: var(--apex-ink);
+  --bs-secondary-color: var(--apex-muted);
+  --bs-border-color: var(--apex-line);
+  color: var(--apex-ink);
+  background:
+    radial-gradient(900px 520px at 105% -8%, rgba(255, 51, 38, 0.12), transparent 66%),
+    radial-gradient(720px 480px at -10% 18%, rgba(76, 141, 255, 0.08), transparent 70%),
+    linear-gradient(180deg, #05070a 0%, #080c11 48%, #06090d 100%);
+}
+
+body.apex-night-theme.editorial-theme::before {
+  z-index: -2;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(195, 211, 227, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(195, 211, 227, 0.025) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, #000 0%, rgba(0, 0, 0, 0.2) 72%, transparent 100%);
+}
+
+body.apex-night-theme::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  right: -16vw;
+  top: 38vh;
+  width: 70vw;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255, 51, 38, 0.38), transparent 72%);
+  box-shadow: 0 22px 0 rgba(76, 141, 255, 0.1);
+  transform: rotate(-16deg);
+}
+
+body.apex-night-theme ::selection {
+  color: #fff;
+  background: rgba(255, 51, 38, 0.78);
+}
+
+body.apex-night-theme a {
+  color: #9fc0ff;
+  text-underline-offset: 0.2em;
+}
+
+body.apex-night-theme a:hover {
+  color: #fff;
+}
+
+body.apex-night-theme .main-content {
+  max-width: var(--page-max);
+  padding-top: clamp(1.15rem, 2.4vw, 2.15rem);
+  padding-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+
+body.apex-night-theme h1,
+body.apex-night-theme h2,
+body.apex-night-theme h3,
+body.apex-night-theme h4,
+body.apex-night-theme h5,
+body.apex-night-theme h6 {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .section-title,
+body.apex-night-theme .section-heading-row h2,
+body.apex-night-theme .points-chart-title,
+body.apex-night-theme .profile-name,
+body.apex-night-theme .community-title,
+body.apex-night-theme .season-banner-title,
+body.apex-night-theme .auth-title {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-weight: 800;
+  line-height: 0.98;
+  letter-spacing: -0.018em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .section-title {
+  font-size: clamp(1.7rem, 3vw, 2.65rem);
+}
+
+body.apex-night-theme .section-subtitle,
+body.apex-night-theme .text-muted,
+body.apex-night-theme .score-subtitle,
+body.apex-night-theme .prediction-empty,
+body.apex-night-theme .muted-copy {
+  color: var(--apex-muted) !important;
+}
+
+body.apex-night-theme .eyebrow,
+body.apex-night-theme .page-kicker,
+body.apex-night-theme .display-kicker,
+body.apex-night-theme .dashboard-label,
+body.apex-night-theme .section-count,
+body.apex-night-theme .event-date,
+body.apex-night-theme .points-chart-kicker,
+body.apex-night-theme .achievement-kicker,
+body.apex-night-theme .community-kicker {
+  color: var(--apex-red);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+body.apex-night-theme .page-kicker::before,
+body.apex-night-theme .achievement-kicker::before,
+body.apex-night-theme .community-kicker::before {
+  width: 22px;
+  height: 2px;
+  background: currentColor;
+  box-shadow: 7px 4px 0 rgba(255, 51, 38, 0.35);
+}
+
+/* Header and navigation */
+body.apex-night-theme.editorial-theme .site-header {
+  background: rgba(5, 8, 12, 0.86);
+  border: 0;
+  box-shadow: 0 1px 0 var(--apex-line), 0 14px 40px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+body.apex-night-theme.editorial-theme .site-header::after {
+  right: auto;
+  width: min(26vw, 360px);
+  height: 2px;
+  background: linear-gradient(90deg, var(--apex-red), var(--apex-red) 58%, transparent);
+}
+
+body.apex-night-theme .site-header > .container {
+  max-width: var(--page-max);
+}
+
+body.apex-night-theme .brand-mark {
+  width: 23px;
+  gap: 3px;
+}
+
+body.apex-night-theme .brand-mark i {
+  height: 3px;
+  border-radius: 0;
+  background: var(--apex-red);
+  box-shadow: 7px 0 0 rgba(255, 51, 38, 0.24);
+}
+
+body.apex-night-theme.editorial-theme .brand-f1,
+body.apex-night-theme.editorial-theme .brand-text {
+  color: var(--apex-ink);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+}
+
+body.apex-night-theme.editorial-theme .brand-f1 {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .brand-year {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .desktop-nav {
+  gap: 0.1rem;
+}
+
+body.apex-night-theme .desktop-nav a {
+  position: relative;
+  padding: 0.72rem 0.7rem;
+  border-radius: 0;
+  color: #9ba6b4 !important;
+  background: transparent;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+body.apex-night-theme .desktop-nav a::after {
+  content: "";
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.34rem;
+  left: 0.7rem;
+  height: 2px;
+  background: var(--apex-red);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 180ms ease;
+}
+
+body.apex-night-theme .desktop-nav a:hover,
+body.apex-night-theme .desktop-nav a.is-active {
+  color: #fff !important;
+  background: transparent;
+}
+
+body.apex-night-theme .desktop-nav a:hover::after,
+body.apex-night-theme .desktop-nav a.is-active::after {
+  transform: scaleX(1);
+}
+
+body.apex-night-theme.editorial-theme .site-menu-btn,
+body.apex-night-theme .nav-chip {
+  border: 1px solid var(--apex-line-strong);
+  border-radius: var(--apex-corner-sm);
+  color: var(--apex-ink) !important;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: none;
+}
+
+body.apex-night-theme .site-menu-btn:hover,
+body.apex-night-theme .nav-chip:hover {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+body.apex-night-theme.editorial-theme .nav-chip-primary {
+  color: #fff !important;
+  border-color: var(--apex-red);
+  background: var(--apex-red);
+}
+
+body.apex-night-theme.editorial-theme .nav-chip-primary:hover {
+  border-color: #ff5c50 !important;
+  background: #ff4438 !important;
+}
+
+body.apex-night-theme .f1-menu {
+  color: var(--apex-ink);
+  border-right: 1px solid var(--apex-line);
+  background:
+    radial-gradient(520px 280px at 0 0, rgba(255, 51, 38, 0.15), transparent 70%),
+    #080c11;
+}
+
+body.apex-night-theme .f1-menu .offcanvas-header {
+  border-bottom-color: var(--apex-line);
+}
+
+body.apex-night-theme .f1-menu .btn-close {
+  filter: invert(1) grayscale(1);
+  opacity: 0.75;
+}
+
+body.apex-night-theme .menu-brand-text,
+body.apex-night-theme .menu-user {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .menu-brand-f1 {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .menu-item {
+  position: relative;
+  color: var(--apex-ink-soft) !important;
+  border: 1px solid transparent;
+  border-radius: var(--apex-corner-sm);
+  background: transparent;
+}
+
+body.apex-night-theme .menu-item:hover,
+body.apex-night-theme .menu-item.is-active {
+  color: #fff !important;
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.apex-night-theme .menu-item.is-active::before {
+  content: "";
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: -1px;
+  width: 3px;
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .menu-divider {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .menu-meta {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .season-switcher-link,
+body.apex-night-theme .season-tab {
+  color: var(--apex-ink-soft) !important;
+  border-color: var(--apex-line);
+  border-radius: 2px 9px 2px 2px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .season-switcher-link:hover,
+body.apex-night-theme .season-tab:hover {
+  color: #fff !important;
+  border-color: var(--apex-line-strong);
+}
+
+body.apex-night-theme .season-switcher-link.is-current,
+body.apex-night-theme .season-tab.is-current {
+  color: #fff !important;
+  border-color: var(--apex-red);
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .menu-account {
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
+}
+
+body.apex-night-theme .menu-account .menu-user {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .menu-logout-btn,
+body.apex-night-theme .profile-logout-btn {
+  color: var(--apex-muted);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 51, 38, 0.5);
+  border-radius: 0;
+  background: transparent;
+}
+
+body.apex-night-theme .menu-logout-btn:hover,
+body.apex-night-theme .profile-logout-btn:hover {
+  color: #fff;
+  background: transparent;
+  border-color: var(--apex-red);
+}
+
+/* Shared surfaces, buttons and forms */
+body.apex-night-theme.editorial-theme .card,
+body.apex-night-theme.editorial-theme .glass-panel,
+body.apex-night-theme.editorial-theme .table-shell,
+body.apex-night-theme.editorial-theme .participants-hero,
+body.apex-night-theme.editorial-theme .profile-hero,
+body.apex-night-theme.editorial-theme .points-chart-shell,
+body.apex-night-theme.editorial-theme .season-priority-banner,
+body.apex-night-theme .duel-hero,
+body.apex-night-theme .duel-panel,
+body.apex-night-theme .profile-analytics-shell,
+body.apex-night-theme .community-shell {
+  color: var(--apex-ink);
+  border: 1px solid var(--apex-line);
+  border-radius: var(--apex-corner);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 34%),
+    var(--apex-surface);
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme.editorial-theme .card-accent-top {
+  border-top: 2px solid var(--apex-red);
+}
+
+body.apex-night-theme .card-body {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme.editorial-theme .btn,
+body.apex-night-theme .action-primary,
+body.apex-night-theme .action-secondary,
+body.apex-night-theme .duel-submit,
+body.apex-night-theme .event-card-action {
+  min-height: 42px;
+  border-radius: 2px 12px 2px 2px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+body.apex-night-theme.editorial-theme .btn-primary,
+body.apex-night-theme.editorial-theme .open-event-btn,
+body.apex-night-theme.editorial-theme .action-primary,
+body.apex-night-theme .duel-submit {
+  color: #fff !important;
+  border-color: var(--apex-red);
+  background: var(--apex-red);
+  box-shadow: 0 10px 24px rgba(255, 51, 38, 0.18);
+}
+
+body.apex-night-theme.editorial-theme .btn-primary:hover,
+body.apex-night-theme.editorial-theme .open-event-btn:hover,
+body.apex-night-theme.editorial-theme .action-primary:hover,
+body.apex-night-theme .duel-submit:hover {
+  color: #fff !important;
+  border-color: #ff574c;
+  background: #ff4438;
+  box-shadow: 0 14px 30px rgba(255, 51, 38, 0.24);
+  transform: translateY(-2px);
+}
+
+body.apex-night-theme .action-secondary,
+body.apex-night-theme .btn-outline-light {
+  color: var(--apex-ink) !important;
+  border-color: var(--apex-line-strong);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.apex-night-theme.editorial-theme .form-control,
+body.apex-night-theme.editorial-theme .form-select,
+body.apex-night-theme .western-challenge-form .form-select,
+body.apex-night-theme .western-challenge-form .form-control {
+  min-height: 44px;
+  color: var(--apex-ink);
+  border: 1px solid var(--apex-line-strong);
+  border-radius: 2px 10px 2px 2px;
+  background-color: #090e14;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+body.apex-night-theme.editorial-theme .form-control::placeholder {
+  color: #596675;
+}
+
+body.apex-night-theme.editorial-theme .form-select {
+  --bs-form-select-bg-img: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23aeb8c4' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+body.apex-night-theme.editorial-theme .form-control:focus,
+body.apex-night-theme.editorial-theme .form-select:focus {
+  color: #fff;
+  border-color: var(--apex-red);
+  background-color: #0b1118;
+  box-shadow: 0 0 0 3px rgba(255, 51, 38, 0.12);
+}
+
+body.apex-night-theme .form-label,
+body.apex-night-theme .field-label-row label {
+  color: var(--apex-ink-soft);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+body.apex-night-theme.editorial-theme .deadline-chip,
+body.apex-night-theme.editorial-theme .field-points-badge,
+body.apex-night-theme .points-chip {
+  color: #aeb9c5;
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.apex-night-theme .alert {
+  color: var(--apex-ink);
+  border-color: var(--apex-line-strong);
+  border-radius: var(--apex-corner-sm);
+  background: var(--apex-surface-2);
+}
+
+body.apex-night-theme .alert-danger {
+  color: #ffc1bd;
+  border-color: rgba(255, 51, 38, 0.35);
+  background: rgba(255, 51, 38, 0.11);
+}
+
+body.apex-night-theme .voting-status {
+  color: var(--apex-ink-soft);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+/* Home command center */
+body.apex-night-theme .home-command {
+  min-height: 440px;
+  border: 1px solid var(--apex-line);
+  border-radius: 3px 30px 3px 3px;
+  background: var(--apex-surface);
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .home-command-main {
+  isolation: isolate;
+  padding: clamp(1.55rem, 4.5vw, 3.8rem);
+  background:
+    linear-gradient(112deg, transparent 62%, rgba(255, 51, 38, 0.08) 62.2%, transparent 62.5%),
+    radial-gradient(600px 320px at 104% 8%, rgba(255, 51, 38, 0.18), transparent 72%),
+    linear-gradient(145deg, #111820, #0b1016 74%);
+}
+
+body.apex-night-theme .home-command-main::after {
+  right: 1.8rem;
+  bottom: -3.6rem;
+  color: rgba(255, 255, 255, 0.027);
+  font-size: clamp(9rem, 18vw, 15rem);
+}
+
+body.apex-night-theme .home-command-main.has-event-cover::before {
+  z-index: 0;
+  background-image:
+    linear-gradient(90deg, rgba(8, 12, 17, 0.97) 0%, rgba(8, 12, 17, 0.75) 47%, rgba(8, 12, 17, 0.53) 100%),
+    linear-gradient(0deg, rgba(7, 10, 14, 0.7), transparent 60%),
+    var(--next-event-cover);
+  background-position: center;
+  background-size: cover;
+  filter: saturate(0.78) contrast(1.06);
+  opacity: 0.9;
+}
+
+body.apex-night-theme .home-command h1 {
+  max-width: 740px;
+  color: #fff;
+  font-size: clamp(2.3rem, 5.2vw, 4.85rem);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+body.apex-night-theme .display-kicker {
+  color: var(--apex-ink-soft);
+}
+
+body.apex-night-theme .home-lead {
+  max-width: 650px;
+  color: #aeb8c4;
+  font-size: clamp(0.82rem, 1.35vw, 0.98rem);
+  line-height: 1.65;
+}
+
+body.apex-night-theme .countdown-chip {
+  border-color: var(--apex-line-strong);
+  border-radius: 2px 12px 2px 2px;
+  background: rgba(5, 8, 12, 0.7);
+  backdrop-filter: blur(12px);
+}
+
+body.apex-night-theme .countdown-label {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .countdown-chip strong {
+  color: #fff;
+}
+
+body.apex-night-theme .prediction-confirmed {
+  color: #9eeac7;
+  border-color: rgba(85, 214, 158, 0.25);
+  background: rgba(85, 214, 158, 0.08);
+}
+
+body.apex-night-theme .prediction-confirmed span {
+  color: #06120d;
+  background: var(--apex-green);
+}
+
+body.apex-night-theme .home-command-side {
+  color: var(--apex-ink);
+  border-left: 1px solid var(--apex-line);
+  background:
+    linear-gradient(160deg, rgba(76, 141, 255, 0.08), transparent 36%),
+    #090d13;
+}
+
+body.apex-night-theme .home-command-side .dashboard-label,
+body.apex-night-theme .dashboard-rank-row small,
+body.apex-night-theme .dashboard-stats small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .dashboard-rank-row,
+body.apex-night-theme .dashboard-stats {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .dashboard-rank-row strong,
+body.apex-night-theme .dashboard-stats strong,
+body.apex-night-theme .mini-standings strong {
+  color: #fff;
+}
+
+body.apex-night-theme .mini-standings a {
+  color: var(--apex-ink-soft) !important;
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .mini-standings a:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.apex-night-theme .mini-position {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .mini-avatar {
+  background: linear-gradient(145deg, var(--apex-red), #8e1611);
+}
+
+body.apex-night-theme .text-link,
+body.apex-night-theme .section-inline-link {
+  color: var(--apex-ink) !important;
+}
+
+body.apex-night-theme .home-duel-alert {
+  color: #f5e5d3 !important;
+  border-color: rgba(205, 145, 79, 0.3);
+  background: rgba(62, 40, 27, 0.68);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+body.apex-night-theme .home-duel-alert-icon {
+  color: #23150e;
+  background: #e6ad65;
+}
+
+body.apex-night-theme .home-duel-alert small {
+  color: #e0a96e;
+}
+
+/* Editorial feed, result media and event cards */
+body.apex-night-theme .editorial-section {
+  margin-top: clamp(2rem, 4.2vw, 3.8rem);
+}
+
+body.apex-night-theme .section-heading-row {
+  margin-bottom: 1rem;
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .section-heading-row h2 {
+  font-size: clamp(1.75rem, 3.2vw, 2.6rem);
+}
+
+body.apex-night-theme .activity-feed-grid {
+  gap: 0.6rem;
+}
+
+body.apex-night-theme .activity-feed-item {
+  color: var(--apex-ink) !important;
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(15, 21, 29, 0.88);
+}
+
+body.apex-night-theme .activity-feed-item:hover {
+  border-color: rgba(255, 51, 38, 0.35);
+  background: #111821;
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme .activity-feed-icon {
+  border-radius: 2px 11px 2px 2px;
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .activity-feed-item.is-movement .activity-feed-icon {
+  background: var(--apex-blue);
+}
+
+body.apex-night-theme .activity-feed-item small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .results-stage {
+  border: 1px solid var(--apex-line);
+  border-radius: 3px 25px 3px 3px;
+  background: #020304;
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .results-stage-image {
+  height: clamp(220px, 48vw, 540px);
+  min-height: 0;
+  object-fit: contain;
+}
+
+body.apex-night-theme .results-stage .carousel-control-prev-icon,
+body.apex-night-theme .results-stage .carousel-control-next-icon {
+  border: 1px solid var(--apex-line-strong);
+  background-color: rgba(7, 10, 14, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+body.apex-night-theme .event-editorial-grid {
+  gap: 0.85rem;
+}
+
+body.apex-night-theme .event-editorial-card {
+  border-color: var(--apex-line);
+  border-radius: 3px 20px 3px 3px;
+  background: var(--apex-surface);
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme .event-editorial-card:hover {
+  border-color: rgba(255, 51, 38, 0.36);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.38);
+}
+
+body.apex-night-theme .event-media {
+  background: #10161d;
+}
+
+body.apex-night-theme .event-media::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 42%;
+  pointer-events: none;
+  background: linear-gradient(transparent, rgba(4, 6, 9, 0.68));
+}
+
+body.apex-night-theme .event-media img {
+  filter: saturate(0.88) contrast(1.04);
+}
+
+body.apex-night-theme .event-media-placeholder,
+body.apex-night-theme .event-detail-placeholder {
+  color: rgba(255, 255, 255, 0.075);
+  background:
+    linear-gradient(115deg, transparent 52%, rgba(255, 51, 38, 0.16) 52.2%, transparent 52.5%),
+    linear-gradient(145deg, #182331, #090d12);
+}
+
+body.apex-night-theme .round-flag {
+  z-index: 2;
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .event-state {
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 2px 9px 2px 2px;
+}
+
+body.apex-night-theme .event-state.open {
+  color: #07140e;
+  border-color: var(--apex-green);
+  background: var(--apex-green);
+}
+
+body.apex-night-theme .event-state.saved {
+  color: #07100d;
+  border-color: var(--apex-cyan);
+  background: var(--apex-cyan);
+}
+
+body.apex-night-theme .event-state.scored {
+  background: rgba(76, 141, 255, 0.9);
+}
+
+body.apex-night-theme .event-state.soon {
+  color: #181005;
+  background: var(--apex-amber);
+}
+
+body.apex-night-theme .event-state.locked {
+  color: #c4ccd5;
+  background: rgba(34, 43, 54, 0.92);
+}
+
+body.apex-night-theme .event-card-copy {
+  padding: 0.9rem 0.95rem 1rem;
+}
+
+body.apex-night-theme .event-card-copy h3 {
+  min-height: auto;
+  margin: 0.28rem 0 0.8rem;
+  color: var(--apex-ink);
+  font-size: clamp(1.08rem, 2vw, 1.35rem);
+}
+
+body.apex-night-theme .event-card-copy h3 a {
+  color: var(--apex-ink) !important;
+}
+
+body.apex-night-theme .event-card-foot {
+  color: var(--apex-muted);
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .event-card-action {
+  width: auto;
+  height: 31px;
+  min-height: 31px;
+  padding: 0 0.58rem;
+  color: #fff !important;
+  border: 1px solid var(--apex-line-strong);
+  background: rgba(255, 255, 255, 0.055);
+  font-size: 0.61rem;
+  white-space: nowrap;
+}
+
+body.apex-night-theme .event-card-action.is-open {
+  border-color: var(--apex-red);
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .event-card-action.is-saved {
+  color: #07110e !important;
+  border-color: var(--apex-cyan);
+  background: var(--apex-cyan);
+}
+
+body.apex-night-theme .event-card-action.is-scored {
+  border-color: var(--apex-blue);
+  background: var(--apex-blue);
+}
+
+body.apex-night-theme .empty-editorial {
+  color: var(--apex-muted);
+  border-color: var(--apex-line-strong);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Event page and prediction details */
+body.apex-night-theme .event-hero-card {
+  overflow: hidden;
+  background: #0b1016;
+}
+
+body.apex-night-theme .event-hero-card .section-title {
+  color: #fff;
+  font-size: clamp(2rem, 5.2vw, 4.2rem);
+}
+
+body.apex-night-theme .event-hero-layout {
+  background:
+    radial-gradient(500px 240px at 100% 0, rgba(255, 51, 38, 0.13), transparent 70%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .event-hero-media {
+  background: #05070a;
+}
+
+body.apex-night-theme .event-hero-image {
+  max-height: 460px;
+  object-fit: cover;
+  filter: saturate(0.84) contrast(1.08);
+}
+
+body.apex-night-theme .event-hero-copy {
+  padding: clamp(1.2rem, 3.2vw, 2.5rem);
+}
+
+body.apex-night-theme .event-hero-deadline {
+  color: var(--apex-ink-soft);
+  border-left-color: var(--apex-red);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .event-hero-deadline small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .event-status-badge {
+  border-radius: 2px 9px 2px 2px;
+}
+
+body.apex-night-theme .event-status-badge.is-open {
+  color: #07140e;
+  border-color: var(--apex-green);
+  background: var(--apex-green);
+}
+
+body.apex-night-theme .event-status-badge.is-saved {
+  color: #071110;
+  border-color: var(--apex-cyan);
+  background: var(--apex-cyan);
+}
+
+body.apex-night-theme .event-status-badge.is-scored {
+  color: #fff;
+  border-color: var(--apex-blue);
+  background: var(--apex-blue);
+}
+
+body.apex-night-theme .event-status-badge.is-locked,
+body.apex-night-theme .event-status-badge.is-soon {
+  color: #c2cad4;
+  border-color: var(--apex-line-strong);
+  background: var(--apex-surface-3);
+}
+
+body.apex-night-theme .prediction-workbench h2 {
+  color: var(--apex-ink);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+body.apex-night-theme .workbench-note {
+  color: #9cabb9;
+  border-color: var(--apex-blue);
+  background: rgba(76, 141, 255, 0.07);
+}
+
+body.apex-night-theme .prediction-submit-bar {
+  border-color: var(--apex-line-strong);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(8, 12, 17, 0.92);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(15px);
+}
+
+body.apex-night-theme .prediction-submit-bar span {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .result-facts-item,
+body.apex-night-theme .prediction-item,
+body.apex-night-theme .comparison-row,
+body.apex-night-theme .comparison-value-card {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .result-facts-label,
+body.apex-night-theme .prediction-item-label,
+body.apex-night-theme .comparison-value-label,
+body.apex-night-theme .comparison-note,
+body.apex-night-theme .season-fact {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .score-total {
+  color: #fff;
+  text-shadow: 0 0 28px rgba(255, 51, 38, 0.24);
+}
+
+body.apex-night-theme .kpi-divider,
+body.apex-night-theme .breakdown-row {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .comparison-shell {
+  border-color: var(--apex-line);
+  background: #090e14;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+body.apex-night-theme .comparison-status-hit,
+body.apex-night-theme .comparison-points-hit {
+  color: #a7edcd;
+}
+
+body.apex-night-theme .comparison-status-partial,
+body.apex-night-theme .comparison-points-partial {
+  color: #ffe0a0;
+}
+
+body.apex-night-theme .comparison-status-miss,
+body.apex-night-theme .comparison-points-miss {
+  color: #ffaaa4;
+}
+
+body.apex-night-theme .community-shell {
+  overflow: hidden;
+}
+
+body.apex-night-theme .community-head {
+  border-bottom: 1px solid var(--apex-line);
+  background:
+    linear-gradient(112deg, transparent 67%, rgba(255, 51, 38, 0.08) 67.2%, transparent 67.5%),
+    #0d131a;
+}
+
+body.apex-night-theme .community-title {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .community-copy {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme.editorial-theme .table,
+body.apex-night-theme .community-table {
+  --bs-table-color: var(--apex-ink-soft);
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--apex-line);
+  color: var(--apex-ink-soft);
+}
+
+body.apex-night-theme.editorial-theme .table > :not(caption) > * > *,
+body.apex-night-theme .community-table > :not(caption) > * > * {
+  color: inherit;
+  border-color: var(--apex-line);
+  background: transparent;
+}
+
+body.apex-night-theme.editorial-theme .table thead th,
+body.apex-night-theme .community-table thead th {
+  color: #8e9aa8;
+  border-color: var(--apex-line);
+  background: #090d12;
+}
+
+body.apex-night-theme .community-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+body.apex-night-theme .community-table tbody td:first-child {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+body.apex-night-theme .community-prediction-correct {
+  color: #74e3b2 !important;
+  background: rgba(85, 214, 158, 0.055) !important;
+}
+
+body.apex-night-theme .community-score {
+  color: var(--apex-ink);
+  border-color: var(--apex-line-strong);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+body.apex-night-theme .community-round-winner td {
+  background: rgba(255, 200, 87, 0.075) !important;
+}
+
+body.apex-night-theme .community-winner-label {
+  color: #171004;
+  background: var(--apex-amber);
+}
+
+/* Western duel — a warm, intentional feature inside the night paddock */
+body.apex-night-theme .western-duel {
+  --western-ink: #f6e7d3;
+  --western-brown: #b37749;
+  --western-rust: #ed784c;
+  color: #f5e7d7;
+  border-color: rgba(205, 145, 79, 0.26);
+  background:
+    radial-gradient(560px 220px at 92% 0, rgba(214, 111, 58, 0.17), transparent 72%),
+    linear-gradient(145deg, #1a130f, #100d0b);
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .western-duel::after {
+  height: 3px;
+  background: linear-gradient(90deg, #d89752, #7e4329 36%, transparent 74%);
+}
+
+body.apex-night-theme .western-duel.has-duel-art::before {
+  background-image:
+    linear-gradient(90deg, rgba(20, 14, 11, 0.96) 0%, rgba(20, 14, 11, 0.76) 50%, rgba(20, 14, 11, 0.82) 100%),
+    var(--western-duel-art);
+  filter: sepia(0.2) saturate(0.76) contrast(1.08);
+}
+
+body.apex-night-theme .western-duel-heading h2 {
+  color: #fff1df;
+}
+
+body.apex-night-theme .western-duel-heading p {
+  color: #a98d79;
+}
+
+body.apex-night-theme .western-duel-limit,
+body.apex-night-theme .western-stake-seal {
+  color: #fff3df;
+  background: #5f3423;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
+}
+
+body.apex-night-theme .western-showdown,
+body.apex-night-theme .western-challenge-form,
+body.apex-night-theme .western-roster-card,
+body.apex-night-theme .western-duel-empty {
+  color: #f4e6d5;
+  border-color: rgba(205, 145, 79, 0.24);
+  background: rgba(255, 235, 210, 0.035);
+}
+
+body.apex-night-theme .western-fighter strong,
+body.apex-night-theme .western-roster-card strong,
+body.apex-night-theme .western-challenge-form strong,
+body.apex-night-theme .western-duel-state strong {
+  color: #fff0db;
+}
+
+body.apex-night-theme .western-fighter small,
+body.apex-night-theme .western-challenge-form small,
+body.apex-night-theme .western-duel-empty,
+body.apex-night-theme .western-duel-history span {
+  color: #a98d79;
+}
+
+body.apex-night-theme .western-duel-state {
+  border-color: rgba(205, 145, 79, 0.2);
+  background: rgba(205, 145, 79, 0.06);
+}
+
+body.apex-night-theme .western-avatar {
+  border-color: rgba(236, 183, 126, 0.5);
+  background: #6b3926;
+}
+
+body.apex-night-theme .western-btn {
+  border-radius: 2px 10px 2px 2px;
+}
+
+body.apex-night-theme .western-btn.is-accept,
+body.apex-night-theme .western-btn.is-challenge {
+  color: #1a0e08;
+  border-color: #df9d5d;
+  background: #df9d5d;
+}
+
+body.apex-night-theme .western-btn.is-decline,
+body.apex-night-theme .western-btn.is-quiet {
+  color: #d7b99a;
+  border-color: rgba(205, 145, 79, 0.28);
+  background: transparent;
+}
+
+body.apex-night-theme .western-duel-history span {
+  border-color: rgba(205, 145, 79, 0.18);
+  background: rgba(255, 240, 218, 0.03);
+}
+
+/* Standings and points graph */
+body.apex-night-theme .round-winner-spotlight {
+  color: var(--apex-ink);
+  border-color: rgba(255, 200, 87, 0.28);
+  border-radius: var(--apex-corner);
+  background:
+    radial-gradient(420px 170px at 100% 0, rgba(255, 200, 87, 0.14), transparent 72%),
+    linear-gradient(135deg, #15150f, #0d1117 62%);
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme .round-winner-kicker {
+  color: var(--apex-amber);
+}
+
+body.apex-night-theme .round-winner-copy strong {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .round-winner-person {
+  color: var(--apex-ink) !important;
+  border-color: rgba(255, 200, 87, 0.22);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .round-winner-person small {
+  color: #c2a35d;
+}
+
+body.apex-night-theme .round-winner-person > b {
+  color: var(--apex-amber);
+}
+
+body.apex-night-theme .round-winner-avatar {
+  border-color: rgba(255, 200, 87, 0.5);
+  background: linear-gradient(145deg, #e7b03f, #8b5c0a);
+  box-shadow: none;
+}
+
+body.apex-night-theme.editorial-theme .leaderboard-luxe .table-responsive,
+body.apex-night-theme.editorial-theme .leaderboard-table .sticky-col {
+  background: #0b1016;
+}
+
+body.apex-night-theme .leaderboard-luxe {
+  border-color: var(--apex-line);
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .leaderboard-luxe .table-responsive {
+  background: #0b1016;
+}
+
+body.apex-night-theme .leaderboard-table .sticky-col {
+  background: rgba(11, 16, 22, 0.98);
+  box-shadow: 10px 0 20px rgba(0, 0, 0, 0.26);
+}
+
+body.apex-night-theme .leaderboard-table tbody tr:hover td {
+  background: rgba(76, 141, 255, 0.045) !important;
+}
+
+body.apex-night-theme .rank-chip,
+body.apex-night-theme .race-points {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.apex-night-theme .total-chip {
+  color: #fff;
+  border-color: rgba(255, 51, 38, 0.45);
+  background: rgba(255, 51, 38, 0.18);
+}
+
+body.apex-night-theme .player-link {
+  color: var(--apex-ink) !important;
+}
+
+body.apex-night-theme .table-avatar,
+body.apex-night-theme .participant-avatar,
+body.apex-night-theme .profile-avatar {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.25);
+  background: linear-gradient(145deg, var(--apex-red), #7c1410);
+  box-shadow: 0 0 0 3px rgba(255, 51, 38, 0.08);
+}
+
+body.apex-night-theme .round-winner-badge,
+body.apex-night-theme .achievement-count {
+  color: #241903;
+  border-color: var(--apex-amber);
+  background: var(--apex-amber);
+}
+
+body.apex-night-theme .leaderboard-table tr.is-round-winner td {
+  background: rgba(255, 200, 87, 0.065) !important;
+}
+
+body.apex-night-theme .leaderboard-table tr.is-round-winner td:first-child {
+  box-shadow: inset 3px 0 0 var(--apex-amber), 10px 0 20px rgba(0, 0, 0, 0.26);
+}
+
+body.apex-night-theme .points-chart-shell {
+  background:
+    radial-gradient(600px 240px at 100% 0, rgba(76, 141, 255, 0.1), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .points-chart-shell::after {
+  opacity: 0.08;
+}
+
+body.apex-night-theme .points-chart-head {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .points-chart-title {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .points-chart-subtitle,
+body.apex-night-theme .points-chart-note,
+body.apex-night-theme .points-chart-summary small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .points-chart-summary {
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .points-chart-summary span {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .points-chart-viewport,
+body.apex-night-theme .points-chart-canvas {
+  border-color: var(--apex-line);
+  background: #090e14;
+}
+
+body.apex-night-theme .points-chart-legend-item {
+  color: var(--apex-ink-soft);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .points-chart-tooltip {
+  color: var(--apex-ink);
+  border-color: var(--apex-line-strong);
+  background: rgba(7, 10, 14, 0.94);
+}
+
+/* Participants */
+body.apex-night-theme .participants-hero {
+  background:
+    linear-gradient(112deg, transparent 68%, rgba(255, 51, 38, 0.1) 68.2%, transparent 68.5%),
+    radial-gradient(520px 190px at 100% 0, rgba(76, 141, 255, 0.1), transparent 70%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .participants-duel-link {
+  color: #fff !important;
+  border-color: var(--apex-line-strong);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.apex-night-theme .participant-card,
+body.apex-night-theme.editorial-theme .participant-card {
+  color: var(--apex-ink) !important;
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 44%),
+    var(--apex-surface);
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme .participant-card:hover,
+body.apex-night-theme.editorial-theme .participant-card:hover {
+  color: #fff !important;
+  border-color: rgba(76, 141, 255, 0.4);
+  background: var(--apex-surface-2);
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34);
+}
+
+body.apex-night-theme .participant-meta,
+body.apex-night-theme .participant-stat-label {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .participant-stat {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.apex-night-theme .participant-stat-value {
+  color: var(--apex-ink);
+}
+
+/* Player profile */
+body.apex-night-theme .profile-page-controls {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .profile-hero {
+  background:
+    linear-gradient(112deg, transparent 67%, rgba(255, 51, 38, 0.1) 67.2%, transparent 67.5%),
+    radial-gradient(540px 210px at 100% 0, rgba(255, 51, 38, 0.12), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .profile-hero::before {
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.04), transparent 38%);
+}
+
+body.apex-night-theme .profile-name {
+  color: #fff;
+  font-size: clamp(1.7rem, 3.4vw, 2.7rem);
+}
+
+body.apex-night-theme .profile-avatar-hint,
+body.apex-night-theme .telegram-connect-note {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .profile-avatar-editable:hover {
+  border-color: var(--apex-red);
+  box-shadow: 0 0 0 5px rgba(255, 51, 38, 0.11);
+}
+
+body.apex-night-theme .profile-avatar-menu {
+  color: var(--apex-ink);
+  border-color: var(--apex-line-strong);
+  background: #101720;
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .profile-avatar-menu::before {
+  border-color: var(--apex-line-strong);
+  background: #101720;
+}
+
+body.apex-night-theme .profile-avatar-menu-action {
+  color: var(--apex-ink);
+  background: transparent;
+}
+
+body.apex-night-theme .profile-avatar-menu-action:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.apex-night-theme .profile-avatar-menu-action small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .profile-avatar-menu-icon {
+  color: #fff;
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .telegram-connect-card {
+  color: var(--apex-ink);
+  border-color: rgba(76, 141, 255, 0.22);
+  background: rgba(76, 141, 255, 0.06);
+}
+
+body.apex-night-theme .profile-stat-card {
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, 0.032);
+}
+
+body.apex-night-theme .profile-stat-card small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .profile-stat-card strong {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .profile-analytics-shell {
+  background:
+    radial-gradient(640px 220px at 100% 0, rgba(53, 213, 220, 0.07), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .profile-analytics-head {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .profile-analytics-head p {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .accuracy-card,
+body.apex-night-theme .insight-card {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, 0.032);
+}
+
+body.apex-night-theme .accuracy-card small,
+body.apex-night-theme .accuracy-card span,
+body.apex-night-theme .insight-card small,
+body.apex-night-theme .insight-card span {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .accuracy-ring {
+  --ring-color: var(--apex-red);
+  color: var(--apex-ink);
+  background: conic-gradient(var(--ring-color) var(--accuracy), rgba(255, 255, 255, 0.07) 0);
+}
+
+body.apex-night-theme .accuracy-card:nth-child(2) .accuracy-ring {
+  --ring-color: var(--apex-blue);
+}
+
+body.apex-night-theme .accuracy-card:nth-child(3) .accuracy-ring {
+  --ring-color: var(--apex-green);
+}
+
+body.apex-night-theme .accuracy-ring::after {
+  background: var(--apex-surface-2);
+}
+
+body.apex-night-theme .accuracy-ring strong {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .insight-favorite {
+  border-top-color: var(--apex-blue);
+}
+
+body.apex-night-theme .insight-strong {
+  border-top-color: var(--apex-green);
+}
+
+body.apex-night-theme .insight-weak {
+  border-top-color: var(--apex-red);
+}
+
+body.apex-night-theme .achievement-card {
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, 0.032);
+}
+
+body.apex-night-theme .achievement-card strong {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .achievement-card small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .achievement-icon {
+  color: #171003;
+  background: var(--apex-amber);
+}
+
+body.apex-night-theme .mini-trend {
+  border-color: var(--apex-line);
+  background: #090e14;
+}
+
+body.apex-night-theme .mini-trend polyline {
+  stroke: var(--apex-red);
+}
+
+body.apex-night-theme .prediction-card,
+body.apex-night-theme.editorial-theme .prediction-card {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: #0b1016;
+  box-shadow: none;
+}
+
+body.apex-night-theme .prediction-head {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+body.apex-night-theme .prediction-round {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .score-pill {
+  color: #07120e;
+  border-color: var(--apex-green);
+  background: var(--apex-green);
+}
+
+/* Participant comparison */
+body.apex-night-theme .duel-hero {
+  background:
+    linear-gradient(112deg, transparent 66%, rgba(255, 51, 38, 0.1) 66.2%, transparent 66.5%),
+    radial-gradient(540px 220px at 100% 0, rgba(76, 141, 255, 0.1), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .duel-selector label > span {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .duel-selector-vs {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .duel-scoreboard {
+  border-color: var(--apex-line);
+  border-radius: var(--apex-corner);
+  background: #090e14;
+  box-shadow: var(--apex-shadow);
+}
+
+body.apex-night-theme .duel-player {
+  color: var(--apex-ink);
+  background:
+    linear-gradient(145deg, rgba(76, 141, 255, 0.07), transparent 48%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .duel-player-b {
+  background:
+    linear-gradient(215deg, rgba(255, 51, 38, 0.08), transparent 48%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .duel-player small,
+body.apex-night-theme .duel-player span,
+body.apex-night-theme .duel-head-to-head small,
+body.apex-night-theme .duel-head-to-head p {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .duel-head-to-head {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  background: #070a0e;
+}
+
+body.apex-night-theme .duel-head-to-head > div span {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .duel-panel-head {
+  border-color: var(--apex-line);
+}
+
+body.apex-night-theme .duel-panel-head > span,
+body.apex-night-theme .duel-accuracy-row > strong,
+body.apex-night-theme .duel-accuracy-value small {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .duel-chart-wrap,
+body.apex-night-theme .duel-round-row,
+body.apex-night-theme .duel-accuracy-row {
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+body.apex-night-theme .duel-round-row {
+  color: var(--apex-ink) !important;
+}
+
+body.apex-night-theme .duel-round-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.apex-night-theme .duel-round-row > b {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+body.apex-night-theme .duel-round-row > b.is-winner {
+  color: #07140e;
+  border-color: var(--apex-green);
+  background: var(--apex-green);
+}
+
+body.apex-night-theme .duel-chart-grid {
+  stroke: rgba(195, 210, 225, 0.12);
+}
+
+body.apex-night-theme .duel-chart-x-label,
+body.apex-night-theme .duel-chart-y-label {
+  fill: #7f8b98;
+}
+
+body.apex-night-theme .duel-chart-legend span {
+  color: var(--apex-ink-soft);
+}
+
+body.apex-night-theme .duel-empty {
+  color: var(--apex-muted);
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+/* Season predictions and authentication */
+body.apex-night-theme .season-priority-banner {
+  background:
+    linear-gradient(112deg, transparent 64%, rgba(255, 51, 38, 0.12) 64.2%, transparent 64.5%),
+    radial-gradient(580px 220px at 100% 0, rgba(255, 51, 38, 0.14), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .season-banner-title {
+  color: var(--apex-ink);
+  font-size: clamp(2rem, 4.5vw, 3.8rem);
+}
+
+body.apex-night-theme .season-banner-subtitle {
+  color: var(--apex-muted);
+}
+
+body.apex-night-theme .season-banner-subtitle strong {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme .season-banner-badge {
+  color: var(--apex-red);
+  border-color: rgba(255, 51, 38, 0.35);
+  background: rgba(255, 51, 38, 0.08);
+}
+
+body.apex-night-theme .status-pill {
+  border-radius: 2px 10px 2px 2px;
+}
+
+body.apex-night-theme.editorial-theme .status-open {
+  color: #07140e;
+  border-color: var(--apex-green);
+  background: var(--apex-green);
+}
+
+body.apex-night-theme.editorial-theme .status-locked {
+  color: #c6ced7;
+  border-color: var(--apex-line-strong);
+  background: var(--apex-surface-3);
+}
+
+body.apex-night-theme.editorial-theme .status-scored {
+  color: #fff;
+  border-color: var(--apex-blue);
+  background: var(--apex-blue);
+}
+
+body.apex-night-theme .auth-shell {
+  min-height: min(680px, calc(100vh - 160px));
+}
+
+body.apex-night-theme .auth-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(420px 220px at 100% 0, rgba(255, 51, 38, 0.13), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .auth-card::after {
+  content: "";
+  position: absolute;
+  right: -95px;
+  bottom: -95px;
+  width: 220px;
+  height: 220px;
+  border: 1px solid rgba(255, 51, 38, 0.16);
+  border-radius: 50%;
+  box-shadow: 0 0 0 32px rgba(255, 51, 38, 0.025), 0 0 0 64px rgba(255, 51, 38, 0.018);
+  pointer-events: none;
+}
+
+body.apex-night-theme .auth-title {
+  color: #fff;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+}
+
+body.apex-night-theme .auth-note {
+  color: var(--apex-muted);
+}
+
+/* Footer */
+body.apex-night-theme.editorial-theme footer {
+  color: var(--apex-muted);
+  border-top: 1px solid var(--apex-line);
+  background: rgba(4, 6, 9, 0.62);
+}
+
+body.apex-night-theme .footer-inner {
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+body.apex-night-theme .footer-brand {
+  color: #8d98a5;
+}
+
+body.apex-night-theme .footer-brand strong {
+  color: var(--apex-red);
+}
+
+body.apex-night-theme .footer-season {
+  color: #596572;
+}
+
+/* Responsive typography and spacing */
+@media (max-width: 1100px) {
+  body.apex-night-theme .desktop-nav a {
+    padding-inline: 0.48rem;
+    font-size: 0.64rem;
+  }
+
+  body.apex-night-theme .profile-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  body.apex-night-theme.editorial-theme .site-menu-btn {
+    display: inline-flex;
+  }
+
+  body.apex-night-theme .home-command {
+    grid-template-columns: 1fr;
+  }
+
+  body.apex-night-theme .home-command-side {
+    border-top: 1px solid var(--apex-line);
+    border-left: 0;
+  }
+
+  body.apex-night-theme .event-editorial-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  body.apex-night-theme .main-content {
+    padding-top: 1rem;
+  }
+
+  body.apex-night-theme .home-command {
+    min-height: 0;
+    border-radius: 3px 22px 3px 3px;
+  }
+
+  body.apex-night-theme .home-command-main {
+    min-height: 410px;
+  }
+
+  body.apex-night-theme .home-command h1 {
+    font-size: clamp(2.15rem, 11vw, 3.5rem);
+  }
+
+  body.apex-night-theme .event-hero-card .section-title {
+    font-size: clamp(1.85rem, 9vw, 3rem);
+  }
+
+  body.apex-night-theme .event-hero-image {
+    height: 280px;
+  }
+
+  body.apex-night-theme .event-editorial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.apex-night-theme .prediction-submit-bar {
+    position: static;
+  }
+
+  body.apex-night-theme .round-winner-spotlight {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.apex-night-theme .round-winner-list {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  body.apex-night-theme .main-content {
+    padding: 0.85rem 0.7rem 2rem;
+  }
+
+  body.apex-night-theme.editorial-theme .brand-f1,
+  body.apex-night-theme.editorial-theme .brand-text {
+    font-size: 0.94rem;
+  }
+
+  body.apex-night-theme .brand-mark {
+    width: 18px;
+    margin-right: 0.3rem;
+  }
+
+  body.apex-night-theme .site-header-actions .nav-chip {
+    max-width: 104px;
+    overflow: hidden;
+    padding-inline: 0.62rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.apex-night-theme .home-command-main {
+    min-height: 380px;
+    padding: 1.35rem 1.1rem;
+  }
+
+  body.apex-night-theme .home-command h1 {
+    font-size: clamp(2rem, 11.5vw, 3.05rem);
+    line-height: 0.94;
+  }
+
+  body.apex-night-theme .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.apex-night-theme .hero-actions .action-primary,
+  body.apex-night-theme .hero-actions .action-secondary,
+  body.apex-night-theme .hero-actions .countdown-chip {
+    width: 100%;
+  }
+
+  body.apex-night-theme .event-card-copy h3 {
+    font-size: 1.2rem;
+  }
+
+  body.apex-night-theme .section-heading-row h2,
+  body.apex-night-theme .points-chart-title {
+    font-size: 1.75rem;
+  }
+
+  body.apex-night-theme .section-title {
+    font-size: 1.65rem;
+  }
+
+  body.apex-night-theme .event-hero-image {
+    height: 220px;
+  }
+
+  body.apex-night-theme .results-stage-image {
+    height: 230px;
+  }
+
+  body.apex-night-theme .event-hero-copy {
+    padding: 1rem;
+  }
+
+  body.apex-night-theme .prediction-workbench h2 {
+    font-size: 1.45rem;
+  }
+
+  body.apex-night-theme .prediction-submit-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.apex-night-theme .prediction-submit-bar .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.apex-night-theme .profile-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.apex-night-theme .profile-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.apex-night-theme .round-winner-person {
+    width: 100%;
+  }
+
+  body.apex-night-theme .western-duel-heading h2 {
+    font-size: 1.8rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.apex-night-theme *,
+  body.apex-night-theme *::before,
+  body.apex-night-theme *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
