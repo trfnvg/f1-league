@@ -24,6 +24,7 @@ from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, Register
 from .models import (
     DRIVER_CHOICES,
     DuelChallenge,
+    DuelSettings,
     Event,
     HomeResultImage,
     Prediction,
@@ -41,7 +42,14 @@ from .services import (
     build_player_statistics,
     get_selected_season,
 )
-from .telegram_bot import TelegramAPIError, bot_is_configured, get_bot_username, notify_prediction_saved
+from .telegram_bot import (
+    TelegramAPIError,
+    bot_is_configured,
+    get_bot_username,
+    notify_duel_accepted,
+    notify_duel_challenge,
+    notify_prediction_saved,
+)
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -505,6 +513,7 @@ def event_detail(request, event_id: int):
         ]
 
     own_duel = get_user_event_duel(event, request.user)
+    duel_settings = DuelSettings.objects.first()
     duel_form = None
     if request.user.is_authenticated and state == "open" and own_duel is None:
         initial = {}
@@ -566,6 +575,7 @@ def event_detail(request, event_id: int):
             "can_view_community": can_view_community,
             "community_predictions": community_predictions,
             "own_duel": own_duel,
+            "duel_settings": duel_settings,
             "duel_form": duel_form,
             "event_duels": event_duels,
             "duel_history": duel_history,
@@ -593,6 +603,10 @@ def create_event_duel(request, event_id: int):
     except DuelActionError as exc:
         messages.error(request, str(exc))
     else:
+        try:
+            notify_duel_challenge(duel)
+        except TelegramAPIError:
+            logger.exception("Could not send duel challenge notification for duel %s", duel.pk)
         messages.success(
             request,
             f"Вызов отправлен игроку {duel.opponent.username}. Ставка — {duel.stake} очков.",
@@ -609,12 +623,16 @@ def respond_event_duel(request, duel_id: int, action: str):
         messages.error(request, "Неизвестное действие с дуэлью.")
         return redirect("league:event_detail", event_id=duel.event_id)
     try:
-        respond_to_duel(duel, request.user, accept=action == "accept")
+        duel = respond_to_duel(duel, request.user, accept=action == "accept")
     except DuelActionError as exc:
         messages.error(request, str(exc))
         return redirect(f"{reverse('league:event_detail', args=(duel.event_id,))}#event-duel")
 
     if action == "accept":
+        try:
+            notify_duel_accepted(duel)
+        except TelegramAPIError:
+            logger.exception("Could not send duel acceptance notification for duel %s", duel.pk)
         messages.success(request, f"Дуэль принята. На кону {duel.stake} очков.")
         target = reverse("league:event_detail", args=(duel.event_id,))
     else:

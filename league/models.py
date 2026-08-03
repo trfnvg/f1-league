@@ -101,14 +101,6 @@ class Event(models.Model):
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
     has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
-    duel_cover_image = models.ImageField(
-        "Обложка дуэлей",
-        upload_to="event_duels/",
-        blank=True,
-        null=True,
-        max_length=255,
-        help_text="Необязательная иллюстрация F1 × Wild West для блока дуэлей.",
-    )
 
     class Status(models.TextChoices):
         OPEN = "open", "Открыто"
@@ -181,6 +173,26 @@ class HomeResultImage(models.Model):
         if self.title:
             return self.title
         return f"Фото результатов #{self.id}"
+
+
+class DuelSettings(models.Model):
+    key = models.CharField(max_length=32, unique=True, default="default", editable=False)
+    cover_image = models.ImageField(
+        "Общая обложка дуэлей",
+        upload_to="duel_theme/",
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="Загружается один раз и используется на всех этапах.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Оформление дуэлей"
+        verbose_name_plural = "Оформление дуэлей"
+
+    def __str__(self):
+        return "Общее оформление дуэлей"
 
 
 class UserProfile(models.Model):

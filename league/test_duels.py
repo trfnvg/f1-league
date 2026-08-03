@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
@@ -6,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .duels import DuelActionError, create_duel_challenge, respond_to_duel
-from .models import DuelChallenge, Event, Prediction, Result, Score
+from .models import DuelChallenge, DuelSettings, Event, Prediction, Result, Score
 from .scoring import publish_event_scores
 from .services import build_leaderboard
 
@@ -223,3 +224,48 @@ class DuelChallengeTests(TestCase):
         self.assertContains(response, "Вызов на дуэль")
         self.assertContains(response, "F1 · Wild West")
         self.assertContains(response, reverse("league:create_event_duel", args=(self.event.id,)))
+
+    def test_one_global_cover_is_used_for_every_event(self):
+        DuelSettings.objects.create(cover_image="duel_theme/western.webp")
+        second_event = Event.objects.create(
+            season_year=2026,
+            name="Second Desert Grand Prix",
+            round_number=2,
+            deadline=timezone.now() + timedelta(days=3),
+            race_datetime=timezone.now() + timedelta(days=4),
+        )
+        self.client.force_login(self.challenger)
+
+        first_page = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        second_page = self.client.get(reverse("league:event_detail", args=(second_event.id,)))
+        self.assertContains(first_page, "/media/duel_theme/western.webp")
+        self.assertContains(second_page, "/media/duel_theme/western.webp")
+
+    @patch("league.telegram_bot.send_message")
+    def test_telegram_notifies_opponent_and_then_challenger(self, send_message):
+        challenger_profile = self.challenger.league_profile
+        challenger_profile.telegram_chat_id = 111
+        challenger_profile.telegram_notifications = True
+        challenger_profile.save(update_fields=("telegram_chat_id", "telegram_notifications", "updated_at"))
+        opponent_profile = self.opponent.league_profile
+        opponent_profile.telegram_chat_id = 222
+        opponent_profile.telegram_notifications = True
+        opponent_profile.save(update_fields=("telegram_chat_id", "telegram_notifications", "updated_at"))
+
+        self.client.force_login(self.challenger)
+        self.client.post(
+            reverse("league:create_event_duel", args=(self.event.id,)),
+            {"opponent": self.opponent.id, "stake": 6},
+        )
+        duel = DuelChallenge.objects.get()
+        self.assertEqual(send_message.call_args_list[0].args[0], 222)
+        self.assertIn("Тебе бросили вызов", send_message.call_args_list[0].args[1])
+        self.assertIn("6 очков", send_message.call_args_list[0].args[1])
+
+        self.client.force_login(self.opponent)
+        self.client.post(
+            reverse("league:respond_event_duel", kwargs={"duel_id": duel.id, "action": "accept"})
+        )
+        self.assertEqual(send_message.call_args_list[1].args[0], 111)
+        self.assertIn("Твой вызов принят", send_message.call_args_list[1].args[1])
+        self.assertIn("Ranger", send_message.call_args_list[1].args[1])

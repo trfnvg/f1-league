@@ -459,6 +459,66 @@ def notify_prediction_saved(prediction):
     return True
 
 
+def _duel_points_label(value):
+    value = abs(int(value))
+    if value % 100 in range(11, 15):
+        return "очков"
+    if value % 10 == 1:
+        return "очко"
+    if value % 10 in range(2, 5):
+        return "очка"
+    return "очков"
+
+
+def _duel_notification_profile(user):
+    return UserProfile.objects.filter(
+        user=user,
+        user__is_active=True,
+        telegram_chat_id__isnull=False,
+        telegram_notifications=True,
+    ).first()
+
+
+def _send_duel_notification(profile, text, event):
+    if not profile:
+        return False
+    try:
+        send_message(profile.telegram_chat_id, text, event=event)
+    except TelegramAPIError as exc:
+        if exc.error_code == 403:
+            profile.telegram_notifications = False
+            profile.save(update_fields=("telegram_notifications", "updated_at"))
+        raise
+    return True
+
+
+def notify_duel_challenge(duel):
+    profile = _duel_notification_profile(duel.opponent)
+    points_label = _duel_points_label(duel.stake)
+    return _send_duel_notification(
+        profile,
+        "🤠 Тебе бросили вызов на дуэль!\n\n"
+        f"{duel.challenger.username} вызывает тебя на этапе «{duel.event.name}».\n"
+        f"На кону: {duel.stake} {points_label}.\n\n"
+        "Прими вызов или отклони его и предложи свою ставку.\n"
+        f"Ответить нужно до {_deadline_text(duel.event)}.",
+        duel.event,
+    )
+
+
+def notify_duel_accepted(duel):
+    profile = _duel_notification_profile(duel.challenger)
+    points_label = _duel_points_label(duel.stake)
+    return _send_duel_notification(
+        profile,
+        "⚔️ Твой вызов принят!\n\n"
+        f"{duel.opponent.username} принял дуэль на этапе «{duel.event.name}».\n"
+        f"Ставка зафиксирована: {duel.stake} {points_label}.\n\n"
+        "Победит тот, кто наберёт больше чистых очков за этап.",
+        duel.event,
+    )
+
+
 def send_result_notifications():
     profiles = list(
         UserProfile.objects.filter(

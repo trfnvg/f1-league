@@ -895,7 +895,7 @@ body.editorial-theme .action-primary.action-saved:hover { border-color:#105f4b; 
 .western-duel-kicker { display:block; margin-bottom:.25rem; color:var(--western-rust); font-size:.62rem; font-weight:1000; letter-spacing:.13em; text-transform:uppercase; }
 .western-duel-heading h2 { margin:0; color:var(--western-ink); font-family:"Barlow Condensed",sans-serif; font-size:clamp(1.75rem,4vw,2.7rem); font-weight:900; letter-spacing:.02em; line-height:.92; text-transform:uppercase; }
 .western-duel-heading p { max-width:680px; margin:.5rem 0 0; color:#70503b; font-size:.76rem; font-weight:650; }
-.western-duel-limit { width:88px; min-height:78px; display:grid; place-items:center; align-content:center; flex:0 0 auto; padding:.45rem; color:#fff7df; background:var(--western-ink); clip-path:polygon(50% 0,62% 13%,80% 8%,88% 27%,100% 38%,91% 54%,94% 74%,74% 81%,62% 100%,47% 90%,28% 98%,20% 80%,0 69%,8% 50%,0 31%,19% 21%,29% 3%); text-align:center; }
+.western-duel-limit { width:88px; height:88px; min-height:88px; display:grid; place-items:center; align-content:center; flex:0 0 auto; padding:.45rem; color:#fff7df; background:var(--western-ink); clip-path:polygon(50% 0,60% 23%,85% 15%,77% 40%,100% 50%,77% 60%,85% 85%,60% 77%,50% 100%,40% 77%,15% 85%,23% 60%,0 50%,23% 40%,15% 15%,40% 23%); text-align:center; filter:drop-shadow(0 6px 7px rgba(55,30,18,.2)); }
 .western-duel-limit small,.western-duel-limit span { display:block; max-width:58px; font-size:.47rem; font-weight:850; letter-spacing:.05em; line-height:1.05; text-transform:uppercase; }
 .western-duel-limit strong { display:block; color:#ffd77c; font-family:"Barlow Condensed",sans-serif; font-size:1.65rem; line-height:.8; }
 .western-showdown { display:grid; grid-template-columns:minmax(0,1fr) 100px minmax(0,1fr); align-items:center; overflow:hidden; border:1px solid rgba(70,37,20,.32); border-radius:3px 18px 3px 3px; background:rgba(255,251,235,.78); box-shadow:inset 0 1px rgba(255,255,255,.8); }
@@ -906,7 +906,7 @@ body.editorial-theme .action-primary.action-saved:hover { border-color:#105f4b; 
 .western-fighter > small { color:#7b5a43; font-size:.58rem; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
 .western-avatar { width:64px; height:64px; grid-row:1 / span 2; display:grid; place-items:center; overflow:hidden; border:3px solid #fff6dc; border-radius:50%; color:#fff8e8; background:linear-gradient(145deg,var(--western-rust),#6a2f1f); font-size:1.2rem; font-weight:900; box-shadow:0 0 0 2px var(--western-brown),0 8px 18px rgba(64,34,20,.24); }
 .western-avatar img { width:100%; height:100%; display:block; object-fit:cover; }
-.western-stake-seal { width:100px; min-height:104px; display:grid; place-items:center; align-content:center; color:#fff9e8; background:radial-gradient(circle at 50% 44%,#9c5830,#3a2419 74%); text-align:center; clip-path:polygon(50% 0,61% 13%,79% 6%,86% 25%,100% 35%,91% 51%,100% 67%,82% 75%,75% 94%,56% 87%,42% 100%,30% 84%,10% 87%,12% 66%,0 53%,12% 38%,5% 20%,27% 17%,37% 0); }
+.western-stake-seal { width:100px; height:100px; min-height:100px; display:grid; place-items:center; align-content:center; color:#fff9e8; background:radial-gradient(circle at 50% 44%,#9c5830,#3a2419 74%); text-align:center; clip-path:polygon(50% 0,60% 23%,85% 15%,77% 40%,100% 50%,77% 60%,85% 85%,60% 77%,50% 100%,40% 77%,15% 85%,23% 60%,0 50%,23% 40%,15% 15%,40% 23%); filter:drop-shadow(0 7px 8px rgba(55,30,18,.23)); }
 .western-stake-seal small,.western-stake-seal span { display:block; font-size:.5rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
 .western-stake-seal strong { display:block; color:#ffd777; font-family:"Barlow Condensed",sans-serif; font-size:2.4rem; line-height:.82; }
 .western-duel-state { grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.72rem 1rem; border-top:1px solid rgba(70,37,20,.22); background:rgba(79,44,25,.08); }
@@ -967,13 +967,13 @@ body.editorial-theme .action-primary.action-saved:hover { border-color:#105f4b; 
 @media (max-width: 620px) {
   .western-duel { padding:.9rem; border-radius:3px 17px 3px 3px; }
   .western-duel-heading p { font-size:.68rem; }
-  .western-duel-limit { width:72px; min-height:67px; }
+  .western-duel-limit { width:72px; height:72px; min-height:72px; }
   .western-showdown { grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr); }
   .western-fighter,.western-fighter.is-opponent { grid-template-columns:1fr; grid-template-rows:auto auto auto; justify-items:center; gap:.25rem; padding:.75rem .35rem; text-align:center; }
   .western-fighter.is-opponent .western-avatar,.western-avatar { grid-column:auto; grid-row:auto; }
   .western-avatar { width:50px; height:50px; }
   .western-fighter > strong { max-width:100%; font-size:1.02rem; }
-  .western-stake-seal { width:70px; min-height:78px; }
+  .western-stake-seal { width:70px; height:70px; min-height:70px; }
   .western-stake-seal strong { font-size:1.8rem; }
   .western-duel-state { align-items:stretch; flex-direction:column; }
   .western-duel-actions { align-items:stretch; flex-direction:column; }
