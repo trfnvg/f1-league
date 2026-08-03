@@ -208,13 +208,17 @@ class PlayerProfileOrderingTests(TestCase):
 
 
 @override_settings(STORAGES=TEST_STORAGES)
-class SummerThemeTests(TestCase):
-    def test_base_template_loads_summer_theme(self):
+class ApexNightThemeTests(TestCase):
+    def test_base_template_loads_apex_night_theme_last(self):
         response = self.client.get(reverse("league:home"))
 
         self.assertContains(response, "league/summer-theme.css")
         self.assertContains(response, "league/editorial-rework.css")
-        self.assertContains(response, 'class="summer-theme editorial-theme d-flex flex-column min-vh-100"')
+        self.assertContains(response, "league/apex-night.css")
+        self.assertContains(
+            response,
+            'class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100"',
+        )
 
 
 @override_settings(
