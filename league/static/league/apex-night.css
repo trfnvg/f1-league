@@ -177,6 +177,10 @@ body.apex-night-theme .site-header > .container {
   max-width: var(--page-max);
 }
 
+body.apex-night-theme .site-header-left {
+  gap: 1.05rem;
+}
+
 body.apex-night-theme .brand-mark {
   width: 23px;
   gap: 3px;
@@ -1282,6 +1286,10 @@ body.apex-night-theme .western-duel-empty {
   background: rgba(255, 235, 210, 0.035);
 }
 
+body.apex-night-theme .western-showdown {
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
+}
+
 body.apex-night-theme .western-fighter strong,
 body.apex-night-theme .western-roster-card strong,
 body.apex-night-theme .western-challenge-form strong,
@@ -1302,8 +1310,9 @@ body.apex-night-theme .western-duel-state {
 }
 
 body.apex-night-theme .western-avatar {
-  border-color: rgba(236, 183, 126, 0.5);
-  background: #6b3926;
+  border: 0;
+  background: linear-gradient(145deg, #8a4a31, #49281e);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
 }
 
 body.apex-night-theme .western-btn {
@@ -1317,11 +1326,40 @@ body.apex-night-theme .western-btn.is-challenge {
   background: #df9d5d;
 }
 
+body.apex-night-theme .western-btn.is-challenge {
+  color: #fff;
+  border-color: #ef7646;
+  background: linear-gradient(135deg, #ef7646, #b94729);
+  box-shadow: 0 10px 24px rgba(224, 91, 49, 0.3), 0 0 0 3px rgba(224, 91, 49, 0.08);
+}
+
+body.apex-night-theme .western-btn.is-challenge:hover,
+body.apex-night-theme .western-btn.is-challenge:focus-visible {
+  border-color: #ff986e;
+  background: linear-gradient(135deg, #fa8554, #ca5330);
+  box-shadow: 0 14px 30px rgba(224, 91, 49, 0.38), 0 0 0 4px rgba(224, 91, 49, 0.11);
+}
+
 body.apex-night-theme .western-btn.is-decline,
 body.apex-night-theme .western-btn.is-quiet {
   color: #d7b99a;
   border-color: rgba(205, 145, 79, 0.28);
   background: transparent;
+}
+
+body.apex-night-theme .western-btn.is-quiet {
+  color: #f1c49f;
+  border-color: rgba(231, 126, 74, 0.58);
+  background: rgba(205, 92, 48, 0.1);
+  box-shadow: 0 0 0 3px rgba(205, 92, 48, 0.05);
+}
+
+body.apex-night-theme .western-btn.is-quiet:hover,
+body.apex-night-theme .western-btn.is-quiet:focus-visible {
+  color: #fff0df;
+  border-color: #e78455;
+  background: rgba(205, 92, 48, 0.18);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(205, 92, 48, 0.08);
 }
 
 body.apex-night-theme .western-duel-history span {
@@ -2306,6 +2344,10 @@ body.apex-night-theme .footer-season {
   body.apex-night-theme .brand-mark {
     width: 18px;
     margin-right: 0.3rem;
+  }
+
+  body.apex-night-theme .site-header-left {
+    gap: 0.78rem;
   }
 
   body.apex-night-theme .site-header-actions .nav-chip {
