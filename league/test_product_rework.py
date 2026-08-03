@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
+    DuelChallenge,
     Event,
     Prediction,
     Result,
@@ -382,6 +383,66 @@ class CompetitiveFeaturesTests(TestCase):
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, "Последние события")
         self.assertContains(response, "Alice поднялся на 1 место")
+
+    def test_activity_feed_reports_leader_record_podium_and_duel_events(self):
+        player_a = User.objects.create_user("Alice")
+        player_b = User.objects.create_user("Bob")
+        now = timezone.now()
+        first_event = Event.objects.create(
+            name="Opening GP",
+            round_number=1,
+            deadline=now - timedelta(days=4),
+            status=Event.Status.SCORED,
+        )
+        second_event = Event.objects.create(
+            name="Comeback GP",
+            round_number=2,
+            deadline=now - timedelta(days=2),
+            status=Event.Status.SCORED,
+        )
+        for event in (first_event, second_event):
+            create_prediction(player_a, event)
+            prediction_b = create_prediction(player_b, event)
+            prediction_b.p1 = "verstappen"
+            prediction_b.save(update_fields=("p1",))
+            create_result(event)
+
+        Score.objects.create(event=first_event, user=player_a, points=10)
+        Score.objects.create(event=first_event, user=player_b, points=20)
+        Score.objects.create(event=second_event, user=player_a, points=35)
+        Score.objects.create(event=second_event, user=player_b, points=0)
+        duel = DuelChallenge.objects.create(
+            event=second_event,
+            challenger=player_a,
+            opponent=player_b,
+            stake=5,
+            status=DuelChallenge.Status.SETTLED,
+            winner=player_a,
+            challenger_prediction_points=35,
+            opponent_prediction_points=0,
+            responded_at=now - timedelta(days=1, hours=2),
+            settled_at=now - timedelta(days=1),
+        )
+
+        feed = build_activity_feed(build_leaderboard(2026), limit=20)
+        feed_types = {item["type"] for item in feed}
+
+        self.assertTrue(
+            {"leader", "record", "perfect-podium", "duel-accepted", "duel-result"}
+            <= feed_types
+        )
+        self.assertTrue(
+            any(item["text"] == "Alice стал новым лидером чемпионата" for item in feed)
+        )
+        self.assertTrue(any(item["text"] == "Alice обновил личный рекорд" for item in feed))
+        self.assertTrue(any(item["text"] == "Alice идеально угадал подиум" for item in feed))
+
+        response = self.client.get(reverse("league:home"))
+        self.assertContains(response, "Alice выиграл дуэль")
+        self.assertContains(
+            response,
+            f'{reverse("league:event_detail", args=(duel.event_id,))}#event-duel',
+        )
 
     def test_saved_scored_and_round_winner_states_are_rendered(self):
         winner = User.objects.create_user("Winner", password="test")

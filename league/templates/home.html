@@ -53,8 +53,8 @@
       <h1>Прогнозируй гонки.<br>Выигрывай сезон.</h1>
       <p class="home-lead">Закрытая лига друзей с живой таблицей, подробным разбором очков и Telegram-напоминаниями.</p>
       <div class="hero-actions">
-        <a class="action-primary" href="{% url 'league:register' %}">Вступить в лигу <span>→</span></a>
-        <a class="action-secondary" href="{% url 'league:leaderboard' %}">Смотреть таблицу</a>
+        <a class="action-primary" href="{% url 'login' %}">Войти в аккаунт <span>→</span></a>
+        <a class="action-secondary" href="{% url 'league:register' %}">Создать аккаунт</a>
       </div>
     {% endif %}
   </div>
@@ -101,7 +101,14 @@
     </div>
     <div class="activity-feed-grid">
       {% for item in activity_feed %}
-        <a class="activity-feed-item is-{{ item.type }}" href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}">
+        <a
+          class="activity-feed-item is-{{ item.type }}"
+          {% if item.event_id %}
+            href="{% url 'league:event_detail' event_id=item.event_id %}{{ item.anchor|default:'' }}"
+          {% else %}
+            href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}"
+          {% endif %}
+        >
           <span class="activity-feed-icon">{{ item.icon }}</span>
           <span><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
         </a>

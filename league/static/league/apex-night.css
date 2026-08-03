@@ -740,6 +740,34 @@ body.apex-night-theme .activity-feed-item.is-movement .activity-feed-icon {
   background: var(--apex-blue);
 }
 
+body.apex-night-theme .activity-feed-item.is-leader .activity-feed-icon {
+  color: #1b1203;
+  background: var(--apex-amber);
+}
+
+body.apex-night-theme .activity-feed-item.is-record .activity-feed-icon {
+  color: #041518;
+  background: var(--apex-cyan);
+}
+
+body.apex-night-theme .activity-feed-item.is-perfect-podium .activity-feed-icon {
+  color: #06150f;
+  background: var(--apex-green);
+  font-size: 0.62rem;
+  letter-spacing: -0.04em;
+}
+
+body.apex-night-theme .activity-feed-item.is-duel-accepted .activity-feed-icon {
+  color: #21140b;
+  background: #d99a62;
+}
+
+body.apex-night-theme .activity-feed-item.is-duel-result .activity-feed-icon {
+  color: #fff;
+  background: #8a5cf5;
+  box-shadow: 0 0 0 4px rgba(138, 92, 245, 0.1);
+}
+
 body.apex-night-theme .activity-feed-item small {
   color: var(--apex-muted);
 }
@@ -1140,7 +1168,6 @@ body.apex-night-theme .western-duel-heading p {
   color: #a98d79;
 }
 
-body.apex-night-theme .western-duel-limit,
 body.apex-night-theme .western-stake-seal {
   width: 116px;
   height: 116px;
@@ -1151,8 +1178,6 @@ body.apex-night-theme .western-stake-seal {
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
 }
 
-body.apex-night-theme .western-duel-limit small,
-body.apex-night-theme .western-duel-limit span,
 body.apex-night-theme .western-stake-seal small,
 body.apex-night-theme .western-stake-seal span {
   width: 72px;
@@ -1166,11 +1191,75 @@ body.apex-night-theme .western-stake-seal span {
   white-space: normal;
 }
 
+body.apex-night-theme .western-duel-limit {
+  position: relative;
+  width: 156px;
+  height: auto;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: end;
+  gap: 0.15rem 0.42rem;
+  flex: 0 0 auto;
+  padding: 0.8rem 0.9rem 0.72rem;
+  overflow: hidden;
+  color: #fff3df;
+  border: 1px solid rgba(224, 169, 111, 0.3);
+  border-radius: 2px 16px 2px 2px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 48%),
+    #2b1d17;
+  clip-path: none;
+  filter: none;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+  text-align: left;
+}
+
+body.apex-night-theme .western-duel-limit::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 42%;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #e78b55, #b84f2d);
+}
+
+body.apex-night-theme .western-duel-limit small {
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: none;
+  color: #c8aa91;
+  font-size: 0.5rem;
+  font-weight: 850;
+  line-height: 1.1;
+  letter-spacing: 0.09em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 body.apex-night-theme .western-duel-limit strong {
-  margin: 0.12rem 0;
+  margin: 0;
   color: #ffd384;
-  font-size: 2rem;
-  line-height: 0.78;
+  font-size: 2.15rem;
+  line-height: 0.82;
+}
+
+body.apex-night-theme .western-duel-limit span {
+  width: auto;
+  max-width: none;
+  padding-bottom: 0.12rem;
+  color: #d5b89d;
+  font-size: 0.5rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 body.apex-night-theme .western-stake-seal strong {
@@ -2163,7 +2252,6 @@ body.apex-night-theme .footer-season {
     justify-content: flex-start;
   }
 
-  body.apex-night-theme .western-duel-limit,
   body.apex-night-theme .western-stake-seal {
     width: 92px;
     height: 92px;
@@ -2171,8 +2259,6 @@ body.apex-night-theme .footer-season {
     padding: 1.05rem;
   }
 
-  body.apex-night-theme .western-duel-limit small,
-  body.apex-night-theme .western-duel-limit span,
   body.apex-night-theme .western-stake-seal small,
   body.apex-night-theme .western-stake-seal span {
     width: 58px;
@@ -2180,8 +2266,22 @@ body.apex-night-theme .footer-season {
     font-size: 0.38rem;
   }
 
+  body.apex-night-theme .western-duel-limit {
+    width: 140px;
+    min-height: 72px;
+    padding: 0.72rem 0.78rem 0.66rem;
+  }
+
+  body.apex-night-theme .western-duel-limit small {
+    font-size: 0.45rem;
+  }
+
   body.apex-night-theme .western-duel-limit strong {
-    font-size: 1.65rem;
+    font-size: 1.85rem;
+  }
+
+  body.apex-night-theme .western-duel-limit span {
+    font-size: 0.45rem;
   }
 
   body.apex-night-theme .western-stake-seal strong {
