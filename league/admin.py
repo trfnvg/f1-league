@@ -5,6 +5,7 @@ from django.template.response import TemplateResponse
 from .models import (
     DRIVER_CHOICES,
     DuelChallenge,
+    DuelSettings,
     Event,
     EventPhoto,
     HomeResultImage,
@@ -107,7 +108,6 @@ class EventAdmin(admin.ModelAdmin):
         "deadline",
         "race_datetime",
         "cover_image",
-        "duel_cover_image",
     )
 
     actions = ["preview_and_publish_scores"]
@@ -262,6 +262,15 @@ class DuelChallengeAdmin(admin.ModelAdmin):
         "responded_at",
         "settled_at",
     )
+
+
+@admin.register(DuelSettings)
+class DuelSettingsAdmin(admin.ModelAdmin):
+    fields = ("cover_image", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        return not DuelSettings.objects.exists()
 
 
 @admin.register(ScoreRevision)

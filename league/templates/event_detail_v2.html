@@ -256,8 +256,8 @@
 
 <section
   id="event-duel"
-  class="western-duel mb-4{% if event.duel_cover_image %} has-duel-art{% endif %}"
-  {% if event.duel_cover_image %}style="--western-duel-art:url('{{ event.duel_cover_image.url }}');"{% endif %}
+  class="western-duel mb-4{% if duel_settings.cover_image %} has-duel-art{% endif %}"
+  {% if duel_settings.cover_image %}style="--western-duel-art:url('{{ duel_settings.cover_image.url }}');"{% endif %}
 >
   <div class="western-duel-heading">
     <div>
