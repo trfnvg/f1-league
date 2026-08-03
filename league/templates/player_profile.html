@@ -318,6 +318,49 @@
   </div>
 </section>
 
+<section class="profile-analytics-shell mb-4">
+  <div class="profile-analytics-head">
+    <div>
+      <div class="achievement-kicker">Prediction intelligence</div>
+      <h2 class="profile-section-title mb-1">Точность прогнозов</h2>
+      <p>Проценты считаются только по завершённым этапам с опубликованным результатом.</p>
+    </div>
+  </div>
+  <div class="profile-analytics-grid">
+    <article class="accuracy-card" style="--accuracy: {{ player_statistics.winner_accuracy }}%;">
+      <div class="accuracy-ring"><strong>{{ player_statistics.winner_accuracy }}%</strong></div>
+      <div><small>Победитель гонки</small><span>Точное попадание в P1</span></div>
+    </article>
+    <article class="accuracy-card" style="--accuracy: {{ player_statistics.podium_accuracy }}%;">
+      <div class="accuracy-ring"><strong>{{ player_statistics.podium_accuracy }}%</strong></div>
+      <div><small>Пилоты подиума</small><span>Пилот оказался в топ-3</span></div>
+    </article>
+    <article class="accuracy-card" style="--accuracy: {{ player_statistics.pole_accuracy }}%;">
+      <div class="accuracy-ring"><strong>{{ player_statistics.pole_accuracy }}%</strong></div>
+      <div><small>Поул-позиция</small><span>Точный обладатель поула</span></div>
+    </article>
+    <article class="insight-card insight-favorite">
+      <small>Любимый пилот</small>
+      <strong>{{ player_statistics.favorite_driver }}</strong>
+      <span>Чаще всего появляется в прогнозах</span>
+    </article>
+    <article class="insight-card insight-strong">
+      <small>Сильнейшая категория</small>
+      {% if player_statistics.strongest_category %}
+        <strong>{{ player_statistics.strongest_category.label }}</strong>
+        <span>{{ player_statistics.strongest_category.rate }}% · {{ player_statistics.strongest_category.hits }}/{{ player_statistics.strongest_category.attempts }}</span>
+      {% else %}<strong>—</strong><span>Нужны завершённые этапы</span>{% endif %}
+    </article>
+    <article class="insight-card insight-weak">
+      <small>Зона роста</small>
+      {% if player_statistics.weakest_category %}
+        <strong>{{ player_statistics.weakest_category.label }}</strong>
+        <span>{{ player_statistics.weakest_category.rate }}% · {{ player_statistics.weakest_category.hits }}/{{ player_statistics.weakest_category.attempts }}</span>
+      {% else %}<strong>—</strong><span>Нужны завершённые этапы</span>{% endif %}
+    </article>
+  </div>
+</section>
+
 <div class="row g-4 mb-4">
   <div class="col-12 col-xl-7">
     <section class="glass-panel p-3 p-md-4 h-100">

@@ -15,9 +15,9 @@
         <h1>{{ personal_dashboard.next_event.name }}</h1>
         <p class="home-lead">R{{ personal_dashboard.next_event.round_number }} · предикты принимаются до {{ personal_dashboard.next_event.deadline|date:"d.m · H:i" }} МСК</p>
         <div class="hero-actions">
-          <a class="action-primary" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}">
-            {% if personal_dashboard.next_prediction %}Проверить предикт{% else %}Сделать предикт{% endif %}
-            <span aria-hidden="true">→</span>
+          <a class="action-primary {% if personal_dashboard.next_prediction %}action-saved{% else %}action-open{% endif %}" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}">
+            {% if personal_dashboard.next_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}
+            <span aria-hidden="true">{% if personal_dashboard.next_prediction %}✓{% else %}→{% endif %}</span>
           </a>
           <div class="countdown-chip" data-deadline="{{ personal_dashboard.next_event.deadline|date:'c' }}">
             <span class="countdown-label">До дедлайна</span>
@@ -78,6 +78,23 @@
   </aside>
 </section>
 
+{% if activity_feed %}
+  <section class="activity-feed-shell editorial-section mb-4">
+    <div class="section-heading-row">
+      <div><span class="eyebrow">Live paddock</span><h2>Последние события</h2></div>
+      <a class="section-inline-link" href="{% url 'league:leaderboard' %}?season={{ season.year }}">Таблица →</a>
+    </div>
+    <div class="activity-feed-grid">
+      {% for item in activity_feed %}
+        <a class="activity-feed-item is-{{ item.type }}" href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}">
+          <span class="activity-feed-icon">{{ item.icon }}</span>
+          <span><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
 {% if result_images %}
   <section class="editorial-section mb-4">
     <div class="section-heading-row">
@@ -117,14 +134,16 @@
         <a class="event-media" href="{% url 'league:event_detail' event_id=e.id %}">
           {% if e.cover_image %}<img src="{{ e.cover_image.url }}" alt="{{ e.name }}">{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
           <span class="round-flag">R{{ e.round_number }}</span>
-          {% if e.status == "open" %}<span class="event-state open">Открыто</span>{% elif e.status == "scored" %}<span class="event-state scored">Результаты</span>{% else %}<span class="event-state locked">Закрыто</span>{% endif %}
+          {% if e.ui_state == "saved" %}<span class="event-state saved">Сохранено ✓</span>{% elif e.ui_state == "open" %}<span class="event-state open">Доступно</span>{% elif e.ui_state == "scored" %}<span class="event-state scored">Рассчитано</span>{% elif e.ui_state == "soon" %}<span class="event-state soon">Скоро</span>{% else %}<span class="event-state locked">Закрыто</span>{% endif %}
         </a>
         <div class="event-card-copy">
           <div class="event-date">{{ e.deadline|date:"d M Y" }}</div>
           <h3><a href="{% url 'league:event_detail' event_id=e.id %}">{{ e.name }}</a></h3>
           <div class="event-card-foot">
             <span>Дедлайн {{ e.deadline|date:"H:i" }} МСК</span>
-            <a href="{% url 'league:event_detail' event_id=e.id %}" aria-label="Открыть {{ e.name }}">→</a>
+            <a class="event-card-action is-{{ e.ui_state }}" href="{% url 'league:event_detail' event_id=e.id %}" aria-label="Открыть {{ e.name }}">
+              {% if e.ui_state == "saved" %}Готово ✓{% elif e.ui_state == "open" %}Прогноз →{% elif e.ui_state == "scored" %}Итоги →{% elif e.ui_state == "soon" %}Скоро{% else %}Закрыто{% endif %}
+            </a>
           </div>
         </div>
       </article>
