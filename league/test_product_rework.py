@@ -239,6 +239,18 @@ class InterfaceRefinementTests(TestCase):
         self.assertContains(response, "дн ·")
         self.assertContains(response, "мин`")
 
+    def test_account_menu_and_footer_use_refined_layout(self):
+        user = User.objects.create_user("menu-owner", password="test")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("league:home"))
+
+        self.assertContains(response, 'class="menu-account"')
+        self.assertContains(response, 'class="menu-logout-btn"')
+        self.assertNotContains(response, "menu-item-danger w-100")
+        self.assertContains(response, 'class="footer-signature"')
+        self.assertContains(response, "F1</strong> Predictions League")
+
     def test_chart_uses_unique_curated_colors(self):
         users = [User.objects.create_user(f"driver-{index}") for index in range(12)]
 
