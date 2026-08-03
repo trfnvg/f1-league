@@ -16,7 +16,13 @@ from .models import (
     UserProfile,
 )
 from .scoring import publish_event_scores, restore_score_revision
-from .services import build_achievements, build_leaderboard
+from .services import (
+    build_achievements,
+    build_activity_feed,
+    build_duel,
+    build_leaderboard,
+    build_player_statistics,
+)
 from .telegram_bot import send_due_reminders, send_result_notifications
 
 
@@ -273,3 +279,133 @@ class InterfaceRefinementTests(TestCase):
 
         stable_pace = next(item for item in achievements if item["code"] == "streak")
         self.assertEqual(stable_pace["description"], "11 этапов подряд с очками")
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class CompetitiveFeaturesTests(TestCase):
+    def test_player_profile_accuracy_and_favorite_driver(self):
+        player = User.objects.create_user("analytics-driver")
+        first_event = Event.objects.create(
+            name="First GP",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=4),
+        )
+        second_event = Event.objects.create(
+            name="Second GP",
+            round_number=2,
+            deadline=timezone.now() - timedelta(days=2),
+        )
+        create_prediction(player, first_event)
+        create_prediction(player, second_event)
+        create_result(first_event)
+        second_result = create_result(second_event)
+        second_result.p1 = "verstappen"
+        second_result.p2 = "norris"
+        second_result.p3 = "piastri"
+        second_result.pole = "russell"
+        second_result.save()
+        publish_event_scores(first_event)
+        publish_event_scores(second_event)
+
+        statistics = build_player_statistics(player, 2026)
+
+        self.assertEqual(statistics["winner_accuracy"], 50)
+        self.assertEqual(statistics["podium_accuracy"], 83)
+        self.assertEqual(statistics["pole_accuracy"], 50)
+        self.assertEqual(statistics["favorite_driver"], "Норрис (McLaren)")
+        self.assertIsNotNone(statistics["strongest_category"])
+        self.assertIsNotNone(statistics["weakest_category"])
+
+        response = self.client.get(reverse("league:player_profile", args=[player.id]))
+        self.assertContains(response, "Точность прогнозов")
+        self.assertContains(response, "Любимый пилот")
+        self.assertContains(response, "Норрис (McLaren)")
+
+    def test_duel_compares_scores_rounds_and_accuracy(self):
+        player_a = User.objects.create_user("Alpha")
+        player_b = User.objects.create_user("Bravo")
+        event = Event.objects.create(
+            name="Duel GP",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=1),
+        )
+        create_prediction(player_a, event)
+        prediction_b = create_prediction(player_b, event)
+        prediction_b.p1 = "verstappen"
+        prediction_b.pole = "verstappen"
+        prediction_b.save()
+        create_result(event)
+        publish_event_scores(event)
+
+        duel = build_duel(player_a, player_b, 2026)
+
+        self.assertEqual(duel["wins_a"], 1)
+        self.assertEqual(duel["wins_b"], 0)
+        self.assertEqual(len(duel["event_rows"]), 1)
+        self.assertTrue(duel["category_rows"])
+
+        response = self.client.get(
+            reverse("league:duel"),
+            {"player_a": player_a.id, "player_b": player_b.id},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "График очной борьбы")
+        self.assertContains(response, "Точность категорий")
+        self.assertContains(response, "Duel GP")
+
+    def test_activity_feed_reports_winner_and_rank_movement(self):
+        player_a = User.objects.create_user("Alice")
+        player_b = User.objects.create_user("Bob")
+        first_event = Event.objects.create(
+            name="Opening GP",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=4),
+            status=Event.Status.SCORED,
+        )
+        second_event = Event.objects.create(
+            name="Comeback GP",
+            round_number=2,
+            deadline=timezone.now() - timedelta(days=2),
+            status=Event.Status.SCORED,
+        )
+        Score.objects.create(event=first_event, user=player_a, points=10)
+        Score.objects.create(event=first_event, user=player_b, points=20)
+        Score.objects.create(event=second_event, user=player_a, points=30)
+        Score.objects.create(event=second_event, user=player_b, points=0)
+
+        leaderboard = build_leaderboard(2026)
+        feed = build_activity_feed(leaderboard)
+
+        self.assertTrue(any(item["text"] == "Alice выиграл этап" for item in feed))
+        self.assertTrue(any("Alice поднялся на 1 место" == item["text"] for item in feed))
+
+        response = self.client.get(reverse("league:home"))
+        self.assertContains(response, "Последние события")
+        self.assertContains(response, "Alice поднялся на 1 место")
+
+    def test_saved_scored_and_round_winner_states_are_rendered(self):
+        winner = User.objects.create_user("Winner", password="test")
+        scored_event = Event.objects.create(
+            name="Winner GP",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=2),
+        )
+        create_prediction(winner, scored_event)
+        create_result(scored_event)
+        publish_event_scores(scored_event)
+        open_event = Event.objects.create(
+            name="Open GP",
+            round_number=2,
+            deadline=timezone.now() + timedelta(days=1),
+        )
+        create_prediction(winner, open_event)
+        self.client.force_login(winner)
+
+        home_response = self.client.get(reverse("league:home"))
+        leaderboard_response = self.client.get(reverse("league:leaderboard"))
+        event_response = self.client.get(reverse("league:event_detail", args=[scored_event.id]))
+
+        self.assertContains(home_response, "Сохранено ✓")
+        self.assertContains(home_response, "Рассчитано")
+        self.assertContains(leaderboard_response, "Победитель последнего этапа")
+        self.assertContains(event_response, "Победитель этапа")

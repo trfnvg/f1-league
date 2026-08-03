@@ -6,6 +6,7 @@ app_name = "league"
 urlpatterns = [
     path("", views.home, name="home"),
     path("participants/", views.participants, name="participants"),
+    path("duel/", views.duel, name="duel"),
     path("season-predictions/", views.season_predictions, name="season_predictions"),
     path("register/", views.register, name="register"),
     path("telegram/connect/", views.connect_telegram, name="telegram_connect"),

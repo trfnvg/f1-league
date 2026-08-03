@@ -23,7 +23,14 @@ from .models import (
     SeasonScore,
     UserProfile,
 )
-from .services import build_achievements, build_leaderboard, build_player_statistics, get_selected_season
+from .services import (
+    build_achievements,
+    build_activity_feed,
+    build_duel,
+    build_leaderboard,
+    build_player_statistics,
+    get_selected_season,
+)
 from .telegram_bot import TelegramAPIError, bot_is_configured, get_bot_username, notify_prediction_saved
 
 
@@ -86,6 +93,23 @@ def home(request):
         HomeResultImage.objects.filter(is_active=True, season_year=season.year)
     )
     leaderboard_data = build_leaderboard(season.year)
+    saved_event_ids = set()
+    if request.user.is_authenticated:
+        saved_event_ids = set(
+            Prediction.objects.filter(user=request.user, event__in=events).values_list("event_id", flat=True)
+        )
+    for event in events:
+        voting_state = event.voting_state()
+        if voting_state == "scored":
+            event.ui_state = "scored"
+        elif voting_state == "open" and event.id in saved_event_ids:
+            event.ui_state = "saved"
+        elif voting_state == "open":
+            event.ui_state = "open"
+        elif voting_state == "soon":
+            event.ui_state = "soon"
+        else:
+            event.ui_state = "locked"
     personal_dashboard = None
     next_event = min(
         (event for event in events if event.deadline > now and event.status != Event.Status.SCORED),
@@ -128,6 +152,7 @@ def home(request):
             "season": season,
             "personal_dashboard": personal_dashboard,
             "leaderboard_top": leaderboard_data["rows"][:3],
+            "activity_feed": build_activity_feed(leaderboard_data),
         },
     )
 
@@ -449,12 +474,21 @@ def event_detail(request, event_id: int):
             item.user_id: item
             for item in Score.objects.filter(event=event)
         }
+        best_public_score = max(
+            (item.points for item in public_scores.values()),
+            default=None,
+        )
         community_predictions = [
             {
                 "prediction": item,
                 "profile": getattr(item.user, "league_profile", None),
                 "score": public_scores.get(item.user_id),
                 "correct": _community_prediction_correctness(item, result_obj),
+                "is_winner": (
+                    best_public_score is not None
+                    and public_scores.get(item.user_id) is not None
+                    and public_scores[item.user_id].points == best_public_score
+                ),
             }
             for item in public_predictions
         ]
@@ -647,6 +681,54 @@ def leaderboard(request):
             "scores_map": data["scores_map"],
             "leaderboard_chart": data["chart"],
             "latest_event": data["latest_event"],
+            "round_winners": [row for row in data["rows"] if row["is_round_winner"]],
             "season": season,
+        },
+    )
+
+
+def duel(request):
+    season = get_selected_season(request)
+    leaderboard_data = build_leaderboard(season.year)
+    candidates = [row["user"] for row in leaderboard_data["rows"]]
+
+    def selected_id(parameter, fallback=None):
+        try:
+            value = int(request.GET.get(parameter, ""))
+        except (TypeError, ValueError):
+            return fallback
+        return value if any(user.id == value for user in candidates) else fallback
+
+    default_a = candidates[0].id if candidates else None
+    default_b = candidates[1].id if len(candidates) > 1 else None
+    player_a_id = selected_id("player_a", default_a)
+    player_b_id = selected_id("player_b", default_b)
+    player_a = next((user for user in candidates if user.id == player_a_id), None)
+    player_b = next((user for user in candidates if user.id == player_b_id), None)
+
+    duel_data = None
+    duel_error = ""
+    if player_a and player_b and player_a.id == player_b.id:
+        duel_error = "Выбери двух разных участников."
+    elif player_a and player_b:
+        duel_data = build_duel(
+            player_a,
+            player_b,
+            season.year,
+            leaderboard=leaderboard_data,
+        )
+    elif len(candidates) < 2:
+        duel_error = "Для дуэли нужны как минимум два участника."
+
+    return render(
+        request,
+        "duel.html",
+        {
+            "season": season,
+            "candidates": candidates,
+            "player_a_id": player_a_id,
+            "player_b_id": player_b_id,
+            "duel": duel_data,
+            "duel_error": duel_error,
         },
     )

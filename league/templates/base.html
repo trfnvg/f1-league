@@ -1026,6 +1026,7 @@
       <a href="{% url 'league:home' %}">Этапы</a>
       <a href="{% url 'league:leaderboard' %}">Таблица</a>
       <a href="{% url 'league:participants' %}">Участники</a>
+      <a href="{% url 'league:duel' %}">Дуэль</a>
       <a href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
     </div>
 
@@ -1052,6 +1053,7 @@
     <a class="menu-item" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
     <a class="menu-item" href="{% url 'league:participants' %}">Участники</a>
+    <a class="menu-item" href="{% url 'league:duel' %}">Дуэль участников</a>
     <a class="menu-item" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>

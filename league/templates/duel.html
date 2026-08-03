@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Дуэль участников · F1 Predictions {{ season.year }}{% endblock %}
+
+{% block content %}
+<section class="duel-hero mb-4">
+  <div>
+    <div class="page-kicker">Head to head</div>
+    <h1 class="section-title">Дуэль участников</h1>
+    <p class="section-subtitle mb-0">Сравни общий счёт, точность категорий и ход очной борьбы.</p>
+  </div>
+  <form method="get" class="duel-selector">
+    <input type="hidden" name="season" value="{{ season.year }}">
+    <label><span>Первый участник</span><select name="player_a" class="form-select">
+      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_a_id %} selected{% endif %}>{{ user.username }}</option>{% endfor %}
+    </select></label>
+    <span class="duel-selector-vs">VS</span>
+    <label><span>Второй участник</span><select name="player_b" class="form-select">
+      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_b_id %} selected{% endif %}>{{ user.username }}</option>{% endfor %}
+    </select></label>
+    <button type="submit" class="duel-submit">Сравнить →</button>
+  </form>
+</section>
+
+{% if duel_error %}<div class="duel-empty mb-4">{{ duel_error }}</div>{% endif %}
+
+{% if duel %}
+  <section class="duel-scoreboard mb-4">
+    <article class="duel-player duel-player-a">
+      <span class="duel-avatar">{% if duel.player_a.avatar_url %}<img src="{{ duel.player_a.avatar_url }}" alt="">{% else %}{{ duel.player_a.user.username|slice:":1"|upper }}{% endif %}</span>
+      <div><small>{% if duel.player_a.rank %}P{{ duel.player_a.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_a.user.username }}</h2><span>Среднее {{ duel.player_a.average }} за этап</span></div>
+      <strong>{{ duel.player_a.total }}</strong>
+    </article>
+    <div class="duel-head-to-head">
+      <small>Победы по этапам</small>
+      <div><strong>{{ duel.wins_a }}</strong><span>—</span><strong>{{ duel.wins_b }}</strong></div>
+      <p>{{ duel.ties }} ничьих</p>
+    </div>
+    <article class="duel-player duel-player-b">
+      <strong>{{ duel.player_b.total }}</strong>
+      <div><small>{% if duel.player_b.rank %}P{{ duel.player_b.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_b.user.username }}</h2><span>Среднее {{ duel.player_b.average }} за этап</span></div>
+      <span class="duel-avatar">{% if duel.player_b.avatar_url %}<img src="{{ duel.player_b.avatar_url }}" alt="">{% else %}{{ duel.player_b.user.username|slice:":1"|upper }}{% endif %}</span>
+    </article>
+  </section>
+
+  {% if duel.graph.events %}
+    <section class="duel-panel mb-4">
+      <div class="duel-panel-head"><div><span class="eyebrow">Race trace</span><h2>График очной борьбы</h2></div><span>Накопительные очки</span></div>
+      <div class="duel-chart-wrap"><svg id="duelChart" class="duel-chart" viewBox="0 0 920 330" role="img" aria-label="График дуэли"></svg></div>
+      <div class="duel-chart-legend"><span style="--series-color:#E6392F">{{ duel.player_a.user.username }}</span><span style="--series-color:#1473E6">{{ duel.player_b.user.username }}</span></div>
+    </section>
+  {% endif %}
+
+  <div class="duel-content-grid mb-4">
+    <section class="duel-panel">
+      <div class="duel-panel-head"><div><span class="eyebrow">Accuracy</span><h2>Точность категорий</h2></div></div>
+      <div class="duel-accuracy-list">
+        {% for row in duel.category_rows %}
+          <div class="duel-accuracy-row">
+            <strong>{{ row.label }}</strong>
+            <div class="duel-accuracy-value is-a"><span>{{ row.a.rate }}%</span><small>{{ row.a.hits }}/{{ row.a.attempts }}</small></div>
+            <div class="duel-accuracy-bars"><i style="width:{{ row.a.rate }}%"></i><b style="width:{{ row.b.rate }}%"></b></div>
+            <div class="duel-accuracy-value is-b"><span>{{ row.b.rate }}%</span><small>{{ row.b.hits }}/{{ row.b.attempts }}</small></div>
+          </div>
+        {% empty %}<div class="duel-empty">Пока нет рассчитанных категорий.</div>{% endfor %}
+      </div>
+    </section>
+    <section class="duel-panel">
+      <div class="duel-panel-head"><div><span class="eyebrow">Round by round</span><h2>Результаты этапов</h2></div></div>
+      <div class="duel-round-list">
+        {% for row in duel.event_rows reversed %}
+          <a href="{% url 'league:event_detail' event_id=row.event.id %}" class="duel-round-row">
+            <span><small>R{{ row.event.round_number }}</small><strong>{{ row.event.name }}</strong></span>
+            <b class="{% if row.winner == 'a' %}is-winner{% endif %}">{{ row.points_a }}</b>
+            <i>:</i>
+            <b class="{% if row.winner == 'b' %}is-winner{% endif %}">{{ row.points_b }}</b>
+          </a>
+        {% empty %}<div class="duel-empty">Завершённых этапов пока нет.</div>{% endfor %}
+      </div>
+    </section>
+  </div>
+
+  {{ duel.graph|json_script:"duel-chart-data" }}
+  <script>
+    (() => {
+      const source = document.getElementById("duel-chart-data");
+      const svg = document.getElementById("duelChart");
+      if (!source || !svg) return;
+      const data = JSON.parse(source.textContent);
+      const width = 920, height = 330, left = 54, right = 24, top = 24, bottom = 48;
+      const maxPoints = Math.max(10, ...data.series.flatMap(series => series.points));
+      const maxIndex = Math.max(1, data.events.length - 1);
+      const ns = "http://www.w3.org/2000/svg";
+      const x = index => left + index * (width - left - right) / maxIndex;
+      const y = value => top + (maxPoints - value) * (height - top - bottom) / maxPoints;
+      for (let index = 0; index <= 4; index += 1) {
+        const value = Math.round(maxPoints * (4 - index) / 4);
+        const line = document.createElementNS(ns, "line");
+        line.setAttribute("x1", left); line.setAttribute("x2", width - right);
+        line.setAttribute("y1", y(value)); line.setAttribute("y2", y(value));
+        line.setAttribute("class", "duel-chart-grid"); svg.appendChild(line);
+        const label = document.createElementNS(ns, "text");
+        label.setAttribute("x", left - 10); label.setAttribute("y", y(value) + 4);
+        label.setAttribute("class", "duel-chart-y-label"); label.textContent = value; svg.appendChild(label);
+      }
+      data.events.forEach((event, index) => {
+        const label = document.createElementNS(ns, "text");
+        label.setAttribute("x", x(index)); label.setAttribute("y", height - 18);
+        label.setAttribute("class", "duel-chart-x-label"); label.textContent = `R${event.round}`; svg.appendChild(label);
+      });
+      data.series.forEach(series => {
+        const polyline = document.createElementNS(ns, "polyline");
+        polyline.setAttribute("points", series.points.map((value, index) => `${x(index)},${y(value)}`).join(" "));
+        polyline.setAttribute("fill", "none"); polyline.setAttribute("stroke", series.color);
+        polyline.setAttribute("class", "duel-chart-line"); svg.appendChild(polyline);
+        series.points.forEach((value, index) => {
+          const dot = document.createElementNS(ns, "circle");
+          dot.setAttribute("cx", x(index)); dot.setAttribute("cy", y(value)); dot.setAttribute("r", 5);
+          dot.setAttribute("fill", "#fffdf8"); dot.setAttribute("stroke", series.color); dot.setAttribute("stroke-width", 3);
+          const title = document.createElementNS(ns, "title"); title.textContent = `${series.name} · R${data.events[index].round}: ${value}`;
+          dot.appendChild(title); svg.appendChild(dot);
+        });
+      });
+    })();
+  </script>
+{% endif %}
+{% endblock %}

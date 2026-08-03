@@ -119,6 +119,24 @@
   </div>
 </section>
 
+{% if round_winners and latest_event %}
+  <section class="round-winner-spotlight mb-4">
+    <div class="round-winner-copy">
+      <span class="round-winner-kicker">Победитель последнего этапа</span>
+      <strong>R{{ latest_event.round_number }} · {{ latest_event.name }}</strong>
+    </div>
+    <div class="round-winner-list">
+      {% for winner in round_winners %}
+        <a href="{% url 'league:player_profile' user_id=winner.user.id %}?season={{ season.year }}" class="round-winner-person">
+          <span class="round-winner-avatar">{% if winner.avatar_url %}<img src="{{ winner.avatar_url }}" alt="">{% else %}{{ winner.user.username|slice:":1"|upper }}{% endif %}</span>
+          <span><small>Лучший результат</small><strong>{{ winner.user.username }}</strong></span>
+          <b>{{ winner.latest_points }}</b>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
+
 <section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
   <div class="table-responsive" style="max-height: 72vh;">
     <table class="table table-sm align-middle leaderboard-table">
@@ -134,7 +152,7 @@
       </thead>
       <tbody>
         {% for r in rows %}
-          <tr>
+          <tr{% if r.is_round_winner %} class="is-round-winner"{% endif %}>
             <td class="sticky-col col-rank">
               <span class="rank-chip">{{ r.rank }}</span>
               {% if r.movement > 0 %}<span class="movement movement-up d-block mt-1">▲ {{ r.movement }}</span>{% elif r.movement < 0 %}<span class="movement movement-down d-block mt-1">▼ {{ r.movement|stringformat:"d"|slice:"1:" }}</span>{% else %}<span class="movement movement-flat d-block mt-1">—</span>{% endif %}

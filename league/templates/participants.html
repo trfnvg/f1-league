@@ -144,7 +144,10 @@
       <div class="season-tabs mb-2">
         {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
       </div>
-      <div class="deadline-chip"><span>Профилей: {{ rows|length }}</span></div>
+      <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+        <div class="deadline-chip"><span>Профилей: {{ rows|length }}</span></div>
+        <a class="participants-duel-link" href="{% url 'league:duel' %}?season={{ season.year }}">Сравнить участников →</a>
+      </div>
     </div>
   </div>
 </section>

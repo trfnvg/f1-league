@@ -234,13 +234,15 @@
       <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
         <span class="badge text-bg-light">R{{ event.round_number }}</span>
         {% if state == "soon" %}
-          <span class="badge text-bg-info">Скоро откроется</span>
+          <span class="event-status-badge is-soon">Скоро откроется</span>
+        {% elif state == "open" and prediction %}
+          <span class="event-status-badge is-saved">Прогноз сохранён ✓</span>
         {% elif state == "open" %}
-          <span class="badge text-bg-success">Открыто</span>
+          <span class="event-status-badge is-open">Доступно для прогноза</span>
         {% elif state == "closed" %}
-          <span class="badge text-bg-warning">Закрыто</span>
+          <span class="event-status-badge is-locked">Закрыто</span>
         {% else %}
-          <span class="badge text-bg-secondary">Очки посчитаны</span>
+          <span class="event-status-badge is-scored">Очки рассчитаны</span>
         {% endif %}
       </div>
       <h1 class="section-title mb-3">{{ event.name }}</h1>
@@ -258,7 +260,7 @@
     {% if state == "open" %}<p class="workbench-note">Твой выбор виден только тебе. Предикты всех участников откроются после дедлайна.</p>{% endif %}
 
     {% if not user.is_authenticated %}
-      <div class="voting-status mb-0">
+      <div class="voting-status voting-status-{{ state }} mb-0">
         Нужно
         <a href="{% url 'login' %}?next={{ request.path|urlencode }}">войти</a>
         или
@@ -366,7 +368,7 @@
         </div>
         <div class="prediction-submit-bar">
           <span>Проверь состав — до дедлайна прогноз можно изменить.</span>
-          <button type="submit" class="btn btn-primary">{% if prediction %}Обновить прогноз{% else %}Сохранить прогноз{% endif %}</button>
+          <button type="submit" class="btn prediction-state-button {% if prediction %}is-saved{% else %}is-open{% endif %}">{% if prediction %}Сохранить изменения ✓{% else %}Сохранить прогноз →{% endif %}</button>
         </div>
       </form>
     {% endif %}
@@ -500,9 +502,10 @@
         </thead>
         <tbody>
           {% for row in community_predictions %}
-            <tr>
+            <tr{% if row.is_winner %} class="community-round-winner"{% endif %}>
               <td>
                 <a class="player-link fw-bold" href="{% url 'league:player_profile' user_id=row.prediction.user.id %}?season={{ event.season_year }}">{{ row.prediction.user.username }}</a>
+                {% if row.is_winner %}<span class="community-winner-label">Победитель этапа</span>{% endif %}
               </td>
               <td{% if row.correct.p1 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p1_display }}</td>
               <td{% if row.correct.p2 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p2_display }}</td>
