@@ -4,17 +4,17 @@
  */
 
 :root {
-  --apex-bg: #05070a;
-  --apex-bg-soft: #080c12;
-  --apex-surface: #0d1219;
-  --apex-surface-2: #111821;
-  --apex-surface-3: #17212c;
-  --apex-raised: #1c2835;
+  --apex-bg: #0a0f15;
+  --apex-bg-soft: #0f151d;
+  --apex-surface: #151d27;
+  --apex-surface-2: #1a2430;
+  --apex-surface-3: #222e3b;
+  --apex-raised: #2a3948;
   --apex-ink: #f5f7fa;
   --apex-ink-soft: #bdc6d2;
-  --apex-muted: #7d8997;
-  --apex-line: rgba(213, 224, 237, 0.12);
-  --apex-line-strong: rgba(213, 224, 237, 0.23);
+  --apex-muted: #929eab;
+  --apex-line: rgba(218, 228, 239, 0.16);
+  --apex-line-strong: rgba(218, 228, 239, 0.29);
   --apex-red: #ff3326;
   --apex-red-deep: #d61f17;
   --apex-blue: #4c8dff;
@@ -49,9 +49,9 @@ body.apex-night-theme.editorial-theme {
   --bs-border-color: var(--apex-line);
   color: var(--apex-ink);
   background:
-    radial-gradient(900px 520px at 105% -8%, rgba(255, 51, 38, 0.12), transparent 66%),
-    radial-gradient(720px 480px at -10% 18%, rgba(76, 141, 255, 0.08), transparent 70%),
-    linear-gradient(180deg, #05070a 0%, #080c11 48%, #06090d 100%);
+    radial-gradient(900px 520px at 105% -8%, rgba(255, 51, 38, 0.15), transparent 66%),
+    radial-gradient(720px 480px at -10% 18%, rgba(76, 141, 255, 0.11), transparent 70%),
+    linear-gradient(180deg, #0b1016 0%, #101720 48%, #0b1118 100%);
 }
 
 body.apex-night-theme.editorial-theme::before {
@@ -159,7 +159,7 @@ body.apex-night-theme .community-kicker::before {
 
 /* Header and navigation */
 body.apex-night-theme.editorial-theme .site-header {
-  background: rgba(5, 8, 12, 0.86);
+  background: rgba(11, 16, 22, 0.9);
   border: 0;
   box-shadow: 0 1px 0 var(--apex-line), 0 14px 40px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(18px) saturate(135%);
@@ -275,7 +275,7 @@ body.apex-night-theme .f1-menu {
   border-right: 1px solid var(--apex-line);
   background:
     radial-gradient(520px 280px at 0 0, rgba(255, 51, 38, 0.15), transparent 70%),
-    #080c11;
+    #111821;
 }
 
 body.apex-night-theme .f1-menu .offcanvas-header {
@@ -285,6 +285,50 @@ body.apex-night-theme .f1-menu .offcanvas-header {
 body.apex-night-theme .f1-menu .btn-close {
   filter: invert(1) grayscale(1);
   opacity: 0.75;
+}
+
+/* The old summer selector is intentionally very specific; this must outrank it. */
+body.apex-night-theme.summer-theme .offcanvas.f1-menu {
+  color: var(--apex-ink);
+  border-right: 1px solid var(--apex-line-strong);
+  background:
+    radial-gradient(440px 250px at 0 0, rgba(255, 51, 38, 0.18), transparent 72%),
+    linear-gradient(180deg, #18212b 0%, #111821 100%) !important;
+  box-shadow: 22px 0 60px rgba(0, 0, 0, 0.42);
+}
+
+body.apex-night-theme.summer-theme .offcanvas.f1-menu .offcanvas-header {
+  border-bottom-color: var(--apex-line);
+  background: transparent;
+}
+
+body.apex-night-theme.summer-theme .offcanvas.f1-menu .offcanvas-body {
+  background: transparent;
+}
+
+body.apex-night-theme.summer-theme .menu-brand-text,
+body.apex-night-theme.summer-theme .menu-user {
+  color: var(--apex-ink);
+}
+
+body.apex-night-theme.summer-theme .menu-item,
+body.apex-night-theme.summer-theme .menu-item:visited {
+  color: var(--apex-ink-soft) !important;
+  border-color: transparent;
+  background: transparent;
+}
+
+body.apex-night-theme.summer-theme .menu-item:hover,
+body.apex-night-theme.summer-theme .menu-item:focus,
+body.apex-night-theme.summer-theme .menu-item:active,
+body.apex-night-theme.summer-theme .menu-item.is-active {
+  color: #fff !important;
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.065);
+}
+
+body.apex-night-theme.summer-theme .menu-divider {
+  background: var(--apex-line);
 }
 
 body.apex-night-theme .menu-brand-text,
@@ -455,7 +499,7 @@ body.apex-night-theme .western-challenge-form .form-control {
   color: var(--apex-ink);
   border: 1px solid var(--apex-line-strong);
   border-radius: 2px 10px 2px 2px;
-  background-color: #090e14;
+  background-color: #111821;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
@@ -471,7 +515,7 @@ body.apex-night-theme.editorial-theme .form-control:focus,
 body.apex-night-theme.editorial-theme .form-select:focus {
   color: #fff;
   border-color: var(--apex-red);
-  background-color: #0b1118;
+  background-color: #151f2a;
   box-shadow: 0 0 0 3px rgba(255, 51, 38, 0.12);
 }
 
@@ -524,7 +568,7 @@ body.apex-night-theme .home-command-main {
   background:
     linear-gradient(112deg, transparent 62%, rgba(255, 51, 38, 0.08) 62.2%, transparent 62.5%),
     radial-gradient(600px 320px at 104% 8%, rgba(255, 51, 38, 0.18), transparent 72%),
-    linear-gradient(145deg, #111820, #0b1016 74%);
+    linear-gradient(145deg, #1a2430, #121922 74%);
 }
 
 body.apex-night-theme .home-command-main::after {
@@ -597,7 +641,7 @@ body.apex-night-theme .home-command-side {
   border-left: 1px solid var(--apex-line);
   background:
     linear-gradient(160deg, rgba(76, 141, 255, 0.08), transparent 36%),
-    #090d13;
+    #111821;
 }
 
 body.apex-night-theme .home-command-side .dashboard-label,
@@ -1098,9 +1142,46 @@ body.apex-night-theme .western-duel-heading p {
 
 body.apex-night-theme .western-duel-limit,
 body.apex-night-theme .western-stake-seal {
+  width: 116px;
+  height: 116px;
+  min-height: 116px;
+  padding: 1.35rem;
   color: #fff3df;
-  background: #5f3423;
+  background: radial-gradient(circle at 50% 42%, #855038, #43271d 74%);
   filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.32));
+}
+
+body.apex-night-theme .western-duel-limit small,
+body.apex-night-theme .western-duel-limit span,
+body.apex-night-theme .western-stake-seal small,
+body.apex-night-theme .western-stake-seal span {
+  width: 72px;
+  max-width: 72px;
+  color: #f6ddc2;
+  font-size: 0.43rem;
+  font-weight: 850;
+  line-height: 1.08;
+  letter-spacing: 0.045em;
+  text-align: center;
+  white-space: normal;
+}
+
+body.apex-night-theme .western-duel-limit strong {
+  margin: 0.12rem 0;
+  color: #ffd384;
+  font-size: 2rem;
+  line-height: 0.78;
+}
+
+body.apex-night-theme .western-stake-seal strong {
+  margin: 0.1rem 0;
+  color: #ffd384;
+  font-size: 2.5rem;
+  line-height: 0.76;
+}
+
+body.apex-night-theme .western-showdown {
+  grid-template-columns: minmax(0, 1fr) 116px minmax(0, 1fr);
 }
 
 body.apex-night-theme .western-showdown,
@@ -1690,31 +1771,264 @@ body.apex-night-theme .season-banner-subtitle strong {
 }
 
 body.apex-night-theme .season-banner-badge {
+  margin-top: 0.7rem;
+  padding: 0.25rem 0;
   color: var(--apex-red);
-  border-color: rgba(255, 51, 38, 0.35);
-  background: rgba(255, 51, 38, 0.08);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 51, 38, 0.7);
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.65rem;
+  letter-spacing: 0.11em;
 }
 
 body.apex-night-theme .status-pill {
-  border-radius: 2px 10px 2px 2px;
+  gap: 0.45rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.7rem;
+  letter-spacing: 0.075em;
+}
+
+body.apex-night-theme .status-pill i {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 15%, transparent);
 }
 
 body.apex-night-theme.editorial-theme .status-open {
-  color: #07140e;
-  border-color: var(--apex-green);
-  background: var(--apex-green);
+  color: #77e3b5;
+  border: 0;
+  background: transparent;
 }
 
 body.apex-night-theme.editorial-theme .status-locked {
   color: #c6ced7;
-  border-color: var(--apex-line-strong);
-  background: var(--apex-surface-3);
+  border: 0;
+  background: transparent;
 }
 
 body.apex-night-theme.editorial-theme .status-scored {
+  color: #91b6ff;
+  border: 0;
+  background: transparent;
+}
+
+body.apex-night-theme .season-header-status {
+  min-width: 150px;
+  padding: 0.75rem 0 0.75rem 1rem;
+  border-left: 1px solid var(--apex-line-strong);
+}
+
+body.apex-night-theme .season-header-status > small {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: var(--apex-muted);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-scoring-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--apex-line-strong);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 52%),
+    var(--apex-surface-2);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2);
+}
+
+body.apex-night-theme .season-scoring-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 76px;
+  height: 2px;
+  background: var(--apex-red);
+}
+
+body.apex-night-theme .season-scoring-card::after {
+  display: none;
+}
+
+body.apex-night-theme .season-scoring-head {
+  margin-bottom: 0.75rem;
+}
+
+body.apex-night-theme .season-scoring-head span {
+  display: block;
+  color: var(--apex-red);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-scoring-head h2 {
+  margin: 0.22rem 0 0;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-scoring-list {
+  border-top: 1px solid var(--apex-line);
+}
+
+body.apex-night-theme .season-points-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  min-height: 48px;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--apex-line);
+}
+
+body.apex-night-theme .season-points-row:last-child {
+  border-bottom: 0;
+}
+
+body.apex-night-theme .season-points-label {
+  color: var(--apex-ink-soft);
+  font-size: 0.77rem;
+  line-height: 1.35;
+}
+
+body.apex-night-theme .season-points-value {
+  width: 52px;
+  min-height: 34px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.18rem;
   color: #fff;
-  border-color: var(--apex-blue);
-  background: var(--apex-blue);
+  border-left: 2px solid var(--apex-red);
+  background: rgba(255, 51, 38, 0.1);
+}
+
+body.apex-night-theme .season-points-value strong {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+body.apex-night-theme .season-points-value small {
+  color: #cf8d88;
+  font-size: 0.48rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-form-panel {
+  border-color: var(--apex-line-strong);
+  background:
+    radial-gradient(720px 250px at 100% 0, rgba(76, 141, 255, 0.08), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .season-form-heading {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--apex-line);
+}
+
+body.apex-night-theme .season-form-heading h2 {
+  margin: 0.3rem 0 0.3rem;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(1.65rem, 3vw, 2.25rem);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-form-heading p {
+  margin: 0;
+  color: var(--apex-muted);
+  font-size: 0.78rem;
+}
+
+body.apex-night-theme .season-form-group {
+  margin-top: 0.85rem;
+  padding: clamp(0.9rem, 2vw, 1.25rem);
+  border: 1px solid var(--apex-line);
+  border-radius: 2px 15px 2px 2px;
+  background: rgba(255, 255, 255, 0.032);
+}
+
+body.apex-night-theme .season-form-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+body.apex-night-theme .season-form-group-head > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #fff;
+  border: 1px solid rgba(255, 51, 38, 0.5);
+  border-radius: 2px 10px 2px 2px;
+  background: rgba(255, 51, 38, 0.12);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+body.apex-night-theme .season-form-group-head h3 {
+  margin: 0;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.12rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .season-form-group-head p {
+  margin: 0.12rem 0 0;
+  color: var(--apex-muted);
+  font-size: 0.65rem;
+}
+
+body.apex-night-theme .season-form-group .form-label {
+  min-height: 2.3em;
+  margin-bottom: 0.4rem;
+  color: var(--apex-ink-soft);
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+body.apex-night-theme .season-form-group .form-control,
+body.apex-night-theme .season-form-group .form-select {
+  border-radius: 2px 10px 2px 2px;
+  background-color: #1b2632;
+}
+
+body.apex-night-theme .season-form-submit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.8rem 0 0;
+}
+
+body.apex-night-theme .season-form-submit > span {
+  color: var(--apex-muted);
+  font-size: 0.68rem;
 }
 
 body.apex-night-theme .auth-shell {
@@ -1848,6 +2162,35 @@ body.apex-night-theme .footer-season {
   body.apex-night-theme .round-winner-list {
     justify-content: flex-start;
   }
+
+  body.apex-night-theme .western-duel-limit,
+  body.apex-night-theme .western-stake-seal {
+    width: 92px;
+    height: 92px;
+    min-height: 92px;
+    padding: 1.05rem;
+  }
+
+  body.apex-night-theme .western-duel-limit small,
+  body.apex-night-theme .western-duel-limit span,
+  body.apex-night-theme .western-stake-seal small,
+  body.apex-night-theme .western-stake-seal span {
+    width: 58px;
+    max-width: 58px;
+    font-size: 0.38rem;
+  }
+
+  body.apex-night-theme .western-duel-limit strong {
+    font-size: 1.65rem;
+  }
+
+  body.apex-night-theme .western-stake-seal strong {
+    font-size: 2rem;
+  }
+
+  body.apex-night-theme .western-showdown {
+    grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 576px) {
@@ -1947,6 +2290,38 @@ body.apex-night-theme .footer-season {
 
   body.apex-night-theme .western-duel-heading h2 {
     font-size: 1.8rem;
+  }
+
+  body.apex-night-theme .western-duel-heading {
+    align-items: flex-start;
+  }
+
+  body.apex-night-theme .season-header-status {
+    min-width: 0;
+    padding: 0.85rem 0 0;
+    border-top: 1px solid var(--apex-line);
+    border-left: 0;
+  }
+
+  body.apex-night-theme .season-scoring-card {
+    padding: 1rem !important;
+  }
+
+  body.apex-night-theme .season-form-group {
+    padding: 0.85rem;
+  }
+
+  body.apex-night-theme .season-form-group .form-label {
+    min-height: 0;
+  }
+
+  body.apex-night-theme .season-form-submit {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  body.apex-night-theme .season-form-submit .btn {
+    width: 100%;
   }
 }
 
