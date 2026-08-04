@@ -8,7 +8,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Count, Q, Sum
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -27,12 +27,14 @@ from .models import (
     DuelSettings,
     Event,
     HomeResultImage,
+    PlayerWildcard,
     Prediction,
     Score,
     SeasonPrediction,
     SeasonResult,
     SeasonScore,
     UserProfile,
+    WildcardSettings,
 )
 from .services import (
     build_achievements,
@@ -50,6 +52,7 @@ from .telegram_bot import (
     notify_duel_challenge,
     notify_prediction_saved,
 )
+from .wildcards import WildcardActionError, answer_wildcard, draw_wildcard
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -90,6 +93,23 @@ def _community_prediction_correctness(prediction, result):
         and prediction.crazy_prediction_approved
     )
     return correct
+
+
+def _is_async_request(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _wildcard_payload(assignment):
+    question = assignment.question
+    return {
+        "assignment_id": assignment.id,
+        "card_slot": assignment.card_slot,
+        "question": question.question,
+        "option_a": question.option_a,
+        "option_b": question.option_b,
+        "points": question.points,
+        "selected_option": assignment.selected_option,
+    }
 
 
 def home(request):
@@ -300,8 +320,17 @@ def event_detail(request, event_id: int):
     is_past_event = event.status == Event.Status.SCORED or (event_time and event_time < timezone.now())
 
     prediction = None
+    wildcard_assignment = None
     if request.user.is_authenticated:
         prediction = Prediction.objects.filter(event=event, user=request.user).first()
+        wildcard_assignment = (
+            PlayerWildcard.objects.filter(event=event, user=request.user)
+            .select_related("question")
+            .first()
+        )
+
+    wildcard_settings = WildcardSettings.objects.first()
+    wildcard_questions_available = event.wildcard_questions.filter(is_active=True).exists()
 
     state = event.voting_state()
     is_locked = state != "open"
@@ -481,6 +510,26 @@ def event_detail(request, event_id: int):
             status="hit" if prediction.crazy_prediction_approved else "miss",
         )
 
+    if (
+        wildcard_assignment
+        and wildcard_assignment.selected_option
+        and state == "scored"
+        and wildcard_assignment.question.correct_option
+    ):
+        wildcard_points = wildcard_assignment.awarded_points
+        comparison_total += wildcard_points
+        comparison_rows.append(
+            {
+                "label": "Личная карта этапа",
+                "predicted": wildcard_assignment.selected_answer,
+                "actual": wildcard_assignment.correct_answer,
+                "points": wildcard_points,
+                "max_points": wildcard_assignment.question.points,
+                "status": "hit" if wildcard_points else "miss",
+                "note": wildcard_assignment.question.question,
+            }
+        )
+
     can_view_community = state in ("closed", "scored")
     community_predictions = []
     if can_view_community:
@@ -493,6 +542,14 @@ def event_detail(request, event_id: int):
             item.user_id: item
             for item in Score.objects.filter(event=event)
         }
+        public_wildcards = {
+            item.user_id: item
+            for item in PlayerWildcard.objects.filter(
+                event=event,
+                user__is_active=True,
+                user__is_staff=False,
+            ).select_related("question")
+        }
         best_public_score = max(
             (item.points for item in public_scores.values()),
             default=None,
@@ -503,6 +560,12 @@ def event_detail(request, event_id: int):
                 "profile": getattr(item.user, "league_profile", None),
                 "score": public_scores.get(item.user_id),
                 "correct": _community_prediction_correctness(item, result_obj),
+                "wildcard": public_wildcards.get(item.user_id),
+                "wildcard_correct": bool(
+                    state == "scored"
+                    and public_wildcards.get(item.user_id)
+                    and public_wildcards[item.user_id].is_correct
+                ),
                 "is_winner": (
                     best_public_score is not None
                     and public_scores.get(item.user_id) is not None
@@ -579,8 +642,56 @@ def event_detail(request, event_id: int):
             "duel_form": duel_form,
             "event_duels": event_duels,
             "duel_history": duel_history,
+            "wildcard_assignment": wildcard_assignment,
+            "wildcard_settings": wildcard_settings,
+            "wildcard_questions_available": wildcard_questions_available,
         },
     )
+
+
+@login_required(login_url="login")
+def draw_event_wildcard(request, event_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(("POST",))
+    event = get_object_or_404(Event, id=event_id)
+    try:
+        assignment, created = draw_wildcard(event, request.user, request.POST.get("slot", 2))
+    except WildcardActionError as exc:
+        if _is_async_request(request):
+            return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        messages.error(request, str(exc))
+    else:
+        if _is_async_request(request):
+            return JsonResponse({"ok": True, "created": created, **_wildcard_payload(assignment)})
+        if created:
+            messages.success(request, "Личная карта открыта. Теперь выбери свой ответ.")
+        else:
+            messages.info(request, "Твоя личная карта уже была открыта.")
+    return redirect(f"{reverse('league:event_detail', args=(event.id,))}#personal-wildcard")
+
+
+@login_required(login_url="login")
+def answer_event_wildcard(request, event_id: int):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(("POST",))
+    event = get_object_or_404(Event, id=event_id)
+    try:
+        assignment = answer_wildcard(event, request.user, request.POST.get("choice", ""))
+    except WildcardActionError as exc:
+        if _is_async_request(request):
+            return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        messages.error(request, str(exc))
+    else:
+        if _is_async_request(request):
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "selected_option": assignment.selected_option,
+                    "selected_answer": assignment.selected_answer,
+                }
+            )
+        messages.success(request, "Ответ на личную карту сохранён.")
+    return redirect(f"{reverse('league:event_detail', args=(event.id,))}#personal-wildcard")
 
 
 @login_required(login_url="login")

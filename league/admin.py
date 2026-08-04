@@ -8,7 +8,9 @@ from .models import (
     DuelSettings,
     Event,
     EventPhoto,
+    EventWildcardQuestion,
     HomeResultImage,
+    PlayerWildcard,
     Prediction,
     Result,
     Score,
@@ -20,6 +22,7 @@ from .models import (
     TelegramBotState,
     TelegramReminder,
     UserProfile,
+    WildcardSettings,
 )
 from .scoring import (
     calculate_season_scores,
@@ -27,6 +30,7 @@ from .scoring import (
     publish_event_scores,
     restore_score_revision,
 )
+from .wildcards import unresolved_wildcard_questions
 
 
 class ResultAdminForm(forms.ModelForm):
@@ -93,12 +97,28 @@ class ResultInline(admin.StackedInline):
     max_num = 1
 
 
+class EventWildcardQuestionInline(admin.TabularInline):
+    model = EventWildcardQuestion
+    extra = 1
+    readonly_fields = ("points",)
+    fields = (
+        "sort_order",
+        "question",
+        "option_a",
+        "option_b",
+        "points",
+        "is_active",
+        "correct_option",
+    )
+    ordering = ("sort_order", "id")
+
+
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     list_display = ("season_year", "round_number", "name", "has_sprint", "status", "deadline")
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
-    inlines = [EventPhotoInline, ResultInline]
+    inlines = [EventPhotoInline, EventWildcardQuestionInline, ResultInline]
     fields = (
         "season_year",
         "name",
@@ -120,7 +140,11 @@ class EventAdmin(admin.ModelAdmin):
                 if not hasattr(event, "result"):
                     self.message_user(request, f"{event}: фактический результат не заполнен.", level="error")
                     continue
-                revision, rows = publish_event_scores(event, request.user)
+                try:
+                    revision, rows = publish_event_scores(event, request.user)
+                except ValueError as exc:
+                    self.message_user(request, f"{event}: {exc}", level="error")
+                    continue
                 revisions.append(f"R{event.round_number} v{revision.revision}")
                 published += len(rows)
             if revisions:
@@ -135,6 +159,7 @@ class EventAdmin(admin.ModelAdmin):
                 "event": event,
                 "has_result": hasattr(event, "result"),
                 "rows": preview_event_scores(event),
+                "wildcard_pending": list(unresolved_wildcard_questions(event)),
             }
             for event in queryset
         ]
@@ -271,6 +296,62 @@ class DuelSettingsAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return not DuelSettings.objects.exists()
+
+
+@admin.register(WildcardSettings)
+class WildcardSettingsAdmin(admin.ModelAdmin):
+    fields = ("card_back_image", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        return not WildcardSettings.objects.exists()
+
+
+@admin.register(EventWildcardQuestion)
+class EventWildcardQuestionAdmin(admin.ModelAdmin):
+    list_display = (
+        "event",
+        "question",
+        "option_a",
+        "option_b",
+        "points",
+        "is_active",
+        "correct_option",
+    )
+    list_filter = ("event__season_year", "event", "is_active")
+    list_editable = ("is_active", "correct_option")
+    search_fields = ("event__name", "question", "option_a", "option_b")
+    list_select_related = ("event",)
+    ordering = ("-event__season_year", "event__round_number", "sort_order", "id")
+    readonly_fields = ("points",)
+
+
+@admin.register(PlayerWildcard)
+class PlayerWildcardAdmin(admin.ModelAdmin):
+    list_display = (
+        "event",
+        "user",
+        "question",
+        "selected_option",
+        "card_slot",
+        "drawn_at",
+        "answered_at",
+    )
+    list_filter = ("event__season_year", "event", "selected_option")
+    search_fields = ("event__name", "user__username", "question__question")
+    list_select_related = ("event", "user", "question")
+    readonly_fields = (
+        "event",
+        "user",
+        "question",
+        "card_slot",
+        "selected_option",
+        "drawn_at",
+        "answered_at",
+    )
+
+    def has_add_permission(self, request):
+        return False
 
 
 @admin.register(ScoreRevision)

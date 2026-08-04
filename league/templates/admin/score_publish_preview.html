@@ -10,14 +10,22 @@
         {% if not preview.has_result %}
           <p class="errornote">Фактический результат этапа не заполнен.</p>
         {% else %}
+          {% if preview.wildcard_pending %}
+            <p class="errornote">
+              Укажи правильный вариант у личных карт:
+              {% for card in preview.wildcard_pending %}«{{ card.question }}»{% if not forloop.last %}, {% endif %}{% endfor %}.
+            </p>
+          {% endif %}
           <table>
             <thead>
-              <tr><th>Игрок</th><th>Прогноз</th><th>Дуэль</th><th>Было</th><th>Станет</th><th>Изменение</th><th>Разбор</th></tr>
+              <tr><th>Игрок</th><th>Основной прогноз</th><th>Личная карта</th><th>Прогноз всего</th><th>Дуэль</th><th>Было</th><th>Станет</th><th>Изменение</th><th>Разбор</th></tr>
             </thead>
             <tbody>
               {% for row in preview.rows %}
                 <tr>
                   <td>{{ row.username }}</td>
+                  <td>{{ row.duel_prediction_points }}</td>
+                  <td>{% if row.wildcard_points > 0 %}+{% endif %}{{ row.wildcard_points }}</td>
                   <td>{{ row.prediction_points }}</td>
                   <td>{% if row.duel_adjustment > 0 %}+{% endif %}{{ row.duel_adjustment }}</td>
                   <td>{{ row.previous_points|default_if_none:"—" }}</td>
@@ -30,7 +38,7 @@
                   </td>
                 </tr>
               {% empty %}
-                <tr><td colspan="7">На этот этап нет прогнозов и принятых дуэлей.</td></tr>
+                <tr><td colspan="9">На этот этап нет прогнозов, личных карт и принятых дуэлей.</td></tr>
               {% endfor %}
             </tbody>
           </table>

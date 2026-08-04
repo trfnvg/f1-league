@@ -2477,3 +2477,752 @@ body.apex-night-theme .footer-season {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Personal wildcard ------------------------------------------------------- */
+body.apex-night-theme .wildcard-module {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: clamp(1.1rem, 2.4vw, 1.75rem);
+  border: 1px solid rgba(222, 157, 92, 0.25);
+  border-radius: 24px;
+  background:
+    radial-gradient(720px 320px at 50% 102%, rgba(222, 72, 46, 0.16), transparent 72%),
+    radial-gradient(540px 260px at 100% 0%, rgba(221, 158, 91, 0.11), transparent 72%),
+    linear-gradient(145deg, rgba(28, 35, 45, 0.98), rgba(14, 19, 27, 0.99));
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+body.apex-night-theme .wildcard-module::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.28;
+  background:
+    repeating-linear-gradient(118deg, transparent 0 52px, rgba(255, 255, 255, 0.035) 52px 53px),
+    linear-gradient(90deg, transparent 0 72%, rgba(224, 70, 42, 0.07) 72% 72.5%, transparent 72.5%);
+}
+
+body.apex-night-theme .wildcard-module::after {
+  content: "WILDCARD";
+  position: absolute;
+  z-index: -1;
+  right: -0.04em;
+  bottom: -0.2em;
+  color: rgba(255, 255, 255, 0.018);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(5rem, 15vw, 11rem);
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  pointer-events: none;
+}
+
+body.apex-night-theme .wildcard-heading {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+body.apex-night-theme .wildcard-kicker,
+body.apex-night-theme .wildcard-face-kicker {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: #e7a96a;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-heading h2 {
+  margin: 0;
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(1.75rem, 3.2vw, 2.55rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-heading p {
+  max-width: 680px;
+  margin: 0.35rem 0 0;
+  color: rgba(239, 243, 247, 0.66);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+body.apex-night-theme .wildcard-reward {
+  min-width: 96px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: end;
+  justify-content: center;
+  padding: 0.72rem 0.82rem;
+  border: 1px solid rgba(231, 169, 106, 0.34);
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(145deg, rgba(231, 169, 106, 0.13), rgba(225, 63, 34, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+body.apex-night-theme .wildcard-reward span {
+  grid-column: 1 / -1;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-reward strong {
+  color: #f2b878;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+body.apex-night-theme .wildcard-reward small {
+  margin: 0 0 0.14rem 0.25rem;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+body.apex-night-theme .wildcard-draw-prompt {
+  margin: 1.2rem 0 0.1rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-deck,
+body.apex-night-theme .wildcard-single-stage {
+  position: relative;
+  width: min(100%, 780px);
+  height: 338px;
+  margin: 0 auto;
+  perspective: 1300px;
+}
+
+body.apex-night-theme .wildcard-single-stage {
+  height: 328px;
+  margin-top: 0.9rem;
+}
+
+body.apex-night-theme .wildcard-card {
+  --wildcard-x: 0px;
+  --wildcard-rotation: 0deg;
+  appearance: none;
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  width: clamp(172px, 20vw, 214px);
+  aspect-ratio: 5 / 7;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 19px;
+  color: inherit;
+  background: transparent;
+  transform: translateX(-50%) translateX(var(--wildcard-x)) rotate(var(--wildcard-rotation));
+  transform-origin: 50% 92%;
+  transition: transform 420ms cubic-bezier(0.2, 0.85, 0.25, 1), opacity 320ms ease, filter 320ms ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.apex-night-theme .wildcard-card.is-slot-1 {
+  --wildcard-x: -172px;
+  --wildcard-rotation: -9deg;
+  z-index: 1;
+}
+
+body.apex-night-theme .wildcard-card.is-slot-2 {
+  --wildcard-x: 0px;
+  --wildcard-rotation: 0deg;
+  z-index: 2;
+}
+
+body.apex-night-theme .wildcard-card.is-slot-3 {
+  --wildcard-x: 172px;
+  --wildcard-rotation: 9deg;
+  z-index: 1;
+}
+
+body.apex-night-theme .wildcard-card:hover:not(.is-picked),
+body.apex-night-theme .wildcard-card:focus-visible:not(.is-picked) {
+  z-index: 4;
+  outline: none;
+  transform: translateX(-50%) translateX(var(--wildcard-x)) translateY(-18px) rotate(var(--wildcard-rotation)) scale(1.025);
+}
+
+body.apex-night-theme .wildcard-card:focus-visible .wildcard-card-inner {
+  box-shadow: 0 0 0 3px rgba(242, 184, 120, 0.25), 0 26px 50px rgba(0, 0, 0, 0.48);
+}
+
+body.apex-night-theme .wildcard-card.is-picked {
+  --wildcard-x: 0px;
+  --wildcard-rotation: 0deg;
+  z-index: 8;
+  cursor: default;
+  transform: translateX(-50%) translateY(-28px) scale(1.045);
+}
+
+body.apex-night-theme .wildcard-card.is-dismissed {
+  opacity: 0;
+  filter: blur(2px);
+  pointer-events: none;
+  transform: translateX(-50%) translateX(var(--wildcard-x)) translateY(38px) rotate(var(--wildcard-rotation)) scale(0.78);
+}
+
+body.apex-night-theme .wildcard-card.is-single {
+  --wildcard-x: 0px;
+  --wildcard-rotation: 0deg;
+  top: 8px;
+  cursor: default;
+}
+
+body.apex-night-theme .wildcard-card-inner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: inherit;
+  transform-style: preserve-3d;
+  transition: transform 720ms cubic-bezier(0.2, 0.78, 0.2, 1), box-shadow 300ms ease;
+  box-shadow: 0 24px 44px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(235, 174, 111, 0.2);
+}
+
+body.apex-night-theme .wildcard-card.is-revealed .wildcard-card-inner {
+  transform: rotateY(180deg);
+  box-shadow: 0 28px 58px rgba(0, 0, 0, 0.52), 0 0 34px rgba(222, 91, 47, 0.16);
+}
+
+body.apex-night-theme .wildcard-card-back,
+body.apex-night-theme .wildcard-card-front {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 1.05rem;
+  border: 1px solid rgba(242, 184, 120, 0.45);
+  border-radius: inherit;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+body.apex-night-theme .wildcard-card-back {
+  background-color: #171d26;
+  background-image:
+    linear-gradient(145deg, rgba(10, 14, 20, 0.25), rgba(10, 14, 20, 0.8)),
+    var(--wildcard-card-back-image, none),
+    radial-gradient(circle at 22% 18%, rgba(231, 169, 106, 0.19), transparent 35%),
+    repeating-linear-gradient(128deg, transparent 0 22px, rgba(255, 255, 255, 0.045) 22px 23px),
+    linear-gradient(145deg, #252e3a, #111720 70%);
+  background-position: center;
+  background-size: cover;
+}
+
+body.apex-night-theme .wildcard-card-back::before,
+body.apex-night-theme .wildcard-card-front::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(231, 169, 106, 0.34);
+  border-radius: 13px;
+  pointer-events: none;
+}
+
+body.apex-night-theme .wildcard-card-back::after {
+  content: "";
+  position: absolute;
+  width: 155%;
+  height: 32px;
+  top: 42%;
+  left: -25%;
+  background: linear-gradient(90deg, transparent, rgba(226, 66, 35, 0.32), transparent);
+  transform: rotate(-31deg);
+  pointer-events: none;
+}
+
+body.apex-night-theme .wildcard-card-brand,
+body.apex-night-theme .wildcard-card-round {
+  position: relative;
+  z-index: 2;
+  color: rgba(255, 255, 255, 0.68);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-card-round {
+  color: #e6a766;
+}
+
+body.apex-night-theme .wildcard-question-mark {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 88px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(234, 174, 112, 0.42);
+  border-radius: 50%;
+  color: #f0b372;
+  background: rgba(9, 13, 19, 0.38);
+  box-shadow: 0 0 0 8px rgba(230, 164, 96, 0.035), inset 0 0 28px rgba(222, 75, 40, 0.12);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 3.6rem;
+  font-weight: 800;
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(236, 163, 88, 0.26);
+}
+
+body.apex-night-theme .wildcard-card-front {
+  justify-content: flex-start;
+  transform: rotateY(180deg);
+  color: #fff;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 15%, rgba(231, 169, 106, 0.17), transparent 35%),
+    linear-gradient(155deg, #242d38, #111720 72%);
+}
+
+body.apex-night-theme .wildcard-face-kicker {
+  position: relative;
+  z-index: 1;
+  margin: 0.15rem 0 0.7rem;
+  font-size: 0.62rem;
+}
+
+body.apex-night-theme .wildcard-face-question {
+  position: relative;
+  z-index: 1;
+  display: -webkit-box;
+  overflow: hidden;
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(1rem, 1.7vw, 1.25rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+body.apex-night-theme .wildcard-face-versus {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  gap: 0.35rem;
+  margin: auto 0;
+}
+
+body.apex-night-theme .wildcard-face-versus span {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.68rem;
+  font-weight: 750;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.apex-night-theme .wildcard-face-versus b {
+  color: #e7a96a;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.7rem;
+  font-style: italic;
+  letter-spacing: 0.1em;
+}
+
+body.apex-night-theme .wildcard-face-points {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  margin-top: 0.6rem;
+  padding: 0.28rem 0.58rem;
+  border: 1px solid rgba(231, 169, 106, 0.36);
+  border-radius: 999px;
+  color: #f0b575;
+  background: rgba(231, 169, 106, 0.08);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+body.apex-night-theme .wildcard-answer-shell {
+  position: relative;
+  z-index: 3;
+  width: min(100%, 770px);
+  margin: 0.15rem auto 0;
+}
+
+body.apex-night-theme .wildcard-answer-shell.is-draw-result {
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+body.apex-night-theme .wildcard-answer-shell.is-draw-result.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+body.apex-night-theme .wildcard-answer-shell[hidden] {
+  display: none !important;
+}
+
+body.apex-night-theme .wildcard-answer-form {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.75fr) minmax(0, 1.6fr);
+  gap: 0.8rem;
+  align-items: stretch;
+  padding: 0.78rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 17px;
+  background: rgba(8, 12, 18, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+body.apex-night-theme .wildcard-answer-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0.2rem 0.35rem;
+}
+
+body.apex-night-theme .wildcard-answer-copy span {
+  color: #e4a565;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-answer-copy strong {
+  margin-top: 0.2rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+body.apex-night-theme .wildcard-answer-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.58rem;
+}
+
+body.apex-night-theme .wildcard-option {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  color: #fff;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.045);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+body.apex-night-theme .wildcard-option > span {
+  display: grid;
+  width: 30px;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 9px;
+  color: #e8a867;
+  background: rgba(231, 169, 106, 0.1);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+body.apex-night-theme .wildcard-option > strong {
+  overflow: hidden;
+  font-size: 0.76rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+body.apex-night-theme .wildcard-option:hover:not(:disabled),
+body.apex-night-theme .wildcard-option:focus-visible:not(:disabled) {
+  outline: none;
+  border-color: rgba(235, 167, 98, 0.55);
+  background: rgba(231, 169, 106, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  transform: translateY(-1px);
+}
+
+body.apex-night-theme .wildcard-option.is-selected {
+  border-color: rgba(232, 166, 98, 0.72);
+  background: linear-gradient(145deg, rgba(231, 169, 106, 0.18), rgba(218, 69, 39, 0.1));
+  box-shadow: 0 0 0 1px rgba(231, 169, 106, 0.14), 0 10px 26px rgba(0, 0, 0, 0.22);
+}
+
+body.apex-night-theme .wildcard-option.is-correct {
+  border-color: rgba(71, 204, 138, 0.58);
+  background: rgba(48, 165, 107, 0.14);
+}
+
+body.apex-night-theme .wildcard-option.is-correct > span {
+  color: #7de3ae;
+  background: rgba(48, 165, 107, 0.18);
+}
+
+body.apex-night-theme .wildcard-option.is-wrong {
+  border-color: rgba(232, 87, 68, 0.52);
+  background: rgba(201, 57, 43, 0.12);
+}
+
+body.apex-night-theme .wildcard-option:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+body.apex-night-theme .wildcard-result-banner {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.12rem 0.9rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.apex-night-theme .wildcard-result-banner span {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .wildcard-result-banner strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.35rem;
+}
+
+body.apex-night-theme .wildcard-result-banner small {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.73rem;
+}
+
+body.apex-night-theme .wildcard-result-banner.is-hit {
+  border-color: rgba(70, 202, 136, 0.3);
+  background: rgba(46, 157, 103, 0.09);
+}
+
+body.apex-night-theme .wildcard-result-banner.is-hit strong {
+  color: #79dfa9;
+}
+
+body.apex-night-theme .wildcard-result-banner.is-miss strong {
+  color: #f08c7d;
+}
+
+body.apex-night-theme .wildcard-result-banner.is-waiting strong {
+  color: #f0b575;
+}
+
+body.apex-night-theme .wildcard-empty-state {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  min-height: 150px;
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed rgba(231, 169, 106, 0.25);
+  border-radius: 17px;
+  background: rgba(8, 12, 18, 0.28);
+}
+
+body.apex-night-theme .wildcard-empty-mark {
+  display: grid;
+  width: 48px;
+  flex: 0 0 48px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(231, 169, 106, 0.3);
+  border-radius: 50%;
+  color: #e9aa69;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.7rem;
+}
+
+body.apex-night-theme .wildcard-empty-state strong {
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+body.apex-night-theme .wildcard-empty-state p {
+  margin: 0.18rem 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+}
+
+body.apex-night-theme .wildcard-empty-state a {
+  color: #efb170;
+}
+
+body.apex-night-theme .community-wildcard-question {
+  display: block;
+  min-width: 190px;
+  max-width: 270px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.64rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+body.apex-night-theme .community-wildcard-answer {
+  display: block;
+  margin-top: 0.2rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.72rem;
+  white-space: normal;
+}
+
+@media (max-width: 720px) {
+  body.apex-night-theme .wildcard-module {
+    padding: 1rem 0.8rem;
+    border-radius: 18px;
+  }
+
+  body.apex-night-theme .wildcard-heading {
+    align-items: center;
+  }
+
+  body.apex-night-theme .wildcard-heading h2 {
+    font-size: 1.72rem;
+  }
+
+  body.apex-night-theme .wildcard-heading p {
+    font-size: 0.75rem;
+  }
+
+  body.apex-night-theme .wildcard-reward {
+    min-width: 78px;
+    padding: 0.6rem;
+  }
+
+  body.apex-night-theme .wildcard-reward strong {
+    font-size: 1.45rem;
+  }
+
+  body.apex-night-theme .wildcard-deck {
+    height: 286px;
+  }
+
+  body.apex-night-theme .wildcard-single-stage {
+    height: 276px;
+  }
+
+  body.apex-night-theme .wildcard-card {
+    top: 26px;
+    width: clamp(146px, 43vw, 174px);
+  }
+
+  body.apex-night-theme .wildcard-card.is-slot-1 {
+    --wildcard-x: -86px;
+    --wildcard-rotation: -8deg;
+  }
+
+  body.apex-night-theme .wildcard-card.is-slot-3 {
+    --wildcard-x: 86px;
+    --wildcard-rotation: 8deg;
+  }
+
+  body.apex-night-theme .wildcard-card.is-single {
+    top: 6px;
+  }
+
+  body.apex-night-theme .wildcard-card-back,
+  body.apex-night-theme .wildcard-card-front {
+    padding: 0.82rem;
+    border-radius: 16px;
+  }
+
+  body.apex-night-theme .wildcard-question-mark {
+    width: 68px;
+    font-size: 2.8rem;
+  }
+
+  body.apex-night-theme .wildcard-face-question {
+    font-size: 0.98rem;
+  }
+
+  body.apex-night-theme .wildcard-face-versus span {
+    font-size: 0.61rem;
+  }
+
+  body.apex-night-theme .wildcard-answer-form {
+    grid-template-columns: 1fr;
+  }
+
+  body.apex-night-theme .wildcard-answer-copy {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  body.apex-night-theme .wildcard-kicker {
+    font-size: 0.62rem;
+  }
+
+  body.apex-night-theme .wildcard-heading p {
+    max-width: 240px;
+  }
+
+  body.apex-night-theme .wildcard-answer-options {
+    grid-template-columns: 1fr;
+  }
+
+  body.apex-night-theme .wildcard-result-banner {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  body.apex-night-theme .wildcard-result-banner strong {
+    grid-row: auto;
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.apex-night-theme .wildcard-card,
+  body.apex-night-theme .wildcard-card-inner,
+  body.apex-night-theme .wildcard-answer-shell {
+    transition-duration: 0.01ms !important;
+  }
+}
