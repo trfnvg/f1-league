@@ -285,13 +285,16 @@
             <span class="wildcard-card-round">R{{ event.round_number }}</span>
           </span>
           <span class="wildcard-card-front">
-            <span class="wildcard-face-kicker">Твоя категория</span>
-            <strong class="wildcard-face-question">{{ wildcard_assignment.question.question }}</strong>
-            <span class="wildcard-face-options" aria-label="Варианты ответа">
-              <span class="wildcard-face-option"><small>A</small><b>{{ wildcard_assignment.question.option_a }}</b></span>
-              <span class="wildcard-face-option"><small>B</small><b>{{ wildcard_assignment.question.option_b }}</b></span>
+            <span class="wildcard-face-content">
+              <span class="wildcard-face-kicker">Твоя категория</span>
+              <strong class="wildcard-face-question">{{ wildcard_assignment.question.question }}</strong>
+              <span class="wildcard-face-divider">Выбери</span>
+              <span class="wildcard-face-options" aria-label="Варианты ответа">
+                <span class="wildcard-face-option"><small>A</small><b>{{ wildcard_assignment.question.option_a }}</b></span>
+                <span class="wildcard-face-option"><small>B</small><b>{{ wildcard_assignment.question.option_b }}</b></span>
+              </span>
+              <span class="wildcard-face-points">{{ wildcard_assignment.question.points }} PTS</span>
             </span>
-            <span class="wildcard-face-points">{{ wildcard_assignment.question.points }} PTS</span>
           </span>
         </span>
       </article>
@@ -363,13 +366,16 @@
                 <span class="wildcard-card-round">R{{ event.round_number }}</span>
               </span>
               <span class="wildcard-card-front">
-                <span class="wildcard-face-kicker">Твоя категория</span>
-                <strong class="wildcard-face-question" data-wildcard-question></strong>
-                <span class="wildcard-face-options" aria-label="Варианты ответа">
-                  <span class="wildcard-face-option"><small>A</small><b data-wildcard-card-option="a"></b></span>
-                  <span class="wildcard-face-option"><small>B</small><b data-wildcard-card-option="b"></b></span>
+                <span class="wildcard-face-content">
+                  <span class="wildcard-face-kicker">Твоя категория</span>
+                  <strong class="wildcard-face-question" data-wildcard-question></strong>
+                  <span class="wildcard-face-divider">Выбери</span>
+                  <span class="wildcard-face-options" aria-label="Варианты ответа">
+                    <span class="wildcard-face-option"><small>A</small><b data-wildcard-card-option="a"></b></span>
+                    <span class="wildcard-face-option"><small>B</small><b data-wildcard-card-option="b"></b></span>
+                  </span>
+                  <span class="wildcard-face-points" data-wildcard-points></span>
                 </span>
-                <span class="wildcard-face-points" data-wildcard-points></span>
               </span>
             </span>
           </button>
