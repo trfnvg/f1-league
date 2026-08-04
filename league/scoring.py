@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import (
     DuelChallenge,
     Event,
+    PlayerWildcard,
     Prediction,
     Score,
     ScoreRevision,
@@ -14,6 +15,7 @@ from .models import (
     SeasonResult,
     SeasonScore,
 )
+from .wildcards import unresolved_wildcard_questions
 
 SEASON_SCORING_WEIGHTS = {
     "hungary_driver_championship_leader": ("Лидер пилотского зачета после Венгрии", 12),
@@ -133,14 +135,27 @@ def _build_event_score_rows(event):
     predictions = list(
         Prediction.objects.filter(event=event).select_related("user").order_by("user__username")
     )
-    prediction_points = {}
+    standard_prediction_points = {}
     breakdowns = {}
     users = {}
     for prediction in predictions:
         points, breakdown = calculate_points(prediction, event.result)
-        prediction_points[prediction.user_id] = points
+        standard_prediction_points[prediction.user_id] = points
         breakdowns[prediction.user_id] = breakdown
         users[prediction.user_id] = prediction.user
+
+    wildcard_points = {}
+    wildcard_answers = list(
+        PlayerWildcard.objects.filter(event=event)
+        .exclude(selected_option="")
+        .select_related("user", "question")
+        .order_by("user__username")
+    )
+    for assignment in wildcard_answers:
+        points = assignment.awarded_points
+        wildcard_points[assignment.user_id] = points
+        users[assignment.user_id] = assignment.user
+        breakdowns.setdefault(assignment.user_id, {})["Личная карта этапа"] = points
 
     duels = list(
         DuelChallenge.objects.filter(
@@ -152,8 +167,10 @@ def _build_event_score_rows(event):
     duel_participant_ids = set()
     outcomes = []
     for duel in duels:
-        challenger_points = prediction_points.get(duel.challenger_id, 0)
-        opponent_points = prediction_points.get(duel.opponent_id, 0)
+        # Случайная личная карта не влияет на дуэль: соперники сравнивают
+        # только одинаковый для всех основной прогноз.
+        challenger_points = standard_prediction_points.get(duel.challenger_id, 0)
+        opponent_points = standard_prediction_points.get(duel.opponent_id, 0)
         users[duel.challenger_id] = duel.challenger
         users[duel.opponent_id] = duel.opponent
         duel_participant_ids.update((duel.challenger_id, duel.opponent_id))
@@ -179,7 +196,9 @@ def _build_event_score_rows(event):
 
     rows = []
     for user_id, player in sorted(users.items(), key=lambda item: item[1].username.lower()):
-        base_points = prediction_points.get(user_id, 0)
+        duel_prediction_points = standard_prediction_points.get(user_id, 0)
+        personal_points = wildcard_points.get(user_id, 0)
+        base_points = duel_prediction_points + personal_points
         duel_adjustment = adjustments[user_id]
         breakdown = dict(breakdowns.get(user_id, {}))
         if user_id in duel_participant_ids:
@@ -189,6 +208,8 @@ def _build_event_score_rows(event):
                 "user_id": user_id,
                 "username": player.username,
                 "prediction_points": base_points,
+                "duel_prediction_points": duel_prediction_points,
+                "wildcard_points": personal_points,
                 "duel_adjustment": duel_adjustment,
                 "points": base_points + duel_adjustment,
                 "breakdown": breakdown,
@@ -218,6 +239,8 @@ def _apply_duel_outcomes(event, outcomes):
 def calculate_event_scores(event):
     if not hasattr(event, "result"):
         return 0
+    if unresolved_wildcard_questions(event).exists():
+        raise ValueError("Укажи правильные ответы для всех разыгранных личных карт этапа.")
 
     rows, outcomes = _build_event_score_rows(event)
     for row in rows:
@@ -254,6 +277,8 @@ def preview_event_scores(event):
 def publish_event_scores(event, user=None):
     if not hasattr(event, "result"):
         raise ValueError("Сначала внеси фактический результат этапа.")
+    if unresolved_wildcard_questions(event).exists():
+        raise ValueError("Укажи правильные ответы для всех разыгранных личных карт этапа.")
 
     rows, outcomes = _build_event_score_rows(event)
     previous_scores = {score.user_id: score for score in Score.objects.filter(event=event)}
@@ -288,6 +313,8 @@ def publish_event_scores(event, user=None):
                 "user_id": row["user_id"],
                 "points": row["points"],
                 "prediction_points": row["prediction_points"],
+                "duel_prediction_points": row["duel_prediction_points"],
+                "wildcard_points": row["wildcard_points"],
                 "duel_adjustment": row["duel_adjustment"],
                 "breakdown": row["breakdown"],
             }
@@ -335,7 +362,10 @@ def restore_score_revision(revision, user=None):
     )
 
     restored_base_points = {
-        row["user_id"]: row.get("prediction_points", row["points"])
+        row["user_id"]: row.get(
+            "duel_prediction_points",
+            row.get("prediction_points", row["points"]),
+        )
         for row in revision.scores
     }
     outcomes = []

@@ -195,6 +195,26 @@ class DuelSettings(models.Model):
         return "Общее оформление дуэлей"
 
 
+class WildcardSettings(models.Model):
+    key = models.CharField(max_length=32, unique=True, default="default", editable=False)
+    card_back_image = models.ImageField(
+        "Общая рубашка личных карт",
+        upload_to="wildcard_theme/",
+        blank=True,
+        null=True,
+        max_length=255,
+        help_text="Необязательно. Одна картинка используется для всех этапов.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Оформление личных карт"
+        verbose_name_plural = "Оформление личных карт"
+
+    def __str__(self):
+        return "Общее оформление личных карт"
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
     avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)
@@ -261,6 +281,110 @@ class Prediction(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.event}"
+
+
+class EventWildcardQuestion(models.Model):
+    class Option(models.TextChoices):
+        A = "a", "Вариант A"
+        B = "b", "Вариант B"
+
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="wildcard_questions")
+    question = models.CharField("Вопрос", max_length=240)
+    option_a = models.CharField("Вариант A", max_length=120)
+    option_b = models.CharField("Вариант B", max_length=120)
+    correct_option = models.CharField(
+        "Правильный вариант",
+        max_length=1,
+        choices=Option.choices,
+        blank=True,
+        default="",
+        help_text="Заполни после завершения этапа перед публикацией очков.",
+    )
+    points = models.PositiveSmallIntegerField(
+        "Очки",
+        default=5,
+        editable=False,
+        validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
+    is_active = models.BooleanField("Участвует в розыгрыше", default=True)
+    sort_order = models.PositiveIntegerField("Порядок", default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("sort_order", "id")
+        verbose_name = "Личная карта этапа"
+        verbose_name_plural = "Личные карты этапов"
+        indexes = [
+            models.Index(fields=("event", "is_active"), name="wildcard_event_active_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.event}: {self.question}"
+
+    def answer_for(self, option):
+        if option == self.Option.A:
+            return self.option_a
+        if option == self.Option.B:
+            return self.option_b
+        return ""
+
+
+class PlayerWildcard(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="player_wildcards")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="event_wildcards")
+    question = models.ForeignKey(
+        EventWildcardQuestion,
+        on_delete=models.RESTRICT,
+        related_name="draws",
+    )
+    card_slot = models.PositiveSmallIntegerField(
+        "Выбранная карта",
+        default=2,
+        validators=(MinValueValidator(1), MaxValueValidator(3)),
+    )
+    selected_option = models.CharField(
+        "Ответ игрока",
+        max_length=1,
+        choices=EventWildcardQuestion.Option.choices,
+        blank=True,
+        default="",
+    )
+    drawn_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField("Ответ сохранён", null=True, blank=True)
+
+    class Meta:
+        ordering = ("event", "user__username")
+        verbose_name = "Выданная личная карта"
+        verbose_name_plural = "Выданные личные карты"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "user"),
+                name="unique_wildcard_draw_per_event_user",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.event}: {self.question.question}"
+
+    @property
+    def selected_answer(self):
+        return self.question.answer_for(self.selected_option)
+
+    @property
+    def correct_answer(self):
+        return self.question.answer_for(self.question.correct_option)
+
+    @property
+    def is_correct(self):
+        return bool(
+            self.selected_option
+            and self.question.correct_option
+            and self.selected_option == self.question.correct_option
+        )
+
+    @property
+    def awarded_points(self):
+        return self.question.points if self.is_correct else 0
 
 
 class Result(models.Model):

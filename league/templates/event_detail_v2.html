@@ -1,4 +1,5 @@
 ﻿{% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
@@ -253,6 +254,151 @@
     </div>
   </div>
 </div>
+
+<section
+  id="personal-wildcard"
+  class="wildcard-module mb-4{% if wildcard_settings.card_back_image %} has-wildcard-art{% endif %}"
+  {% if wildcard_settings.card_back_image %}style="--wildcard-card-back-image:url('{{ wildcard_settings.card_back_image.url }}');"{% endif %}
+  data-wildcard-root
+>
+  <div class="wildcard-heading">
+    <div>
+      <span class="wildcard-kicker">Personal wildcard · R{{ event.round_number }}</span>
+      <h2>Личная карта этапа</h2>
+      <p>Вытяни одно секретное задание. Карта закрепится за тобой, а ответ можно менять до дедлайна.</p>
+    </div>
+    <div class="wildcard-reward"><span>Бонус</span><strong>+5</strong><small>очков</small></div>
+  </div>
+
+  {% if not user.is_authenticated %}
+    <div class="wildcard-empty-state">
+      <span class="wildcard-empty-mark">?</span>
+      <div><strong>Сначала войди в аккаунт</strong><p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Авторизуйся</a>, чтобы вытянуть личную карту.</p></div>
+    </div>
+  {% elif wildcard_assignment %}
+    <div class="wildcard-single-stage">
+      <article class="wildcard-card is-single is-revealed" aria-label="Твоя личная карта">
+        <span class="wildcard-card-inner">
+          <span class="wildcard-card-back">
+            <span class="wildcard-card-brand">F1 Predictions</span>
+            <span class="wildcard-question-mark">?</span>
+            <span class="wildcard-card-round">R{{ event.round_number }}</span>
+          </span>
+          <span class="wildcard-card-front">
+            <span class="wildcard-face-kicker">Твоя категория</span>
+            <strong class="wildcard-face-question">{{ wildcard_assignment.question.question }}</strong>
+            <span class="wildcard-face-versus">
+              <span>{{ wildcard_assignment.question.option_a }}</span><b>VS</b><span>{{ wildcard_assignment.question.option_b }}</span>
+            </span>
+            <span class="wildcard-face-points">{{ wildcard_assignment.question.points }} PTS</span>
+          </span>
+        </span>
+      </article>
+    </div>
+
+    <div class="wildcard-answer-shell">
+      {% if state == "scored" and wildcard_assignment.question.correct_option %}
+        <div class="wildcard-result-banner {% if wildcard_assignment.is_correct %}is-hit{% else %}is-miss{% endif %}">
+          <span>{% if wildcard_assignment.is_correct %}Карта сыграла{% else %}Карта не сыграла{% endif %}</span>
+          <strong>{% if wildcard_assignment.is_correct %}+{{ wildcard_assignment.question.points }} очков{% else %}+0 очков{% endif %}</strong>
+          <small>Правильный ответ: {{ wildcard_assignment.correct_answer }}</small>
+        </div>
+      {% elif state != "open" %}
+        <div class="wildcard-result-banner is-waiting">
+          <span>Ответ зафиксирован</span>
+          <strong>{{ wildcard_assignment.selected_answer|default:"Ответ не выбран" }}</strong>
+          <small>Итог появится после расчёта этапа.</small>
+        </div>
+      {% endif %}
+
+      <form
+        method="post"
+        action="{% url 'league:answer_event_wildcard' event_id=event.id %}"
+        class="wildcard-answer-form"
+        data-wildcard-answer-form
+        data-selected="{{ wildcard_assignment.selected_option }}"
+      >
+        {% csrf_token %}
+        <div class="wildcard-answer-copy">
+          <span>Твой выбор</span>
+          <strong data-wildcard-status aria-live="polite">
+            {% if wildcard_assignment.selected_option %}Ответ сохранён — его можно изменить до дедлайна.{% else %}Выбери один вариант.{% endif %}
+          </strong>
+        </div>
+        <div class="wildcard-answer-options">
+          <button
+            type="submit"
+            name="choice"
+            value="a"
+            class="wildcard-option{% if wildcard_assignment.selected_option == 'a' %} is-selected{% endif %}{% if state == 'scored' and wildcard_assignment.question.correct_option == 'a' %} is-correct{% elif state == 'scored' and wildcard_assignment.selected_option == 'a' %} is-wrong{% endif %}"
+            {% if state != "open" %}disabled{% endif %}
+          ><span>A</span><strong>{{ wildcard_assignment.question.option_a }}</strong></button>
+          <button
+            type="submit"
+            name="choice"
+            value="b"
+            class="wildcard-option{% if wildcard_assignment.selected_option == 'b' %} is-selected{% endif %}{% if state == 'scored' and wildcard_assignment.question.correct_option == 'b' %} is-correct{% elif state == 'scored' and wildcard_assignment.selected_option == 'b' %} is-wrong{% endif %}"
+            {% if state != "open" %}disabled{% endif %}
+          ><span>B</span><strong>{{ wildcard_assignment.question.option_b }}</strong></button>
+        </div>
+      </form>
+    </div>
+  {% elif state == "open" and wildcard_questions_available %}
+    <form
+      method="post"
+      action="{% url 'league:draw_event_wildcard' event_id=event.id %}"
+      class="wildcard-draw-form"
+      data-wildcard-draw-form
+    >
+      {% csrf_token %}
+      <p class="wildcard-draw-prompt" data-wildcard-status aria-live="polite">Выбери одну из трёх карт</p>
+      <div class="wildcard-deck" role="group" aria-label="Выбор личной карты">
+        {% for slot in "123" %}
+          <button type="submit" name="slot" value="{{ slot }}" class="wildcard-card is-slot-{{ slot }}" aria-label="Вытянуть карту {{ slot }}">
+            <span class="wildcard-card-inner">
+              <span class="wildcard-card-back">
+                <span class="wildcard-card-brand">F1 Predictions</span>
+                <span class="wildcard-question-mark">?</span>
+                <span class="wildcard-card-round">R{{ event.round_number }}</span>
+              </span>
+              <span class="wildcard-card-front">
+                <span class="wildcard-face-kicker">Твоя категория</span>
+                <strong class="wildcard-face-question" data-wildcard-question></strong>
+                <span class="wildcard-face-versus"><span data-option-a></span><b>VS</b><span data-option-b></span></span>
+                <span class="wildcard-face-points" data-wildcard-points></span>
+              </span>
+            </span>
+          </button>
+        {% endfor %}
+      </div>
+    </form>
+
+    <div class="wildcard-answer-shell is-draw-result" data-wildcard-answer-panel hidden>
+      <form
+        method="post"
+        action="{% url 'league:answer_event_wildcard' event_id=event.id %}"
+        class="wildcard-answer-form"
+        data-wildcard-answer-form
+      >
+        {% csrf_token %}
+        <div class="wildcard-answer-copy">
+          <span>Карта закреплена</span>
+          <strong data-wildcard-status aria-live="polite">Теперь выбери ответ.</strong>
+        </div>
+        <div class="wildcard-answer-options">
+          <button type="submit" name="choice" value="a" class="wildcard-option"><span>A</span><strong data-option-label="a"></strong></button>
+          <button type="submit" name="choice" value="b" class="wildcard-option"><span>B</span><strong data-option-label="b"></strong></button>
+        </div>
+      </form>
+    </div>
+  {% elif state == "soon" %}
+    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">⌁</span><div><strong>Колода ещё закрыта</strong><p>Карты станут доступны вместе с прогнозами — за 7 дней до гонки.</p></div></div>
+  {% elif state == "open" %}
+    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">?</span><div><strong>Колода готовится</strong><p>Для этого этапа пока не добавлены личные категории.</p></div></div>
+  {% else %}
+    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">×</span><div><strong>Розыгрыш завершён</strong><p>Ты не вытянул личную карту до дедлайна этого этапа.</p></div></div>
+  {% endif %}
+</section>
 
 <section
   id="event-duel"
@@ -533,7 +679,7 @@
   </div>
 {% endif %}
 
-{% if user.is_authenticated and prediction and comparison_rows %}
+{% if user.is_authenticated and comparison_rows %}
   <div class="card mb-4 card-accent-top" style="animation: card-enter 480ms ease-out both;">
     <div class="card-body">
       <div class="d-flex align-items-end justify-content-between mb-3 gap-2">
@@ -597,7 +743,7 @@
     <div class="table-responsive">
       <table class="table community-table align-middle">
         <thead>
-          <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th><th>Crazy prediction</th><th>Очки</th></tr>
+          <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th><th>Crazy prediction</th><th>Личная карта</th><th>Очки</th></tr>
         </thead>
         <tbody>
           {% for row in community_predictions %}
@@ -612,10 +758,16 @@
               <td{% if row.correct.pole %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_pole_display }}</td>
               <td{% if row.correct.fastest_lap %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
               <td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}</td>
+              <td{% if row.wildcard_correct %} class="community-prediction-correct"{% endif %}>
+                {% if row.wildcard and row.wildcard.selected_option %}
+                  <span class="community-wildcard-question">{{ row.wildcard.question.question }}</span>
+                  <strong class="community-wildcard-answer">{{ row.wildcard.selected_answer }}</strong>
+                {% else %}—{% endif %}
+              </td>
               <td>{% if row.score %}<span class="community-score">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="8" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>
+            <tr><td colspan="9" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>
           {% endfor %}
         </tbody>
       </table>
@@ -640,4 +792,5 @@
     {% endfor %}
   </div>
 {% endif %}
+<script src="{% static 'league/wildcard.js' %}"></script>
 {% endblock %}
