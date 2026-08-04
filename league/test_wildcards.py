@@ -134,6 +134,16 @@ class PersonalWildcardTests(TestCase):
         self.assertEqual(locked.status_code, 400)
         self.assertEqual(assignment.selected_option, "b")
 
+    def test_revealed_card_shows_both_answer_labels_on_its_face(self):
+        self.client.force_login(self.user)
+        self._ajax_post("league:draw_event_wildcard", {"slot": 2})
+
+        response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+
+        self.assertContains(response, 'class="wildcard-face-options"')
+        self.assertContains(response, "Леклер")
+        self.assertContains(response, "Рассел")
+
     def test_correct_card_adds_points_but_does_not_decide_duel(self):
         self.question.correct_option = EventWildcardQuestion.Option.A
         self.question.save(update_fields=("correct_option",))
