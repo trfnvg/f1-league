@@ -50,8 +50,12 @@
         const [payload] = await Promise.all([postForm(drawForm, picked), wait(430)]);
         const question = picked.querySelector("[data-wildcard-question]");
         const points = picked.querySelector("[data-wildcard-points]");
+        const cardOptionA = picked.querySelector('[data-wildcard-card-option="a"]');
+        const cardOptionB = picked.querySelector('[data-wildcard-card-option="b"]');
         if (question) question.textContent = payload.question;
         if (points) points.textContent = `${payload.points} PTS`;
+        if (cardOptionA) cardOptionA.textContent = payload.option_a;
+        if (cardOptionB) cardOptionB.textContent = payload.option_b;
 
         if (status) status.textContent = "Твоя личная карта";
         picked.classList.add("is-revealed");
