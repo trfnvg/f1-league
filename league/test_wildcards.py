@@ -11,6 +11,7 @@ from .models import (
     DuelChallenge,
     Event,
     EventWildcardDeck,
+    EventWildcardDeckCard,
     EventWildcardQuestion,
     PlayerWildcard,
     PlayerWildcardOffer,
@@ -59,6 +60,16 @@ class PersonalWildcardTests(TestCase):
             question="Кто окажется выше в квалификации?",
             option_a="Норрис",
             option_b="Пиастри",
+        )
+        self.deck = EventWildcardDeck.objects.create(event=self.event)
+        EventWildcardDeckCard.objects.bulk_create(
+            [
+                EventWildcardDeckCard(deck=self.deck, question=question, slot=slot)
+                for slot, question in enumerate(
+                    (self.question, self.question_two, self.question_three),
+                    start=1,
+                )
+            ]
         )
 
     def _ajax_post(self, name, data=None):
@@ -112,6 +123,15 @@ class PersonalWildcardTests(TestCase):
         self.assertEqual(offer.cards.count(), 3)
         self.assertEqual(PlayerWildcard.objects.filter(event=self.event, user=self.user).count(), 0)
 
+    def test_event_page_waits_for_manual_admin_deck(self):
+        self.deck.delete()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+
+        self.assertContains(response, "Администратор ещё не выбрал три карты для этого этапа.")
+        self.assertFalse(PlayerWildcardOffer.objects.filter(event=self.event, user=self.user).exists())
+
     def test_every_player_gets_the_same_three_cards_in_the_same_order(self):
         for index in range(4, 7):
             EventWildcardQuestion.objects.create(
@@ -133,7 +153,10 @@ class PersonalWildcardTests(TestCase):
 
         self.assertEqual(EventWildcardDeck.objects.filter(event=self.event).count(), 1)
         self.assertEqual(first_cards, second_cards)
-        self.assertEqual(len(first_cards), 3)
+        self.assertEqual(
+            first_cards,
+            [(1, self.question.id), (2, self.question_two.id), (3, self.question_three.id)],
+        )
 
     def test_requested_race_cards_are_available_in_library(self):
         expected_titles = {
@@ -274,7 +297,9 @@ class PersonalWildcardTests(TestCase):
                 "status": self.event.status,
                 "deadline": self.event.deadline.strftime("%Y-%m-%d %H:%M:%S"),
                 "race_datetime": self.event.race_datetime.strftime("%Y-%m-%d %H:%M:%S"),
-                "wildcard_card_templates": [template.id for template in templates],
+                "wildcard_card_1": templates[0].id,
+                "wildcard_card_2": templates[1].id,
+                "wildcard_card_3": templates[2].id,
             },
             instance=self.event,
         )
@@ -286,6 +311,149 @@ class PersonalWildcardTests(TestCase):
         selected = self.event.wildcard_questions.filter(source_card__in=templates)
         self.assertEqual(selected.count(), 3)
         self.assertTrue(all(item.points == 3 for item in selected))
+        self.assertEqual(
+            list(
+                self.event.wildcard_deck.cards.order_by("slot").values_list(
+                    "slot",
+                    "question__source_card_id",
+                )
+            ),
+            [(1, templates[0].id), (2, templates[1].id), (3, templates[2].id)],
+        )
+
+    def test_event_admin_card_select_renders_live_preview_data(self):
+        template = WildcardCardTemplate.objects.create(
+            title="Карта с предпросмотром",
+            question="Кто попадёт на подиум?",
+            option_a="Албон",
+            option_b="Сайнс",
+        )
+
+        rendered = str(EventAdminForm(instance=self.event)["wildcard_card_1"])
+
+        self.assertIn(f'value="{template.id}"', rendered)
+        self.assertIn('data-card-question="Кто попадёт на подиум?"', rendered)
+        self.assertIn('data-card-option-a="Албон"', rendered)
+
+    def test_admin_deck_change_replaces_unpicked_offers_for_every_player(self):
+        self.client.force_login(self.user)
+        self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        old_offer_id = PlayerWildcardOffer.objects.get(event=self.event, user=self.user).id
+        templates = [
+            WildcardCardTemplate.objects.create(
+                title=f"Ручная карта {index}",
+                question=f"Ручной вопрос {index}?",
+                option_a=f"A{index}",
+                option_b=f"B{index}",
+            )
+            for index in range(1, 4)
+        ]
+        form = EventAdminForm(
+            data={
+                "season_year": self.event.season_year,
+                "name": self.event.name,
+                "round_number": self.event.round_number,
+                "status": self.event.status,
+                "deadline": self.event.deadline.strftime("%Y-%m-%d %H:%M:%S"),
+                "race_datetime": self.event.race_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                "wildcard_card_1": templates[0].id,
+                "wildcard_card_2": templates[1].id,
+                "wildcard_card_3": templates[2].id,
+            },
+            instance=self.event,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        form.sync_wildcard_cards()
+
+        self.assertFalse(PlayerWildcardOffer.objects.filter(pk=old_offer_id).exists())
+
+        self.client.force_login(self.user)
+        self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        first_cards = list(
+            PlayerWildcardOffer.objects.get(event=self.event, user=self.user)
+            .cards.order_by("slot")
+            .values_list("question__source_card_id", flat=True)
+        )
+        self.client.force_login(self.opponent)
+        self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        second_cards = list(
+            PlayerWildcardOffer.objects.get(event=self.event, user=self.opponent)
+            .cards.order_by("slot")
+            .values_list("question__source_card_id", flat=True)
+        )
+
+        self.assertEqual(first_cards, [card.id for card in templates])
+        self.assertEqual(second_cards, first_cards)
+
+    def test_event_admin_requires_three_different_cards(self):
+        template = WildcardCardTemplate.objects.create(
+            title="Одна карта",
+            question="Будет ли сейфти-кар?",
+            option_a="Да",
+            option_b="Нет",
+        )
+        base_data = {
+            "season_year": self.event.season_year,
+            "name": self.event.name,
+            "round_number": self.event.round_number,
+            "status": self.event.status,
+            "deadline": self.event.deadline.strftime("%Y-%m-%d %H:%M:%S"),
+            "race_datetime": self.event.race_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        partial_form = EventAdminForm(
+            data={**base_data, "wildcard_card_1": template.id},
+            instance=self.event,
+        )
+        duplicate_form = EventAdminForm(
+            data={
+                **base_data,
+                "wildcard_card_1": template.id,
+                "wildcard_card_2": template.id,
+                "wildcard_card_3": template.id,
+            },
+            instance=self.event,
+        )
+
+        self.assertFalse(partial_form.is_valid())
+        self.assertIn("Выбери все три карты", partial_form.non_field_errors()[0])
+        self.assertFalse(duplicate_form.is_valid())
+        self.assertIn("не должно быть одинаковых", duplicate_form.non_field_errors()[0])
+
+    def test_event_admin_cannot_replace_deck_after_player_choice(self):
+        templates = [
+            WildcardCardTemplate.objects.create(
+                title=f"Новая карта {index}",
+                question=f"Новый вопрос {index}?",
+                option_a=f"A{index}",
+                option_b=f"B{index}",
+            )
+            for index in range(1, 4)
+        ]
+        PlayerWildcard.objects.create(
+            event=self.event,
+            user=self.user,
+            question=self.question,
+            card_slot=1,
+        )
+        form = EventAdminForm(
+            data={
+                "season_year": self.event.season_year,
+                "name": self.event.name,
+                "round_number": self.event.round_number,
+                "status": self.event.status,
+                "deadline": self.event.deadline.strftime("%Y-%m-%d %H:%M:%S"),
+                "race_datetime": self.event.race_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                "wildcard_card_1": templates[0].id,
+                "wildcard_card_2": templates[1].id,
+                "wildcard_card_3": templates[2].id,
+            },
+            instance=self.event,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("уже нельзя изменить", form.non_field_errors()[0])
 
     def test_correct_card_adds_points_but_does_not_decide_duel(self):
         self.question.correct_option = EventWildcardQuestion.Option.A
