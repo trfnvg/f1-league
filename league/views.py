@@ -52,7 +52,12 @@ from .telegram_bot import (
     notify_duel_challenge,
     notify_prediction_saved,
 )
-from .wildcards import WildcardActionError, answer_wildcard, draw_wildcard
+from .wildcards import (
+    WildcardActionError,
+    answer_wildcard,
+    draw_wildcard,
+    get_or_create_wildcard_offer,
+)
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -319,8 +324,11 @@ def event_detail(request, event_id: int):
     event_time = event.race_datetime or event.deadline
     is_past_event = event.status == Event.Status.SCORED or (event_time and event_time < timezone.now())
 
+    state = event.voting_state()
     prediction = None
     wildcard_assignment = None
+    wildcard_offer_cards = []
+    wildcard_offer_error = ""
     if request.user.is_authenticated:
         prediction = Prediction.objects.filter(event=event, user=request.user).first()
         wildcard_assignment = (
@@ -329,10 +337,16 @@ def event_detail(request, event_id: int):
             .first()
         )
 
-    wildcard_settings = WildcardSettings.objects.first()
-    wildcard_questions_available = event.wildcard_questions.filter(is_active=True).exists()
+        if state == "open" and wildcard_assignment is None:
+            try:
+                wildcard_offer, _ = get_or_create_wildcard_offer(event, request.user)
+            except WildcardActionError as exc:
+                wildcard_offer_error = str(exc)
+            else:
+                wildcard_offer_cards = list(wildcard_offer.cards.all())
 
-    state = event.voting_state()
+    wildcard_settings = WildcardSettings.objects.first()
+
     is_locked = state != "open"
 
     if request.method == "POST":
@@ -525,7 +539,7 @@ def event_detail(request, event_id: int):
                 "actual": wildcard_assignment.correct_answer,
                 "points": wildcard_points,
                 "max_points": wildcard_assignment.question.points,
-                "status": "hit" if wildcard_points else "miss",
+                "status": "hit" if wildcard_points > 0 else "miss",
                 "note": wildcard_assignment.question.question,
             }
         )
@@ -565,6 +579,13 @@ def event_detail(request, event_id: int):
                     state == "scored"
                     and public_wildcards.get(item.user_id)
                     and public_wildcards[item.user_id].is_correct
+                ),
+                "wildcard_wrong": bool(
+                    state == "scored"
+                    and public_wildcards.get(item.user_id)
+                    and public_wildcards[item.user_id].selected_option
+                    and public_wildcards[item.user_id].question.correct_option
+                    and not public_wildcards[item.user_id].is_correct
                 ),
                 "is_winner": (
                     best_public_score is not None
@@ -644,7 +665,8 @@ def event_detail(request, event_id: int):
             "duel_history": duel_history,
             "wildcard_assignment": wildcard_assignment,
             "wildcard_settings": wildcard_settings,
-            "wildcard_questions_available": wildcard_questions_available,
+            "wildcard_offer_cards": wildcard_offer_cards,
+            "wildcard_offer_error": wildcard_offer_error,
         },
     )
 

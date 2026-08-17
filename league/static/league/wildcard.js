@@ -28,17 +28,40 @@
 
   const drawForm = root.querySelector("[data-wildcard-draw-form]");
   if (drawForm) {
+    const cards = Array.from(drawForm.querySelectorAll("[data-wildcard-card]"));
+    const status = drawForm.querySelector("[data-wildcard-status]");
+
+    cards.forEach((card) => {
+      card.addEventListener("click", (event) => {
+        if (drawForm.getAttribute("aria-busy") === "true") {
+          event.preventDefault();
+          return;
+        }
+        if (!card.classList.contains("is-revealed")) {
+          event.preventDefault();
+          card.classList.add("is-revealed", "is-inspected");
+          card.setAttribute("aria-expanded", "true");
+          card.setAttribute("aria-label", `Выбрать карту ${card.value}`);
+          card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+          if (status) {
+            const opened = cards.filter((item) => item.classList.contains("is-revealed")).length;
+            status.textContent = opened === 3
+              ? "Все карты открыты — выбери понравившуюся"
+              : `Открыто ${opened} из 3 · посмотри остальные или нажми эту карту ещё раз`;
+          }
+        }
+      });
+    });
+
     drawForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const picked = event.submitter;
       if (!picked || picked.classList.contains("is-picked")) return;
 
-      const cards = Array.from(drawForm.querySelectorAll(".wildcard-card"));
-      const status = drawForm.querySelector("[data-wildcard-status]");
       drawForm.setAttribute("aria-busy", "true");
       cards.forEach((card) => { card.disabled = true; });
       picked.classList.add("is-picked");
-      if (status) status.textContent = "Карта поднимается…";
+      if (status) status.textContent = "Закрепляем выбранную карту…";
 
       window.setTimeout(() => {
         cards.forEach((card) => {
@@ -48,17 +71,7 @@
 
       try {
         const [payload] = await Promise.all([postForm(drawForm, picked), wait(430)]);
-        const question = picked.querySelector("[data-wildcard-question]");
-        const points = picked.querySelector("[data-wildcard-points]");
-        const cardOptionA = picked.querySelector('[data-wildcard-card-option="a"]');
-        const cardOptionB = picked.querySelector('[data-wildcard-card-option="b"]');
-        if (question) question.textContent = payload.question;
-        if (points) points.textContent = `${payload.points} PTS`;
-        if (cardOptionA) cardOptionA.textContent = payload.option_a;
-        if (cardOptionB) cardOptionB.textContent = payload.option_b;
-
-        if (status) status.textContent = "Твоя личная карта";
-        picked.classList.add("is-revealed");
+        if (status) status.textContent = "Карта закреплена — теперь выбери ответ";
 
         const answerPanel = root.querySelector("[data-wildcard-answer-panel]");
         if (answerPanel) {
@@ -74,7 +87,7 @@
         drawForm.removeAttribute("aria-busy");
         cards.forEach((card) => {
           card.disabled = false;
-          card.classList.remove("is-picked", "is-dismissed", "is-revealed");
+          card.classList.remove("is-picked", "is-dismissed");
         });
         if (status) status.textContent = error.message;
       }

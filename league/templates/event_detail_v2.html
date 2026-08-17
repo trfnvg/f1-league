@@ -265,9 +265,9 @@
     <div>
       <span class="wildcard-kicker">Personal wildcard · R{{ event.round_number }}</span>
       <h2>Личная карта этапа</h2>
-      <p>Вытяни одно секретное задание. Карта закрепится за тобой, а ответ можно менять до дедлайна.</p>
+      <p>Переверни все три карты, изучи задания и оставь одну. Верный ответ принесёт 3 очка, ошибка снимет 3.</p>
     </div>
-    <div class="wildcard-reward"><span>Бонус</span><strong>+5</strong><small>очков</small></div>
+    <div class="wildcard-reward"><span>Риск</span><strong>±3</strong><small>очка</small></div>
   </div>
 
   {% if not user.is_authenticated %}
@@ -293,7 +293,7 @@
                 <span class="wildcard-face-option"><small>A</small><b>{{ wildcard_assignment.question.option_a }}</b></span>
                 <span class="wildcard-face-option"><small>B</small><b>{{ wildcard_assignment.question.option_b }}</b></span>
               </span>
-              <span class="wildcard-face-points">{{ wildcard_assignment.question.points }} PTS</span>
+              <span class="wildcard-face-points">±{{ wildcard_assignment.question.points }} PTS</span>
             </span>
           </span>
         </span>
@@ -304,7 +304,7 @@
       {% if state == "scored" and wildcard_assignment.question.correct_option %}
         <div class="wildcard-result-banner {% if wildcard_assignment.is_correct %}is-hit{% else %}is-miss{% endif %}">
           <span>{% if wildcard_assignment.is_correct %}Карта сыграла{% else %}Карта не сыграла{% endif %}</span>
-          <strong>{% if wildcard_assignment.is_correct %}+{{ wildcard_assignment.question.points }} очков{% else %}+0 очков{% endif %}</strong>
+          <strong>{% if wildcard_assignment.is_correct %}+{{ wildcard_assignment.question.points }} очка{% else %}−{{ wildcard_assignment.question.points }} очка{% endif %}</strong>
           <small>Правильный ответ: {{ wildcard_assignment.correct_answer }}</small>
         </div>
       {% elif state != "open" %}
@@ -347,7 +347,7 @@
         </div>
       </form>
     </div>
-  {% elif state == "open" and wildcard_questions_available %}
+  {% elif state == "open" and wildcard_offer_cards %}
     <form
       method="post"
       action="{% url 'league:draw_event_wildcard' event_id=event.id %}"
@@ -355,10 +355,18 @@
       data-wildcard-draw-form
     >
       {% csrf_token %}
-      <p class="wildcard-draw-prompt" data-wildcard-status aria-live="polite">Выбери одну из трёх карт</p>
+      <p class="wildcard-draw-prompt" data-wildcard-status aria-live="polite">Нажми на каждую карту, чтобы открыть · повторное нажатие выбирает её</p>
       <div class="wildcard-deck" role="group" aria-label="Выбор личной карты">
-        {% for slot in "123" %}
-          <button type="submit" name="slot" value="{{ slot }}" class="wildcard-card is-slot-{{ slot }}" aria-label="Вытянуть карту {{ slot }}">
+        {% for offered_card in wildcard_offer_cards %}
+          <button
+            type="submit"
+            name="slot"
+            value="{{ offered_card.slot }}"
+            class="wildcard-card is-slot-{{ offered_card.slot }}"
+            aria-label="Открыть карту {{ offered_card.slot }}"
+            aria-expanded="false"
+            data-wildcard-card
+          >
             <span class="wildcard-card-inner">
               <span class="wildcard-card-back">
                 <span class="wildcard-card-brand">F1 Predictions</span>
@@ -367,14 +375,17 @@
               </span>
               <span class="wildcard-card-front">
                 <span class="wildcard-face-content">
-                  <span class="wildcard-face-kicker">Твоя категория</span>
-                  <strong class="wildcard-face-question" data-wildcard-question></strong>
+                  <span class="wildcard-face-kicker">Карта {{ offered_card.slot }} · категория</span>
+                  <strong class="wildcard-face-question">{{ offered_card.question.question }}</strong>
                   <span class="wildcard-face-divider">Выбери</span>
                   <span class="wildcard-face-options" aria-label="Варианты ответа">
-                    <span class="wildcard-face-option"><small>A</small><b data-wildcard-card-option="a"></b></span>
-                    <span class="wildcard-face-option"><small>B</small><b data-wildcard-card-option="b"></b></span>
+                    <span class="wildcard-face-option"><small>A</small><b>{{ offered_card.question.option_a }}</b></span>
+                    <span class="wildcard-face-option"><small>B</small><b>{{ offered_card.question.option_b }}</b></span>
                   </span>
-                  <span class="wildcard-face-points" data-wildcard-points></span>
+                  <span class="wildcard-face-footer">
+                    <span class="wildcard-face-points">±{{ offered_card.question.points }} PTS</span>
+                    <span class="wildcard-face-select">Выбрать карту</span>
+                  </span>
                 </span>
               </span>
             </span>
@@ -404,7 +415,7 @@
   {% elif state == "soon" %}
     <div class="wildcard-empty-state"><span class="wildcard-empty-mark">⌁</span><div><strong>Колода ещё закрыта</strong><p>Карты станут доступны вместе с прогнозами — за 7 дней до гонки.</p></div></div>
   {% elif state == "open" %}
-    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">?</span><div><strong>Колода готовится</strong><p>Для этого этапа пока не добавлены личные категории.</p></div></div>
+    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">?</span><div><strong>Колода готовится</strong><p>{{ wildcard_offer_error|default:"Для этого этапа нужно добавить минимум три активные карты." }}</p></div></div>
   {% else %}
     <div class="wildcard-empty-state"><span class="wildcard-empty-mark">×</span><div><strong>Розыгрыш завершён</strong><p>Ты не вытянул личную карту до дедлайна этого этапа.</p></div></div>
   {% endif %}
@@ -718,7 +729,7 @@
                     <span class="comparison-status comparison-status-miss">Мимо</span>
                   {% endif %}
                 </div>
-                <span class="comparison-points comparison-points-{{ row.status }}">+{{ row.points }} / {{ row.max_points }}</span>
+                <span class="comparison-points comparison-points-{{ row.status }}">{% if row.points > 0 %}+{% endif %}{{ row.points }} / {{ row.max_points }}</span>
               </div>
 
               <div class="comparison-values">
@@ -750,7 +761,7 @@
       <h2 class="community-title">Предикты участников</h2>
       <p class="community-copy">После дедлайна прогнозы открываются для всех — сравни стратегии игроков.</p>
     </div>
-    <div class="table-responsive">
+    <div class="table-responsive community-table-viewport">
       <table class="table community-table align-middle">
         <thead>
           <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th><th>Crazy prediction</th><th>Личная карта</th><th>Очки</th></tr>
@@ -768,7 +779,7 @@
               <td{% if row.correct.pole %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_pole_display }}</td>
               <td{% if row.correct.fastest_lap %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
               <td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}</td>
-              <td{% if row.wildcard_correct %} class="community-prediction-correct"{% endif %}>
+              <td{% if row.wildcard_correct %} class="community-prediction-correct"{% elif row.wildcard_wrong %} class="community-prediction-wrong"{% endif %}>
                 {% if row.wildcard and row.wildcard.selected_option %}
                   <span class="community-wildcard-question">{{ row.wildcard.question.question }}</span>
                   <strong class="community-wildcard-answer">{{ row.wildcard.selected_answer }}</strong>
