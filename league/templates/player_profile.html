@@ -311,7 +311,13 @@
       <div class="profile-stat-card"><small>Позиция</small><strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong></div>
       <div class="profile-stat-card"><small>Очки за этапы</small><strong>{{ player_statistics.total }}</strong></div>
       <div class="profile-stat-card"><small>Среднее за этап</small><strong>{{ player_statistics.average }}</strong></div>
-      <div class="profile-stat-card"><small>Лучший результат</small><strong>{{ player_statistics.best }}</strong></div>
+      <div class="profile-stat-card profile-stat-best">
+        <small>Лучший этап</small>
+        <strong>{{ player_statistics.best }}</strong>
+        <span class="profile-stat-detail">
+          {% if player_statistics.best_event_name %}R{{ player_statistics.best_event_round }} · {{ player_statistics.best_event_name }}{% else %}Пока нет результата{% endif %}
+        </span>
+      </div>
       <div class="profile-stat-card"><small>Победы на этапах</small><strong>{{ player_statistics.stage_wins }}</strong></div>
       <div class="profile-stat-card"><small>Точные попадания</small><strong>{{ player_statistics.exact_hits }}</strong></div>
     </div>
@@ -349,13 +355,6 @@
       {% if player_statistics.strongest_category %}
         <strong>{{ player_statistics.strongest_category.label }}</strong>
         <span>{{ player_statistics.strongest_category.rate }}% · {{ player_statistics.strongest_category.hits }}/{{ player_statistics.strongest_category.attempts }}</span>
-      {% else %}<strong>—</strong><span>Нужны завершённые этапы</span>{% endif %}
-    </article>
-    <article class="insight-card insight-weak">
-      <small>Зона роста</small>
-      {% if player_statistics.weakest_category %}
-        <strong>{{ player_statistics.weakest_category.label }}</strong>
-        <span>{{ player_statistics.weakest_category.rate }}% · {{ player_statistics.weakest_category.hits }}/{{ player_statistics.weakest_category.attempts }}</span>
       {% else %}<strong>—</strong><span>Нужны завершённые этапы</span>{% endif %}
     </article>
   </div>

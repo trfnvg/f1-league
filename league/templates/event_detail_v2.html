@@ -442,7 +442,7 @@
     <div>
       <span class="western-duel-kicker">F1 · Wild West</span>
       <h2>Вызов на дуэль</h2>
-      <p>Сравниваются чистые очки прогноза. Победитель забирает ставку, проигравший теряет столько же.</p>
+      <p>У кого больше чистых очков за этап — тот получает ставку. При ничьей очки не меняются.</p>
     </div>
     <div class="western-duel-limit"><small>Максимальная ставка</small><strong>10</strong><span>очков</span></div>
   </div>
@@ -467,7 +467,7 @@
           {% if own_duel.opponent.league_profile.avatar %}<img src="{{ own_duel.opponent.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.opponent.username|slice:":1"|upper }}{% endif %}
         </span>
         <strong>{{ own_duel.opponent.username }}</strong>
-        <small>Принимает бой</small>
+        <small>{% if own_duel.status == "pending" %}Получил вызов{% else %}Принял вызов{% endif %}</small>
       </div>
 
       <div class="western-duel-state">
@@ -489,10 +489,10 @@
   {% elif duel_form %}
     <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="western-challenge-form">
       {% csrf_token %}
-      <div class="western-form-intro"><span>✦</span><div><strong>Назначить дуэль</strong><small>У каждого игрока может быть только одна активная дуэль на этап.</small></div></div>
-      <label><span>Кого вызываем</span>{{ duel_form.opponent }}</label>
-      <label class="western-stake-field"><span>Сколько очков</span>{{ duel_form.stake }}<small>от 1 до 10</small></label>
-      <button type="submit" class="western-btn is-challenge">Бросить вызов <span>→</span></button>
+      <div class="western-form-intro"><span>✦</span><div><strong>Назначить дуэль</strong><small>Выбери соперника, укажи ставку и отправь вызов.</small></div></div>
+      <label><span>1. Выбери соперника</span>{{ duel_form.opponent }}</label>
+      <label class="western-stake-field"><span>2. Укажи ставку</span>{{ duel_form.stake }}<small>от 1 до 10 очков</small></label>
+      <button type="submit" class="western-btn is-challenge">Отправить вызов <span>→</span></button>
     </form>
   {% elif state != "open" %}
     <div class="western-duel-empty"><span>⌛</span><p>Приём новых вызовов закрыт вместе с дедлайном прогнозов.</p></div>

@@ -1706,6 +1706,16 @@ body.apex-night-theme .profile-stat-card strong {
   color: var(--apex-ink);
 }
 
+body.apex-night-theme .profile-stat-detail {
+  display: block;
+  margin-top: 0.32rem;
+  color: var(--apex-muted);
+  font-size: 0.62rem;
+  font-weight: 650;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
 body.apex-night-theme .profile-analytics-shell {
   background:
     radial-gradient(640px 220px at 100% 0, rgba(53, 213, 220, 0.07), transparent 72%),
@@ -3768,5 +3778,434 @@ body.apex-night-theme .western-btn {
   body.apex-night-theme .event-hero-card .section-title {
     font-size: clamp(1.65rem, 7.8vw, 2.15rem);
     line-height: 1.04;
+  }
+}
+
+/* Mobile duel flow -------------------------------------------------------
+ * On a narrow screen the duel is a short decision flow, not a compressed
+ * desktop banner. Solid surfaces and explicit states keep the artwork from
+ * washing out controls or status copy.
+ */
+@media (max-width: 620px) {
+  body.apex-night-theme .western-duel {
+    padding: 1rem;
+    border-color: rgba(244, 154, 91, 0.34);
+    border-radius: 3px 20px 3px 3px;
+    background:
+      radial-gradient(360px 190px at 100% 0, rgba(235, 106, 55, 0.2), transparent 70%),
+      linear-gradient(155deg, #211712 0%, #111317 58%, #0c1015 100%);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.38);
+  }
+
+  body.apex-night-theme .western-duel.has-duel-art::before {
+    background-image:
+      linear-gradient(180deg, rgba(15, 13, 12, 0.74), rgba(12, 14, 18, 0.92)),
+      var(--western-duel-art);
+    background-position: center;
+    filter: sepia(0.12) saturate(0.9) contrast(1.06);
+  }
+
+  body.apex-night-theme .western-duel::after {
+    height: 3px;
+    background: linear-gradient(90deg, #ff9a62 0 34%, #d64d2c 68%, transparent 100%);
+    opacity: 1;
+  }
+
+  body.apex-night-theme .western-duel-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.8rem;
+    margin: 0.15rem 0 1rem;
+  }
+
+  body.apex-night-theme .western-duel-kicker {
+    margin-bottom: 0.3rem;
+    color: #ff9d68;
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+  }
+
+  body.apex-night-theme .western-duel-heading h2 {
+    color: #fff8ef;
+    font-size: clamp(1.35rem, 6.4vw, 1.6rem);
+    line-height: 1.05;
+  }
+
+  body.apex-night-theme .western-duel-heading p {
+    max-width: none;
+    margin-top: 0.46rem;
+    color: #d8c5b4;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.48;
+  }
+
+  body.apex-night-theme .western-duel-limit {
+    width: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+    padding: 0.62rem 0.74rem;
+    border-color: rgba(255, 182, 116, 0.3);
+    border-radius: 3px 12px 3px 3px;
+    background: rgba(255, 181, 113, 0.09);
+    box-shadow: none;
+  }
+
+  body.apex-night-theme .western-duel-limit::before {
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    height: auto;
+    background: #f58b50;
+  }
+
+  body.apex-night-theme .western-duel-limit small,
+  body.apex-night-theme .western-duel-limit span {
+    width: auto;
+    max-width: none;
+    padding: 0;
+    color: #d8b99e;
+    font-size: 0.63rem;
+    line-height: 1.2;
+    letter-spacing: 0.045em;
+    white-space: normal;
+  }
+
+  body.apex-night-theme .western-duel-limit small {
+    flex: 1 1 auto;
+  }
+
+  body.apex-night-theme .western-duel-limit strong {
+    color: #ffd18e;
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  body.apex-night-theme .western-challenge-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.88rem;
+    padding: 1rem;
+    border: 1px solid rgba(241, 152, 89, 0.3);
+    border-radius: 3px 17px 3px 3px;
+    color: #fff4e8;
+    background: linear-gradient(160deg, rgba(37, 29, 24, 0.98), rgba(18, 21, 27, 0.98));
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.3), inset 0 1px rgba(255, 255, 255, 0.035);
+  }
+
+  body.apex-night-theme .western-form-intro {
+    grid-column: auto;
+    align-items: flex-start;
+    gap: 0.72rem;
+    padding-bottom: 0.78rem;
+    border-bottom: 1px solid rgba(255, 184, 119, 0.18);
+  }
+
+  body.apex-night-theme .western-form-intro > span {
+    width: 42px;
+    height: 42px;
+    color: #17100c;
+    background: linear-gradient(145deg, #ffc176, #ee7845);
+    box-shadow: 0 7px 18px rgba(235, 105, 56, 0.22);
+  }
+
+  body.apex-night-theme .western-form-intro strong {
+    color: #fff8ef;
+    font-size: 1.08rem;
+    line-height: 1.1;
+    text-transform: none;
+  }
+
+  body.apex-night-theme .western-form-intro small {
+    margin-top: 0.28rem;
+    color: #cdb8a7;
+    font-size: 0.7rem;
+    line-height: 1.4;
+  }
+
+  body.apex-night-theme .western-challenge-form label {
+    min-width: 0;
+    margin: 0;
+  }
+
+  body.apex-night-theme .western-challenge-form label > span {
+    margin-bottom: 0.42rem;
+    color: #ffb174;
+    font-size: 0.67rem;
+    line-height: 1.2;
+    letter-spacing: 0.055em;
+  }
+
+  body.apex-night-theme .western-challenge-form .form-select,
+  body.apex-night-theme .western-challenge-form .form-control {
+    width: 100%;
+    min-height: 50px;
+    padding: 0.72rem 0.82rem;
+    border: 1px solid rgba(255, 186, 126, 0.36);
+    border-radius: 3px 11px 3px 3px;
+    color: #fff8ef;
+    background-color: #0e1319;
+    box-shadow: inset 0 1px rgba(255, 255, 255, 0.035);
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  body.apex-night-theme .western-challenge-form .form-select:focus,
+  body.apex-night-theme .western-challenge-form .form-control:focus {
+    border-color: #ff9a61;
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(242, 119, 67, 0.17);
+  }
+
+  body.apex-night-theme .western-challenge-form .form-select option {
+    color: #f7eee6;
+    background: #12171d;
+  }
+
+  body.apex-night-theme .western-stake-field {
+    position: static;
+  }
+
+  body.apex-night-theme .western-stake-field input {
+    padding-right: 0.82rem;
+  }
+
+  body.apex-night-theme .western-stake-field small {
+    position: static;
+    display: block;
+    margin-top: 0.38rem;
+    color: #af9c8d;
+    font-size: 0.65rem;
+    line-height: 1.25;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  body.apex-night-theme .western-btn {
+    min-height: 48px;
+    padding: 0.7rem 1rem;
+    border-radius: 3px 12px 3px 3px;
+    font-size: 0.83rem;
+    font-weight: 850;
+  }
+
+  body.apex-night-theme .western-btn.is-challenge {
+    width: 100%;
+    min-height: 52px;
+    margin-top: 0.08rem;
+    color: #fff;
+    border-color: #ff8652;
+    background: linear-gradient(135deg, #f77f49, #c33e25);
+    box-shadow: 0 10px 24px rgba(208, 64, 35, 0.32), 0 0 0 3px rgba(238, 103, 55, 0.09);
+  }
+
+  body.apex-night-theme .western-btn.is-challenge > span {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  body.apex-night-theme .western-showdown {
+    grid-template-columns: minmax(0, 1fr) 74px minmax(0, 1fr);
+    border-color: rgba(244, 157, 94, 0.3);
+    border-radius: 3px 17px 3px 3px;
+    background: linear-gradient(160deg, rgba(37, 29, 24, 0.98), rgba(16, 20, 26, 0.98));
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.32);
+  }
+
+  body.apex-night-theme .western-fighter,
+  body.apex-night-theme .western-fighter.is-opponent {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    padding: 0.9rem 0.32rem 0.8rem;
+    text-align: center;
+  }
+
+  body.apex-night-theme .western-fighter.is-opponent .western-avatar,
+  body.apex-night-theme .western-avatar {
+    width: 54px;
+    height: 54px;
+    grid-column: auto;
+    grid-row: auto;
+    border: 2px solid rgba(255, 192, 130, 0.66);
+    box-shadow: 0 0 0 3px rgba(241, 125, 71, 0.1), 0 8px 18px rgba(0, 0, 0, 0.34);
+  }
+
+  body.apex-night-theme .western-fighter > strong {
+    width: 100%;
+    max-width: 100%;
+    color: #fff8ef;
+    font-size: 0.96rem;
+    line-height: 1.05;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.apex-night-theme .western-fighter > small {
+    color: #bdab9c;
+    font-size: 0.54rem;
+    line-height: 1.2;
+    letter-spacing: 0.035em;
+  }
+
+  body.apex-night-theme .western-stake-seal {
+    width: 74px;
+    height: 74px;
+    min-height: 74px;
+    padding: 0.55rem;
+    border: 1px solid rgba(255, 185, 110, 0.5);
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 36%, #7e432e, #271916 72%);
+    clip-path: none;
+    filter: none;
+    box-shadow: 0 0 0 4px rgba(229, 116, 64, 0.08), 0 9px 20px rgba(0, 0, 0, 0.38);
+  }
+
+  body.apex-night-theme .western-stake-seal small,
+  body.apex-night-theme .western-stake-seal span {
+    width: auto;
+    max-width: 58px;
+    color: #e4c5aa;
+    font-size: 0.42rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+  }
+
+  body.apex-night-theme .western-stake-seal strong {
+    margin: 0.12rem 0;
+    color: #ffd38f;
+    font-size: 1.85rem;
+    line-height: 0.78;
+  }
+
+  body.apex-night-theme .western-duel-state {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.85rem;
+    border-top-color: rgba(255, 182, 116, 0.22);
+    background: rgba(255, 179, 107, 0.08);
+  }
+
+  body.apex-night-theme .western-state-label {
+    margin-bottom: 0.2rem;
+    color: #ff9f68;
+    font-size: 0.61rem;
+    letter-spacing: 0.075em;
+  }
+
+  body.apex-night-theme .western-duel-state strong {
+    color: #fff5e9;
+    font-size: 0.78rem;
+    line-height: 1.38;
+  }
+
+  body.apex-night-theme .western-showdown.is-accepted .western-duel-state {
+    border-top-color: rgba(91, 216, 154, 0.3);
+    background: rgba(61, 190, 129, 0.1);
+  }
+
+  body.apex-night-theme .western-showdown.is-accepted .western-state-label {
+    color: #75e4ad;
+  }
+
+  body.apex-night-theme .western-duel-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  body.apex-night-theme .western-duel-actions form,
+  body.apex-night-theme .western-duel-actions .western-btn,
+  body.apex-night-theme .western-duel-state > form,
+  body.apex-night-theme .western-duel-state > form .western-btn {
+    width: 100%;
+  }
+
+  body.apex-night-theme .western-btn.is-accept {
+    color: #07170f;
+    border-color: #76e0ac;
+    background: linear-gradient(135deg, #75e2ae, #35a971);
+    box-shadow: 0 8px 20px rgba(48, 174, 112, 0.2);
+  }
+
+  body.apex-night-theme .western-btn.is-decline {
+    color: #f3ded0;
+    border-color: rgba(255, 166, 109, 0.38);
+    background: rgba(255, 151, 91, 0.07);
+  }
+
+  body.apex-night-theme .western-btn.is-quiet {
+    color: #ffb287;
+    border-color: rgba(239, 119, 68, 0.5);
+    background: rgba(201, 70, 39, 0.11);
+  }
+
+  body.apex-night-theme .western-locked-mark {
+    min-height: 36px;
+    justify-content: center;
+    padding: 0.45rem 0.7rem;
+    border-color: rgba(94, 216, 155, 0.28);
+    color: #9ae9bf;
+    background: rgba(64, 185, 126, 0.08);
+    font-size: 0.61rem;
+  }
+
+  body.apex-night-theme .western-duel-empty {
+    min-height: 94px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 0.9rem;
+    border-color: rgba(242, 155, 94, 0.34);
+    color: #d8c5b5;
+    background: rgba(15, 18, 23, 0.88);
+    text-align: left;
+  }
+
+  body.apex-night-theme .western-duel-empty > span {
+    color: #ff9a62;
+  }
+
+  body.apex-night-theme .western-duel-empty p {
+    font-size: 0.75rem;
+    line-height: 1.45;
+  }
+
+  body.apex-night-theme .western-duel-empty a {
+    color: #ffaf7e;
+  }
+
+  body.apex-night-theme .western-duel-roster {
+    border-top-color: rgba(255, 178, 109, 0.18);
+  }
+
+  body.apex-night-theme .western-roster-title strong {
+    color: #fff2e2;
+    font-size: 1rem;
+    text-transform: none;
+  }
+
+  body.apex-night-theme .western-roster-card {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 0.75rem;
+    border-color: rgba(235, 150, 91, 0.22);
+    background: rgba(14, 18, 23, 0.84);
+  }
+
+  body.apex-night-theme .western-roster-result {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-top: 0.48rem;
+    border-top: 1px solid rgba(255, 181, 111, 0.12);
+    text-align: left;
   }
 }
