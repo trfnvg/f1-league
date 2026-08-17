@@ -77,8 +77,14 @@
         if (answerPanel) {
           const answerA = answerPanel.querySelector('[data-option-label="a"]');
           const answerB = answerPanel.querySelector('[data-option-label="b"]');
+          const answerC = answerPanel.querySelector('[data-option-label="c"]');
+          const answerCButton = answerPanel.querySelector('[data-option-button="c"]');
+          const answerOptions = answerPanel.querySelector("[data-wildcard-answer-options]");
           if (answerA) answerA.textContent = payload.option_a;
           if (answerB) answerB.textContent = payload.option_b;
+          if (answerC) answerC.textContent = payload.option_c || "";
+          if (answerCButton) answerCButton.hidden = !payload.option_c;
+          if (answerOptions) answerOptions.classList.toggle("has-three-options", Boolean(payload.option_c));
           await wait(730);
           answerPanel.hidden = false;
           window.requestAnimationFrame(() => answerPanel.classList.add("is-visible"));

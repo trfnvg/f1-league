@@ -10,6 +10,8 @@ from .models import (
     DuelSettings,
     Event,
     EventPhoto,
+    EventWildcardDeck,
+    EventWildcardDeckCard,
     EventWildcardQuestion,
     HomeResultImage,
     PlayerWildcard,
@@ -95,8 +97,8 @@ class EventAdminForm(forms.ModelForm):
         required=False,
         widget=FilteredSelectMultiple("карты", is_stacked=False),
         help_text=(
-            "Выбери минимум 3 карты из библиотеки. Игрок получит случайную тройку "
-            "из этого набора и сам решит, какую карту оставить."
+            "Выбери минимум 3 карты из библиотеки. Для этапа один раз случайно формируется "
+            "общая тройка: все игроки увидят одинаковые карты в одинаковом порядке."
         ),
     )
 
@@ -151,6 +153,8 @@ class EventAdminForm(forms.ModelForm):
                 question=card.question,
                 option_a=card.option_a,
                 option_b=card.option_b,
+                option_c=card.option_c,
+                draw_weight=card.draw_weight,
                 sort_order=next_order,
             )
             next_order += 1
@@ -158,7 +162,11 @@ class EventAdminForm(forms.ModelForm):
         for card_id, assignment in assignments.items():
             if card_id in selected_ids:
                 continue
-            if assignment.draws.exists() or assignment.offer_cards.exists():
+            if (
+                assignment.draws.exists()
+                or assignment.offer_cards.exists()
+                or assignment.shared_deck_cards.exists()
+            ):
                 assignment.is_active = False
                 assignment.save(update_fields=("is_active",))
             else:
@@ -200,7 +208,7 @@ class EventWildcardQuestionInline(admin.TabularInline):
             "<strong>{}</strong><br><small>A: {} · B: {}</small>",
             obj.question,
             obj.option_a,
-            obj.option_b,
+            format_html("{}{}", obj.option_b, format_html(" · C: {}", obj.option_c) if obj.option_c else ""),
         )
 
 
@@ -406,16 +414,33 @@ class WildcardSettingsAdmin(admin.ModelAdmin):
 
 @admin.register(WildcardCardTemplate)
 class WildcardCardTemplateAdmin(admin.ModelAdmin):
-    list_display = ("title", "question", "option_a", "option_b", "is_active", "updated_at")
+    list_display = (
+        "title",
+        "question",
+        "option_a",
+        "option_b",
+        "option_c",
+        "draw_weight",
+        "is_active",
+        "updated_at",
+    )
     list_filter = ("is_active",)
-    list_editable = ("is_active",)
-    search_fields = ("title", "question", "option_a", "option_b")
+    list_editable = ("draw_weight", "is_active")
+    search_fields = ("title", "question", "option_a", "option_b", "option_c")
     ordering = ("title", "id")
     fieldsets = (
         (
             "Карточка",
             {
-                "fields": ("title", "question", "option_a", "option_b", "is_active"),
+                "fields": (
+                    "title",
+                    "question",
+                    "option_a",
+                    "option_b",
+                    "option_c",
+                    "draw_weight",
+                    "is_active",
+                ),
                 "description": "Создай карту один раз, затем выбирай её в настройках любого этапа.",
             },
         ),
@@ -430,16 +455,45 @@ class EventWildcardQuestionAdmin(admin.ModelAdmin):
         "question",
         "option_a",
         "option_b",
+        "option_c",
+        "draw_weight",
         "points",
         "is_active",
         "correct_option",
     )
     list_filter = ("event__season_year", "event", "is_active")
     list_editable = ("is_active", "correct_option")
-    search_fields = ("event__name", "question", "option_a", "option_b")
+    search_fields = ("event__name", "question", "option_a", "option_b", "option_c")
     list_select_related = ("event", "source_card")
     ordering = ("-event__season_year", "event__round_number", "sort_order", "id")
     readonly_fields = ("points",)
+
+
+class EventWildcardDeckCardInline(admin.TabularInline):
+    model = EventWildcardDeckCard
+    extra = 0
+    can_delete = False
+    fields = ("slot", "question")
+    readonly_fields = ("slot", "question")
+    ordering = ("slot",)
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(EventWildcardDeck)
+class EventWildcardDeckAdmin(admin.ModelAdmin):
+    list_display = ("event", "created_at")
+    list_filter = ("event__season_year",)
+    search_fields = ("event__name",)
+    readonly_fields = ("event", "created_at")
+    inlines = (EventWildcardDeckCardInline,)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(PlayerWildcard)

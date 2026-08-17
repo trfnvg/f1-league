@@ -1053,14 +1053,55 @@ body.apex-night-theme .season-fact {
   color: var(--apex-muted);
 }
 
+body.apex-night-theme.editorial-theme .score-card {
+  position: relative;
+  overflow: hidden;
+  color: var(--apex-ink);
+  border-color: var(--apex-line-strong);
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255, 51, 38, 0.12), transparent 32%),
+    linear-gradient(145deg, #17212c 0%, #101720 68%, #0d141c 100%);
+  box-shadow: var(--apex-shadow-soft);
+}
+
+body.apex-night-theme.editorial-theme .score-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--apex-red), rgba(255, 51, 38, 0.18) 52%, transparent);
+}
+
+body.apex-night-theme .score-card h2 {
+  color: var(--apex-ink);
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  text-transform: uppercase;
+}
+
 body.apex-night-theme .score-total {
   color: #fff;
+  line-height: 1;
   text-shadow: 0 0 28px rgba(255, 51, 38, 0.24);
 }
 
-body.apex-night-theme .kpi-divider,
+body.apex-night-theme .score-card .kpi-divider {
+  border: 0;
+  background: var(--apex-line);
+}
+
+body.apex-night-theme .score-card .breakdown-box {
+  color: var(--apex-ink);
+  border-color: var(--apex-line);
+  background: rgba(5, 9, 14, 0.46);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
 body.apex-night-theme .breakdown-row {
   border-color: var(--apex-line);
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: none;
 }
 
 body.apex-night-theme .comparison-shell {
@@ -2932,6 +2973,19 @@ body.apex-night-theme .wildcard-face-options {
   gap: 0.38rem;
 }
 
+body.apex-night-theme .wildcard-face-options.has-three-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.24rem;
+}
+
+body.apex-night-theme .wildcard-face-options.has-three-options .wildcard-face-option {
+  padding-inline: 0.16rem;
+}
+
+body.apex-night-theme .wildcard-face-options.has-three-options .wildcard-face-option b {
+  font-size: 0.63rem;
+}
+
 body.apex-night-theme .wildcard-face-option {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -3057,6 +3111,10 @@ body.apex-night-theme .wildcard-answer-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.58rem;
+}
+
+body.apex-night-theme .wildcard-answer-options.has-three-options {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 body.apex-night-theme .wildcard-option {
@@ -3341,6 +3399,10 @@ body.apex-night-theme .community-wildcard-answer {
     grid-template-columns: 1fr;
   }
 
+  body.apex-night-theme .wildcard-answer-options.has-three-options {
+    grid-template-columns: 1fr;
+  }
+
   body.apex-night-theme .wildcard-answer-copy {
     align-items: center;
     text-align: center;
@@ -3604,5 +3666,107 @@ body.apex-night-theme .community-table .community-score {
   body.apex-night-theme .wildcard-draw-prompt {
     padding-inline: 0.4rem;
     line-height: 1.45;
+  }
+}
+
+/* Calm type scale ---------------------------------------------------------
+ * Four clear levels: hero, page, section and card. Short racing labels keep
+ * their uppercase treatment; content headings and actions use normal case.
+ */
+body.apex-night-theme {
+  --apex-type-hero: clamp(2.15rem, 4.4vw, 3.45rem);
+  --apex-type-page: clamp(1.7rem, 2.6vw, 2.2rem);
+  --apex-type-section: clamp(1.22rem, 1.8vw, 1.52rem);
+  --apex-type-card: 1.05rem;
+}
+
+body.apex-night-theme .section-title,
+body.apex-night-theme .season-banner-title,
+body.apex-night-theme .auth-title {
+  font-size: var(--apex-type-page);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+}
+
+body.apex-night-theme .profile-name {
+  font-size: var(--apex-type-page);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  text-transform: none;
+}
+
+body.apex-night-theme .home-command h1 {
+  max-width: 680px;
+  font-size: var(--apex-type-hero);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+}
+
+body.apex-night-theme .event-hero-card .section-title {
+  max-width: 680px;
+  font-size: clamp(1.9rem, 3.6vw, 2.85rem);
+  line-height: 1;
+  text-wrap: balance;
+}
+
+body.apex-night-theme .section-heading-row h2,
+body.apex-night-theme .points-chart-title,
+body.apex-night-theme .community-title,
+body.apex-night-theme .profile-section-title,
+body.apex-night-theme .prediction-workbench h2,
+body.apex-night-theme .wildcard-heading h2,
+body.apex-night-theme .western-duel-heading h2,
+body.apex-night-theme .season-form-heading h2,
+body.apex-night-theme .duel-panel-head h2 {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: var(--apex-type-section);
+  font-weight: 750;
+  line-height: 1.12;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.apex-night-theme .event-card-copy h3,
+body.apex-night-theme .season-scoring-head h2,
+body.apex-night-theme .season-form-group-head h3,
+body.apex-night-theme .score-card h2,
+body.apex-night-theme .card h2.h4,
+body.apex-night-theme .card h2.h5,
+body.apex-night-theme .main-content > h2.h4 {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: var(--apex-type-card);
+  font-weight: 750;
+  line-height: 1.18;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.apex-night-theme .section-heading-row {
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.68rem;
+}
+
+body.apex-night-theme.editorial-theme .btn,
+body.apex-night-theme .action-primary,
+body.apex-night-theme .action-secondary,
+body.apex-night-theme .duel-submit,
+body.apex-night-theme .event-card-action,
+body.apex-night-theme .western-btn {
+  font-size: 0.76rem;
+  letter-spacing: 0.012em;
+  text-transform: none;
+}
+
+@media (max-width: 576px) {
+  body.apex-night-theme {
+    --apex-type-hero: clamp(1.9rem, 9vw, 2.55rem);
+    --apex-type-page: clamp(1.55rem, 7vw, 1.85rem);
+    --apex-type-section: clamp(1.16rem, 5.6vw, 1.36rem);
+    --apex-type-card: 1rem;
+  }
+
+  body.apex-night-theme .event-hero-card .section-title {
+    font-size: clamp(1.65rem, 7.8vw, 2.15rem);
+    line-height: 1.04;
   }
 }

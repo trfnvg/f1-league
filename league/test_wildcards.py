@@ -10,6 +10,7 @@ from .duels import create_duel_challenge, respond_to_duel
 from .models import (
     DuelChallenge,
     Event,
+    EventWildcardDeck,
     EventWildcardQuestion,
     PlayerWildcard,
     PlayerWildcardOffer,
@@ -100,7 +101,7 @@ class PersonalWildcardTests(TestCase):
 
         response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
 
-        self.assertContains(response, "Личная карта этапа")
+        self.assertContains(response, "Карты этапа")
         self.assertContains(response, 'name="slot"', count=3)
         self.assertContains(response, "Нажми на каждую карту")
         self.assertContains(response, "±3 PTS", count=3)
@@ -110,6 +111,51 @@ class PersonalWildcardTests(TestCase):
         offer = PlayerWildcardOffer.objects.get(event=self.event, user=self.user)
         self.assertEqual(offer.cards.count(), 3)
         self.assertEqual(PlayerWildcard.objects.filter(event=self.event, user=self.user).count(), 0)
+
+    def test_every_player_gets_the_same_three_cards_in_the_same_order(self):
+        for index in range(4, 7):
+            EventWildcardQuestion.objects.create(
+                event=self.event,
+                question=f"Дополнительный вопрос {index}?",
+                option_a=f"A{index}",
+                option_b=f"B{index}",
+            )
+
+        self.client.force_login(self.user)
+        self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        first_offer = PlayerWildcardOffer.objects.get(event=self.event, user=self.user)
+        first_cards = list(first_offer.cards.values_list("slot", "question_id"))
+
+        self.client.force_login(self.opponent)
+        self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        second_offer = PlayerWildcardOffer.objects.get(event=self.event, user=self.opponent)
+        second_cards = list(second_offer.cards.values_list("slot", "question_id"))
+
+        self.assertEqual(EventWildcardDeck.objects.filter(event=self.event).count(), 1)
+        self.assertEqual(first_cards, second_cards)
+        self.assertEqual(len(first_cards), 3)
+
+    def test_requested_race_cards_are_available_in_library(self):
+        expected_titles = {
+            "Гонка · Победа с поула",
+            "Гонка · Разные команды в топ-6",
+            "Редкая · Красный флаг",
+            "Гонка · Стартовая топ-3 на подиуме",
+            "Гонка · Три команды на подиуме",
+        }
+
+        self.assertEqual(
+            set(WildcardCardTemplate.objects.filter(title__in=expected_titles).values_list("title", flat=True)),
+            expected_titles,
+        )
+        self.assertEqual(
+            WildcardCardTemplate.objects.get(title="Гонка · Разные команды в топ-6").option_c,
+            "5 и более",
+        )
+        self.assertLess(
+            WildcardCardTemplate.objects.get(title="Редкая · Красный флаг").draw_weight,
+            WildcardCardTemplate.objects.get(title="Гонка · Победа с поула").draw_weight,
+        )
 
     def test_card_is_drawn_only_once_even_after_second_request(self):
         self.client.force_login(self.user)
@@ -166,12 +212,33 @@ class PersonalWildcardTests(TestCase):
         self.assertContains(response, assignment.question.option_a)
         self.assertContains(response, assignment.question.option_b)
 
+    def test_optional_third_answer_can_be_selected_and_rendered(self):
+        self.question.option_c = "Поровну"
+        self.question.save(update_fields=("option_c",))
+        PlayerWildcard.objects.create(
+            event=self.event,
+            user=self.user,
+            question=self.question,
+        )
+        self.client.force_login(self.user)
+
+        answer = self._ajax_post("league:answer_event_wildcard", {"choice": "c"})
+        response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        assignment = PlayerWildcard.objects.get(event=self.event, user=self.user)
+
+        self.assertEqual(answer.status_code, 200)
+        self.assertEqual(assignment.selected_option, EventWildcardQuestion.Option.C)
+        self.assertContains(response, "Поровну")
+        self.assertContains(response, 'value="c"')
+
     def test_library_card_is_copied_to_event_as_a_snapshot(self):
         template = WildcardCardTemplate.objects.create(
             title="Сравнение пилотов",
             question="Кто финиширует выше?",
             option_a="Албон",
             option_b="Сайнс",
+            option_c="Одинаковая позиция",
+            draw_weight=4,
         )
 
         event_card = EventWildcardQuestion.objects.create(
@@ -185,6 +252,8 @@ class PersonalWildcardTests(TestCase):
         self.assertEqual(event_card.question, template.question)
         self.assertEqual(event_card.option_a, template.option_a)
         self.assertEqual(event_card.option_b, template.option_b)
+        self.assertEqual(event_card.option_c, template.option_c)
+        self.assertEqual(event_card.draw_weight, template.draw_weight)
         self.assertEqual(event_card.points, 3)
 
     def test_event_admin_selects_cards_from_library(self):
