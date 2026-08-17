@@ -1,6 +1,8 @@
 ﻿from django import forms
 from django.contrib import admin
+from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.template.response import TemplateResponse
+from django.utils.html import format_html
 
 from .models import (
     DRIVER_CHOICES,
@@ -22,6 +24,7 @@ from .models import (
     TelegramBotState,
     TelegramReminder,
     UserProfile,
+    WildcardCardTemplate,
     WildcardSettings,
 )
 from .scoring import (
@@ -85,6 +88,83 @@ class ResultAdminForm(forms.ModelForm):
         return instance
 
 
+class EventAdminForm(forms.ModelForm):
+    wildcard_card_templates = forms.ModelMultipleChoiceField(
+        label="Карты этого этапа",
+        queryset=WildcardCardTemplate.objects.all(),
+        required=False,
+        widget=FilteredSelectMultiple("карты", is_stacked=False),
+        help_text=(
+            "Выбери минимум 3 карты из библиотеки. Игрок получит случайную тройку "
+            "из этого набора и сам решит, какую карту оставить."
+        ),
+    )
+
+    class Meta:
+        model = Event
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields["wildcard_card_templates"].initial = list(
+                self.instance.wildcard_questions.exclude(source_card=None)
+                .values_list("source_card_id", flat=True)
+            )
+
+    def clean_wildcard_card_templates(self):
+        selected = self.cleaned_data.get("wildcard_card_templates")
+        selected_count = selected.count() if selected is not None else 0
+        legacy_count = 0
+        if self.instance and self.instance.pk:
+            legacy_count = self.instance.wildcard_questions.filter(
+                source_card=None,
+                is_active=True,
+            ).count()
+        total = selected_count + legacy_count
+        if 0 < total < 3:
+            raise forms.ValidationError("Для выбора игрока добавь минимум 3 активные карты.")
+        return selected
+
+    def sync_wildcard_cards(self):
+        if not self.instance.pk or "wildcard_card_templates" not in self.cleaned_data:
+            return
+
+        selected_cards = list(self.cleaned_data["wildcard_card_templates"])
+        selected_ids = {card.id for card in selected_cards}
+        assignments = {
+            item.source_card_id: item
+            for item in self.instance.wildcard_questions.exclude(source_card=None)
+        }
+
+        next_order = self.instance.wildcard_questions.count()
+        for card in selected_cards:
+            assignment = assignments.get(card.id)
+            if assignment:
+                if not assignment.is_active:
+                    assignment.is_active = True
+                    assignment.save(update_fields=("is_active",))
+                continue
+            EventWildcardQuestion.objects.create(
+                event=self.instance,
+                source_card=card,
+                question=card.question,
+                option_a=card.option_a,
+                option_b=card.option_b,
+                sort_order=next_order,
+            )
+            next_order += 1
+
+        for card_id, assignment in assignments.items():
+            if card_id in selected_ids:
+                continue
+            if assignment.draws.exists() or assignment.offer_cards.exists():
+                assignment.is_active = False
+                assignment.save(update_fields=("is_active",))
+            else:
+                assignment.delete()
+
+
 class EventPhotoInline(admin.TabularInline):
     model = EventPhoto
     extra = 1
@@ -99,22 +179,34 @@ class ResultInline(admin.StackedInline):
 
 class EventWildcardQuestionInline(admin.TabularInline):
     model = EventWildcardQuestion
-    extra = 1
-    readonly_fields = ("points",)
+    extra = 0
+    can_delete = False
+    readonly_fields = ("source_card", "card_preview", "points")
     fields = (
         "sort_order",
-        "question",
-        "option_a",
-        "option_b",
+        "source_card",
+        "card_preview",
         "points",
         "is_active",
         "correct_option",
     )
     ordering = ("sort_order", "id")
 
+    @admin.display(description="Содержание карты")
+    def card_preview(self, obj):
+        if not obj or not obj.pk:
+            return "—"
+        return format_html(
+            "<strong>{}</strong><br><small>A: {} · B: {}</small>",
+            obj.question,
+            obj.option_a,
+            obj.option_b,
+        )
+
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
+    form = EventAdminForm
     list_display = ("season_year", "round_number", "name", "has_sprint", "status", "deadline")
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
@@ -128,9 +220,14 @@ class EventAdmin(admin.ModelAdmin):
         "deadline",
         "race_datetime",
         "cover_image",
+        "wildcard_card_templates",
     )
 
     actions = ["preview_and_publish_scores"]
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        form.sync_wildcard_cards()
 
     def preview_and_publish_scores(self, request, queryset):
         if "publish_confirmed" in request.POST:
@@ -307,10 +404,29 @@ class WildcardSettingsAdmin(admin.ModelAdmin):
         return not WildcardSettings.objects.exists()
 
 
+@admin.register(WildcardCardTemplate)
+class WildcardCardTemplateAdmin(admin.ModelAdmin):
+    list_display = ("title", "question", "option_a", "option_b", "is_active", "updated_at")
+    list_filter = ("is_active",)
+    list_editable = ("is_active",)
+    search_fields = ("title", "question", "option_a", "option_b")
+    ordering = ("title", "id")
+    fieldsets = (
+        (
+            "Карточка",
+            {
+                "fields": ("title", "question", "option_a", "option_b", "is_active"),
+                "description": "Создай карту один раз, затем выбирай её в настройках любого этапа.",
+            },
+        ),
+    )
+
+
 @admin.register(EventWildcardQuestion)
 class EventWildcardQuestionAdmin(admin.ModelAdmin):
     list_display = (
         "event",
+        "source_card",
         "question",
         "option_a",
         "option_b",
@@ -321,7 +437,7 @@ class EventWildcardQuestionAdmin(admin.ModelAdmin):
     list_filter = ("event__season_year", "event", "is_active")
     list_editable = ("is_active", "correct_option")
     search_fields = ("event__name", "question", "option_a", "option_b")
-    list_select_related = ("event",)
+    list_select_related = ("event", "source_card")
     ordering = ("-event__season_year", "event__round_number", "sort_order", "id")
     readonly_fields = ("points",)
 

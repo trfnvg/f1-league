@@ -3364,3 +3364,231 @@ body.apex-night-theme .community-wildcard-answer {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Wildcard choice v2: three readable cards instead of an overlapping fan. */
+body.apex-night-theme .wildcard-deck {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.75rem, 2vw, 1.2rem);
+  width: min(100%, 790px);
+  height: auto;
+  min-height: 355px;
+  padding: 1.35rem 0.35rem 0.55rem;
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: min(100%, 232px);
+  justify-self: center;
+  transform: rotate(var(--wildcard-rotation));
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-1 {
+  --wildcard-rotation: -2.5deg;
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-2 {
+  --wildcard-rotation: 0deg;
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-3 {
+  --wildcard-rotation: 2.5deg;
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card:hover:not(.is-picked),
+body.apex-night-theme .wildcard-deck .wildcard-card:focus-visible:not(.is-picked) {
+  transform: translateY(-12px) rotate(var(--wildcard-rotation)) scale(1.015);
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-revealed {
+  z-index: 5;
+  transform: translateY(-8px) rotate(0deg) scale(1.015);
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-picked {
+  z-index: 8;
+  transform: translateY(-14px) rotate(0deg) scale(1.035);
+}
+
+body.apex-night-theme .wildcard-deck .wildcard-card.is-dismissed {
+  transform: translateY(24px) rotate(var(--wildcard-rotation)) scale(0.86);
+}
+
+body.apex-night-theme .wildcard-face-footer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.38rem;
+  align-items: center;
+  width: 100%;
+}
+
+body.apex-night-theme .wildcard-face-footer .wildcard-face-points {
+  justify-self: start;
+  white-space: nowrap;
+}
+
+body.apex-night-theme .wildcard-face-select {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.48rem;
+  border: 1px solid rgba(255, 92, 72, 0.42);
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 51, 38, 0.72), rgba(181, 35, 27, 0.74));
+  font-size: 0.6rem;
+  font-weight: 850;
+  letter-spacing: 0.045em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* Event result table: opaque cells, restrained states and a stable grid. */
+body.apex-night-theme .community-table-viewport {
+  position: relative;
+  background: #0b1016;
+  scrollbar-color: #3a4654 #0b1016;
+}
+
+body.apex-night-theme .community-table {
+  border-collapse: separate !important;
+  border-spacing: 0;
+  table-layout: auto;
+}
+
+body.apex-night-theme .community-table > :not(caption) > * > * {
+  border-right: 1px solid #26313d !important;
+  border-bottom: 1px solid #26313d !important;
+  background-color: #101720 !important;
+  background-image: none !important;
+}
+
+body.apex-night-theme .community-table > :not(caption) > * > *:last-child {
+  border-right: 0 !important;
+}
+
+body.apex-night-theme .community-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  color: #aeb9c5;
+  background-color: #090d12 !important;
+  box-shadow: inset 0 -1px 0 #34404d;
+}
+
+body.apex-night-theme .community-table tbody tr:nth-child(even) td {
+  background-color: #0d141c !important;
+}
+
+body.apex-night-theme .community-table tbody tr:hover td {
+  background-color: #151f2a !important;
+}
+
+body.apex-night-theme .community-table thead th:first-child,
+body.apex-night-theme .community-table tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  min-width: 154px;
+  background-color: #0d141c !important;
+  box-shadow: 10px 0 18px rgba(0, 0, 0, 0.22);
+}
+
+body.apex-night-theme .community-table thead th:first-child {
+  z-index: 6;
+  background-color: #090d12 !important;
+}
+
+body.apex-night-theme .community-table tbody .community-prediction-correct {
+  color: #86e8bb !important;
+  background-color: #10241d !important;
+  box-shadow: inset 0 -2px 0 rgba(88, 218, 158, 0.48);
+}
+
+body.apex-night-theme .community-table tbody .community-prediction-wrong {
+  color: #f0aaa4 !important;
+  background-color: #211519 !important;
+  box-shadow: inset 0 -2px 0 rgba(232, 87, 68, 0.38);
+}
+
+body.apex-night-theme .community-table tbody tr.community-round-winner td:first-child {
+  background-color: #211d13 !important;
+  box-shadow: inset 3px 0 0 var(--apex-amber), 10px 0 18px rgba(0, 0, 0, 0.22);
+}
+
+body.apex-night-theme .community-table .community-score {
+  color: #f5f7fa;
+  border-color: #3a4654;
+  background: #19222d;
+}
+
+/* Mobile standings: the fixed rank column must fully cover scrolling cells. */
+@media (max-width: 768px) {
+  body.apex-night-theme .leaderboard-luxe .table-responsive {
+    isolation: isolate;
+    background-color: #0b1016 !important;
+  }
+
+  body.apex-night-theme .leaderboard-table thead .sticky-col {
+    z-index: 12;
+    background-color: #090d12 !important;
+    background-image: none !important;
+  }
+
+  body.apex-night-theme .leaderboard-table tbody td.sticky-col,
+  body.apex-night-theme .leaderboard-table tbody tr:hover td.sticky-col,
+  body.apex-night-theme .leaderboard-table tbody tr.is-round-winner td.sticky-col {
+    z-index: 10;
+    background-color: #0b1016 !important;
+    background-image: none !important;
+    box-shadow: 9px 0 16px rgba(0, 0, 0, 0.48);
+  }
+
+  body.apex-night-theme .leaderboard-table tbody tr.is-round-winner td.sticky-col {
+    box-shadow: inset 3px 0 0 var(--apex-amber), 9px 0 16px rgba(0, 0, 0, 0.48);
+  }
+
+  body.apex-night-theme .wildcard-deck {
+    display: flex;
+    width: calc(100% + 1.6rem);
+    min-height: 342px;
+    margin-inline: -0.8rem;
+    gap: 0.85rem;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    padding: 1rem max(1rem, calc((100vw - min(74vw, 220px)) / 2)) 0.8rem;
+    scroll-padding-inline: max(1rem, calc((100vw - min(74vw, 220px)) / 2));
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  body.apex-night-theme .wildcard-deck::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.apex-night-theme .wildcard-deck .wildcard-card,
+  body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-1,
+  body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-2,
+  body.apex-night-theme .wildcard-deck .wildcard-card.is-slot-3 {
+    flex: 0 0 min(74vw, 220px);
+    width: min(74vw, 220px);
+    transform: none;
+    scroll-snap-align: center;
+  }
+
+  body.apex-night-theme .wildcard-deck .wildcard-card:hover:not(.is-picked),
+  body.apex-night-theme .wildcard-deck .wildcard-card:focus-visible:not(.is-picked),
+  body.apex-night-theme .wildcard-deck .wildcard-card.is-revealed,
+  body.apex-night-theme .wildcard-deck .wildcard-card.is-picked {
+    transform: translateY(-7px);
+  }
+
+  body.apex-night-theme .wildcard-draw-prompt {
+    padding-inline: 0.4rem;
+    line-height: 1.45;
+  }
+}

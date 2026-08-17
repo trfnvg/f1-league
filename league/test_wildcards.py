@@ -5,15 +5,18 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from .admin import EventAdminForm
 from .duels import create_duel_challenge, respond_to_duel
 from .models import (
     DuelChallenge,
     Event,
     EventWildcardQuestion,
     PlayerWildcard,
+    PlayerWildcardOffer,
     Prediction,
     Result,
     Score,
+    WildcardCardTemplate,
     WildcardSettings,
 )
 from .scoring import publish_event_scores
@@ -43,6 +46,18 @@ class PersonalWildcardTests(TestCase):
             question="Кто финиширует выше?",
             option_a="Леклер",
             option_b="Рассел",
+        )
+        self.question_two = EventWildcardQuestion.objects.create(
+            event=self.event,
+            question="Какая команда наберёт больше очков?",
+            option_a="Ferrari",
+            option_b="Mercedes",
+        )
+        self.question_three = EventWildcardQuestion.objects.create(
+            event=self.event,
+            question="Кто окажется выше в квалификации?",
+            option_a="Норрис",
+            option_b="Пиастри",
         )
 
     def _ajax_post(self, name, data=None):
@@ -87,8 +102,14 @@ class PersonalWildcardTests(TestCase):
 
         self.assertContains(response, "Личная карта этапа")
         self.assertContains(response, 'name="slot"', count=3)
+        self.assertContains(response, "Нажми на каждую карту")
+        self.assertContains(response, "±3 PTS", count=3)
         self.assertContains(response, "/media/wildcard_theme/back.webp")
         self.assertContains(response, "league/wildcard.js")
+
+        offer = PlayerWildcardOffer.objects.get(event=self.event, user=self.user)
+        self.assertEqual(offer.cards.count(), 3)
+        self.assertEqual(PlayerWildcard.objects.filter(event=self.event, user=self.user).count(), 0)
 
     def test_card_is_drawn_only_once_even_after_second_request(self):
         self.client.force_login(self.user)
@@ -98,9 +119,9 @@ class PersonalWildcardTests(TestCase):
 
         EventWildcardQuestion.objects.create(
             event=self.event,
-            question="Какая команда наберёт больше очков?",
-            option_a="Ferrari",
-            option_b="Mercedes",
+            question="Будет ли красный флаг?",
+            option_a="Да",
+            option_b="Нет",
         )
         second = self._ajax_post("league:draw_event_wildcard", {"slot": 3})
         assignment.refresh_from_db()
@@ -137,12 +158,65 @@ class PersonalWildcardTests(TestCase):
     def test_revealed_card_shows_both_answer_labels_on_its_face(self):
         self.client.force_login(self.user)
         self._ajax_post("league:draw_event_wildcard", {"slot": 2})
+        assignment = PlayerWildcard.objects.get(event=self.event, user=self.user)
 
         response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
 
         self.assertContains(response, 'class="wildcard-face-options"')
-        self.assertContains(response, "Леклер")
-        self.assertContains(response, "Рассел")
+        self.assertContains(response, assignment.question.option_a)
+        self.assertContains(response, assignment.question.option_b)
+
+    def test_library_card_is_copied_to_event_as_a_snapshot(self):
+        template = WildcardCardTemplate.objects.create(
+            title="Сравнение пилотов",
+            question="Кто финиширует выше?",
+            option_a="Албон",
+            option_b="Сайнс",
+        )
+
+        event_card = EventWildcardQuestion.objects.create(
+            event=self.event,
+            source_card=template,
+            question="",
+            option_a="",
+            option_b="",
+        )
+
+        self.assertEqual(event_card.question, template.question)
+        self.assertEqual(event_card.option_a, template.option_a)
+        self.assertEqual(event_card.option_b, template.option_b)
+        self.assertEqual(event_card.points, 3)
+
+    def test_event_admin_selects_cards_from_library(self):
+        templates = [
+            WildcardCardTemplate.objects.create(
+                title=f"Библиотечная карта {index}",
+                question=f"Вопрос {index}?",
+                option_a=f"A{index}",
+                option_b=f"B{index}",
+            )
+            for index in range(1, 4)
+        ]
+        form = EventAdminForm(
+            data={
+                "season_year": self.event.season_year,
+                "name": self.event.name,
+                "round_number": self.event.round_number,
+                "status": self.event.status,
+                "deadline": self.event.deadline.strftime("%Y-%m-%d %H:%M:%S"),
+                "race_datetime": self.event.race_datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                "wildcard_card_templates": [template.id for template in templates],
+            },
+            instance=self.event,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        form.sync_wildcard_cards()
+
+        selected = self.event.wildcard_questions.filter(source_card__in=templates)
+        self.assertEqual(selected.count(), 3)
+        self.assertTrue(all(item.points == 3 for item in selected))
 
     def test_correct_card_adds_points_but_does_not_decide_duel(self):
         self.question.correct_option = EventWildcardQuestion.Option.A
@@ -166,15 +240,36 @@ class PersonalWildcardTests(TestCase):
         row = next(item for item in rows if item["user_id"] == self.user.id)
 
         self.assertTrue(assignment.is_correct)
-        self.assertEqual(score.prediction_points, 5)
-        self.assertEqual(score.points, 5)
-        self.assertEqual(score.breakdown["Личная карта этапа"], 5)
-        self.assertEqual(row["wildcard_points"], 5)
+        self.assertEqual(score.prediction_points, 3)
+        self.assertEqual(score.points, 3)
+        self.assertEqual(score.breakdown["Личная карта этапа"], 3)
+        self.assertEqual(row["wildcard_points"], 3)
         self.assertEqual(row["duel_prediction_points"], 0)
         self.assertEqual(duel.status, DuelChallenge.Status.SETTLED)
         self.assertIsNone(duel.winner)
         self.assertEqual(duel.challenger_prediction_points, 0)
         self.assertEqual(duel.opponent_prediction_points, 0)
+
+    def test_wrong_card_subtracts_three_points(self):
+        self.question.correct_option = EventWildcardQuestion.Option.B
+        self.question.save(update_fields=("correct_option",))
+        PlayerWildcard.objects.create(
+            event=self.event,
+            user=self.user,
+            question=self.question,
+            selected_option=EventWildcardQuestion.Option.A,
+            answered_at=timezone.now(),
+        )
+        self._prediction(self.user)
+        self._result()
+
+        _, rows = publish_event_scores(self.event)
+        score = Score.objects.get(event=self.event, user=self.user)
+
+        self.assertEqual(score.prediction_points, -3)
+        self.assertEqual(score.points, -3)
+        self.assertEqual(score.breakdown["Личная карта этапа"], -3)
+        self.assertEqual(rows[0]["wildcard_points"], -3)
 
     def test_scoring_requires_result_for_every_answered_card(self):
         PlayerWildcard.objects.create(
@@ -209,4 +304,4 @@ class PersonalWildcardTests(TestCase):
 
         self.assertContains(response, "Карта сыграла")
         self.assertContains(response, "Правильный ответ: Рассел")
-        self.assertContains(response, "+5 очков")
+        self.assertContains(response, "+3 очка")

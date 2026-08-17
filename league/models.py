@@ -215,6 +215,28 @@ class WildcardSettings(models.Model):
         return "Общее оформление личных карт"
 
 
+class WildcardCardTemplate(models.Model):
+    title = models.CharField(
+        "Название в библиотеке",
+        max_length=120,
+        help_text="Короткое название только для удобного поиска в админке.",
+    )
+    question = models.CharField("Вопрос", max_length=240)
+    option_a = models.CharField("Вариант A", max_length=120)
+    option_b = models.CharField("Вариант B", max_length=120)
+    is_active = models.BooleanField("Можно добавлять в этапы", default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("title", "id")
+        verbose_name = "Шаблон личной карты"
+        verbose_name_plural = "Библиотека личных карт"
+
+    def __str__(self):
+        return self.title
+
+
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
     avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)
@@ -289,6 +311,15 @@ class EventWildcardQuestion(models.Model):
         B = "b", "Вариант B"
 
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="wildcard_questions")
+    source_card = models.ForeignKey(
+        WildcardCardTemplate,
+        on_delete=models.SET_NULL,
+        related_name="event_assignments",
+        verbose_name="Карта из библиотеки",
+        null=True,
+        blank=True,
+        help_text="Текст и варианты копируются в этап, чтобы история не менялась при редактировании шаблона.",
+    )
     question = models.CharField("Вопрос", max_length=240)
     option_a = models.CharField("Вариант A", max_length=120)
     option_b = models.CharField("Вариант B", max_length=120)
@@ -302,7 +333,7 @@ class EventWildcardQuestion(models.Model):
     )
     points = models.PositiveSmallIntegerField(
         "Очки",
-        default=5,
+        default=3,
         editable=False,
         validators=(MinValueValidator(1), MaxValueValidator(10)),
     )
@@ -312,14 +343,29 @@ class EventWildcardQuestion(models.Model):
 
     class Meta:
         ordering = ("sort_order", "id")
-        verbose_name = "Личная карта этапа"
-        verbose_name_plural = "Личные карты этапов"
+        verbose_name = "Карта этапа"
+        verbose_name_plural = "Карты этапов и правильные ответы"
         indexes = [
             models.Index(fields=("event", "is_active"), name="wildcard_event_active_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "source_card"),
+                name="unique_wildcard_template_per_event",
+            ),
         ]
 
     def __str__(self):
         return f"{self.event}: {self.question}"
+
+    def save(self, *args, **kwargs):
+        if self.source_card_id:
+            source = self.source_card
+            self.question = source.question
+            self.option_a = source.option_a
+            self.option_b = source.option_b
+        self.points = 3
+        super().save(*args, **kwargs)
 
     def answer_for(self, option):
         if option == self.Option.A:
@@ -384,7 +430,64 @@ class PlayerWildcard(models.Model):
 
     @property
     def awarded_points(self):
-        return self.question.points if self.is_correct else 0
+        if not self.selected_option or not self.question.correct_option:
+            return 0
+        return self.question.points if self.is_correct else -self.question.points
+
+
+class PlayerWildcardOffer(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="wildcard_offers")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wildcard_offers")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("event", "user__username")
+        verbose_name = "Персональная тройка карт"
+        verbose_name_plural = "Персональные тройки карт"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "user"),
+                name="unique_wildcard_offer_per_event_user",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} — {self.event}"
+
+
+class PlayerWildcardOfferCard(models.Model):
+    offer = models.ForeignKey(
+        PlayerWildcardOffer,
+        on_delete=models.CASCADE,
+        related_name="cards",
+    )
+    question = models.ForeignKey(
+        EventWildcardQuestion,
+        on_delete=models.RESTRICT,
+        related_name="offer_cards",
+    )
+    slot = models.PositiveSmallIntegerField(
+        "Позиция карты",
+        validators=(MinValueValidator(1), MaxValueValidator(3)),
+    )
+
+    class Meta:
+        ordering = ("slot",)
+        verbose_name = "Карта в персональной тройке"
+        verbose_name_plural = "Карты в персональной тройке"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("offer", "slot"),
+                name="unique_wildcard_offer_slot",
+            ),
+            models.UniqueConstraint(
+                fields=("offer", "question"),
+                name="unique_wildcard_offer_question",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.offer}: карта {self.slot}"
 
 
 class Result(models.Model):
