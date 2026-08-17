@@ -1,6 +1,6 @@
 ﻿from django import forms
 from django.contrib import admin
-from django.contrib.admin.widgets import FilteredSelectMultiple
+from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils.html import format_html
 
@@ -90,16 +90,54 @@ class ResultAdminForm(forms.ModelForm):
         return instance
 
 
+class WildcardTemplateSelect(forms.Select):
+    """Expose card copy to the admin preview without an extra request."""
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        card = getattr(value, "instance", None)
+        if card is not None:
+            option["attrs"].update(
+                {
+                    "data-card-title": card.title,
+                    "data-card-question": card.question,
+                    "data-card-option-a": card.option_a,
+                    "data-card-option-b": card.option_b,
+                    "data-card-option-c": card.option_c,
+                }
+            )
+        return option
+
+
+class WildcardTemplateChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, card):
+        state = "" if card.is_active else " · неактивна"
+        return f"{card.title} — {card.question}{state}"
+
+
 class EventAdminForm(forms.ModelForm):
-    wildcard_card_templates = forms.ModelMultipleChoiceField(
-        label="Карты этого этапа",
-        queryset=WildcardCardTemplate.objects.all(),
+    wildcard_field_names = ("wildcard_card_1", "wildcard_card_2", "wildcard_card_3")
+
+    wildcard_card_1 = WildcardTemplateChoiceField(
+        label="Карта 1",
+        queryset=WildcardCardTemplate.objects.none(),
         required=False,
-        widget=FilteredSelectMultiple("карты", is_stacked=False),
-        help_text=(
-            "Выбери минимум 3 карты из библиотеки. Для этапа один раз случайно формируется "
-            "общая тройка: все игроки увидят одинаковые карты в одинаковом порядке."
-        ),
+        widget=WildcardTemplateSelect,
+        empty_label="Выбери первую карту",
+    )
+    wildcard_card_2 = WildcardTemplateChoiceField(
+        label="Карта 2",
+        queryset=WildcardCardTemplate.objects.none(),
+        required=False,
+        widget=WildcardTemplateSelect,
+        empty_label="Выбери вторую карту",
+    )
+    wildcard_card_3 = WildcardTemplateChoiceField(
+        label="Карта 3",
+        queryset=WildcardCardTemplate.objects.none(),
+        required=False,
+        widget=WildcardTemplateSelect,
+        empty_label="Выбери третью карту",
     )
 
     class Meta:
@@ -108,67 +146,110 @@ class EventAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            self.fields["wildcard_card_templates"].initial = list(
-                self.instance.wildcard_questions.exclude(source_card=None)
-                .values_list("source_card_id", flat=True)
-            )
+        cards = WildcardCardTemplate.objects.order_by("title", "id")
+        for field_name in self.wildcard_field_names:
+            self.fields[field_name].queryset = cards
 
-    def clean_wildcard_card_templates(self):
-        selected = self.cleaned_data.get("wildcard_card_templates")
-        selected_count = selected.count() if selected is not None else 0
-        legacy_count = 0
         if self.instance and self.instance.pk:
-            legacy_count = self.instance.wildcard_questions.filter(
-                source_card=None,
-                is_active=True,
-            ).count()
-        total = selected_count + legacy_count
-        if 0 < total < 3:
-            raise forms.ValidationError("Для выбора игрока добавь минимум 3 активные карты.")
-        return selected
+            for slot, template_id in enumerate(self._current_template_ids(), start=1):
+                if template_id:
+                    self.fields[f"wildcard_card_{slot}"].initial = template_id
 
+    def _current_template_ids(self):
+        if not self.instance or not self.instance.pk:
+            return []
+        return list(
+            EventWildcardDeckCard.objects.filter(deck__event=self.instance)
+            .order_by("slot")
+            .values_list("question__source_card_id", flat=True)
+        )
+
+    def selected_wildcard_cards(self):
+        return [self.cleaned_data.get(field_name) for field_name in self.wildcard_field_names]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        selected_cards = self.selected_wildcard_cards()
+        selected_count = sum(card is not None for card in selected_cards)
+
+        if selected_count not in (0, 3):
+            raise forms.ValidationError("Выбери все три карты этапа — по одной карте в каждом слоте.")
+
+        selected_ids = [card.pk for card in selected_cards if card is not None]
+        if len(selected_ids) != len(set(selected_ids)):
+            raise forms.ValidationError("В тройке не должно быть одинаковых карт.")
+
+        if selected_ids and self.instance and self.instance.pk:
+            current_ids = [item for item in self._current_template_ids() if item]
+            if current_ids != selected_ids and self.instance.player_wildcards.exists():
+                raise forms.ValidationError(
+                    "Состав карт уже нельзя изменить: хотя бы один игрок выбрал карту на этом этапе."
+                )
+        return cleaned_data
+
+    @transaction.atomic
     def sync_wildcard_cards(self):
-        if not self.instance.pk or "wildcard_card_templates" not in self.cleaned_data:
+        if not self.instance.pk:
             return
 
-        selected_cards = list(self.cleaned_data["wildcard_card_templates"])
-        selected_ids = {card.id for card in selected_cards}
+        selected_cards = self.selected_wildcard_cards()
+        if not all(selected_cards):
+            return
+
+        current_ids = [item for item in self._current_template_ids() if item]
+        selected_ids_in_order = [card.pk for card in selected_cards]
+        if current_ids == selected_ids_in_order:
+            return
+
+        # The form already explains this case. The second check closes the
+        # small race between validation and save without rewriting live picks.
+        if self.instance.player_wildcards.exists():
+            return
+
+        selected_ids = set(selected_ids_in_order)
         assignments = {
             item.source_card_id: item
             for item in self.instance.wildcard_questions.exclude(source_card=None)
         }
 
-        next_order = self.instance.wildcard_questions.count()
-        for card in selected_cards:
+        selected_assignments = []
+        for slot, card in enumerate(selected_cards, start=1):
             assignment = assignments.get(card.id)
             if assignment:
-                if not assignment.is_active:
-                    assignment.is_active = True
-                    assignment.save(update_fields=("is_active",))
-                continue
-            EventWildcardQuestion.objects.create(
-                event=self.instance,
-                source_card=card,
-                question=card.question,
-                option_a=card.option_a,
-                option_b=card.option_b,
-                option_c=card.option_c,
-                draw_weight=card.draw_weight,
-                sort_order=next_order,
-            )
-            next_order += 1
+                EventWildcardQuestion.objects.filter(pk=assignment.pk).update(
+                    is_active=True,
+                    sort_order=slot,
+                )
+            else:
+                assignment = EventWildcardQuestion.objects.create(
+                    event=self.instance,
+                    source_card=card,
+                    question=card.question,
+                    option_a=card.option_a,
+                    option_b=card.option_b,
+                    option_c=card.option_c,
+                    draw_weight=card.draw_weight,
+                    sort_order=slot,
+                )
+            selected_assignments.append(assignment)
+
+        # Offers without a final player choice contain no gameplay data. Drop
+        # them so every player receives the newly selected shared trio.
+        self.instance.wildcard_offers.all().delete()
+        deck, _ = EventWildcardDeck.objects.get_or_create(event=self.instance)
+        deck.cards.all().delete()
+        EventWildcardDeckCard.objects.bulk_create(
+            [
+                EventWildcardDeckCard(deck=deck, question=assignment, slot=slot)
+                for slot, assignment in enumerate(selected_assignments, start=1)
+            ]
+        )
 
         for card_id, assignment in assignments.items():
             if card_id in selected_ids:
                 continue
-            if (
-                assignment.draws.exists()
-                or assignment.offer_cards.exists()
-                or assignment.shared_deck_cards.exists()
-            ):
-                assignment.is_active = False
-                assignment.save(update_fields=("is_active",))
+            if assignment.draws.exists():
+                EventWildcardQuestion.objects.filter(pk=assignment.pk).update(is_active=False)
             else:
                 assignment.delete()
 
@@ -215,27 +296,63 @@ class EventWildcardQuestionInline(admin.TabularInline):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     form = EventAdminForm
-    list_display = ("season_year", "round_number", "name", "has_sprint", "status", "deadline")
+    list_display = (
+        "season_year",
+        "round_number",
+        "name",
+        "has_sprint",
+        "status",
+        "wildcard_deck_status",
+        "deadline",
+    )
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
     inlines = [EventPhotoInline, EventWildcardQuestionInline, ResultInline]
-    fields = (
-        "season_year",
-        "name",
-        "round_number",
-        "has_sprint",
-        "status",
-        "deadline",
-        "race_datetime",
-        "cover_image",
-        "wildcard_card_templates",
+    fieldsets = (
+        (
+            "Этап",
+            {
+                "fields": (
+                    "season_year",
+                    "name",
+                    "round_number",
+                    "has_sprint",
+                    "status",
+                    "deadline",
+                    "race_datetime",
+                    "cover_image",
+                ),
+            },
+        ),
+        (
+            "Три карты для всех игроков",
+            {
+                "fields": ("wildcard_card_1", "wildcard_card_2", "wildcard_card_3"),
+                "classes": ("wide", "wildcard-deck-fieldset"),
+                "description": (
+                    "Выбери ровно три разные карты из библиотеки. Они появятся у всех игроков "
+                    "в указанном порядке. После первого выбора игрока тройка блокируется."
+                ),
+            },
+        ),
     )
+
+    class Media:
+        css = {"all": ("league/admin-wildcards.css",)}
+        js = ("league/admin-wildcards.js",)
 
     actions = ["preview_and_publish_scores"]
 
     def save_related(self, request, form, formsets, change):
         super().save_related(request, form, formsets, change)
         form.sync_wildcard_cards()
+
+    @admin.display(description="Карты")
+    def wildcard_deck_status(self, obj):
+        card_count = EventWildcardDeckCard.objects.filter(deck__event=obj).count()
+        state = "is-ready" if card_count == 3 else "is-missing"
+        label = "3 / 3" if card_count == 3 else "Не выбраны"
+        return format_html('<span class="wildcard-deck-status {}">{}</span>', state, label)
 
     def preview_and_publish_scores(self, request, queryset):
         if "publish_confirmed" in request.POST:
@@ -420,12 +537,11 @@ class WildcardCardTemplateAdmin(admin.ModelAdmin):
         "option_a",
         "option_b",
         "option_c",
-        "draw_weight",
         "is_active",
         "updated_at",
     )
     list_filter = ("is_active",)
-    list_editable = ("draw_weight", "is_active")
+    list_editable = ("is_active",)
     search_fields = ("title", "question", "option_a", "option_b", "option_c")
     ordering = ("title", "id")
     fieldsets = (
@@ -438,7 +554,6 @@ class WildcardCardTemplateAdmin(admin.ModelAdmin):
                     "option_a",
                     "option_b",
                     "option_c",
-                    "draw_weight",
                     "is_active",
                 ),
                 "description": "Создай карту один раз, затем выбирай её в настройках любого этапа.",
@@ -456,7 +571,6 @@ class EventWildcardQuestionAdmin(admin.ModelAdmin):
         "option_a",
         "option_b",
         "option_c",
-        "draw_weight",
         "points",
         "is_active",
         "correct_option",
@@ -494,6 +608,10 @@ class EventWildcardDeckAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+    def get_model_perms(self, request):
+        """The shared deck is managed from the event form, not as a second UI."""
+        return {}
 
 
 @admin.register(PlayerWildcard)

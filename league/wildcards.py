@@ -1,12 +1,9 @@
-import secrets
-
 from django.db import transaction
 from django.utils import timezone
 
 from .models import (
     Event,
     EventWildcardDeck,
-    EventWildcardDeckCard,
     EventWildcardQuestion,
     PlayerWildcard,
     PlayerWildcardOffer,
@@ -23,59 +20,11 @@ def _ensure_open(event):
         raise WildcardActionError("Личные карты закрываются вместе с дедлайном прогнозов.")
 
 
-def _weighted_sample(questions, count):
-    """Choose distinct questions while respecting their configured rarity."""
-    remaining = list(questions)
-    selected = []
-    for _ in range(count):
-        total_weight = sum(max(1, item.draw_weight) for item in remaining)
-        marker = secrets.randbelow(total_weight)
-        cursor = 0
-        for index, question in enumerate(remaining):
-            cursor += max(1, question.draw_weight)
-            if marker < cursor:
-                selected.append(remaining.pop(index))
-                break
-    return selected
-
-
-def _get_or_create_shared_deck(event):
+def _get_shared_deck(event):
     deck = EventWildcardDeck.objects.filter(event=event).prefetch_related("cards__question").first()
     if deck and deck.cards.count() == 3:
         return deck
-
-    if deck:
-        deck.cards.all().delete()
-
-    questions = list(
-        EventWildcardQuestion.objects.filter(event=event, is_active=True).order_by("id")
-    )
-    if len(questions) < 3:
-        raise WildcardActionError("Для этапа нужно подготовить минимум три активные карты.")
-
-    # If this stage already had offers under the old personal-random logic,
-    # preserve the earliest trio as the shared deck and align later players to it.
-    legacy_offer = (
-        PlayerWildcardOffer.objects.filter(event=event)
-        .prefetch_related("cards__question")
-        .order_by("created_at", "id")
-        .first()
-    )
-    legacy_cards = list(legacy_offer.cards.all()) if legacy_offer else []
-    if len(legacy_cards) == 3:
-        selected = [item.question for item in legacy_cards]
-    else:
-        selected = _weighted_sample(questions, 3)
-
-    if not deck:
-        deck = EventWildcardDeck.objects.create(event=event)
-    EventWildcardDeckCard.objects.bulk_create(
-        [
-            EventWildcardDeckCard(deck=deck, question=question, slot=slot)
-            for slot, question in enumerate(selected, start=1)
-        ]
-    )
-    return EventWildcardDeck.objects.prefetch_related("cards__question").get(pk=deck.pk)
+    raise WildcardActionError("Администратор ещё не выбрал три карты для этого этапа.")
 
 
 @transaction.atomic
@@ -90,7 +39,7 @@ def get_or_create_wildcard_offer(event, user):
         return existing, False
 
     _ensure_open(locked_event)
-    deck = _get_or_create_shared_deck(locked_event)
+    deck = _get_shared_deck(locked_event)
     shared_cards = list(deck.cards.all())
 
     if existing:
