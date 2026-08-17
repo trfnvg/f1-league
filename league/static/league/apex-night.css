@@ -257,10 +257,24 @@ body.apex-night-theme .nav-chip {
   box-shadow: none;
 }
 
-body.apex-night-theme .site-menu-btn:hover,
 body.apex-night-theme .nav-chip:hover {
   border-color: rgba(255, 255, 255, 0.4) !important;
   background: rgba(255, 255, 255, 0.09) !important;
+}
+
+body.apex-night-theme.editorial-theme .site-menu-btn,
+body.apex-night-theme.editorial-theme .site-menu-btn:hover,
+body.apex-night-theme.editorial-theme .site-menu-btn:focus,
+body.apex-night-theme.editorial-theme .site-menu-btn:focus-visible,
+body.apex-night-theme.editorial-theme .site-menu-btn:active,
+body.apex-night-theme.editorial-theme .site-menu-btn:first-child:active,
+body.apex-night-theme.editorial-theme .site-menu-btn.show {
+  color: var(--apex-ink) !important;
+  border-color: var(--apex-line-strong) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  box-shadow: none !important;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body.apex-night-theme.editorial-theme .nav-chip-primary {

@@ -16,6 +16,14 @@
     background: linear-gradient(180deg, rgba(17, 24, 33, 0.55), rgba(13, 18, 26, 0.62));
   }
 
+  .leaderboard-scroll-x {
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .rank-chip {
     min-width: 30px;
     min-height: 30px;
@@ -138,7 +146,7 @@
 {% endif %}
 
 <section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
-  <div class="table-responsive" style="max-height: 72vh;">
+  <div class="table-responsive leaderboard-scroll-x">
     <table class="table table-sm align-middle leaderboard-table">
       <thead>
         <tr>
