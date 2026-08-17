@@ -112,6 +112,7 @@ def _wildcard_payload(assignment):
         "question": question.question,
         "option_a": question.option_a,
         "option_b": question.option_b,
+        "option_c": question.option_c,
         "points": question.points,
         "selected_option": assignment.selected_option,
     }

@@ -263,9 +263,9 @@
 >
   <div class="wildcard-heading">
     <div>
-      <span class="wildcard-kicker">Personal wildcard · R{{ event.round_number }}</span>
-      <h2>Личная карта этапа</h2>
-      <p>Переверни все три карты, изучи задания и оставь одну. Верный ответ принесёт 3 очка, ошибка снимет 3.</p>
+      <span class="wildcard-kicker">Shared wildcard · R{{ event.round_number }}</span>
+      <h2>Карты этапа</h2>
+      <p>У всех игроков одна тройка. Переверни карты, изучи задания и оставь одну: верный ответ даст 3 очка, ошибка снимет 3.</p>
     </div>
     <div class="wildcard-reward"><span>Риск</span><strong>±3</strong><small>очка</small></div>
   </div>
@@ -289,9 +289,10 @@
               <span class="wildcard-face-kicker">Твоя категория</span>
               <strong class="wildcard-face-question">{{ wildcard_assignment.question.question }}</strong>
               <span class="wildcard-face-divider">Выбери</span>
-              <span class="wildcard-face-options" aria-label="Варианты ответа">
+              <span class="wildcard-face-options{% if wildcard_assignment.question.option_c %} has-three-options{% endif %}" aria-label="Варианты ответа">
                 <span class="wildcard-face-option"><small>A</small><b>{{ wildcard_assignment.question.option_a }}</b></span>
                 <span class="wildcard-face-option"><small>B</small><b>{{ wildcard_assignment.question.option_b }}</b></span>
+                {% if wildcard_assignment.question.option_c %}<span class="wildcard-face-option"><small>C</small><b>{{ wildcard_assignment.question.option_c }}</b></span>{% endif %}
               </span>
               <span class="wildcard-face-points">±{{ wildcard_assignment.question.points }} PTS</span>
             </span>
@@ -329,7 +330,7 @@
             {% if wildcard_assignment.selected_option %}Ответ сохранён — его можно изменить до дедлайна.{% else %}Выбери один вариант.{% endif %}
           </strong>
         </div>
-        <div class="wildcard-answer-options">
+        <div class="wildcard-answer-options{% if wildcard_assignment.question.option_c %} has-three-options{% endif %}">
           <button
             type="submit"
             name="choice"
@@ -344,6 +345,15 @@
             class="wildcard-option{% if wildcard_assignment.selected_option == 'b' %} is-selected{% endif %}{% if state == 'scored' and wildcard_assignment.question.correct_option == 'b' %} is-correct{% elif state == 'scored' and wildcard_assignment.selected_option == 'b' %} is-wrong{% endif %}"
             {% if state != "open" %}disabled{% endif %}
           ><span>B</span><strong>{{ wildcard_assignment.question.option_b }}</strong></button>
+          {% if wildcard_assignment.question.option_c %}
+            <button
+              type="submit"
+              name="choice"
+              value="c"
+              class="wildcard-option{% if wildcard_assignment.selected_option == 'c' %} is-selected{% endif %}{% if state == 'scored' and wildcard_assignment.question.correct_option == 'c' %} is-correct{% elif state == 'scored' and wildcard_assignment.selected_option == 'c' %} is-wrong{% endif %}"
+              {% if state != "open" %}disabled{% endif %}
+            ><span>C</span><strong>{{ wildcard_assignment.question.option_c }}</strong></button>
+          {% endif %}
         </div>
       </form>
     </div>
@@ -378,9 +388,10 @@
                   <span class="wildcard-face-kicker">Карта {{ offered_card.slot }} · категория</span>
                   <strong class="wildcard-face-question">{{ offered_card.question.question }}</strong>
                   <span class="wildcard-face-divider">Выбери</span>
-                  <span class="wildcard-face-options" aria-label="Варианты ответа">
+                  <span class="wildcard-face-options{% if offered_card.question.option_c %} has-three-options{% endif %}" aria-label="Варианты ответа">
                     <span class="wildcard-face-option"><small>A</small><b>{{ offered_card.question.option_a }}</b></span>
                     <span class="wildcard-face-option"><small>B</small><b>{{ offered_card.question.option_b }}</b></span>
+                    {% if offered_card.question.option_c %}<span class="wildcard-face-option"><small>C</small><b>{{ offered_card.question.option_c }}</b></span>{% endif %}
                   </span>
                   <span class="wildcard-face-footer">
                     <span class="wildcard-face-points">±{{ offered_card.question.points }} PTS</span>
@@ -406,9 +417,10 @@
           <span>Карта закреплена</span>
           <strong data-wildcard-status aria-live="polite">Теперь выбери ответ.</strong>
         </div>
-        <div class="wildcard-answer-options">
+        <div class="wildcard-answer-options" data-wildcard-answer-options>
           <button type="submit" name="choice" value="a" class="wildcard-option"><span>A</span><strong data-option-label="a"></strong></button>
           <button type="submit" name="choice" value="b" class="wildcard-option"><span>B</span><strong data-option-label="b"></strong></button>
+          <button type="submit" name="choice" value="c" class="wildcard-option" data-option-button="c" hidden><span>C</span><strong data-option-label="c"></strong></button>
         </div>
       </form>
     </div>

@@ -2,6 +2,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
@@ -224,6 +225,19 @@ class WildcardCardTemplate(models.Model):
     question = models.CharField("Вопрос", max_length=240)
     option_a = models.CharField("Вариант A", max_length=120)
     option_b = models.CharField("Вариант B", max_length=120)
+    option_c = models.CharField(
+        "Вариант C",
+        max_length=120,
+        blank=True,
+        default="",
+        help_text="Необязательно. Оставь пустым для обычной карты с двумя ответами.",
+    )
+    draw_weight = models.PositiveSmallIntegerField(
+        "Частота выпадения",
+        default=10,
+        validators=(MinValueValidator(1), MaxValueValidator(100)),
+        help_text="10 — обычная карта. Чем меньше число, тем реже карта попадает в общую тройку этапа.",
+    )
     is_active = models.BooleanField("Можно добавлять в этапы", default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -309,6 +323,7 @@ class EventWildcardQuestion(models.Model):
     class Option(models.TextChoices):
         A = "a", "Вариант A"
         B = "b", "Вариант B"
+        C = "c", "Вариант C"
 
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="wildcard_questions")
     source_card = models.ForeignKey(
@@ -323,6 +338,7 @@ class EventWildcardQuestion(models.Model):
     question = models.CharField("Вопрос", max_length=240)
     option_a = models.CharField("Вариант A", max_length=120)
     option_b = models.CharField("Вариант B", max_length=120)
+    option_c = models.CharField("Вариант C", max_length=120, blank=True, default="")
     correct_option = models.CharField(
         "Правильный вариант",
         max_length=1,
@@ -336,6 +352,11 @@ class EventWildcardQuestion(models.Model):
         default=3,
         editable=False,
         validators=(MinValueValidator(1), MaxValueValidator(10)),
+    )
+    draw_weight = models.PositiveSmallIntegerField(
+        "Частота выпадения",
+        default=10,
+        validators=(MinValueValidator(1), MaxValueValidator(100)),
     )
     is_active = models.BooleanField("Участвует в розыгрыше", default=True)
     sort_order = models.PositiveIntegerField("Порядок", default=0)
@@ -364,15 +385,77 @@ class EventWildcardQuestion(models.Model):
             self.question = source.question
             self.option_a = source.option_a
             self.option_b = source.option_b
+            self.option_c = source.option_c
+            self.draw_weight = source.draw_weight
         self.points = 3
         super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        if self.correct_option == self.Option.C and not self.option_c:
+            raise ValidationError({"correct_option": "У этой карты не заполнен вариант C."})
 
     def answer_for(self, option):
         if option == self.Option.A:
             return self.option_a
         if option == self.Option.B:
             return self.option_b
+        if option == self.Option.C:
+            return self.option_c
         return ""
+
+
+class EventWildcardDeck(models.Model):
+    event = models.OneToOneField(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="wildcard_deck",
+        verbose_name="Этап",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-event__season_year", "event__round_number")
+        verbose_name = "Общая тройка карт этапа"
+        verbose_name_plural = "Общие тройки карт этапов"
+
+    def __str__(self):
+        return f"Общая тройка — {self.event}"
+
+
+class EventWildcardDeckCard(models.Model):
+    deck = models.ForeignKey(
+        EventWildcardDeck,
+        on_delete=models.CASCADE,
+        related_name="cards",
+    )
+    question = models.ForeignKey(
+        EventWildcardQuestion,
+        on_delete=models.RESTRICT,
+        related_name="shared_deck_cards",
+    )
+    slot = models.PositiveSmallIntegerField(
+        "Позиция карты",
+        validators=(MinValueValidator(1), MaxValueValidator(3)),
+    )
+
+    class Meta:
+        ordering = ("slot",)
+        verbose_name = "Карта в общей тройке"
+        verbose_name_plural = "Карты в общей тройке"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("deck", "slot"),
+                name="unique_wildcard_deck_slot",
+            ),
+            models.UniqueConstraint(
+                fields=("deck", "question"),
+                name="unique_wildcard_deck_question",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.deck}: карта {self.slot}"
 
 
 class PlayerWildcard(models.Model):
