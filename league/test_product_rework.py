@@ -314,6 +314,8 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertEqual(statistics["podium_accuracy"], 83)
         self.assertEqual(statistics["pole_accuracy"], 50)
         self.assertEqual(statistics["favorite_driver"], "Норрис (McLaren)")
+        self.assertEqual(statistics["best_event_name"], "First GP")
+        self.assertEqual(statistics["best_event_round"], 1)
         self.assertIsNotNone(statistics["strongest_category"])
         self.assertIsNotNone(statistics["weakest_category"])
 
@@ -321,6 +323,14 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Точность прогнозов")
         self.assertContains(response, "Любимый пилот")
         self.assertContains(response, "Норрис (McLaren)")
+        self.assertContains(response, "R1 · First GP")
+        self.assertNotContains(response, "Зона роста")
+
+        participants_response = self.client.get(reverse("league:participants"))
+        self.assertNotContains(
+            participants_response,
+            '<div class="participant-stat-label">Сезонный предикт</div>',
+        )
 
     def test_duel_compares_scores_rounds_and_accuracy(self):
         player_a = User.objects.create_user("Alpha")

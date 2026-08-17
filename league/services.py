@@ -193,11 +193,21 @@ def build_player_statistics(player, season_year, leaderboard=None):
     scores_map = leaderboard["scores_map"]
     player_scores = [scores_map.get((player.id, event.id)) for event in scored_events]
     points = [score.points if score else 0 for score in player_scores]
+    scored_entries = [
+        (event, score)
+        for event, score in zip(scored_events, player_scores)
+        if score is not None
+    ]
     submitted = Prediction.objects.filter(user=player, event__season_year=season_year).count()
 
     total = sum(points)
-    best = max(points, default=0)
-    worst = min(points, default=0)
+    best_entry = max(
+        scored_entries,
+        key=lambda item: (item[1].points, item[0].round_number),
+        default=None,
+    )
+    best = best_entry[1].points if best_entry else 0
+    worst = min((score.points for _, score in scored_entries), default=0)
     average = round(total / len(scored_events), 1) if scored_events else 0
     stage_wins = 0
     exact_hits = 0
@@ -331,6 +341,8 @@ def build_player_statistics(player, season_year, leaderboard=None):
         "total": total,
         "average": average,
         "best": best,
+        "best_event_name": best_entry[0].name if best_entry else "",
+        "best_event_round": best_entry[0].round_number if best_entry else None,
         "worst": worst,
         "stage_wins": stage_wins,
         "exact_hits": exact_hits,
