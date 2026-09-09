@@ -46,7 +46,9 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 # never committed to the repository.
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@")
-TELEGRAM_WORKER_ENABLED = os.getenv("TELEGRAM_WORKER_ENABLED", "True").lower() == "true"
+# Telegram integration is currently paused.  The worker is no longer started
+# by the application; keep this flag false by default for any manual command.
+TELEGRAM_WORKER_ENABLED = os.getenv("TELEGRAM_WORKER_ENABLED", "False").lower() == "true"
 TELEGRAM_API_BASE_URL = os.getenv("TELEGRAM_API_BASE_URL", "https://api.telegram.org").strip().rstrip("/")
 TELEGRAM_PROXY_SECRET = os.getenv("TELEGRAM_PROXY_SECRET", "").strip()
 SITE_URL = os.getenv("SITE_URL", "").strip()

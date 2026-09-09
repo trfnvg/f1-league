@@ -44,14 +44,6 @@ from .services import (
     build_player_statistics,
     get_selected_season,
 )
-from .telegram_bot import (
-    TelegramAPIError,
-    bot_is_configured,
-    get_bot_username,
-    notify_duel_accepted,
-    notify_duel_challenge,
-    notify_prediction_saved,
-)
 from .wildcards import (
     WildcardActionError,
     answer_wildcard,
@@ -303,21 +295,6 @@ def register(request):
     return render(request, "registration/register.html", {"form": form, "next": next_url})
 
 
-@login_required(login_url="login")
-def connect_telegram(request):
-    bot_username = get_bot_username()
-    if not bot_username:
-        messages.error(request, "Telegram-бот ещё не настроен администрацией сайта.")
-        return redirect("league:player_profile", user_id=request.user.id)
-
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    connect_url = (
-        f"https://t.me/{bot_username}"
-        f"?start={profile.telegram_link_token}"
-    )
-    return redirect(connect_url)
-
-
 def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
     photos = event.photos.all()
@@ -373,11 +350,6 @@ def event_detail(request, event_id: int):
             new_prediction.user = request.user
             new_prediction.event = event
             new_prediction.save()
-            try:
-                notify_prediction_saved(new_prediction)
-            except TelegramAPIError:
-                # Telegram must never prevent the prediction itself from being saved.
-                logger.exception("Could not send prediction confirmation for prediction %s", new_prediction.pk)
             messages.success(request, "Прогноз сохранен.")
             return redirect("league:event_detail", event_id=event.id)
     else:
@@ -737,10 +709,6 @@ def create_event_duel(request, event_id: int):
     except DuelActionError as exc:
         messages.error(request, str(exc))
     else:
-        try:
-            notify_duel_challenge(duel)
-        except TelegramAPIError:
-            logger.exception("Could not send duel challenge notification for duel %s", duel.pk)
         messages.success(
             request,
             f"Вызов отправлен игроку {duel.opponent.username}. Ставка — {duel.stake} очков.",
@@ -763,10 +731,6 @@ def respond_event_duel(request, duel_id: int, action: str):
         return redirect(f"{reverse('league:event_detail', args=(duel.event_id,))}#event-duel")
 
     if action == "accept":
-        try:
-            notify_duel_accepted(duel)
-        except TelegramAPIError:
-            logger.exception("Could not send duel acceptance notification for duel %s", duel.pk)
         messages.success(request, f"Дуэль принята. На кону {duel.stake} очков.")
         target = reverse("league:event_detail", args=(duel.event_id,))
     else:
@@ -887,7 +851,6 @@ def player_profile(request, user_id: int):
             "profile_obj": profile_obj,
             "can_edit_avatar": can_edit_avatar,
             "avatar_form": avatar_form,
-            "telegram_bot_configured": bot_is_configured(),
             "season": season,
             "player_statistics": player_statistics,
             "achievements": achievements,
