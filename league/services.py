@@ -536,30 +536,14 @@ def build_activity_feed(leaderboard, limit=10):
             }
         )
 
-    cumulative = defaultdict(
-        int,
-        {
-            score.user_id: score.points
-            for score in SeasonScore.objects.filter(season_year=season_year, user_id__in=user_ids)
-        },
-    )
     personal_bests = {}
-    previous_ranks = {
-        user.id: index
-        for index, user in enumerate(sorted(users, key=lambda item: item.username.lower()), start=1)
-    }
-    previous_leader_id = None
     feed = []
-    for event_index, event in enumerate(published_events):
+    for event in published_events:
         event_scores = {}
         for user in users:
             score = leaderboard["scores_map"].get((user.id, event.id))
             event_scores[user.id] = score.points if score else 0
         best_points = max(event_scores.values(), default=0)
-        for user in users:
-            cumulative[user.id] += event_scores[user.id]
-        ordered = sorted(users, key=lambda user: (-cumulative[user.id], user.username.lower()))
-        current_ranks = {user.id: index for index, user in enumerate(ordered, start=1)}
 
         entries = []
         if best_points > 0:
@@ -575,24 +559,6 @@ def build_activity_feed(leaderboard, limit=10):
                         user_id=winner.id,
                         link_to_event=True,
                     )
-
-        unique_leader_id = None
-        if ordered:
-            leader_points = cumulative[ordered[0].id]
-            runner_up_points = cumulative[ordered[1].id] if len(ordered) > 1 else None
-            if runner_up_points is None or leader_points > runner_up_points:
-                unique_leader_id = ordered[0].id
-        if event_index and unique_leader_id and unique_leader_id != previous_leader_id:
-            leader = next(user for user in users if user.id == unique_leader_id)
-            add_event(
-                entries,
-                event=event,
-                activity_type="leader",
-                icon="P1",
-                text=f"{leader.username} стал новым лидером чемпионата",
-                meta=f"После R{event.round_number} · {cumulative[leader.id]} очков",
-                user_id=leader.id,
-            )
 
         for user in users:
             score = leaderboard["scores_map"].get((user.id, event.id))
@@ -633,28 +599,80 @@ def build_activity_feed(leaderboard, limit=10):
                         link_to_event=True,
                     )
 
-        if event_index:
-            movers = [
-                (previous_ranks[user.id] - current_ranks[user.id], user)
-                for user in users
-                if previous_ranks[user.id] - current_ranks[user.id] > 0
-                and current_ranks[user.id] > 1
-            ]
-            if movers:
-                movement, mover = max(movers, key=lambda item: (item[0], event_scores[item[1].id]))
-                place_word = _russian_plural(movement, ("позицию", "позиции", "позиций"))
-                add_event(
-                    entries,
-                    event=event,
-                    activity_type="movement",
-                    icon="↗",
-                    text=f"{mover.username} поднялся на {movement} {place_word}",
-                    meta=f"После R{event.round_number} · теперь P{current_ranks[mover.id]}",
-                    user_id=mover.id,
-                )
         feed.extend(entries)
-        previous_ranks = current_ranks
-        previous_leader_id = unique_leader_id
+
+    latest_published_event = published_events[-1]
+    latest_scored_event = leaderboard["latest_event"]
+    if (
+        len(published_events) > 1
+        and latest_scored_event
+        and latest_scored_event.id == latest_published_event.id
+    ):
+        # Ranking news must use the same current and previous ranks as the
+        # participants page. If newer scores exist before publication, the
+        # latest published event can no longer describe the live positions.
+        ranking_rows = leaderboard["rows"]
+        current_leader = (
+            ranking_rows[0]
+            if ranking_rows
+            and (len(ranking_rows) == 1 or ranking_rows[0]["total"] > ranking_rows[1]["total"])
+            else None
+        )
+        previous_rows = sorted(
+            ranking_rows,
+            key=lambda row: (
+                -(row["total"] - (row["latest_points"] or 0)),
+                row["user"].username.lower(),
+            ),
+        )
+        previous_leader = (
+            previous_rows[0]
+            if previous_rows
+            and (
+                len(previous_rows) == 1
+                or previous_rows[0]["total"] - (previous_rows[0]["latest_points"] or 0)
+                > previous_rows[1]["total"] - (previous_rows[1]["latest_points"] or 0)
+            )
+            else None
+        )
+        if current_leader and (
+            previous_leader is None
+            or current_leader["user"].id != previous_leader["user"].id
+        ):
+            add_event(
+                feed,
+                event=latest_published_event,
+                activity_type="leader",
+                icon="P1",
+                text=f"{current_leader['user'].username} стал новым лидером чемпионата",
+                meta=f"После R{latest_published_event.round_number} · {current_leader['total']} очков",
+                user_id=current_leader["user"].id,
+            )
+
+        movers = [
+            row
+            for row in ranking_rows
+            if row["rank"] > 1 and row["previous_rank"] > row["rank"]
+        ]
+        if movers:
+            mover = max(
+                movers,
+                key=lambda row: (
+                    row["previous_rank"] - row["rank"],
+                    row["latest_points"] or 0,
+                ),
+            )
+            movement = mover["previous_rank"] - mover["rank"]
+            place_word = _russian_plural(movement, ("позицию", "позиции", "позиций"))
+            add_event(
+                feed,
+                event=latest_published_event,
+                activity_type="movement",
+                icon="↗",
+                text=f"{mover['user'].username} поднялся на {movement} {place_word}",
+                meta=f"После R{latest_published_event.round_number} · теперь P{mover['rank']}",
+                user_id=mover["user"].id,
+            )
 
     duels = (
         DuelChallenge.objects.filter(
@@ -707,7 +725,7 @@ def build_activity_feed(leaderboard, limit=10):
         "perfect-podium": 75,
         "record": 70,
     }
-    latest_event_id = published_events[-1].id
+    latest_event_id = latest_published_event.id
     feed = [item for item in feed if item["source_event_id"] == latest_event_id]
     feed.sort(
         key=lambda item: (item["occurred_at"], type_priority.get(item["type"], 0)),
