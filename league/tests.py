@@ -305,21 +305,19 @@ class TelegramTests(TestCase):
         run_worker.assert_not_called()
         self.assertIn("Telegram worker is disabled", output.getvalue())
 
-    def test_authenticated_user_gets_deep_link_for_current_profile(self):
+    def test_telegram_connection_route_is_disabled(self):
         self.client.force_login(self.user)
 
-        response = self.client.get(reverse("league:telegram_connect"))
+        response = self.client.get("/telegram/connect/")
 
-        self.assertEqual(response.status_code, 302)
-        self.assertTrue(response["Location"].startswith("https://t.me/f1_predictions_test?start="))
-        self.assertIn(str(self.profile.telegram_link_token), response["Location"])
+        self.assertEqual(response.status_code, 404)
 
-    def test_profile_shows_telegram_connection_button(self):
+    def test_profile_hides_telegram_connection_button(self):
         self.client.force_login(self.user)
 
         response = self.client.get(reverse("league:player_profile", args=[self.user.id]))
 
-        self.assertContains(response, "Подключить Telegram")
+        self.assertNotContains(response, "Подключить Telegram")
 
     @patch("league.telegram_bot.send_message")
     def test_start_command_links_chat_and_rotates_token(self, send_message):

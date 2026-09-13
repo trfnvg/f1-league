@@ -242,7 +242,7 @@ class DuelChallengeTests(TestCase):
         self.assertContains(second_page, "/media/duel_theme/western.webp")
 
     @patch("league.telegram_bot.send_message")
-    def test_telegram_notifies_opponent_and_then_challenger(self, send_message):
+    def test_duel_actions_do_not_notify_telegram_while_disabled(self, send_message):
         challenger_profile = self.challenger.league_profile
         challenger_profile.telegram_chat_id = 111
         challenger_profile.telegram_notifications = True
@@ -258,14 +258,9 @@ class DuelChallengeTests(TestCase):
             {"opponent": self.opponent.id, "stake": 6},
         )
         duel = DuelChallenge.objects.get()
-        self.assertEqual(send_message.call_args_list[0].args[0], 222)
-        self.assertIn("Тебе бросили вызов", send_message.call_args_list[0].args[1])
-        self.assertIn("6 очков", send_message.call_args_list[0].args[1])
 
         self.client.force_login(self.opponent)
         self.client.post(
             reverse("league:respond_event_duel", kwargs={"duel_id": duel.id, "action": "accept"})
         )
-        self.assertEqual(send_message.call_args_list[1].args[0], 111)
-        self.assertIn("Твой вызов принят", send_message.call_args_list[1].args[1])
-        self.assertIn("Ranger", send_message.call_args_list[1].args[1])
+        send_message.assert_not_called()

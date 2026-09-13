@@ -21,7 +21,7 @@ from .models import (
     WildcardCardTemplate,
     WildcardSettings,
 )
-from .scoring import publish_event_scores
+from .scoring import publish_event_scores, restore_score_revision
 
 
 TEST_STORAGES = {
@@ -455,7 +455,7 @@ class PersonalWildcardTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("уже нельзя изменить", form.non_field_errors()[0])
 
-    def test_correct_card_adds_points_but_does_not_decide_duel(self):
+    def test_correct_card_adds_points_and_decides_duel(self):
         self.question.correct_option = EventWildcardQuestion.Option.A
         self.question.save(update_fields=("correct_option",))
         assignment = PlayerWildcard.objects.create(
@@ -478,14 +478,53 @@ class PersonalWildcardTests(TestCase):
 
         self.assertTrue(assignment.is_correct)
         self.assertEqual(score.prediction_points, 3)
-        self.assertEqual(score.points, 3)
+        self.assertEqual(score.points, 10)
+        self.assertEqual(score.duel_adjustment, 7)
         self.assertEqual(score.breakdown["Личная карта этапа"], 3)
         self.assertEqual(row["wildcard_points"], 3)
-        self.assertEqual(row["duel_prediction_points"], 0)
+        self.assertEqual(row["duel_prediction_points"], 3)
         self.assertEqual(duel.status, DuelChallenge.Status.SETTLED)
-        self.assertIsNone(duel.winner)
-        self.assertEqual(duel.challenger_prediction_points, 0)
+        self.assertEqual(duel.winner, self.user)
+        self.assertEqual(duel.challenger_prediction_points, 3)
         self.assertEqual(duel.opponent_prediction_points, 0)
+        self.assertEqual(Score.objects.get(event=self.event, user=self.opponent).points, -7)
+
+    def test_wrong_card_loses_duel_and_restoring_revision_recovers_original_winner(self):
+        self.question.correct_option = EventWildcardQuestion.Option.A
+        self.question.save(update_fields=("correct_option",))
+        PlayerWildcard.objects.create(
+            event=self.event,
+            user=self.user,
+            question=self.question,
+            selected_option=EventWildcardQuestion.Option.A,
+            answered_at=timezone.now(),
+        )
+        duel = create_duel_challenge(self.event, self.user, self.opponent, 7)
+        respond_to_duel(duel, self.opponent, accept=True)
+        self._prediction(self.user)
+        self._prediction(self.opponent)
+        self._result()
+
+        first_revision, _ = publish_event_scores(self.event)
+        duel.refresh_from_db()
+        self.assertEqual(duel.winner, self.user)
+
+        self.question.correct_option = EventWildcardQuestion.Option.B
+        self.question.save(update_fields=("correct_option",))
+        publish_event_scores(self.event)
+        duel.refresh_from_db()
+        self.assertEqual(duel.winner, self.opponent)
+        self.assertEqual(duel.challenger_prediction_points, -3)
+        self.assertEqual(duel.opponent_prediction_points, 0)
+        self.assertEqual(Score.objects.get(event=self.event, user=self.user).points, -10)
+        self.assertEqual(Score.objects.get(event=self.event, user=self.opponent).points, 7)
+
+        restore_score_revision(first_revision)
+        duel.refresh_from_db()
+        self.assertEqual(duel.winner, self.user)
+        self.assertEqual(duel.challenger_prediction_points, 3)
+        self.assertEqual(Score.objects.get(event=self.event, user=self.user).points, 10)
+        self.assertEqual(Score.objects.get(event=self.event, user=self.opponent).points, -7)
 
     def test_wrong_card_subtracts_three_points(self):
         self.question.correct_option = EventWildcardQuestion.Option.B
