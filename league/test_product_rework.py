@@ -506,6 +506,46 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertTrue(any(item["text"] == "Alice поднялся на 1 позицию" for item in feed))
         self.assertFalse(any(item["type"] == "leader" for item in feed))
 
+    def test_feed_does_not_show_stale_rank_when_newer_scores_are_unpublished(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        cathy = User.objects.create_user("Cathy")
+        for round_number, scores in (
+            (1, ((alice, 10), (bob, 30), (cathy, 20))),
+            (2, ((alice, 15), (bob, 10), (cathy, 0))),
+        ):
+            event = Event.objects.create(
+                name=f"Round {round_number}",
+                round_number=round_number,
+                deadline=timezone.now() - timedelta(days=3 - round_number),
+                status=Event.Status.SCORED,
+            )
+            for user, points in scores:
+                Score.objects.create(event=event, user=user, points=points)
+                if round_number == 1:
+                    create_prediction(user, event)
+            result = create_result(event)
+            result.published_at = timezone.now()
+            result.save(update_fields=("published_at",))
+
+        unpublished_event = Event.objects.create(
+            name="Unpublished GP",
+            round_number=3,
+            deadline=timezone.now() - timedelta(hours=1),
+        )
+        Score.objects.create(event=unpublished_event, user=alice, points=0)
+        Score.objects.create(event=unpublished_event, user=bob, points=0)
+        Score.objects.create(event=unpublished_event, user=cathy, points=10)
+
+        leaderboard = build_leaderboard(2026)
+        feed = build_activity_feed(leaderboard)
+        participants_page = self.client.get(reverse("league:participants"))
+        participant = next(row for row in participants_page.context["rows"] if row["user"] == alice)
+
+        self.assertEqual(participant["rank"], 3)
+        self.assertEqual(next(row for row in leaderboard["rows"] if row["user"] == alice)["rank"], 3)
+        self.assertFalse(any(item["type"] in {"movement", "leader"} for item in feed))
+
     def test_activity_feed_reports_leader_record_podium_and_duel_events(self):
         player_a = User.objects.create_user("Alice")
         player_b = User.objects.create_user("Bob")
