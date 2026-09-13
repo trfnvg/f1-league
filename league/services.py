@@ -492,6 +492,15 @@ def build_activity_feed(leaderboard, limit=10):
         result.event_id: result
         for result in Result.objects.filter(event_id__in=event_ids)
     }
+    published_events = [
+        event
+        for event in scored_events
+        if event.status == Event.Status.SCORED
+        and (result := results.get(event.id))
+        and result.published_at is not None
+    ]
+    if not published_events:
+        return []
 
     def event_timestamp(event):
         result = results.get(event.id)
@@ -527,7 +536,13 @@ def build_activity_feed(leaderboard, limit=10):
             }
         )
 
-    cumulative = defaultdict(int)
+    cumulative = defaultdict(
+        int,
+        {
+            score.user_id: score.points
+            for score in SeasonScore.objects.filter(season_year=season_year, user_id__in=user_ids)
+        },
+    )
     personal_bests = {}
     previous_ranks = {
         user.id: index
@@ -535,7 +550,7 @@ def build_activity_feed(leaderboard, limit=10):
     }
     previous_leader_id = None
     feed = []
-    for event_index, event in enumerate(scored_events):
+    for event_index, event in enumerate(published_events):
         event_scores = {}
         for user in users:
             score = leaderboard["scores_map"].get((user.id, event.id))
@@ -623,10 +638,11 @@ def build_activity_feed(leaderboard, limit=10):
                 (previous_ranks[user.id] - current_ranks[user.id], user)
                 for user in users
                 if previous_ranks[user.id] - current_ranks[user.id] > 0
+                and current_ranks[user.id] > 1
             ]
             if movers:
                 movement, mover = max(movers, key=lambda item: (item[0], event_scores[item[1].id]))
-                place_word = _russian_plural(movement, ("место", "места", "мест"))
+                place_word = _russian_plural(movement, ("позицию", "позиции", "позиций"))
                 add_event(
                     entries,
                     event=event,
@@ -691,7 +707,7 @@ def build_activity_feed(leaderboard, limit=10):
         "perfect-podium": 75,
         "record": 70,
     }
-    latest_event_id = scored_events[-1].id if scored_events else None
+    latest_event_id = published_events[-1].id
     feed = [item for item in feed if item["source_event_id"] == latest_event_id]
     feed.sort(
         key=lambda item: (item["occurred_at"], type_priority.get(item["type"], 0)),
