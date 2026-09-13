@@ -167,10 +167,16 @@ def _build_event_score_rows(event):
     duel_participant_ids = set()
     outcomes = []
     for duel in duels:
-        # Случайная личная карта не влияет на дуэль: соперники сравнивают
-        # только одинаковый для всех основной прогноз.
-        challenger_points = standard_prediction_points.get(duel.challenger_id, 0)
-        opponent_points = standard_prediction_points.get(duel.opponent_id, 0)
+        # Compare each player's complete event score before the duel stake.
+        # Including the stake here would make the winner depend on its own result.
+        challenger_points = (
+            standard_prediction_points.get(duel.challenger_id, 0)
+            + wildcard_points.get(duel.challenger_id, 0)
+        )
+        opponent_points = (
+            standard_prediction_points.get(duel.opponent_id, 0)
+            + wildcard_points.get(duel.opponent_id, 0)
+        )
         users[duel.challenger_id] = duel.challenger
         users[duel.opponent_id] = duel.opponent
         duel_participant_ids.update((duel.challenger_id, duel.opponent_id))
@@ -196,9 +202,9 @@ def _build_event_score_rows(event):
 
     rows = []
     for user_id, player in sorted(users.items(), key=lambda item: item[1].username.lower()):
-        duel_prediction_points = standard_prediction_points.get(user_id, 0)
+        standard_points = standard_prediction_points.get(user_id, 0)
         personal_points = wildcard_points.get(user_id, 0)
-        base_points = duel_prediction_points + personal_points
+        base_points = standard_points + personal_points
         duel_adjustment = adjustments[user_id]
         breakdown = dict(breakdowns.get(user_id, {}))
         if user_id in duel_participant_ids:
@@ -208,7 +214,7 @@ def _build_event_score_rows(event):
                 "user_id": user_id,
                 "username": player.username,
                 "prediction_points": base_points,
-                "duel_prediction_points": duel_prediction_points,
+                "duel_prediction_points": base_points,
                 "wildcard_points": personal_points,
                 "duel_adjustment": duel_adjustment,
                 "points": base_points + duel_adjustment,
@@ -343,7 +349,9 @@ def restore_score_revision(revision, user=None):
                 event=event,
                 user_id=row["user_id"],
                 points=row["points"],
-                prediction_points=row.get("prediction_points", row["points"]),
+                prediction_points=row.get(
+                    "prediction_points", row["points"] - row.get("duel_adjustment", 0)
+                ),
                 duel_adjustment=row.get("duel_adjustment", 0),
                 breakdown=row.get("breakdown", {}),
             )
@@ -363,8 +371,8 @@ def restore_score_revision(revision, user=None):
 
     restored_base_points = {
         row["user_id"]: row.get(
-            "duel_prediction_points",
-            row.get("prediction_points", row["points"]),
+            "prediction_points",
+            row["points"] - row.get("duel_adjustment", 0),
         )
         for row in revision.scores
     }
