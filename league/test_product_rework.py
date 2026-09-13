@@ -13,6 +13,7 @@ from .models import (
     Result,
     Score,
     Season,
+    SeasonScore,
     TelegramReminder,
     UserProfile,
 )
@@ -364,7 +365,7 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Точность категорий")
         self.assertContains(response, "Duel GP")
 
-    def test_activity_feed_reports_winner_and_rank_movement(self):
+    def test_activity_feed_reports_new_leader_after_published_event(self):
         player_a = User.objects.create_user("Alice")
         player_b = User.objects.create_user("Bob")
         first_event = Event.objects.create(
@@ -383,18 +384,127 @@ class CompetitiveFeaturesTests(TestCase):
         Score.objects.create(event=first_event, user=player_b, points=20)
         Score.objects.create(event=second_event, user=player_a, points=30)
         Score.objects.create(event=second_event, user=player_b, points=0)
+        create_result(first_event)
+        create_result(second_event)
+        Result.objects.filter(event__in=(first_event, second_event)).update(
+            published_at=timezone.now()
+        )
 
         leaderboard = build_leaderboard(2026)
         feed = build_activity_feed(leaderboard)
 
         self.assertTrue(any(item["text"] == "Alice выиграл этап" for item in feed))
-        self.assertTrue(any("Alice поднялся на 1 место" == item["text"] for item in feed))
+        self.assertTrue(any(item["text"] == "Alice стал новым лидером чемпионата" for item in feed))
+        self.assertFalse(any("поднялся на 1 место" in item["text"] for item in feed))
         self.assertTrue(all(item["source_event_id"] == second_event.id for item in feed))
         self.assertFalse(any("Opening GP" in item["meta"] for item in feed))
 
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, "Последние события")
-        self.assertContains(response, "Alice поднялся на 1 место")
+        self.assertContains(response, "Alice стал новым лидером чемпионата")
+
+    def test_activity_feed_waits_for_complete_publication(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        first_event = Event.objects.create(
+            name="Opening GP",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=4),
+            status=Event.Status.SCORED,
+        )
+        second_event = Event.objects.create(
+            name="Unpublished GP",
+            round_number=2,
+            deadline=timezone.now() - timedelta(days=2),
+            status=Event.Status.SCORED,
+        )
+        Score.objects.create(event=first_event, user=alice, points=10)
+        Score.objects.create(event=first_event, user=bob, points=20)
+        Score.objects.create(event=second_event, user=alice, points=30)
+        Score.objects.create(event=second_event, user=bob, points=0)
+        first_result = create_result(first_event)
+        second_result = create_result(second_event)
+        first_result.published_at = timezone.now()
+        first_result.save(update_fields=("published_at",))
+
+        feed = build_activity_feed(build_leaderboard(2026))
+        self.assertTrue(feed)
+        self.assertTrue(all(item["source_event_id"] == first_event.id for item in feed))
+        self.assertFalse(any(item["type"] == "leader" for item in feed))
+
+        second_result.published_at = timezone.now()
+        second_result.save(update_fields=("published_at",))
+        feed = build_activity_feed(build_leaderboard(2026))
+        self.assertTrue(any(item["text"] == "Alice стал новым лидером чемпионата" for item in feed))
+
+    def test_activity_feed_uses_season_points_when_deciding_leader(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        for round_number, alice_points, bob_points in ((1, 10, 20), (2, 20, 0)):
+            event = Event.objects.create(
+                name=f"Round {round_number}",
+                round_number=round_number,
+                deadline=timezone.now() - timedelta(days=3 - round_number),
+                status=Event.Status.SCORED,
+            )
+            Score.objects.create(event=event, user=alice, points=alice_points)
+            Score.objects.create(event=event, user=bob, points=bob_points)
+            result = create_result(event)
+            result.published_at = timezone.now()
+            result.save(update_fields=("published_at",))
+        SeasonScore.objects.create(season_year=2026, user=bob, points=20)
+
+        leaderboard = build_leaderboard(2026)
+        feed = build_activity_feed(leaderboard)
+
+        self.assertEqual(leaderboard["rows"][0]["user"], bob)
+        self.assertFalse(any(item["type"] == "leader" for item in feed))
+
+    def test_tied_first_place_does_not_announce_new_leader(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        for round_number, alice_points, bob_points in ((1, 10, 20), (2, 10, 0)):
+            event = Event.objects.create(
+                name=f"Round {round_number}",
+                round_number=round_number,
+                deadline=timezone.now() - timedelta(days=3 - round_number),
+                status=Event.Status.SCORED,
+            )
+            Score.objects.create(event=event, user=alice, points=alice_points)
+            Score.objects.create(event=event, user=bob, points=bob_points)
+            result = create_result(event)
+            result.published_at = timezone.now()
+            result.save(update_fields=("published_at",))
+
+        feed = build_activity_feed(build_leaderboard(2026))
+
+        self.assertFalse(any(item["type"] == "leader" for item in feed))
+        self.assertFalse(any(item["type"] == "movement" and item["user_id"] == alice.id for item in feed))
+
+    def test_movement_news_says_position_not_first_place(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        cathy = User.objects.create_user("Cathy")
+        for round_number, scores in (
+            (1, ((alice, 10), (bob, 30), (cathy, 20))),
+            (2, ((alice, 15), (bob, 10), (cathy, 0))),
+        ):
+            event = Event.objects.create(
+                name=f"Round {round_number}",
+                round_number=round_number,
+                deadline=timezone.now() - timedelta(days=3 - round_number),
+                status=Event.Status.SCORED,
+            )
+            for user, points in scores:
+                Score.objects.create(event=event, user=user, points=points)
+            result = create_result(event)
+            result.published_at = timezone.now()
+            result.save(update_fields=("published_at",))
+
+        feed = build_activity_feed(build_leaderboard(2026))
+
+        self.assertTrue(any(item["text"] == "Alice поднялся на 1 позицию" for item in feed))
+        self.assertFalse(any(item["type"] == "leader" for item in feed))
 
     def test_activity_feed_reports_leader_record_podium_and_duel_events(self):
         player_a = User.objects.create_user("Alice")
@@ -418,6 +528,7 @@ class CompetitiveFeaturesTests(TestCase):
             prediction_b.p1 = "verstappen"
             prediction_b.save(update_fields=("p1",))
             create_result(event)
+        Result.objects.filter(event__in=(first_event, second_event)).update(published_at=now)
 
         Score.objects.create(event=first_event, user=player_a, points=10)
         Score.objects.create(event=first_event, user=player_b, points=20)

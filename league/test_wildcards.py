@@ -22,6 +22,7 @@ from .models import (
     WildcardSettings,
 )
 from .scoring import publish_event_scores, restore_score_revision
+from .services import build_activity_feed, build_leaderboard
 
 
 TEST_STORAGES = {
@@ -525,6 +526,55 @@ class PersonalWildcardTests(TestCase):
         self.assertEqual(duel.challenger_prediction_points, 3)
         self.assertEqual(Score.objects.get(event=self.event, user=self.user).points, 10)
         self.assertEqual(Score.objects.get(event=self.event, user=self.opponent).points, -7)
+
+    def test_activity_feed_leader_uses_card_and_duel_points(self):
+        first_event = Event.objects.create(
+            season_year=2026,
+            name="Previous GP",
+            round_number=7,
+            deadline=timezone.now() - timedelta(days=3),
+            status=Event.Status.SCORED,
+        )
+        Result.objects.create(
+            event=first_event,
+            p1="norris",
+            p2="piastri",
+            p3="russell",
+            pole="norris",
+            published_at=timezone.now() - timedelta(days=2),
+        )
+        Score.objects.create(event=first_event, user=self.user, points=10)
+        Score.objects.create(event=first_event, user=self.opponent, points=26)
+
+        self.question.correct_option = EventWildcardQuestion.Option.A
+        self.question.save(update_fields=("correct_option",))
+        PlayerWildcard.objects.create(
+            event=self.event,
+            user=self.user,
+            question=self.question,
+            selected_option=EventWildcardQuestion.Option.A,
+            answered_at=timezone.now(),
+        )
+        duel = create_duel_challenge(self.event, self.user, self.opponent, 7)
+        respond_to_duel(duel, self.opponent, accept=True)
+        self._prediction(self.user)
+        self._prediction(self.opponent)
+        self._result()
+        publish_event_scores(self.event)
+
+        leaderboard = build_leaderboard(2026)
+        feed = build_activity_feed(leaderboard)
+
+        self.assertEqual(leaderboard["rows"][0]["user"], self.user)
+        self.assertEqual(leaderboard["rows"][0]["total"], 20)
+        self.assertTrue(
+            any(
+                item["type"] == "leader"
+                and item["user_id"] == self.user.id
+                and "20 очков" in item["meta"]
+                for item in feed
+            )
+        )
 
     def test_wrong_card_subtracts_three_points(self):
         self.question.correct_option = EventWildcardQuestion.Option.B
