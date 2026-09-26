@@ -3778,6 +3778,182 @@ body.apex-night-theme .profile-name {
   text-transform: none;
 }
 
+/* Driver card: a compact race-weekend identity block for player profiles. */
+body.apex-night-theme .profile-race-card {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(116deg, transparent 0 54%, rgba(255, 51, 38, 0.08) 54.2% 54.45%, transparent 54.65%),
+    radial-gradient(560px 240px at 100% 0, rgba(76, 141, 255, 0.14), transparent 72%),
+    var(--apex-surface);
+}
+
+body.apex-night-theme .profile-race-card::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--apex-red) 0 22%, var(--apex-blue) 22% 48%, transparent 48%);
+}
+
+body.apex-night-theme .profile-race-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(340px, .95fr);
+  gap: 1.4rem;
+  align-items: center;
+}
+
+body.apex-night-theme .profile-race-identity {
+  position: relative;
+  min-width: 0;
+  padding-left: 3.7rem;
+}
+
+body.apex-night-theme .profile-race-number {
+  position: absolute;
+  top: .05rem;
+  left: 0;
+  color: rgba(255, 255, 255, .18);
+  font-size: clamp(2.1rem, 4.2vw, 3.8rem);
+  font-weight: 900;
+  line-height: .9;
+  letter-spacing: -.08em;
+}
+
+body.apex-night-theme .profile-race-subtitle,
+body.apex-night-theme .profile-race-form-head,
+body.apex-night-theme .profile-race-kpi small {
+  color: var(--apex-muted);
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+body.apex-night-theme .profile-race-subtitle {
+  margin-top: .28rem;
+  letter-spacing: .08em;
+}
+
+body.apex-night-theme .profile-race-performance {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+}
+
+body.apex-night-theme .profile-race-kpi,
+body.apex-night-theme .profile-race-form {
+  min-width: 0;
+  padding: .78rem .9rem;
+  border: 1px solid var(--apex-line);
+  border-radius: var(--apex-corner-sm);
+  background: rgba(255, 255, 255, .035);
+}
+
+body.apex-night-theme .profile-race-kpi strong {
+  display: block;
+  margin-top: .18rem;
+  color: var(--apex-ink);
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  line-height: 1;
+}
+
+body.apex-night-theme .profile-race-kpi-points strong {
+  color: #fff;
+}
+
+body.apex-night-theme .profile-race-kpi span {
+  display: block;
+  margin-top: .35rem;
+  color: var(--apex-muted);
+  font-size: .68rem;
+}
+
+body.apex-night-theme .profile-race-movement {
+  color: var(--apex-green) !important;
+  font-weight: 800;
+}
+
+body.apex-night-theme .profile-race-form {
+  grid-column: 1 / -1;
+}
+
+body.apex-night-theme .profile-race-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .6rem;
+}
+
+body.apex-night-theme .profile-race-form-head span {
+  color: rgba(255, 255, 255, .35);
+  font-size: .6rem;
+}
+
+body.apex-night-theme .profile-form-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+}
+
+body.apex-night-theme .profile-form-pill,
+body.apex-night-theme .profile-form-empty {
+  display: inline-flex;
+  min-width: 2.4rem;
+  min-height: 1.8rem;
+  align-items: center;
+  justify-content: center;
+  padding: .18rem .45rem;
+  border: 1px solid var(--apex-line-strong);
+  border-radius: 5px;
+  color: var(--apex-muted);
+  background: rgba(255, 255, 255, .04);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+body.apex-night-theme .profile-form-pill.is-positive {
+  border-color: rgba(53, 213, 154, .42);
+  color: var(--apex-green);
+  background: rgba(53, 213, 154, .1);
+}
+
+body.apex-night-theme .profile-form-pill.is-negative {
+  border-color: rgba(255, 79, 92, .42);
+  color: #ff8992;
+  background: rgba(255, 79, 92, .1);
+}
+
+body.apex-night-theme .profile-race-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.1rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--apex-line);
+  color: var(--apex-muted);
+  font-size: .72rem;
+}
+
+@media (max-width: 760px) {
+  body.apex-night-theme .profile-race-card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  body.apex-night-theme .profile-race-performance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.apex-night-theme .profile-race-footer {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .35rem;
+  }
+}
+
 body.apex-night-theme .home-command h1 {
   max-width: 680px;
   font-size: var(--apex-type-hero);

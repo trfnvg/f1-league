@@ -239,9 +239,11 @@
   </div>
 </div>
 
-<section class="profile-hero p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
-  <div class="d-flex flex-column gap-3">
-    <div class="profile-user">
+<section class="profile-hero profile-race-card p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
+  <div class="profile-race-card-grid">
+    <div class="profile-race-identity">
+      <div class="profile-race-number" aria-label="Номер участника">№{{ player.id|stringformat:"02d" }}</div>
+      <div class="profile-user">
       {% if can_edit_avatar %}
         <form method="post" enctype="multipart/form-data" class="profile-avatar-form" id="avatarUploadForm">
           {% csrf_token %}
@@ -278,34 +280,55 @@
           {% endif %}
         </div>
       {% endif %}
-      <div>
-        <div class="profile-name-row">
-          <h1 class="profile-name">{{ player.username }}</h1>
-          {% if profile_obj.is_world_predict_champion %}
-            <span class="wpc-badge">WPC</span>
-          {% endif %}
+        <div>
+          <div class="profile-name-row">
+            <h1 class="profile-name">{{ player.username }}</h1>
+            {% if profile_obj.is_world_predict_champion %}
+              <span class="wpc-badge">WPC</span>
+            {% endif %}
+          </div>
+          <div class="profile-race-subtitle">F1 Predictions · {{ season.year }} season</div>
+          {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы открыть меню</div>{% endif %}
+          {% if avatar_form.avatar.errors %}<div class="avatar-upload-error">{{ avatar_form.avatar.errors }}</div>{% endif %}
         </div>
-        <div class="text-muted">Профиль участника лиги прогнозов</div>
-        {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы открыть меню</div>{% endif %}
-        {% if avatar_form.avatar.errors %}<div class="avatar-upload-error">{{ avatar_form.avatar.errors }}</div>{% endif %}
       </div>
     </div>
-
-    <div class="profile-stat-grid">
-      <div class="profile-stat-card"><small>Позиция</small><strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong></div>
-      <div class="profile-stat-card"><small>Очки за этапы</small><strong>{{ player_statistics.total }}</strong></div>
-      <div class="profile-stat-card"><small>Среднее за этап</small><strong>{{ player_statistics.average }}</strong></div>
-      <div class="profile-stat-card profile-stat-best">
-        <small>Лучший этап</small>
-        <strong>{{ player_statistics.best }}</strong>
-        <span class="profile-stat-detail">
-          {% if player_statistics.best_event_name %}R{{ player_statistics.best_event_round }} · {{ player_statistics.best_event_name }}{% else %}Пока нет результата{% endif %}
-        </span>
+    <div class="profile-race-performance">
+      <div class="profile-race-kpi">
+        <small>CHAMPIONSHIP</small>
+        <strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong>
+        {% if player_statistics.movement %}<span class="profile-race-movement">{% if player_statistics.movement > 0 %}▲{% else %}▼{% endif %} {{ player_statistics.movement|cut:"-" }}</span>{% endif %}
       </div>
-      <div class="profile-stat-card"><small>Победы на этапах</small><strong>{{ player_statistics.stage_wins }}</strong></div>
-      <div class="profile-stat-card"><small>Точные попадания</small><strong>{{ player_statistics.exact_hits }}</strong></div>
+      <div class="profile-race-kpi profile-race-kpi-points">
+        <small>SEASON POINTS</small>
+        <strong>{{ player_statistics.total }}</strong>
+        <span>avg {{ player_statistics.average }} / stage</span>
+      </div>
+      <div class="profile-race-form">
+        <div class="profile-race-form-head"><small>RECENT FORM</small><span>LAST 5</span></div>
+        <div class="profile-form-pills">
+          {% for item in player_statistics.recent_form %}
+            <span class="profile-form-pill {% if item.points > 0 %}is-positive{% elif item.points < 0 %}is-negative{% endif %}" title="R{{ item.round }}: {{ item.points }} очков">{{ item.points }}</span>
+          {% empty %}
+            <span class="profile-form-empty">Пока нет этапов</span>
+          {% endfor %}
+        </div>
+      </div>
     </div>
   </div>
+  <div class="profile-race-footer">
+    <span>{% if player_statistics.best_event_name %}BEST RESULT · R{{ player_statistics.best_event_round }} {{ player_statistics.best_event_name }} · {{ player_statistics.best }} pts{% else %}Профиль участника лиги прогнозов{% endif %}</span>
+    <span>{{ player_statistics.stage_wins }} побед на этапах · {{ player_statistics.exact_hits }} точных попаданий</span>
+  </div>
+</section>
+
+<section class="profile-stat-grid mb-4">
+  <div class="profile-stat-card"><small>Позиция</small><strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong></div>
+  <div class="profile-stat-card"><small>Очки за этапы</small><strong>{{ player_statistics.total }}</strong></div>
+  <div class="profile-stat-card"><small>Среднее за этап</small><strong>{{ player_statistics.average }}</strong></div>
+  <div class="profile-stat-card profile-stat-best"><small>Лучший этап</small><strong>{{ player_statistics.best }}</strong><span class="profile-stat-detail">{% if player_statistics.best_event_name %}R{{ player_statistics.best_event_round }} · {{ player_statistics.best_event_name }}{% else %}Пока нет результата{% endif %}</span></div>
+  <div class="profile-stat-card"><small>Победы на этапах</small><strong>{{ player_statistics.stage_wins }}</strong></div>
+  <div class="profile-stat-card"><small>Точные попадания</small><strong>{{ player_statistics.exact_hits }}</strong></div>
 </section>
 
 <section class="profile-analytics-shell mb-4">

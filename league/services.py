@@ -336,6 +336,10 @@ def build_player_statistics(player, season_year, leaderboard=None):
     for event, value in zip(scored_events, points):
         cumulative += value
         trend.append({"round": event.round_number, "points": cumulative})
+    recent_form = [
+        {"round": event.round_number, "points": value}
+        for event, value in zip(scored_events[-5:], points[-5:])
+    ]
 
     return {
         "total": total,
@@ -355,6 +359,7 @@ def build_player_statistics(player, season_year, leaderboard=None):
         "movement": row["movement"] if row else 0,
         "leader_gap": max(0, leader_total - total),
         "trend": trend,
+        "recent_form": recent_form,
         "points": points,
         "winner_accuracy": accuracy["winner"]["rate"],
         "podium_accuracy": accuracy["podium"]["rate"],
