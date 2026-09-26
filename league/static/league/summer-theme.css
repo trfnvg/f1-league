@@ -1031,10 +1031,6 @@ body.summer-theme .comparison-points {
     top: 84px;
   }
 
-  body.summer-theme .site-header-actions .nav-chip:first-child {
-    display: none;
-  }
-
   body.summer-theme .brand-year {
     display: none;
   }

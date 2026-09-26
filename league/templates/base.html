@@ -1004,6 +1004,7 @@
 </head>
 
 <body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
+<a class="skip-link" href="#main-content">Перейти к содержимому</a>
 
 <nav class="navbar navbar-dark site-header">
   <div class="container">
@@ -1091,7 +1092,7 @@
   </div>
 {% endif %}
 
-<main class="container flex-grow-1 main-content">
+<main id="main-content" class="container flex-grow-1 main-content">
   {% block content %}{% endblock %}
 </main>
 
@@ -1140,7 +1141,7 @@
 
       header.classList.add("is-scrolled");
 
-      if (!menuOpen) {
+      if (!menuOpen && !header.contains(document.activeElement)) {
         if (diff > DELTA && currentY > HIDE_THRESHOLD) {
           header.classList.add("is-hidden");
         } else if (diff < -DELTA) {
@@ -1153,6 +1154,7 @@
     };
 
     syncHeaderOffset();
+    header.addEventListener("focusin", () => header.classList.remove("is-hidden"));
     window.addEventListener("resize", syncHeaderOffset, { passive: true });
     window.addEventListener("orientationchange", syncHeaderOffset, { passive: true });
 
