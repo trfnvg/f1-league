@@ -41,6 +41,7 @@ from .services import (
     build_activity_feed,
     build_duel,
     build_leaderboard,
+    build_participant_achievement_counts,
     build_player_statistics,
     get_selected_season,
 )
@@ -891,6 +892,10 @@ def participants(request):
     }
     leaderboard_data = build_leaderboard(season.year)
     leaderboard_rows = {row["user"].id: row for row in leaderboard_data["rows"]}
+    achievement_counts = build_participant_achievement_counts(
+        users,
+        leaderboard_data,
+    )
 
     rows = []
     for user in users:
@@ -902,7 +907,14 @@ def participants(request):
         profile_obj = profile_map.get(user.id)
         avatar_url = profile_obj.avatar.url if profile_obj and profile_obj.avatar else None
         total_points = event_totals.get(user.id, 0) + season_totals.get(user.id, 0)
-        statistics = build_player_statistics(user, season.year, leaderboard=leaderboard_data)
+        achievement_data = achievement_counts.get(user.id, {})
+        achievement_count = (
+            int(bool(profile_obj and profile_obj.is_world_predict_champion))
+            + int(achievement_data.get("stage_wins", 0) > 0)
+            + int(achievement_data.get("perfect_podiums", 0) > 0)
+            + int(achievement_data.get("pole_hits", 0) >= 3)
+            + int(achievement_data.get("crazy_hits", 0) > 0)
+        )
         rows.append(
             {
                 "user": user,
@@ -913,7 +925,7 @@ def participants(request):
                 "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
                 "rank": leaderboard_rows.get(user.id, {}).get("rank"),
                 "movement": leaderboard_rows.get(user.id, {}).get("movement", 0),
-                "achievement_count": len(build_achievements(user, statistics)),
+                "achievement_count": achievement_count,
             }
         )
 
