@@ -115,9 +115,6 @@
       <p class="section-subtitle">Общий рейтинг игроков, движение позиций и очки за каждый этап.</p>
     </div>
     <div>
-      <div class="season-tabs mb-2">
-        {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
-      </div>
       <div class="deadline-chip">
         <span>Игроков: {{ rows|length }}</span>
         <span style="opacity:.45;">|</span>

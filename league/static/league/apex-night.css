@@ -3807,18 +3807,6 @@ body.apex-night-theme .profile-race-card-grid {
 body.apex-night-theme .profile-race-identity {
   position: relative;
   min-width: 0;
-  padding-left: 3.7rem;
-}
-
-body.apex-night-theme .profile-race-number {
-  position: absolute;
-  top: .05rem;
-  left: 0;
-  color: rgba(255, 255, 255, .18);
-  font-size: clamp(2.1rem, 4.2vw, 3.8rem);
-  font-weight: 900;
-  line-height: .9;
-  letter-spacing: -.08em;
 }
 
 body.apex-night-theme .profile-race-subtitle,
