@@ -264,6 +264,20 @@ class ResultInline(admin.StackedInline):
     form = ResultAdminForm
     extra = 0
     max_num = 1
+    classes = ("wide", "race-result-inline")
+
+
+class EventPredictionInline(admin.TabularInline):
+    """Keep Crazy Prediction approvals beside the race result."""
+
+    model = Prediction
+    extra = 0
+    fields = ("user", "crazy_prediction", "crazy_prediction_approved")
+    readonly_fields = ("user", "crazy_prediction")
+    ordering = ("user__username",)
+    classes = ("wide", "crazy-predictions-inline")
+    verbose_name = "Crazy Prediction"
+    verbose_name_plural = "Crazy Predictions — проверка ответов"
 
 
 class EventWildcardQuestionInline(admin.TabularInline):
@@ -307,7 +321,12 @@ class EventAdmin(admin.ModelAdmin):
     )
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
-    inlines = [EventPhotoInline, EventWildcardQuestionInline, ResultInline]
+    inlines = [
+        EventPhotoInline,
+        ResultInline,
+        EventWildcardQuestionInline,
+        EventPredictionInline,
+    ]
     fieldsets = (
         (
             "Этап",
