@@ -3779,9 +3779,10 @@ body.apex-night-theme .profile-name {
 }
 
 /* Driver card: a compact race-weekend identity block for player profiles. */
-body.apex-night-theme .profile-race-card {
+body.apex-night-theme.editorial-theme .profile-race-card {
   position: relative;
   isolation: isolate;
+  overflow: visible;
   background:
     linear-gradient(116deg, transparent 0 54%, rgba(255, 51, 38, 0.08) 54.2% 54.45%, transparent 54.65%),
     radial-gradient(560px 240px at 100% 0, rgba(76, 141, 255, 0.14), transparent 72%),
@@ -3807,6 +3808,23 @@ body.apex-night-theme .profile-race-card-grid {
 body.apex-night-theme .profile-race-identity {
   position: relative;
   min-width: 0;
+}
+
+body.apex-night-theme .profile-race-identity .profile-user {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 1rem;
+}
+
+body.apex-night-theme .profile-race-identity .profile-user > div:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+body.apex-night-theme .profile-race-identity .profile-avatar,
+body.apex-night-theme .profile-race-identity .profile-avatar-form {
+  flex-shrink: 0;
 }
 
 body.apex-night-theme .profile-race-subtitle,
@@ -3858,9 +3876,13 @@ body.apex-night-theme .profile-race-kpi span {
   font-size: .68rem;
 }
 
-body.apex-night-theme .profile-race-movement {
-  color: var(--apex-green) !important;
+body.apex-night-theme .profile-race-kpi .profile-race-movement {
+  color: var(--apex-green);
   font-weight: 800;
+}
+
+body.apex-night-theme .profile-race-kpi .profile-race-movement.is-down {
+  color: #ff8992;
 }
 
 body.apex-night-theme .profile-race-form {
@@ -3876,8 +3898,8 @@ body.apex-night-theme .profile-race-form-head {
 }
 
 body.apex-night-theme .profile-race-form-head span {
-  color: rgba(255, 255, 255, .35);
-  font-size: .6rem;
+  color: var(--apex-muted);
+  font-size: .7rem;
 }
 
 body.apex-night-theme .profile-form-pills {
@@ -3889,8 +3911,10 @@ body.apex-night-theme .profile-form-pills {
 body.apex-night-theme .profile-form-pill,
 body.apex-night-theme .profile-form-empty {
   display: inline-flex;
-  min-width: 2.4rem;
-  min-height: 1.8rem;
+  min-width: 2.8rem;
+  min-height: 3rem;
+  flex-direction: column;
+  gap: .15rem;
   align-items: center;
   justify-content: center;
   padding: .18rem .45rem;
@@ -3900,6 +3924,16 @@ body.apex-night-theme .profile-form-empty {
   background: rgba(255, 255, 255, .04);
   font-size: .78rem;
   font-weight: 800;
+}
+
+body.apex-night-theme .profile-form-pill small {
+  color: var(--apex-ink-soft);
+  font-size: .65rem;
+}
+
+body.apex-night-theme .profile-form-pill strong {
+  font-size: .95rem;
+  font-variant-numeric: tabular-nums;
 }
 
 body.apex-night-theme .profile-form-pill.is-positive {
@@ -3915,14 +3949,25 @@ body.apex-night-theme .profile-form-pill.is-negative {
 }
 
 body.apex-night-theme .profile-race-footer {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
   gap: 1rem;
   margin-top: 1.1rem;
   padding-top: .75rem;
   border-top: 1px solid var(--apex-line);
   color: var(--apex-muted);
-  font-size: .72rem;
+  font-size: .8rem;
+}
+
+body.apex-night-theme .profile-race-footer small,
+body.apex-night-theme .profile-race-footer strong {
+  display: block;
+}
+
+body.apex-night-theme .profile-race-footer strong {
+  margin: .3rem 0;
+  color: var(--apex-ink);
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {
@@ -3936,9 +3981,12 @@ body.apex-night-theme .profile-race-footer {
   }
 
   body.apex-night-theme .profile-race-footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: .35rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .8rem;
+  }
+
+  body.apex-night-theme .profile-race-footer > span:first-child {
+    grid-column: 1 / -1;
   }
 }
 
@@ -4444,5 +4492,151 @@ body.apex-night-theme .western-btn {
     padding-top: 0.48rem;
     border-top: 1px solid rgba(255, 181, 111, 0.12);
     text-align: left;
+  }
+}
+
+/* Shared interaction polish: touch targets, text flow and keyboard states. */
+body.apex-night-theme :is(button, input, select, textarea, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.apex-night-theme :is(a, button, input, select, textarea, [tabindex]):focus-visible,
+body.apex-night-theme.editorial-theme .site-menu-btn:focus-visible {
+  outline: 2px solid var(--apex-blue) !important;
+  outline-offset: 3px;
+}
+
+body.apex-night-theme :is(button:disabled, .btn.disabled) {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+body.apex-night-theme .skip-link {
+  position: fixed;
+  top: .5rem;
+  left: .5rem;
+  z-index: 1200;
+  padding: .8rem 1rem;
+  border-radius: 8px;
+  color: var(--apex-ink);
+  background: var(--apex-surface-2);
+  transform: translateY(-150%);
+}
+
+body.apex-night-theme .skip-link:focus {
+  transform: none;
+}
+
+body.apex-night-theme :is(.site-menu-btn, .nav-chip, .menu-logout-btn, .profile-logout-btn, .event-card-action, .western-btn) {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+body.apex-night-theme .site-menu-btn {
+  min-width: 44px;
+  flex-shrink: 0;
+}
+
+body.apex-night-theme .site-header-actions .nav-chip {
+  display: block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-content: center;
+}
+
+body.apex-night-theme :is(.event-card-copy h3, .home-command h1, .event-hero-copy h1, .participant-name, .insight-card strong) {
+  overflow-wrap: anywhere;
+}
+
+body.apex-night-theme .event-card-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+body.apex-night-theme .event-card-foot {
+  flex-wrap: wrap;
+  row-gap: .75rem;
+}
+
+body.apex-night-theme .event-card-foot .event-card-action {
+  height: auto;
+  flex-shrink: 0;
+  padding-inline: .8rem;
+  font-size: .75rem;
+}
+
+body.apex-night-theme .activity-news-copy :is(strong, small) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+body.apex-night-theme .insight-card strong {
+  white-space: normal;
+  line-height: 1.3;
+}
+
+body.apex-night-theme .profile-analytics-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+body.apex-night-theme .profile-analytics-grid .accuracy-card { grid-column: span 2; }
+body.apex-night-theme .profile-analytics-grid .insight-card { grid-column: span 3; }
+
+body.apex-night-theme .table-scroll-hint {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .8rem 1rem;
+  border-bottom: 1px solid var(--apex-line);
+  color: var(--apex-muted);
+  font-size: .75rem;
+}
+
+body.apex-night-theme .round-heading {
+  text-decoration: none;
+  cursor: help;
+}
+
+body.apex-night-theme :is(.leaderboard-table, .profile-race-kpi, .community-score, .countdown-chip) {
+  font-variant-numeric: tabular-nums;
+}
+
+body.apex-night-theme .errorlist {
+  margin: .5rem 0 0;
+  padding-left: 1.1rem;
+  color: #ffacb3;
+  font-size: .8rem;
+}
+
+body.apex-night-theme [aria-invalid="true"] {
+  border-color: #ff8992;
+}
+
+@media (max-width: 1100px) {
+  body.apex-night-theme .desktop-nav { display: none; }
+}
+
+@media (max-width: 576px) {
+  body.apex-night-theme .site-header > .container { padding-inline: .7rem; gap: .5rem; }
+  body.apex-night-theme .brand-mark { display: none; }
+  body.apex-night-theme .site-brand { margin-right: 0; }
+  body.apex-night-theme .site-header-actions .nav-chip { max-width: 90px; }
+  body.apex-night-theme :is(.form-control, .form-select) { font-size: 16px; min-height: 44px; }
+  body.apex-night-theme .profile-analytics-grid { grid-template-columns: minmax(0, 1fr); }
+  body.apex-night-theme .profile-analytics-grid :is(.accuracy-card, .insight-card) { grid-column: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.apex-night-theme *, body.apex-night-theme *::before, body.apex-night-theme *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
   }
 }

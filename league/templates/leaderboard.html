@@ -143,7 +143,8 @@
 {% endif %}
 
 <section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
-  <div class="table-responsive leaderboard-scroll-x">
+  <div class="table-scroll-hint" id="standings-scroll-hint"><span>Очки по этапам</span><span>Листайте влево и вправо ↔</span></div>
+  <div class="table-responsive leaderboard-scroll-x" tabindex="0" role="region" aria-label="Турнирная таблица" aria-describedby="standings-scroll-hint">
     <table class="table table-sm align-middle leaderboard-table">
       <thead>
         <tr>
@@ -151,7 +152,7 @@
           <th class="col-player">Игрок</th>
           <th class="col-total text-center">Итого</th>
           {% for e in events %}
-            <th class="text-center">R{{ e.round_number }}</th>
+            <th class="text-center"><abbr class="round-heading" title="{{ e.name }}">R{{ e.round_number }}</abbr></th>
           {% endfor %}
         </tr>
       </thead>

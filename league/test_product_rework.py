@@ -119,6 +119,21 @@ class PredictionPrivacyTests(TestCase):
         response = self.client.get(reverse("league:player_profile", args=[self.owner.id]))
         self.assertIsNotNone(response.context["event_cards"][0]["prediction"])
 
+    def test_invalid_prediction_shows_errors_next_to_fields(self):
+        self.client.force_login(self.viewer)
+        response = self.client.post(
+            reverse("league:event_detail", args=[self.event.id]),
+            {"p1": "not-a-driver", "dnf_count": -1},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        for name in ("p1", "p2", "p3", "pole", "fastest_lap", "driver_of_day", "safety_car_count", "dnf_count"):
+            field = response.context["form"][name]
+            self.assertTrue(field.errors)
+            self.assertContains(response, str(field.errors), html=True)
+            self.assertContains(response, f'for="{field.id_for_label}"')
+        self.assertFalse(Prediction.objects.filter(user=self.viewer, event=self.event).exists())
+
     def test_community_predictions_appear_only_after_deadline(self):
         response = self.client.get(reverse("league:event_detail", args=[self.event.id]))
         self.assertFalse(response.context["can_view_community"])

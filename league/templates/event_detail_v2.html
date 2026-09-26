@@ -566,82 +566,93 @@
         <div class="row g-3">
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">P1</label>
+              <label class="form-label mb-0" for="{{ form.p1.id_for_label }}">P1</label>
               <span class="field-points-badge">10 очков</span>
             </div>
             {{ form.p1 }}
+            {{ form.p1.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">P2</label>
+              <label class="form-label mb-0" for="{{ form.p2.id_for_label }}">P2</label>
               <span class="field-points-badge">6 очков</span>
             </div>
             {{ form.p2 }}
+            {{ form.p2.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">P3</label>
+              <label class="form-label mb-0" for="{{ form.p3.id_for_label }}">P3</label>
               <span class="field-points-badge">4 очка</span>
             </div>
             {{ form.p3 }}
+            {{ form.p3.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">Поул</label>
+              <label class="form-label mb-0" for="{{ form.pole.id_for_label }}">Поул</label>
               <span class="field-points-badge">4 очка</span>
             </div>
             {{ form.pole }}
+            {{ form.pole.errors }}
           </div>
           {% if event.has_sprint %}
             <div class="col-md-6">
               <div class="field-label-row">
-                <label class="form-label mb-0">Квалификация к спринту</label>
+                <label class="form-label mb-0" for="{{ form.sprint_qualifying_winner.id_for_label }}">Квалификация к спринту</label>
                 <span class="field-points-badge">3 очка</span>
               </div>
               {{ form.sprint_qualifying_winner }}
+              {{ form.sprint_qualifying_winner.errors }}
             </div>
             <div class="col-md-6">
               <div class="field-label-row">
-                <label class="form-label mb-0">Победитель спринта</label>
+                <label class="form-label mb-0" for="{{ form.sprint_winner.id_for_label }}">Победитель спринта</label>
                 <span class="field-points-badge">5 очков</span>
               </div>
               {{ form.sprint_winner }}
+              {{ form.sprint_winner.errors }}
             </div>
           {% endif %}
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">Fastest Lap</label>
+              <label class="form-label mb-0" for="{{ form.fastest_lap.id_for_label }}">Fastest Lap</label>
               <span class="field-points-badge">3 очка</span>
             </div>
             {{ form.fastest_lap }}
+            {{ form.fastest_lap.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">Driver of the Day</label>
+              <label class="form-label mb-0" for="{{ form.driver_of_day.id_for_label }}">Driver of the Day</label>
               <span class="field-points-badge">3 очка</span>
             </div>
             {{ form.driver_of_day }}
+            {{ form.driver_of_day.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">Количество Safety Car</label>
+              <label class="form-label mb-0" for="{{ form.safety_car_count.id_for_label }}">Количество Safety Car</label>
               <span class="field-points-badge">5 очков</span>
             </div>
             {{ form.safety_car_count }}
+            {{ form.safety_car_count.errors }}
           </div>
           <div class="col-md-6">
             <div class="field-label-row">
-              <label class="form-label mb-0">Количество DNF</label>
+              <label class="form-label mb-0" for="{{ form.dnf_count.id_for_label }}">Количество DNF</label>
               <span class="field-points-badge">5 очков</span>
             </div>
             {{ form.dnf_count }}
+            {{ form.dnf_count.errors }}
           </div>
           <div class="col-12">
             <div class="field-label-row">
-              <label class="form-label mb-0">Crazy Prediction</label>
+              <label class="form-label mb-0" for="{{ form.crazy_prediction.id_for_label }}">Crazy Prediction</label>
               <span class="field-points-badge">5 очков</span>
             </div>
             {{ form.crazy_prediction }}
+            {{ form.crazy_prediction.errors }}
           </div>
         </div>
         <div class="prediction-submit-bar">
