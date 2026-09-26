@@ -5,26 +5,26 @@
 {% block content %}
 <section class="home-command mb-4">
   <div
-    class="home-command-main {% if personal_dashboard.next_event.cover_image %}has-event-cover{% endif %}"
-    {% if personal_dashboard.next_event.cover_image %}style="--next-event-cover: url('{{ personal_dashboard.next_event.cover_image.url }}');"{% endif %}
+    class="home-command-main {% if featured_event.cover_image %}has-event-cover{% endif %}"
+    {% if featured_event.cover_image %}style="--next-event-cover: url('{{ featured_event.cover_image.url }}');"{% endif %}
   >
     <div class="eyebrow"><span class="live-dot"></span> F1 Predictions · Season {{ season.year }}</div>
-    {% if personal_dashboard %}
-      {% if personal_dashboard.next_event %}
-        <p class="display-kicker">Следующий старт</p>
-        <h1>{{ personal_dashboard.next_event.name }}</h1>
-        <p class="home-lead">R{{ personal_dashboard.next_event.round_number }} · предикты принимаются до {{ personal_dashboard.next_event.deadline|date:"d.m · H:i" }} МСК</p>
+    {% if featured_event %}
+        <p class="display-kicker">{% if featured_is_upcoming %}Следующий старт{% else %}Последний доступный этап{% endif %}</p>
+        <h1>{{ featured_event.name }}</h1>
+        <p class="home-lead">R{{ featured_event.round_number }} · дедлайн {{ featured_event.deadline|date:"d.m · H:i" }} МСК</p>
+        {% if personal_dashboard and personal_dashboard.next_event and personal_dashboard.next_event.id == featured_event.id %}
         <div class="hero-actions">
-          <a class="action-primary {% if personal_dashboard.next_prediction %}action-saved{% else %}action-open{% endif %}" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}">
-            {% if personal_dashboard.next_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}
-            <span aria-hidden="true">{% if personal_dashboard.next_prediction %}✓{% else %}→{% endif %}</span>
+          <a class="action-primary {% if featured_prediction %}action-saved{% else %}action-open{% endif %}" href="{% url 'league:event_detail' event_id=featured_event.id %}">
+            {% if featured_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}
+            <span aria-hidden="true">{% if featured_prediction %}✓{% else %}→{% endif %}</span>
           </a>
-          <div class="countdown-chip" data-deadline="{{ personal_dashboard.next_event.deadline|date:'c' }}">
+          <div class="countdown-chip" data-deadline="{{ featured_event.deadline|date:'c' }}">
             <span class="countdown-label">До дедлайна</span>
             <strong data-countdown>—</strong>
           </div>
         </div>
-        {% if personal_dashboard.next_prediction %}
+        {% if featured_prediction %}
           <div class="prediction-confirmed"><span>✓</span> Прогноз сохранён — его можно изменить до дедлайна</div>
         {% endif %}
         {% if personal_dashboard.next_duel %}
@@ -42,20 +42,16 @@
             <b>Открыть →</b>
           </a>
         {% endif %}
-      {% else %}
-        <p class="display-kicker">Сезон {{ season.year }}</p>
-        <h1>Все предикты приняты</h1>
-        <p class="home-lead">Новый этап появится здесь сразу после публикации календаря.</p>
-        <a class="action-primary" href="{% url 'league:leaderboard' %}">Открыть чемпионат <span>→</span></a>
-      {% endif %}
+        {% elif not request.user.is_authenticated %}
+          <div class="hero-actions"><a class="action-primary" href="{% url 'login' %}">Войти и сделать прогноз <span>→</span></a></div>
+        {% else %}
+          <div class="hero-actions"><a class="action-primary" href="{% url 'league:event_detail' event_id=featured_event.id %}">Открыть этап <span>→</span></a></div>
+        {% endif %}
     {% else %}
       <p class="display-kicker">Твоя собственная пит-уолл</p>
       <h1>Прогнозируй гонки.<br>Выигрывай сезон.</h1>
       <p class="home-lead">Закрытая лига друзей с живой таблицей и подробным разбором очков.</p>
-      <div class="hero-actions">
-        <a class="action-primary" href="{% url 'login' %}">Войти в аккаунт <span>→</span></a>
-        <a class="action-secondary" href="{% url 'league:register' %}">Создать аккаунт</a>
-      </div>
+      <div class="hero-actions"><a class="action-primary" href="{% url 'login' %}">Войти в аккаунт <span>→</span></a><a class="action-secondary" href="{% url 'league:register' %}">Создать аккаунт</a></div>
     {% endif %}
   </div>
 
@@ -99,10 +95,10 @@
       <div><span class="eyebrow">Live paddock</span><h2>Последние события</h2></div>
       <a class="section-inline-link" href="{% url 'league:leaderboard' %}?season={{ season.year }}">Таблица →</a>
     </div>
-    <div class="activity-feed-grid">
+    <div class="activity-news-list">
       {% for item in activity_feed %}
         <a
-          class="activity-feed-item is-{{ item.type }}"
+          class="activity-feed-item activity-news-item is-{{ item.type }}"
           {% if item.event_id %}
             href="{% url 'league:event_detail' event_id=item.event_id %}{{ item.anchor|default:'' }}"
           {% else %}
@@ -110,7 +106,7 @@
           {% endif %}
         >
           <span class="activity-feed-icon">{{ item.icon }}</span>
-          <span><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
+          <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
         </a>
       {% endfor %}
     </div>

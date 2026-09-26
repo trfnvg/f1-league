@@ -152,6 +152,17 @@ def home(request):
         key=lambda event: event.deadline,
         default=None,
     )
+    featured_event = next_event or (events[0] if events else None)
+    featured_is_upcoming = bool(
+        featured_event
+        and featured_event.status != Event.Status.SCORED
+        and featured_event.deadline > now
+    )
+    featured_prediction = (
+        Prediction.objects.filter(event=featured_event, user=request.user).first()
+        if request.user.is_authenticated and featured_event
+        else None
+    )
     if request.user.is_authenticated:
         user_row = next(
             (row for row in leaderboard_data["rows"] if row["user"].id == request.user.id),
@@ -188,6 +199,9 @@ def home(request):
             "result_images": result_images,
             "season": season,
             "personal_dashboard": personal_dashboard,
+            "featured_event": featured_event,
+            "featured_prediction": featured_prediction,
+            "featured_is_upcoming": featured_is_upcoming,
             "leaderboard_top": leaderboard_data["rows"][:3],
             "activity_feed": build_activity_feed(leaderboard_data),
         },
