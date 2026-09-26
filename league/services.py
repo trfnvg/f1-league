@@ -366,6 +366,65 @@ def build_player_statistics(player, season_year, leaderboard=None):
     }
 
 
+def build_participant_achievement_counts(users, leaderboard):
+    """Return achievement counts for the participants table in bulk.
+
+    The participants page only needs the number of achievements, not the full
+    analytics payload from ``build_player_statistics``.  Keeping this smaller
+    calculation separate avoids running one prediction query per user.
+    """
+    user_ids = [user.id for user in users]
+    if not user_ids:
+        return {}
+
+    scored_events = leaderboard["scored_events"]
+    event_ids = [event.id for event in scored_events]
+    scores_by_user = defaultdict(list)
+    event_best_points = {}
+    pole_hits = defaultdict(int)
+    crazy_hits = defaultdict(int)
+
+    for score in leaderboard["scores"]:
+        scores_by_user[score.user_id].append(score)
+        current_best = event_best_points.get(score.event_id)
+        if current_best is None or score.points > current_best:
+            event_best_points[score.event_id] = score.points
+        breakdown = score.breakdown or {}
+        pole_hits[score.user_id] += int(bool(breakdown.get("Pole Position")))
+        crazy_hits[score.user_id] += int(bool(breakdown.get("Crazy Prediction")))
+
+    perfect_podiums = defaultdict(int)
+    if event_ids:
+        predictions = Prediction.objects.filter(
+            user_id__in=user_ids,
+            event_id__in=event_ids,
+        ).select_related("event__result")
+        for prediction in predictions:
+            result = getattr(prediction.event, "result", None)
+            if result and all(
+                _normalize(getattr(prediction, field))
+                == _normalize(getattr(result, field))
+                for field in ("p1", "p2", "p3")
+            ):
+                perfect_podiums[prediction.user_id] += 1
+
+    counts = {}
+    for user in users:
+        user_scores = scores_by_user.get(user.id, ())
+        stage_wins = sum(
+            1
+            for score in user_scores
+            if score.points == event_best_points[score.event_id]
+        )
+        counts[user.id] = {
+            "stage_wins": stage_wins,
+            "perfect_podiums": perfect_podiums[user.id],
+            "pole_hits": pole_hits[user.id],
+            "crazy_hits": crazy_hits[user.id],
+        }
+    return counts
+
+
 def build_duel(player_a, player_b, season_year, leaderboard=None):
     leaderboard = leaderboard or build_leaderboard(season_year)
     scores_map = leaderboard["scores_map"]
