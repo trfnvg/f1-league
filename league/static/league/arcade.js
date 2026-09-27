@@ -32,8 +32,10 @@
   let WORLD_HEIGHT = 540;
   const CAR_X = 235;
   let playerScale = 1;
+  let isMobileGame = false;
   const PLAYER_WIDTH = 36;
   const PLAYER_HEIGHT = 74;
+  const PLAYER_COLLISION_SCALE = 0.78;
   const OBSTACLE_WIDTH = 70;
   const BASE_GAP_HEIGHT = 170;
   const BACKGROUND_SCENE_DURATION = 6.5;
@@ -88,7 +90,16 @@
   }
 
   function getSpeed() {
-    return Math.min(520, 250 + score * 8 + elapsed * 3.5);
+    const speed = Math.min(520, 250 + score * 8 + elapsed * 3.5);
+    return speed * (isMobileGame ? 0.9 : 1);
+  }
+
+  function getPlayerHalfWidth() {
+    return PLAYER_WIDTH * playerScale * PLAYER_COLLISION_SCALE * 0.5;
+  }
+
+  function getPlayerHalfHeight() {
+    return PLAYER_HEIGHT * playerScale * PLAYER_COLLISION_SCALE * 0.5;
   }
 
   function resize() {
@@ -97,7 +108,8 @@
     const previousWorldHeight = WORLD_HEIGHT;
     width = Math.max(1, rect.width);
     height = Math.max(1, rect.height);
-    playerScale = width <= 620 || window.matchMedia("(pointer: coarse)").matches ? 1.4 : 1;
+    isMobileGame = width <= 620 || window.matchMedia("(pointer: coarse)").matches;
+    playerScale = isMobileGame ? 1.4 : 1;
     WORLD_HEIGHT = Math.min(900, Math.max(540, Math.round(WORLD_WIDTH * height / width)));
     if (WORLD_HEIGHT !== previousWorldHeight) {
       if (state === "ready") {
@@ -290,15 +302,23 @@
   }
 
   function spawnObstacle() {
-    const gapHeight = Math.max(132, BASE_GAP_HEIGHT - (getLevel() - 1) * 5);
+    const baseGap = isMobileGame ? 188 : BASE_GAP_HEIGHT;
+    const minimumGap = isMobileGame ? 160 : 132;
+    const gapHeight = Math.max(minimumGap, baseGap - (getLevel() - 1) * 5);
     const margin = 115 + gapHeight * 0.5;
-    const gapCenter = margin + Math.random() * (WORLD_HEIGHT - margin * 2);
+    const highestCenter = WORLD_HEIGHT - margin;
+    const previousObstacle = obstacles[obstacles.length - 1];
+    const maxShift = isMobileGame ? 95 : 120;
+    const proposedCenter = previousObstacle
+      ? previousObstacle.gapCenter + (Math.random() * 2 - 1) * maxShift
+      : margin + Math.random() * (highestCenter - margin);
+    const gapCenter = Math.max(margin, Math.min(highestCenter, proposedCenter));
     obstacles.push({ x: WORLD_WIDTH + 40, gapCenter, gapHeight, passed: false });
   }
 
   function intersectsObstacle(obstacle) {
-    const playerHalfWidth = PLAYER_WIDTH * playerScale * 0.5;
-    const playerHalfHeight = PLAYER_HEIGHT * playerScale * 0.5;
+    const playerHalfWidth = getPlayerHalfWidth();
+    const playerHalfHeight = getPlayerHalfHeight();
     const carLeft = CAR_X - playerHalfWidth;
     const carRight = CAR_X + playerHalfWidth;
     if (carRight < obstacle.x - 7 || carLeft > obstacle.x + OBSTACLE_WIDTH + 7) return false;
@@ -317,11 +337,13 @@
     spawnTimer -= delta;
     if (spawnTimer <= 0) {
       spawnObstacle();
-      spawnTimer = Math.max(1.05, 1.72 - score * 0.015 - elapsed * 0.003);
+      const interval = isMobileGame ? 1.9 : 1.72;
+      const minimumInterval = isMobileGame ? 1.25 : 1.05;
+      spawnTimer = Math.max(minimumInterval, interval - score * 0.015 - elapsed * 0.003);
     }
     for (const obstacle of obstacles) {
       obstacle.x -= speed * delta;
-      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - PLAYER_WIDTH * playerScale * 0.5) {
+      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - getPlayerHalfWidth()) {
         obstacle.passed = true;
         score += 1;
         syncScores();
@@ -332,7 +354,7 @@
       }
     }
     obstacles = obstacles.filter((obstacle) => obstacle.x > -OBSTACLE_WIDTH - 20);
-    const playerHalfHeight = PLAYER_HEIGHT * playerScale * 0.5;
+    const playerHalfHeight = getPlayerHalfHeight();
     if (carY - playerHalfHeight < 26 || carY + playerHalfHeight > WORLD_HEIGHT - 35) endGame();
   }
 
