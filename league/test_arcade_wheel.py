@@ -104,6 +104,8 @@ class ArcadeWheelTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Колесо бонусов")
+        self.assertContains(response, "Что дают сектора")
+        self.assertContains(response, "25% шанс")
         self.assertContains(response, "arcade-wheel-config")
         self.assertEqual(len(response.context["wheel_sectors"]), 6)
         self.assertEqual(response.context["wheel_sectors"][4]["title"], "Руль в говне")
