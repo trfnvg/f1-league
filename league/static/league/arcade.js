@@ -60,6 +60,8 @@
   let obstacles = [];
   let overlayTimer = 0;
   let attemptId = null;
+  let runSequence = 0;
+  const pendingRunScores = new Map();
   let refreshingBoard = false;
 
   function readRecord() {
@@ -146,28 +148,12 @@
 
   async function startGame() {
     window.clearTimeout(overlayTimer);
+    const thisRun = ++runSequence;
+    overlay.classList.add("is-restarting");
     bananaSpeech.hidden = true;
-    overlay.classList.remove("is-gameover");
-    startButton.disabled = true;
-    startButton.innerHTML = 'На старт <span aria-hidden="true">…</span>';
+    startButton.disabled = false;
+    startButton.innerHTML = 'На старт <span aria-hidden="true">→</span>';
     attemptId = null;
-    if (isAuthenticated) {
-      try {
-        const response = await fetch(canvas.dataset.startUrl, {
-          method: "POST",
-          headers: { "X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest" },
-          credentials: "same-origin",
-        });
-        if (response.ok) {
-          attemptId = (await response.json()).attempt_id;
-        } else if (boardStatus) {
-          boardStatus.textContent = "Заезд можно пройти, но сейчас он не сохранится в таблице.";
-        }
-      } catch (_) {
-        // Let players continue even if the leaderboard service is temporarily unavailable.
-        if (boardStatus) boardStatus.textContent = "Нет связи с таблицей рекордов — заезд всё равно доступен.";
-      }
-    }
     state = "playing";
     score = 0;
     elapsed = 0;
@@ -177,10 +163,41 @@
     carVelocity = FLAP_VELOCITY;
     obstacles = [];
     syncScores();
-    overlay.hidden = true;
-    startButton.disabled = false;
-    startButton.innerHTML = 'На старт <span aria-hidden="true">→</span>';
     canvas.focus({ preventScroll: true });
+    overlayTimer = window.setTimeout(() => {
+      overlay.hidden = true;
+      overlay.classList.remove("is-gameover", "is-restarting");
+    }, 160);
+
+    if (isAuthenticated) {
+      try {
+        const response = await fetch(canvas.dataset.startUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin",
+        });
+        if (response.ok) {
+          const startedAttemptId = (await response.json()).attempt_id;
+          const completedScore = pendingRunScores.get(thisRun);
+          if (completedScore !== undefined) {
+            pendingRunScores.delete(thisRun);
+            if (completedScore > 0) submitResult(startedAttemptId, completedScore);
+          } else if (thisRun === runSequence && state === "playing") {
+            attemptId = startedAttemptId;
+          }
+        } else if (boardStatus && (thisRun === runSequence || pendingRunScores.has(thisRun))) {
+          pendingRunScores.delete(thisRun);
+          boardStatus.textContent = "Заезд можно пройти, но сейчас он не сохранится в таблице.";
+        }
+      } catch (_) {
+        // Let players continue even if the leaderboard service is temporarily unavailable.
+        const hadPendingScore = pendingRunScores.has(thisRun);
+        pendingRunScores.delete(thisRun);
+        if (boardStatus && (thisRun === runSequence || hadPendingScore)) {
+          boardStatus.textContent = "Нет связи с таблицей рекордов — заезд всё равно доступен.";
+        }
+      }
+    }
   }
 
   function endGame() {
@@ -201,9 +218,12 @@
     } else {
       overlayMark.textContent = "ЗАЕЗД ЗАВЕРШЁН";
       overlayTitle.textContent = "Болид в боксах";
-      overlayCopy.textContent = `Пройдено ворот: ${score}. Ещё один круг — и рекорд может пасть.`;
+      overlayCopy.textContent = `Пройдено ворот: ${score}.`;
     }
-    if (score > 0 && attemptId) submitResult(attemptId, score);
+    if (score > 0) {
+      if (attemptId) submitResult(attemptId, score);
+      else if (isAuthenticated) pendingRunScores.set(runSequence, score);
+    }
     attemptId = null;
     startButton.innerHTML = 'Ещё круг <span aria-hidden="true">↻</span>';
     syncScores();
