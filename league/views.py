@@ -1,5 +1,6 @@
-﻿import logging
-from datetime import datetime
+﻿import json
+import logging
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -7,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -23,6 +25,8 @@ from .duels import (
 from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, RegisterForm, SeasonPredictionForm
 from .models import (
     DRIVER_CHOICES,
+    ArcadeAttempt,
+    ArcadeRecord,
     DuelChallenge,
     DuelSettings,
     Event,
@@ -98,7 +102,101 @@ def _is_async_request(request):
 
 
 def arcade(request):
-    return render(request, "arcade.html")
+    board_data = _arcade_leaderboard_data(request.user)
+    if request.user.is_authenticated:
+        own_record = ArcadeRecord.objects.filter(user=request.user).first()
+    else:
+        own_record = None
+    return render(request, "arcade.html", {
+        "arcade_records": board_data["records"],
+        "arcade_own_record": own_record,
+        "arcade_own_rank": board_data["rank"],
+    })
+
+
+def arcade_leaderboard(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    return JsonResponse(_arcade_leaderboard_data(request.user))
+
+
+def _arcade_leaderboard_data(user):
+    records = list(
+        ArcadeRecord.objects.select_related("user").filter(best_score__gt=0)
+        .order_by("-best_score", "updated_at", "user__username")[:10]
+    )
+    rows = [{
+        "username": row.user.get_full_name().strip() or row.user.username,
+        "score": row.best_score,
+        "rank": index,
+        "is_current_user": bool(user.is_authenticated and row.user_id == user.id),
+    } for index, row in enumerate(records, start=1)]
+    own_record = ArcadeRecord.objects.filter(user=user).first() if user.is_authenticated else None
+    return {
+        "records": rows,
+        "record": own_record.best_score if own_record else 0,
+        "rank": _arcade_rank(own_record) if own_record and own_record.best_score else None,
+    }
+
+
+def arcade_run_start(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    ArcadeAttempt.objects.filter(user=request.user, started_at__lt=timezone.now() - timedelta(days=30)).delete()
+    attempt = ArcadeAttempt.objects.create(user=request.user)
+    return JsonResponse({"attempt_id": attempt.pk})
+
+
+def arcade_run_finish(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    try:
+        payload = json.loads(request.body or b"{}")
+        attempt_id = int(payload.get("attempt_id"))
+        score = int(payload.get("score"))
+        if isinstance(payload.get("score"), bool) or score < 1 or score > 500:
+            raise ValueError
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "Некорректный результат заезда."}, status=400)
+
+    with transaction.atomic():
+        attempt = ArcadeAttempt.objects.select_for_update().filter(pk=attempt_id, user=request.user).first()
+        if not attempt or attempt.finished_at:
+            return JsonResponse({"error": "Этот заезд уже сохранён или не найден."}, status=409)
+        now = timezone.now()
+        elapsed_seconds = (now - attempt.started_at).total_seconds()
+        minimum_seconds = 3.0 + (score - 1) * 1.15
+        maximum_seconds = 12.0 + (score - 1) * 2.6
+        if elapsed_seconds < minimum_seconds or elapsed_seconds > maximum_seconds:
+            attempt.finished_at = now
+            attempt.save(update_fields=("finished_at",))
+            return JsonResponse({"error": "Время заезда не соответствует указанному результату."}, status=400)
+        attempt.finished_at = now
+        attempt.score = score
+        attempt.save(update_fields=("finished_at", "score"))
+
+        record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
+        is_record = score > record.best_score
+        if is_record:
+            record.best_score = score
+            record.save(update_fields=("best_score", "updated_at"))
+        board_data = _arcade_leaderboard_data(request.user)
+    return JsonResponse({**board_data, "is_record": is_record})
+
+
+def _arcade_rank(record):
+    ahead = Q(best_score__gt=record.best_score)
+    ahead |= Q(best_score=record.best_score, updated_at__lt=record.updated_at)
+    ahead |= Q(
+        best_score=record.best_score,
+        updated_at=record.updated_at,
+        user__username__lt=record.user.username,
+    )
+    return ArcadeRecord.objects.filter(best_score__gt=0).filter(ahead).count() + 1
 
 
 def _wildcard_payload(assignment):

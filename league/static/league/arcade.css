@@ -310,6 +310,159 @@
 
 .arcade-reset:hover { color: #fff; background: rgba(255,255,255,.08); }
 
+.arcade-saved-note {
+  flex: 0 0 auto;
+  color: #8492a1;
+  font-size: .67rem;
+}
+
+.arcade-leaderboard {
+  margin-top: 2.25rem;
+  overflow: hidden;
+  border: 1px solid var(--arcade-line);
+  border-radius: 3px 18px 3px 3px;
+  background: linear-gradient(145deg, rgba(20,29,40,.96), rgba(13,19,27,.96));
+  box-shadow: 0 18px 54px rgba(0,0,0,.2);
+}
+
+.arcade-leaderboard-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.3rem .9rem;
+  border-bottom: 1px solid var(--arcade-line);
+}
+
+.arcade-section-kicker {
+  color: #ff726a;
+  font-size: .59rem;
+  font-weight: 900;
+  letter-spacing: .15em;
+}
+
+.arcade-leaderboard-heading h2 {
+  margin: .25rem 0 0;
+  color: #f7f8fa;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: clamp(1.7rem, 4vw, 2.35rem);
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: .98;
+}
+
+.arcade-leaderboard-heading p {
+  margin: 0;
+  color: var(--arcade-muted);
+  font-size: .69rem;
+  text-align: right;
+}
+
+.arcade-leaderboard-list {
+  margin: 0;
+  padding: .3rem 1.3rem .75rem;
+  list-style: none;
+}
+
+.arcade-leaderboard-list li {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto 3.2rem;
+  align-items: center;
+  gap: .65rem;
+  min-height: 48px;
+  border-bottom: 1px solid rgba(209,222,237,.075);
+}
+
+.arcade-leaderboard-list li:last-child { border-bottom: 0; }
+
+.arcade-leaderboard-list li.is-you {
+  margin-inline: -.65rem;
+  padding-inline: .65rem;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,68,56,.11), rgba(255,68,56,.025));
+}
+
+.arcade-rank {
+  color: #8290a0;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.12rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-leaderboard-list li:nth-child(1) .arcade-rank { color: #f2c86d; }
+.arcade-leaderboard-list li:nth-child(2) .arcade-rank { color: #bdc8d4; }
+.arcade-leaderboard-list li:nth-child(3) .arcade-rank { color: #cd906d; }
+
+.arcade-driver-name {
+  overflow: hidden;
+  color: #e8edf2;
+  font-size: .81rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arcade-leaderboard-list li strong {
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-leaderboard-list li small {
+  color: #8592a0;
+  font-size: .62rem;
+}
+
+.arcade-board-empty {
+  display: block !important;
+  padding-block: 1.1rem;
+  color: var(--arcade-muted);
+  font-size: .78rem;
+}
+
+.arcade-own-rank {
+  margin: 0 1.3rem 1rem;
+  padding: .7rem .85rem;
+  border: 1px solid rgba(255,68,56,.25);
+  border-radius: 4px;
+  color: #b7c2ce;
+  background: rgba(255,68,56,.055);
+  font-size: .72rem;
+}
+
+.arcade-own-rank strong { color: #fff; }
+
+.arcade-board-login {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .8rem 1.3rem;
+  border-bottom: 1px solid var(--arcade-line);
+}
+
+.arcade-board-login p {
+  margin: 0;
+  color: var(--arcade-muted);
+  font-size: .73rem;
+}
+
+.arcade-board-login a {
+  flex: 0 0 auto;
+  padding: .48rem .7rem;
+  border: 1px solid rgba(255,68,56,.45);
+  border-radius: 3px 9px 3px 3px;
+  color: #fff;
+  background: rgba(255,68,56,.15);
+  font-size: .67rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.arcade-board-login a:hover { background: rgba(255,68,56,.26); }
+
 @media (pointer: coarse) {
   .arcade-touch-hint { display: inline; }
 }
@@ -335,6 +488,14 @@
   .arcade-controls > span:last-child { display: none; }
   .arcade-bottom-row { align-items: flex-start; font-size: .67rem; }
   .arcade-bottom-row p { max-width: 70%; }
+  .arcade-leaderboard { margin-top: 1.4rem; }
+  .arcade-leaderboard-heading { align-items: flex-start; flex-direction: column; gap: .35rem; padding: .9rem; }
+  .arcade-leaderboard-heading p { text-align: left; }
+  .arcade-leaderboard-list { padding: .25rem .9rem .6rem; }
+  .arcade-leaderboard-list li { grid-template-columns: 2rem minmax(0, 1fr) auto 2.5rem; gap: .45rem; min-height: 44px; }
+  .arcade-driver-name { font-size: .73rem; }
+  .arcade-board-login { align-items: flex-start; flex-direction: column; padding: .75rem .9rem; }
+  .arcade-own-rank { margin-inline: .9rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -938,3 +938,29 @@ class TelegramBotState(models.Model):
 
     def __str__(self):
         return f"Telegram bot state: {self.key}"
+
+
+class ArcadeAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="arcade_attempts")
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    score = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-started_at",)
+        indexes = [models.Index(fields=("user", "started_at"), name="arcade_attempt_user_idx")]
+
+    def __str__(self):
+        return f"{self.user} — arcade run {self.pk}"
+
+
+class ArcadeRecord(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="arcade_record")
+    best_score = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-best_score", "updated_at", "user__username")
+
+    def __str__(self):
+        return f"{self.user}: {self.best_score}"

@@ -29,7 +29,7 @@
       <div class="arcade-best"><small>РЕКОРД</small><strong id="board-record">00</strong></div>
     </div>
     <div class="arcade-canvas-wrap" id="arcade-canvas-wrap">
-      <canvas id="arcade-canvas" tabindex="0" role="application" aria-describedby="arcade-controls" aria-label="Гоночный болид летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
+      <canvas id="arcade-canvas" tabindex="0" role="application" data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}" data-record="{{ arcade_own_record.best_score|default:0 }}" data-car-src="{% static 'league/images/pit-lane-flight-car.webp' %}" data-track-src="{% static 'league/images/pit-lane-flight-track.webp' %}" data-start-url="{% url 'league:arcade_run_start' %}" data-finish-url="{% url 'league:arcade_run_finish' %}" data-board-url="{% url 'league:arcade_leaderboard' %}" aria-describedby="arcade-controls" aria-label="Гоночный болид летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
       <div class="arcade-overlay" id="arcade-overlay">
         <div class="arcade-overlay-card" id="arcade-overlay-card">
           <span class="arcade-overlay-mark" id="arcade-overlay-mark">01 / GRID</span>
@@ -42,14 +42,52 @@
     <footer class="arcade-controls" id="arcade-controls">
       <span><kbd>ПРОБЕЛ</kbd> или <kbd>↑</kbd> — взлёт</span>
       <span class="arcade-touch-hint">Коснись экрана, чтобы взлететь</span>
-      <span>Без бонусных очков · только личный рекорд</span>
+      <span>Аркадные рекорды не влияют на очки лиги</span>
     </footer>
   </section>
 
   <div class="arcade-bottom-row">
     <p><strong>Короткий круг.</strong> Нажимай вовремя, держи траекторию и попробуй побить свой рекорд.</p>
-    <button class="arcade-reset" id="arcade-reset-record" type="button" title="Сбросить личный рекорд">Сбросить рекорд</button>
+    {% if not user.is_authenticated %}<button class="arcade-reset" id="arcade-reset-record" type="button" title="Сбросить личный рекорд">Сбросить рекорд</button>{% else %}<span class="arcade-saved-note">Рекорд сохраняется в профиле</span>{% endif %}
   </div>
+
+  <section class="arcade-leaderboard" aria-labelledby="arcade-leaderboard-title" aria-live="polite">
+    <div class="arcade-leaderboard-heading">
+      <div>
+        <span class="arcade-section-kicker">PIT LANE FLIGHT</span>
+        <h2 id="arcade-leaderboard-title">Таблица рекордов</h2>
+      </div>
+      <p id="arcade-board-status">Лучший результат каждого · автообновление 15 сек.</p>
+    </div>
+    <form hidden id="arcade-csrf-form">{% csrf_token %}</form>
+    {% if user.is_authenticated %}
+      <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
+        {% for record in arcade_records %}
+          <li class="{% if record.user_id == user.id %}is-you{% endif %}" data-username="{{ record.user.get_full_name|default:record.user.username }}">
+            <span class="arcade-rank">{{ forloop.counter|stringformat:'02d' }}</span>
+            <span class="arcade-driver-name">{{ record.user.get_full_name|default:record.user.username }}</span>
+            <strong>{{ record.best_score }}</strong>
+            <small>ворот</small>
+          </li>
+        {% empty %}
+          <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов — первым в таблице можешь стать ты.</li>
+        {% endfor %}
+      </ol>
+      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong></p>
+    {% else %}
+      <div class="arcade-board-login">
+        <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
+        <a href="{% url 'login' %}?next=/arcade/">Войти в аккаунт</a>
+      </div>
+      <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
+        {% for record in arcade_records %}
+          <li><span class="arcade-rank">{{ forloop.counter|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.user.get_full_name|default:record.user.username }}</span><strong>{{ record.best_score }}</strong><small>ворот</small></li>
+        {% empty %}
+          <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов.</li>
+        {% endfor %}
+      </ol>
+    {% endif %}
+  </section>
 </section>
 {% endblock %}
 
