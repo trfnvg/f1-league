@@ -4,6 +4,7 @@
   const canvas = document.getElementById("arcade-canvas");
   const wrap = document.getElementById("arcade-canvas-wrap");
   const overlay = document.getElementById("arcade-overlay");
+  const bananaSpeech = document.getElementById("arcade-banana-speech");
   const startButton = document.getElementById("arcade-start");
   const scoreOutput = document.getElementById("run-score");
   const recordOutput = document.getElementById("personal-record");
@@ -131,10 +132,22 @@
       0,
       0,
     );
+    positionBananaSpeech();
+  }
+
+  function positionBananaSpeech() {
+    if (!bananaSpeech || bananaSpeech.hidden || !height) return;
+    const bubbleHeight = bananaSpeech.getBoundingClientRect().height * WORLD_HEIGHT / height;
+    const gap = 14 * WORLD_HEIGHT / height;
+    const playerTop = carY - getPlayerHalfHeight();
+    const top = Math.max(3, Math.min(78, (playerTop - bubbleHeight - gap) / WORLD_HEIGHT * 100));
+    bananaSpeech.style.top = `${top}%`;
   }
 
   async function startGame() {
     window.clearTimeout(overlayTimer);
+    bananaSpeech.hidden = true;
+    overlay.classList.remove("is-gameover");
     startButton.disabled = true;
     startButton.innerHTML = 'На старт <span aria-hidden="true">…</span>';
     attemptId = null;
@@ -173,6 +186,12 @@
   function endGame() {
     if (state !== "playing") return;
     state = "gameover";
+    overlay.classList.add("is-gameover");
+    if (bananaSpeech) {
+      bananaSpeech.hidden = false;
+      bananaSpeech.setAttribute("aria-label", 'Банан Леклер говорит: "i am stupid..."');
+      positionBananaSpeech();
+    }
     if (score > best && (!isAuthenticated || attemptId)) {
       best = score;
       if (!isAuthenticated) saveRecord(best);

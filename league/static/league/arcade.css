@@ -200,6 +200,53 @@
   backdrop-filter: blur(16px);
 }
 
+.arcade-overlay.is-gameover { justify-items: end; }
+.arcade-overlay.is-gameover .arcade-overlay-card { margin-right: 0; margin-left: auto; }
+
+.arcade-banana-speech {
+  --banana-speech-width: clamp(116px, 19vw, 180px);
+  position: absolute;
+  z-index: 3;
+  left: max(.5rem, calc(24.5% - var(--banana-speech-width) - .5rem));
+  display: grid;
+  width: var(--banana-speech-width);
+  min-height: 42px;
+  place-items: center;
+  padding: .45rem .55rem;
+  border: 3px solid #101d39;
+  color: #17213b;
+  background: #fff3cf;
+  box-shadow: 4px 4px 0 #a84950;
+  font-family: "Courier New", monospace;
+  font-size: clamp(.62rem, 1.4vw, .78rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+  transform: translateY(5px) scale(.96);
+  transition: opacity 140ms ease, transform 140ms ease;
+  pointer-events: none;
+}
+
+.arcade-banana-speech[hidden] { display: none; }
+.arcade-banana-speech:not([hidden]) { animation: banana-speech-pop 180ms steps(3, end) forwards; }
+.arcade-banana-speech::before,
+.arcade-banana-speech::after {
+  position: absolute;
+  right: 14px;
+  width: 0;
+  height: 0;
+  border-right: 9px solid transparent;
+  border-left: 9px solid transparent;
+  content: "";
+}
+.arcade-banana-speech::before { bottom: -14px; border-top: 12px solid #101d39; }
+.arcade-banana-speech::after { right: 16px; bottom: -8px; border-top: 9px solid #fff3cf; }
+
+@keyframes banana-speech-pop {
+  from { opacity: 0; transform: translateY(5px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 .arcade-overlay-mark {
   color: #ff766e;
   font-size: .64rem;
@@ -482,6 +529,13 @@
   .arcade-live { font-size: .52rem; letter-spacing: .08em; }
   .arcade-overlay { padding: .55rem; }
   .arcade-overlay-card { width: min(290px, 100%); padding: .85rem; }
+  .arcade-overlay.is-gameover { align-items: end; padding: .45rem; }
+  .arcade-overlay.is-gameover .arcade-overlay-card { width: min(230px, 64%); padding: .65rem; }
+  .arcade-overlay.is-gameover .arcade-overlay-card h2 { margin: .3rem 0; font-size: clamp(1.05rem, 5vw, 1.4rem); }
+  .arcade-overlay.is-gameover .arcade-overlay-card p { margin-bottom: .45rem; font-size: .61rem; }
+  .arcade-overlay.is-gameover .arcade-overlay-mark { font-size: .53rem; }
+  .arcade-overlay.is-gameover .arcade-start { min-height: 34px; padding: .45rem .7rem; font-size: .62rem; }
+  .arcade-banana-speech { --banana-speech-width: 116px; font-size: .62rem; }
   .arcade-overlay-card h2 { font-size: 1.7rem; }
   .arcade-overlay-card p { margin-bottom: .65rem; font-size: .7rem; }
   .arcade-start { min-height: 40px; }
@@ -500,7 +554,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arcade-overlay, .arcade-start { transition: none; }
+  .arcade-overlay, .arcade-start, .arcade-banana-speech { transition: none; animation: none !important; }
 }
 
 .arcade-wheel-panel {
