@@ -13,7 +13,7 @@
     <div>
       <div class="arcade-kicker"><span></span> 16-BIT RACE MODE</div>
       <h1 id="arcade-title">PIT LANE<br><em>FLIGHT</em></h1>
-      <p>Ночной Гран-при: держи траекторию, проходи ворота и доберись до нового уровня сложности.</p>
+      <p>Дневной Гран-при: держи траекторию, проходи ворота и доберись до нового уровня сложности.</p>
     </div>
     <div class="arcade-personal-record" aria-live="polite">
       <span>ЛИЧНЫЙ РЕКОРД</span>
@@ -30,7 +30,7 @@
       <div class="arcade-best"><small>РЕКОРД</small><strong id="board-record">00</strong></div>
     </div>
     <div class="arcade-canvas-wrap" id="arcade-canvas-wrap">
-      <canvas id="arcade-canvas" tabindex="0" role="application" data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}" data-record="{{ arcade_own_record.best_score|default:0 }}" data-car-src="{% static 'league/images/pit-lane-flight-car-retro.webp' %}" data-track-src="{% static 'league/images/pit-lane-flight-track-retro.webp' %}" data-start-url="{% url 'league:arcade_run_start' %}" data-finish-url="{% url 'league:arcade_run_finish' %}" data-board-url="{% url 'league:arcade_leaderboard' %}" aria-describedby="arcade-controls" aria-label="Гоночный болид летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
+      <canvas id="arcade-canvas" tabindex="0" role="application" data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}" data-record="{{ arcade_own_record.best_score|default:0 }}" data-sprite-src="{% static 'league/images/banana-leclerc-sprite.webp' %}" data-track-src="{% static 'league/images/pit-lane-flight-track-day.png' %}" data-start-url="{% url 'league:arcade_run_start' %}" data-finish-url="{% url 'league:arcade_run_finish' %}" data-board-url="{% url 'league:arcade_leaderboard' %}" aria-describedby="arcade-controls" aria-label="Банан Леклер летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
       <div class="arcade-overlay" id="arcade-overlay">
         <div class="arcade-overlay-card" id="arcade-overlay-card">
           <span class="arcade-overlay-mark" id="arcade-overlay-mark">PLAYER 1 · GRID</span>

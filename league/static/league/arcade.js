@@ -17,9 +17,9 @@
 
   const context = canvas.getContext("2d", { alpha: false });
   context.imageSmoothingEnabled = false;
-  const carSprite = new Image();
+  const bananaSprite = new Image();
   const trackImage = new Image();
-  carSprite.src = canvas.dataset.carSrc;
+  bananaSprite.src = canvas.dataset.spriteSrc;
   trackImage.src = canvas.dataset.trackSrc;
   const isAuthenticated = canvas.dataset.authenticated === "true";
   const board = document.getElementById("arcade-leaderboard-list");
@@ -28,8 +28,8 @@
   const WORLD_WIDTH = 960;
   let WORLD_HEIGHT = 540;
   const CAR_X = 235;
-  const CAR_RADIUS = 18;
-  const CAR_HALF_WIDTH = 58;
+  const CAR_HALF_HEIGHT = 52;
+  const CAR_HALF_WIDTH = 28;
   const OBSTACLE_WIDTH = 88;
   const BASE_GAP_HEIGHT = 196;
   const GRAVITY = 1320;
@@ -294,7 +294,7 @@
     if (carRight < obstacle.x - 7 || carLeft > obstacle.x + OBSTACLE_WIDTH + 7) return false;
     const topEnd = obstacle.gapCenter - obstacle.gapHeight * 0.5;
     const bottomStart = obstacle.gapCenter + obstacle.gapHeight * 0.5;
-    return carY - CAR_RADIUS < topEnd + 4 || carY + CAR_RADIUS > bottomStart;
+    return carY - CAR_HALF_HEIGHT < topEnd + 4 || carY + CAR_HALF_HEIGHT > bottomStart;
   }
 
   function update(delta) {
@@ -322,7 +322,7 @@
       }
     }
     obstacles = obstacles.filter((obstacle) => obstacle.x > -OBSTACLE_WIDTH - 20);
-    if (carY - CAR_RADIUS < 26 || carY + CAR_RADIUS > WORLD_HEIGHT - 35) endGame();
+    if (carY - CAR_HALF_HEIGHT < 26 || carY + CAR_HALF_HEIGHT > WORLD_HEIGHT - 35) endGame();
   }
 
   function drawBackground(time) {
@@ -405,16 +405,21 @@
     context.save();
     context.translate(CAR_X, carY + idleBounce);
     context.rotate(rotation);
-    if (carSprite.complete && carSprite.naturalWidth) {
+    if (bananaSprite.complete && bananaSprite.naturalWidth) {
       context.shadowColor = "rgba(0,0,0,.5)";
       context.shadowBlur = 14;
       context.shadowOffsetY = 9;
-      context.drawImage(carSprite, -68, -29, 136, 58);
+      context.drawImage(bananaSprite, 155, 41, 207, 430, -27, -56, 54, 112);
     } else {
-      context.fillStyle = "#ef3e35";
+      context.fillStyle = "#ffd92e";
       context.beginPath();
-      context.ellipse(0, 0, 45, 12, 0, 0, Math.PI * 2);
+      context.ellipse(0, 0, 19, 48, -.12, 0, Math.PI * 2);
       context.fill();
+      context.fillStyle = "#644329";
+      context.fillRect(-5, -51, 10, 8);
+      context.fillStyle = "#25233a";
+      context.fillRect(-7, -8, 3, 3);
+      context.fillRect(4, -8, 3, 3);
     }
 
     context.restore();
