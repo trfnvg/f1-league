@@ -185,6 +185,8 @@
   transition: opacity 180ms ease, visibility 180ms ease;
 }
 
+.arcade-overlay.is-restarting { opacity: 0; visibility: hidden; pointer-events: none; }
+
 .arcade-overlay[hidden] {
   display: none;
 }
