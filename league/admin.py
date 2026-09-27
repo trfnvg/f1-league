@@ -2,9 +2,11 @@
 from django.contrib import admin
 from django.db import transaction
 from django.template.response import TemplateResponse
+from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import (
+    ArcadeRecord,
     DRIVER_CHOICES,
     DuelChallenge,
     DuelSettings,
@@ -811,3 +813,20 @@ class TelegramReminderAdmin(admin.ModelAdmin):
 class TelegramBotStateAdmin(admin.ModelAdmin):
     list_display = ("key", "update_offset", "updated_at")
     readonly_fields = ("key", "updated_at")
+
+
+@admin.register(ArcadeRecord)
+class ArcadeRecordAdmin(admin.ModelAdmin):
+    list_display = ("user", "best_score", "updated_at")
+    list_editable = ("best_score",)
+    list_filter = ("updated_at",)
+    search_fields = ("user__username", "user__first_name", "user__last_name")
+    list_select_related = ("user",)
+    readonly_fields = ("updated_at",)
+    ordering = ("-best_score", "updated_at", "user__username")
+    actions = ("delete_selected", "reset_selected_records")
+
+    @admin.action(description="Обнулить рекорды выбранных участников")
+    def reset_selected_records(self, request, queryset):
+        count = queryset.update(best_score=0, updated_at=timezone.now())
+        self.message_user(request, f"Обнулено рекордов: {count}.")
