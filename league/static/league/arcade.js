@@ -315,6 +315,11 @@
     if (event.repeat) return;
     const target = event.target;
     if (target instanceof HTMLElement && target.closest("button, a, input, select, textarea")) return;
+    if (event.code === "Space" && state === "gameover") {
+      event.preventDefault();
+      if (!startButton.disabled) void startGame();
+      return;
+    }
     if (state !== "playing") return;
     event.preventDefault();
     flap();
