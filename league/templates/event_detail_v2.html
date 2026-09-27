@@ -489,10 +489,10 @@
   {% elif duel_form %}
     <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="western-challenge-form">
       {% csrf_token %}
-      <div class="western-form-intro"><span>✦</span><div><strong>Назначить дуэль</strong><small>Выбери соперника, укажи ставку и отправь вызов.</small></div></div>
-      <label><span>1. Выбери соперника</span>{{ duel_form.opponent }}</label>
-      <label class="western-stake-field"><span>2. Укажи ставку</span>{{ duel_form.stake }}<small>от 1 до 10 очков</small></label>
-      <button type="submit" class="western-btn is-challenge">Отправить вызов <span>→</span></button>
+      <div class="western-form-intro"><span aria-hidden="true">VS</span><div><strong>Новый вызов</strong><small>Выбери соперника и размер ставки.</small></div></div>
+      <label><span>Соперник</span>{{ duel_form.opponent }}</label>
+      <label class="western-stake-field"><span>Ставка</span>{{ duel_form.stake }}<small>от 1 до 10 очков</small></label>
+      <button type="submit" class="western-btn is-challenge">Вызвать на дуэль <span aria-hidden="true">→</span></button>
     </form>
   {% elif state != "open" %}
     <div class="western-duel-empty"><span>⌛</span><p>Приём новых вызовов закрыт вместе с дедлайном прогнозов.</p></div>

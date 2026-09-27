@@ -4640,3 +4640,381 @@ body.apex-night-theme [aria-invalid="true"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* A quieter, more editorial treatment for the event duel panel. */
+body.apex-night-theme .western-duel {
+  --western-ink: #e8e6e1;
+  --western-brown: #807064;
+  --western-rust: #b8896c;
+  padding: clamp(1rem, 2.5vw, 1.45rem);
+  border: 1px solid rgba(202, 190, 177, .14);
+  border-radius: 16px;
+  color: var(--western-ink);
+  background:
+    radial-gradient(480px 180px at 95% 0, rgba(173, 133, 102, .07), transparent 72%),
+    linear-gradient(145deg, #171c22, #12171c 72%);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .24), inset 0 1px rgba(255, 255, 255, .025);
+}
+
+body.apex-night-theme .western-duel::after {
+  inset: 0 auto auto 1.4rem;
+  width: 70px;
+  height: 2px;
+  background: linear-gradient(90deg, #b8896c, rgba(184, 137, 108, .15));
+  opacity: .8;
+}
+
+body.apex-night-theme .western-duel.has-duel-art::before {
+  background-image:
+    linear-gradient(90deg, rgba(18, 23, 28, .96), rgba(18, 23, 28, .82) 55%, rgba(18, 23, 28, .9)),
+    var(--western-duel-art);
+  filter: grayscale(.72) saturate(.48) contrast(.94);
+}
+
+body.apex-night-theme .western-duel-heading {
+  align-items: center;
+  gap: 1.25rem;
+  margin: .25rem 0 1rem;
+}
+
+body.apex-night-theme .western-duel-kicker {
+  margin-bottom: .3rem;
+  color: #b99a83;
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+body.apex-night-theme .western-duel-heading h2 {
+  color: #f1efeb;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 750;
+  line-height: 1.05;
+  letter-spacing: -.015em;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-duel-heading p {
+  max-width: 620px;
+  margin-top: .4rem;
+  color: #a7adb3;
+  font-size: .78rem;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+body.apex-night-theme .western-duel-limit {
+  width: 158px;
+  min-width: 158px;
+  height: auto;
+  min-height: 68px;
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  align-content: center;
+  align-items: end;
+  justify-content: start;
+  gap: .18rem .45rem;
+  padding: .68rem .8rem;
+  overflow: hidden;
+  border: 1px solid rgba(190, 170, 153, .17);
+  border-radius: 11px;
+  color: #e8e3dd;
+  background: rgba(255, 255, 255, .025);
+  box-shadow: none;
+  clip-path: none;
+  filter: none;
+  text-align: left;
+}
+
+body.apex-night-theme .western-duel-limit::before {
+  top: 0;
+  right: auto;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  height: auto;
+  background: #aa8268;
+}
+
+body.apex-night-theme .western-duel-limit small {
+  grid-column: 1 / -1;
+  width: auto;
+  max-width: none;
+  color: #a9a29c;
+  font-size: .57rem;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: .025em;
+  text-align: left;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-duel-limit strong {
+  grid-column: 1;
+  color: #e0c7b3;
+  font-size: 1.55rem;
+  line-height: .9;
+}
+
+body.apex-night-theme .western-duel-limit span {
+  grid-column: 2;
+  width: auto;
+  max-width: none;
+  padding-bottom: .04rem;
+  color: #a9a29c;
+  font-size: .61rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: .015em;
+  text-align: left;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-showdown,
+body.apex-night-theme .western-challenge-form,
+body.apex-night-theme .western-roster-card,
+body.apex-night-theme .western-duel-empty {
+  border-color: rgba(191, 179, 166, .14);
+  border-radius: 13px;
+  color: #e5e2dc;
+  background: rgba(255, 255, 255, .022);
+  box-shadow: none;
+}
+
+body.apex-night-theme .western-challenge-form {
+  grid-template-columns: minmax(180px, 1.1fr) minmax(170px, 1fr) minmax(130px, .65fr) auto;
+  gap: .85rem;
+  padding: 1rem;
+}
+
+body.apex-night-theme .western-form-intro { gap: .65rem; }
+
+body.apex-night-theme .western-form-intro > span {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(184, 137, 108, .24);
+  border-radius: 9px;
+  color: #c4aa96;
+  background: rgba(184, 137, 108, .07);
+  box-shadow: none;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+body.apex-night-theme .western-form-intro strong {
+  color: #e9e5df;
+  font-family: "Manrope", sans-serif;
+  font-size: .9rem;
+  font-weight: 750;
+  line-height: 1.25;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-form-intro small {
+  margin-top: .22rem;
+  color: #979da3;
+  font-size: .66rem;
+  line-height: 1.4;
+}
+
+body.apex-night-theme .western-challenge-form label > span {
+  margin-bottom: .38rem;
+  color: #b8a18e;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-challenge-form .form-select,
+body.apex-night-theme .western-challenge-form .form-control {
+  min-height: 44px;
+  padding: .62rem .72rem;
+  border: 1px solid rgba(188, 181, 172, .18);
+  border-radius: 9px;
+  color: #ece9e4;
+  background-color: #11161b;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+  font-size: .83rem;
+  font-weight: 600;
+}
+
+body.apex-night-theme .western-challenge-form .form-select:focus,
+body.apex-night-theme .western-challenge-form .form-control:focus {
+  border-color: rgba(184, 137, 108, .55);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(184, 137, 108, .1);
+}
+
+body.apex-night-theme .western-challenge-form .form-select option {
+  color: #ece9e4;
+  background: #11161b;
+}
+
+body.apex-night-theme .western-stake-field { position: static; }
+body.apex-night-theme .western-stake-field input { padding-right: .72rem; }
+body.apex-night-theme .western-stake-field small {
+  position: static;
+  display: block;
+  margin-top: .32rem;
+  color: #878e94;
+  font-size: .62rem;
+  font-weight: 550;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.apex-night-theme .western-btn {
+  min-height: 42px;
+  padding: .58rem .85rem;
+  border: 1px solid rgba(190, 157, 133, .28);
+  border-radius: 9px;
+  color: #e9e5df;
+  background: rgba(255, 255, 255, .035);
+  box-shadow: none;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  text-transform: none;
+  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+body.apex-night-theme .western-btn.is-challenge {
+  min-height: 44px;
+  color: #f7f2ec;
+  border-color: #8b6a55;
+  background: #765844;
+}
+
+body.apex-night-theme .western-btn.is-challenge:hover,
+body.apex-night-theme .western-btn.is-challenge:focus-visible {
+  border-color: #a88972;
+  background: #876852;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .18);
+}
+
+body.apex-night-theme .western-btn.is-challenge > span { color: #e2cbb9; font-size: .95rem; }
+
+body.apex-night-theme .western-btn.is-accept {
+  color: #e7eee8;
+  border-color: rgba(111, 146, 122, .42);
+  background: #435d4b;
+  box-shadow: none;
+}
+
+body.apex-night-theme .western-btn.is-decline,
+body.apex-night-theme .western-btn.is-quiet {
+  color: #c9c4be;
+  border-color: rgba(188, 181, 172, .2);
+  background: rgba(255, 255, 255, .02);
+  box-shadow: none;
+}
+
+body.apex-night-theme .western-avatar {
+  border: 1px solid rgba(190, 170, 153, .28);
+  background: linear-gradient(145deg, #5e5047, #302a26);
+  box-shadow: none;
+}
+
+body.apex-night-theme .western-stake-seal {
+  width: 88px;
+  height: 88px;
+  min-height: 88px;
+  padding: .65rem;
+  border: 1px solid rgba(190, 170, 153, .28);
+  border-radius: 50%;
+  color: #ded2c8;
+  background: #24282d;
+  clip-path: none;
+  filter: none;
+  box-shadow: none;
+}
+
+body.apex-night-theme .western-stake-seal small,
+body.apex-night-theme .western-stake-seal span {
+  color: #aaa39d;
+  font-size: .46rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+body.apex-night-theme .western-stake-seal strong {
+  margin: .1rem 0;
+  color: #d6bca8;
+  font-size: 1.9rem;
+  line-height: .85;
+}
+
+body.apex-night-theme .western-duel-state {
+  border-top-color: rgba(191, 179, 166, .12);
+  background: rgba(255, 255, 255, .018);
+}
+
+body.apex-night-theme .western-state-label { color: #b9957d; }
+body.apex-night-theme .western-duel-state strong { color: #e5e2dc; }
+body.apex-night-theme .western-showdown.is-accepted .western-duel-state {
+  border-top-color: rgba(111, 146, 122, .24);
+  background: rgba(111, 146, 122, .045);
+}
+body.apex-night-theme .western-showdown.is-accepted .western-state-label { color: #9bb3a1; }
+body.apex-night-theme .western-fighter > strong,
+body.apex-night-theme .western-roster-card strong { color: #e8e5df; }
+body.apex-night-theme .western-fighter > small,
+body.apex-night-theme .western-roster-result span { color: #969da3; }
+body.apex-night-theme .western-duel-empty { color: #a9afb4; }
+body.apex-night-theme .western-duel-empty > span { color: #b8896c; }
+body.apex-night-theme .western-duel-empty a { color: #d1b19a; }
+body.apex-night-theme .western-roster-title span { color: #b8896c; }
+body.apex-night-theme .western-roster-title strong { color: #e8e5df; }
+body.apex-night-theme .western-roster-result strong { color: #d7c8bb; }
+body.apex-night-theme .western-roster-result strong.is-winner { color: #d7c8bb; }
+body.apex-night-theme .western-duel-history span {
+  border-color: rgba(191, 179, 166, .12);
+  color: #9da3a8;
+  background: rgba(255, 255, 255, .02);
+}
+
+@media (max-width: 900px) {
+  body.apex-night-theme .western-challenge-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.apex-night-theme .western-form-intro,
+  body.apex-night-theme .western-btn.is-challenge { grid-column: 1 / -1; }
+}
+
+@media (max-width: 620px) {
+  body.apex-night-theme .western-duel { padding: .9rem; border-radius: 14px; }
+  body.apex-night-theme .western-duel::after { left: .9rem; }
+  body.apex-night-theme .western-duel-heading { gap: .75rem; margin: .2rem 0 .9rem; }
+  body.apex-night-theme .western-duel-heading p { font-size: .74rem; }
+  body.apex-night-theme .western-duel-limit {
+    width: fit-content;
+    min-width: 158px;
+    min-height: 58px;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows: auto auto;
+    align-items: end;
+    justify-content: start;
+    gap: .13rem .4rem;
+    padding: .55rem .72rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .025);
+  }
+  body.apex-night-theme .western-duel-limit small { grid-column: 1 / -1; flex: initial; }
+  body.apex-night-theme .western-duel-limit strong { grid-column: 1; font-size: 1.45rem; }
+  body.apex-night-theme .western-duel-limit span { grid-column: 2; padding-bottom: .03rem; }
+  body.apex-night-theme .western-challenge-form { grid-template-columns: minmax(0, 1fr); gap: .78rem; padding: .9rem; }
+  body.apex-night-theme .western-form-intro { padding-bottom: .65rem; border-bottom: 1px solid rgba(191, 179, 166, .12); }
+  body.apex-night-theme .western-btn.is-challenge { grid-column: auto; width: 100%; min-height: 46px; }
+  body.apex-night-theme .western-challenge-form .form-select,
+  body.apex-night-theme .western-challenge-form .form-control { min-height: 46px; font-size: 16px; }
+  body.apex-night-theme .western-showdown { grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr); }
+  body.apex-night-theme .western-stake-seal { width: 68px; height: 68px; min-height: 68px; padding: .45rem; }
+  body.apex-night-theme .western-stake-seal strong { font-size: 1.5rem; }
+  body.apex-night-theme .western-stake-seal small,
+  body.apex-night-theme .western-stake-seal span { font-size: .38rem; }
+  body.apex-night-theme .western-duel-state { background: rgba(255, 255, 255, .018); }
+  body.apex-night-theme .western-roster-card { background: rgba(255, 255, 255, .022); }
+}
