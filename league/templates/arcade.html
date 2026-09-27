@@ -89,9 +89,145 @@
       </ol>
     {% endif %}
   </section>
+
+  <section
+    class="arcade-wheel-panel"
+    id="arcade-wheel-panel"
+    data-event-id="{{ wheel_event.id|default:'' }}"
+    data-spin-url="{% url 'league:arcade_wheel_spin' %}"
+    data-activate-url="{% url 'league:arcade_wheel_activate' %}"
+    data-selected-prize="{{ wheel_spin.prize|default:'' }}"
+    aria-labelledby="arcade-wheel-title"
+  >
+    <div class="arcade-wheel-heading">
+      <div>
+        <span class="arcade-section-kicker">PIT LANE POWER-UP</span>
+        <h2 id="arcade-wheel-title">Колесо бонусов</h2>
+      </div>
+      {% if wheel_event %}
+        <p>{{ wheel_event.name }} · прогнозы закрыты {{ wheel_event.deadline|date:"d.m H:i" }}</p>
+      {% else %}
+        <p>Колесо откроется для следующего этапа</p>
+      {% endif %}
+    </div>
+
+    {% if wheel_event %}
+      <div class="arcade-wheel-layout">
+        <div class="arcade-wheel-machine" aria-label="Колесо бонусов">
+          <span class="arcade-wheel-pointer" aria-hidden="true">▼</span>
+          <div class="arcade-wheel-disc" id="arcade-wheel-disc" role="img" aria-label="Секторы колеса с игровыми бонусами"></div>
+          <span class="arcade-wheel-hub" aria-hidden="true">F1<br>GP</span>
+        </div>
+
+        <div class="arcade-wheel-info">
+          {% if wheel_leader %}
+            <div class="arcade-wheel-leader">
+              <span>{% if wheel_event.deadline > now %}Текущий лидер недели{% else %}Победитель недели{% endif %}</span>
+              <strong>{{ wheel_leader.user.get_full_name|default:wheel_leader.user.username }}</strong>
+              <small>{{ wheel_leader.score }} очк. · лучший заезд за 7 дней до дедлайна</small>
+            </div>
+          {% else %}
+            <div class="arcade-wheel-leader is-empty">
+              <span>Пока нет результата недели</span>
+              <small>В таблицу розыгрыша попадут участники этапа с завершённым заездом за 7 дней до дедлайна.</small>
+            </div>
+          {% endif %}
+
+          <p class="arcade-wheel-status" id="arcade-wheel-status" aria-live="polite">
+            {% if wheel_event.deadline > now %}
+              Колесо разблокируется после дедлайна прогнозов.
+            {% elif not wheel_open %}
+              Окно активации закрылось с началом гонки.
+            {% elif wheel_spin %}
+              Выпало: <strong>{{ wheel_prize.title }}</strong>{% if wheel_spin.activated_at %} · бонус активирован{% else %} · ожидает активации победителем{% endif %}
+            {% elif wheel_leader %}
+              {% if can_spin_wheel %}Твой рекорд лидирует — прокрути колесо до старта гонки.{% else %}После дедлайна прокрутить колесо сможет лидер недели.{% endif %}
+            {% else %}
+              За неделю до дедлайна никто из участников не завершил заезд.
+            {% endif %}
+          </p>
+
+          {% if not user.is_authenticated %}
+            <a class="arcade-wheel-action" href="{% url 'login' %}?next=/arcade/">Войти, чтобы участвовать</a>
+          {% elif can_spin_wheel %}
+            <button class="arcade-wheel-action" id="arcade-wheel-spin" type="button">Крутить колесо <span aria-hidden="true">↻</span></button>
+          {% elif wheel_spin and wheel_spin.winner_id == user.id and can_activate_wheel %}
+            <div class="arcade-wheel-prize-card">
+              <span class="arcade-wheel-prize-kicker">ТВОЙ ПРИЗ</span>
+              <h3>{{ wheel_prize.title }}</h3>
+              <p>{{ wheel_prize.description }}</p>
+              {% if wheel_spin.prize == "podium_edit" and not podium_edit_open %}
+                <p class="arcade-wheel-wait">Апдейт станет доступен после квалификации{% if wheel_event.qualifying_datetime %}: {{ wheel_event.qualifying_datetime|date:"d.m H:i" }}{% endif %}.</p>
+              {% else %}
+                <form class="arcade-wheel-activation" id="arcade-wheel-activation" method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="event_id" value="{{ wheel_event.id }}">
+                  {% if wheel_spin.prize == "podium_edit" %}
+                    <label>Какое место меняем?
+                      <select name="slot" required>
+                        <option value="p1">Победитель (P1)</option>
+                        <option value="p2">Второе место (P2)</option>
+                        <option value="p3">Третье место (P3)</option>
+                      </select>
+                    </label>
+                    <label>Новый пилот
+                      <select name="driver" required>
+                        {% for value, label in driver_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                      </select>
+                    </label>
+                  {% elif wheel_spin.prize == "va_bank" %}
+                    <label>Твой прогноз на кону
+                      <select name="field" required>
+                        <option value="">Выбери сохранённый ответ</option>
+                        {% for item in wheel_prediction_fields %}<option value="{{ item.key }}">{{ item.label }}</option>{% endfor %}
+                      </select>
+                    </label>
+                  {% elif wheel_spin.prize == "ruel_v_govne" %}
+                    <label>Кому достанется «Руль в говне»?
+                      <select name="target_user" required>
+                        <option value="">Выбери участника</option>
+                        {% for item in wheel_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user.username }}</option>{% endfor %}
+                      </select>
+                    </label>
+                  {% elif wheel_spin.prize == "crazy_block" %}
+                    <label>Чей Crazy Prediction блокируем?
+                      <select name="target_user" required>
+                        <option value="">Выбери участника</option>
+                        {% for item in crazy_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user.username }}</option>{% endfor %}
+                      </select>
+                    </label>
+                  {% endif %}
+                  <button class="arcade-wheel-action" type="submit">Активировать на этом этапе</button>
+                </form>
+              {% endif %}
+              <p class="arcade-wheel-feedback" id="arcade-wheel-feedback" role="status"></p>
+            </div>
+          {% elif wheel_spin and wheel_spin.activated_at %}
+            <div class="arcade-wheel-prize-card is-activated">
+              <span class="arcade-wheel-prize-kicker">ПРИЗ АКТИВИРОВАН</span>
+              <h3>{{ wheel_prize.title }}</h3>
+              <p>{{ wheel_prize.description }}</p>
+            </div>
+          {% elif wheel_spin %}
+            <div class="arcade-wheel-prize-card">
+              <span class="arcade-wheel-prize-kicker">РЕЗУЛЬТАТ РОЗЫГРЫША</span>
+              <h3>{{ wheel_prize.title }}</h3>
+              <p>Приз активирует победитель аркадной недели на этой странице.</p>
+            </div>
+          {% elif wheel_event.deadline > now %}
+            <p class="arcade-wheel-login-note">Сыграй в аркаду до дедлайна прогнозов. Учитывается лучший завершённый заезд за последние 7 дней.</p>
+          {% endif %}
+        </div>
+      </div>
+      {{ wheel_sectors|json_script:"arcade-wheel-config" }}
+    {% else %}
+      <p class="arcade-wheel-empty">Нет этапа, для которого сейчас проводится розыгрыш.</p>
+    {% endif %}
+  </section>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
   <script src="{% static 'league/arcade.js' %}" defer></script>
+  <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
