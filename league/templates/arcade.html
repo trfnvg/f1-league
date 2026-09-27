@@ -64,10 +64,10 @@
     {% if user.is_authenticated %}
       <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
-          <li class="{% if record.user_id == user.id %}is-you{% endif %}" data-username="{{ record.user.get_full_name|default:record.user.username }}">
-            <span class="arcade-rank">{{ forloop.counter|stringformat:'02d' }}</span>
-            <span class="arcade-driver-name">{{ record.user.get_full_name|default:record.user.username }}</span>
-            <strong>{{ record.best_score }}</strong>
+          <li class="{% if record.is_current_user %}is-you{% endif %}" data-username="{{ record.username }}">
+            <span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span>
+            <span class="arcade-driver-name">{{ record.username }}</span>
+            <strong>{{ record.score }}</strong>
             <small>ворот</small>
           </li>
         {% empty %}
@@ -82,7 +82,7 @@
       </div>
       <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
-          <li><span class="arcade-rank">{{ forloop.counter|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.user.get_full_name|default:record.user.username }}</span><strong>{{ record.best_score }}</strong><small>ворот</small></li>
+          <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><strong>{{ record.score }}</strong><small>ворот</small></li>
         {% empty %}
           <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов.</li>
         {% endfor %}
