@@ -26,9 +26,10 @@
   const boardStatus = document.getElementById("arcade-board-status");
   const csrfToken = document.querySelector("#arcade-csrf-form input[name=csrfmiddlewaretoken]")?.value || "";
   const WORLD_WIDTH = 960;
-  const WORLD_HEIGHT = 540;
+  let WORLD_HEIGHT = 540;
   const CAR_X = 235;
-  const CAR_RADIUS = 22;
+  const CAR_RADIUS = 18;
+  const CAR_HALF_WIDTH = 58;
   const OBSTACLE_WIDTH = 88;
   const BASE_GAP_HEIGHT = 196;
   const GRAVITY = 1320;
@@ -86,8 +87,19 @@
   function resize() {
     const rect = wrap.getBoundingClientRect();
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    const previousWorldHeight = WORLD_HEIGHT;
     width = Math.max(1, rect.width);
     height = Math.max(1, rect.height);
+    WORLD_HEIGHT = Math.min(900, Math.max(540, Math.round(WORLD_WIDTH * height / width)));
+    if (WORLD_HEIGHT !== previousWorldHeight) {
+      if (state === "ready") {
+        carY = WORLD_HEIGHT * 0.5;
+      } else {
+        const heightScale = WORLD_HEIGHT / previousWorldHeight;
+        carY *= heightScale;
+        for (const obstacle of obstacles) obstacle.gapCenter *= heightScale;
+      }
+    }
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
     context.imageSmoothingEnabled = false;
@@ -277,12 +289,12 @@
   }
 
   function intersectsObstacle(obstacle) {
-    const carLeft = CAR_X - 68;
-    const carRight = CAR_X + 68;
+    const carLeft = CAR_X - CAR_HALF_WIDTH;
+    const carRight = CAR_X + CAR_HALF_WIDTH;
     if (carRight < obstacle.x - 7 || carLeft > obstacle.x + OBSTACLE_WIDTH + 7) return false;
     const topEnd = obstacle.gapCenter - obstacle.gapHeight * 0.5;
     const bottomStart = obstacle.gapCenter + obstacle.gapHeight * 0.5;
-    return carY - 22 < topEnd + 4 || carY + 22 > bottomStart;
+    return carY - CAR_RADIUS < topEnd + 4 || carY + CAR_RADIUS > bottomStart;
   }
 
   function update(delta) {
@@ -299,7 +311,7 @@
     }
     for (const obstacle of obstacles) {
       obstacle.x -= speed * delta;
-      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - 68) {
+      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - CAR_HALF_WIDTH) {
         obstacle.passed = true;
         score += 1;
         syncScores();
@@ -315,7 +327,19 @@
 
   function drawBackground(time) {
     if (trackImage.complete && trackImage.naturalWidth) {
-      context.drawImage(trackImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+      const backgroundScale = Math.max(
+        WORLD_WIDTH / trackImage.naturalWidth,
+        WORLD_HEIGHT / trackImage.naturalHeight,
+      );
+      const backgroundWidth = trackImage.naturalWidth * backgroundScale;
+      const backgroundHeight = trackImage.naturalHeight * backgroundScale;
+      context.drawImage(
+        trackImage,
+        (WORLD_WIDTH - backgroundWidth) * 0.5,
+        (WORLD_HEIGHT - backgroundHeight) * 0.5,
+        backgroundWidth,
+        backgroundHeight,
+      );
     } else {
       context.fillStyle = "#111a25";
       context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -325,7 +349,7 @@
     const streakWidth = Math.min(48, Math.round(getSpeed() * 0.075));
     for (let index = 0; index < 12; index += 1) {
       const x = ((index * 137 - trackOffset * 1.7) % (WORLD_WIDTH + 64) + WORLD_WIDTH + 64) % (WORLD_WIDTH + 64) - 64;
-      const y = 392 + (index * 29 % 88);
+      const y = WORLD_HEIGHT * 0.72 + (index * 29 % Math.round(WORLD_HEIGHT * 0.16));
       context.fillStyle = index % 3 === 0 ? "#ffbd4a" : "#8fe8ff";
       context.fillRect(x, y, streakWidth, 3);
     }
@@ -385,11 +409,11 @@
       context.shadowColor = "rgba(0,0,0,.5)";
       context.shadowBlur = 14;
       context.shadowOffsetY = 9;
-      context.drawImage(carSprite, -82, -35, 164, 70);
+      context.drawImage(carSprite, -68, -29, 136, 58);
     } else {
       context.fillStyle = "#ef3e35";
       context.beginPath();
-      context.ellipse(0, 0, 54, 14, 0, 0, Math.PI * 2);
+      context.ellipse(0, 0, 45, 12, 0, 0, Math.PI * 2);
       context.fill();
     }
 
