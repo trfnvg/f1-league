@@ -1574,6 +1574,14 @@ body.apex-night-theme .player-link {
   color: var(--apex-ink) !important;
 }
 
+body.apex-night-theme .leaderboard-table .player-link,
+body.apex-night-theme .leaderboard-table .player-link:hover,
+body.apex-night-theme .leaderboard-table .player-link:focus,
+body.apex-night-theme .leaderboard-table .player-link:active {
+  border-bottom: 0 !important;
+  text-decoration: none !important;
+}
+
 body.apex-night-theme .table-avatar,
 body.apex-night-theme .participant-avatar,
 body.apex-night-theme .profile-avatar {
@@ -1588,6 +1596,12 @@ body.apex-night-theme .achievement-count {
   color: #241903;
   border-color: var(--apex-amber);
   background: var(--apex-amber);
+}
+
+body.apex-night-theme .leaderboard-table .round-winner-badge {
+  color: #143b2a;
+  border-color: #8bd6aa;
+  background: #b9edce;
 }
 
 body.apex-night-theme .leaderboard-table tr.is-round-winner td {
