@@ -15,6 +15,14 @@
   if (!canvas || !wrap || !overlay || !startButton) return;
 
   const context = canvas.getContext("2d", { alpha: false });
+  const carSprite = new Image();
+  const trackImage = new Image();
+  carSprite.src = canvas.dataset.carSrc;
+  trackImage.src = canvas.dataset.trackSrc;
+  const isAuthenticated = canvas.dataset.authenticated === "true";
+  const board = document.getElementById("arcade-leaderboard-list");
+  const boardStatus = document.getElementById("arcade-board-status");
+  const csrfToken = document.querySelector("#arcade-csrf-form input[name=csrfmiddlewaretoken]")?.value || "";
   const WORLD_WIDTH = 960;
   const WORLD_HEIGHT = 540;
   const CAR_X = 235;
@@ -32,12 +40,14 @@
   let carY = WORLD_HEIGHT * 0.5;
   let carVelocity = 0;
   let score = 0;
-  let best = readRecord();
+  let best = isAuthenticated ? Number(canvas.dataset.record || 0) : readRecord();
   let elapsed = 0;
   let spawnTimer = 0;
   let trackOffset = 0;
   let obstacles = [];
   let overlayTimer = 0;
+  let attemptId = null;
+  let refreshingBoard = false;
 
   function readRecord() {
     try {
@@ -79,8 +89,28 @@
     );
   }
 
-  function startGame() {
+  async function startGame() {
     window.clearTimeout(overlayTimer);
+    startButton.disabled = true;
+    startButton.innerHTML = 'На старт <span aria-hidden="true">…</span>';
+    attemptId = null;
+    if (isAuthenticated) {
+      try {
+        const response = await fetch(canvas.dataset.startUrl, {
+          method: "POST",
+          headers: { "X-CSRFToken": csrfToken, "X-Requested-With": "XMLHttpRequest" },
+          credentials: "same-origin",
+        });
+        if (response.ok) {
+          attemptId = (await response.json()).attempt_id;
+        } else if (boardStatus) {
+          boardStatus.textContent = "Заезд можно пройти, но сейчас он не сохранится в таблице.";
+        }
+      } catch (_) {
+        // Let players continue even if the leaderboard service is temporarily unavailable.
+        if (boardStatus) boardStatus.textContent = "Нет связи с таблицей рекордов — заезд всё равно доступен.";
+      }
+    }
     state = "playing";
     score = 0;
     elapsed = 0;
@@ -91,15 +121,17 @@
     obstacles = [];
     syncScores();
     overlay.hidden = true;
+    startButton.disabled = false;
+    startButton.innerHTML = 'На старт <span aria-hidden="true">→</span>';
     canvas.focus({ preventScroll: true });
   }
 
   function endGame() {
     if (state !== "playing") return;
     state = "gameover";
-    if (score > best) {
+    if (score > best && (!isAuthenticated || attemptId)) {
       best = score;
-      saveRecord(best);
+      if (!isAuthenticated) saveRecord(best);
       overlayMark.textContent = "НОВЫЙ РЕКОРД";
       overlayTitle.textContent = "Новый личный рекорд!";
       overlayCopy.textContent = `Чистый пилотаж: пройдено ${score} ворот. Готов снова выехать на трассу?`;
@@ -108,9 +140,107 @@
       overlayTitle.textContent = "Болид в боксах";
       overlayCopy.textContent = `Пройдено ворот: ${score}. Ещё один круг — и рекорд может пасть.`;
     }
+    if (score > 0 && attemptId) submitResult(attemptId, score);
+    attemptId = null;
     startButton.innerHTML = 'Ещё круг <span aria-hidden="true">↻</span>';
     syncScores();
     overlayTimer = window.setTimeout(() => { overlay.hidden = false; }, 280);
+  }
+
+  function renderLeaderboard(rows) {
+    if (!board) return;
+    board.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("li");
+      empty.className = "arcade-board-empty";
+      empty.textContent = "Пока нет рекордов — первым в таблице можешь стать ты.";
+      board.append(empty);
+      return;
+    }
+    for (const row of rows) {
+      const item = document.createElement("li");
+      if (row.is_current_user) item.classList.add("is-you");
+      const place = document.createElement("span");
+      place.className = "arcade-rank";
+      place.textContent = String(row.rank).padStart(2, "0");
+      const name = document.createElement("span");
+      name.className = "arcade-driver-name";
+      name.textContent = row.username;
+      const scoreValue = document.createElement("strong");
+      scoreValue.textContent = String(row.score);
+      const unit = document.createElement("small");
+      unit.textContent = "ворот";
+      item.append(place, name, scoreValue, unit);
+      board.append(item);
+    }
+  }
+
+  function syncOwnRank(result) {
+    if (!isAuthenticated) return;
+    const ownRankLine = document.getElementById("arcade-own-rank-line");
+    if (!ownRankLine) return;
+    ownRankLine.hidden = !result.rank || result.rank <= 10;
+    ownRankLine.replaceChildren(document.createTextNode("Твоё место: "));
+    const rankValue = document.createElement("strong");
+    rankValue.textContent = String(result.rank || "—");
+    ownRankLine.append(rankValue, document.createTextNode(" · рекорд "));
+    const ownScore = document.createElement("strong");
+    ownScore.textContent = String(result.record || 0);
+    ownRankLine.append(ownScore);
+  }
+
+  async function refreshLeaderboard() {
+    if (refreshingBoard || document.hidden) return;
+    refreshingBoard = true;
+    try {
+      const response = await fetch(canvas.dataset.boardUrl, { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) return;
+      const result = await response.json();
+      renderLeaderboard(result.records || []);
+      syncOwnRank(result);
+      if (isAuthenticated) {
+        best = Number(result.record || 0);
+        canvas.dataset.record = String(best);
+        syncScores();
+      }
+    } catch (_) {
+      // The page keeps the last known leaderboard if polling is temporarily unavailable.
+    } finally {
+      refreshingBoard = false;
+    }
+  }
+
+  async function submitResult(runId, runScore) {
+    if (boardStatus) boardStatus.textContent = "Проверяем результат заезда…";
+    try {
+      const response = await fetch(canvas.dataset.finishUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrfToken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ attempt_id: runId, score: runScore }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Не удалось сохранить рекорд.");
+      best = result.record;
+      saveRecord(best);
+      canvas.dataset.record = String(best);
+      syncScores();
+      renderLeaderboard(result.records || []);
+      syncOwnRank(result);
+      if (boardStatus) boardStatus.textContent = result.is_record
+        ? `Новый рекорд сохранён · место ${result.rank}`
+        : `Твоё место в таблице: ${result.rank}`;
+    } catch (error) {
+      if (isAuthenticated) {
+        best = Number(canvas.dataset.record || 0);
+        syncScores();
+      }
+      if (boardStatus) boardStatus.textContent = error.message || "Не удалось обновить таблицу рекордов.";
+    }
   }
 
   function flap() {
@@ -134,12 +264,12 @@
   }
 
   function intersectsObstacle(obstacle) {
-    const closestX = Math.max(obstacle.x, Math.min(CAR_X, obstacle.x + OBSTACLE_WIDTH));
-    const dx = CAR_X - closestX;
-    if (Math.abs(dx) > CAR_RADIUS + 8) return false;
+    const carLeft = CAR_X - 52;
+    const carRight = CAR_X + 52;
+    if (carRight < obstacle.x || carLeft > obstacle.x + OBSTACLE_WIDTH) return false;
     const topEnd = obstacle.gapCenter - GAP_HEIGHT * 0.5;
     const bottomStart = obstacle.gapCenter + GAP_HEIGHT * 0.5;
-    return carY - CAR_RADIUS < topEnd || carY + CAR_RADIUS > bottomStart;
+    return carY - 15 < topEnd || carY + 15 > bottomStart;
   }
 
   function update(delta) {
@@ -182,61 +312,26 @@
   }
 
   function drawBackground(time) {
-    const sky = context.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
-    sky.addColorStop(0, "#101c29");
-    sky.addColorStop(.58, "#172735");
-    sky.addColorStop(1, "#0b1119");
-    context.fillStyle = sky;
-    context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-
-    const glow = context.createRadialGradient(710, 125, 10, 710, 125, 360);
-    glow.addColorStop(0, "rgba(255,67,54,.13)");
-    glow.addColorStop(1, "rgba(255,67,54,0)");
-    context.fillStyle = glow;
-    context.fillRect(300, 0, 660, 400);
-
-    context.save();
-    context.globalAlpha = .36;
-    for (let index = 0; index < 42; index += 1) {
-      const x = (index * 197 + 73) % WORLD_WIDTH;
-      const y = (index * 83 + 29) % 330;
-      const pulse = .35 + .65 * Math.abs(Math.sin(time * .001 + index));
-      context.fillStyle = index % 6 === 0 ? `rgba(255,111,96,${pulse})` : `rgba(215,230,246,${pulse})`;
-      context.fillRect(x, y, index % 5 === 0 ? 3 : 2, index % 5 === 0 ? 3 : 2);
+    if (trackImage.complete && trackImage.naturalWidth) {
+      context.drawImage(trackImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    } else {
+      context.fillStyle = "#111a25";
+      context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     }
-    context.restore();
-
-    context.fillStyle = "rgba(22,34,47,.8)";
-    for (let index = 0; index < 15; index += 1) {
-      const buildingX = index * 76 - (trackOffset * .22 % 76);
-      const buildingHeight = 65 + (index * 41 % 105);
-      context.fillRect(buildingX, 330 - buildingHeight, 44, buildingHeight);
-      context.fillStyle = "rgba(255,115,91,.18)";
-      for (let row = 0; row < 3; row += 1) context.fillRect(buildingX + 8 + row * 10, 344 - buildingHeight, 3, 3);
-      context.fillStyle = "rgba(22,34,47,.8)";
-    }
-
-    context.fillStyle = "#0b1118";
-    context.fillRect(0, 365, WORLD_WIDTH, WORLD_HEIGHT - 365);
-    context.fillStyle = "rgba(203,216,231,.07)";
-    for (let index = 0; index < 11; index += 1) {
-      const x = index * 120 - trackOffset;
-      context.beginPath();
-      context.moveTo(x, 365);
-      context.lineTo(x - 185, WORLD_HEIGHT);
-      context.lineTo(x - 176, WORLD_HEIGHT);
-      context.lineTo(x + 6, 365);
-      context.fill();
-    }
-
     const floor = WORLD_HEIGHT - 34;
-    context.fillStyle = "#eef2f4";
-    context.fillRect(0, floor, WORLD_WIDTH, 4);
-    for (let index = 0; index < 28; index += 1) {
-      const x = (index * 52 - trackOffset * 1.4) % WORLD_WIDTH;
-      context.fillStyle = index % 2 ? "#f0f2f4" : "#e33b31";
-      context.fillRect(x, floor + 4, 27, 5);
+    context.fillStyle = "rgba(7,11,17,.8)";
+    context.fillRect(0, floor, WORLD_WIDTH, WORLD_HEIGHT - floor);
+    for (let index = 0; index < 20; index += 1) {
+      const x = ((index * 64 - trackOffset * 1.8) % (WORLD_WIDTH + 64) + WORLD_WIDTH + 64) % (WORLD_WIDTH + 64) - 64;
+      context.fillStyle = index % 2 ? "#e8e9e7" : "#d83b33";
+      context.fillRect(x, floor + 5, 34, 5);
     }
+    const vignette = context.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
+    vignette.addColorStop(0, "rgba(4,9,16,.12)");
+    vignette.addColorStop(.66, "rgba(4,9,16,0)");
+    vignette.addColorStop(1, "rgba(4,9,16,.35)");
+    context.fillStyle = vignette;
+    context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
   }
 
   function drawGate(obstacle) {
@@ -300,74 +395,17 @@
     context.save();
     context.translate(CAR_X, carY + idleBounce);
     context.rotate(rotation);
-
-    const flame = context.createLinearGradient(-52, 0, -18, 0);
-    flame.addColorStop(0, "rgba(255,188,75,0)");
-    flame.addColorStop(.65, "rgba(255,98,54,.75)");
-    flame.addColorStop(1, "rgba(255,212,113,.9)");
-    context.fillStyle = flame;
-    context.beginPath();
-    context.moveTo(-43, -4);
-    context.lineTo(-62 - Math.sin(time * .03) * 5, 0);
-    context.lineTo(-43, 4);
-    context.closePath();
-    context.fill();
-
-    context.fillStyle = "rgba(0,0,0,.35)";
-    context.beginPath();
-    context.ellipse(-2, 19, 53, 7, 0, 0, Math.PI * 2);
-    context.fill();
-
-    context.fillStyle = "#080b10";
-    roundedRect(-34, 8, 19, 23, 6); context.fill();
-    roundedRect(24, 8, 19, 23, 6); context.fill();
-    context.fillStyle = "#788391";
-    context.fillRect(-31, 12, 13, 4);
-    context.fillRect(27, 12, 13, 4);
-    context.fillRect(-31, 24, 13, 3);
-    context.fillRect(27, 24, 13, 3);
-
-    context.fillStyle = "#fa4034";
-    context.beginPath();
-    context.moveTo(-48, 5);
-    context.lineTo(-41, -1);
-    context.lineTo(-24, -2);
-    context.lineTo(-14, -16);
-    context.lineTo(7, -19);
-    context.lineTo(22, -8);
-    context.lineTo(43, -5);
-    context.lineTo(54, 2);
-    context.lineTo(40, 6);
-    context.lineTo(29, 8);
-    context.lineTo(-28, 8);
-    context.closePath();
-    context.fill();
-
-    context.fillStyle = "#f3f6f8";
-    context.beginPath();
-    context.moveTo(-48, 2); context.lineTo(-67, 2); context.lineTo(-67, 7); context.lineTo(-45, 8); context.fill();
-    context.fillRect(-44, -4, 16, 4);
-    context.fillRect(39, -5, 17, 4);
-
-    context.fillStyle = "#ffb7a9";
-    context.beginPath();
-    context.ellipse(-1, -11, 16, 12, 0, Math.PI, Math.PI * 2);
-    context.fill();
-    context.fillStyle = "#e8edf2";
-    context.beginPath();
-    context.arc(0, -15, 9, 0, Math.PI * 2);
-    context.fill();
-    context.fillStyle = "#243548";
-    context.beginPath();
-    context.arc(2, -16, 7, Math.PI * 1.08, Math.PI * 1.95);
-    context.lineTo(9, -13); context.lineTo(2, -13); context.closePath(); context.fill();
-    context.fillStyle = "#ffcc59";
-    context.fillRect(-3, -13, 7, 2);
-
-    context.fillStyle = "rgba(255,255,255,.92)";
-    context.font = "900 10px Manrope, sans-serif";
-    context.textAlign = "center";
-    context.fillText("F1", 18, 3);
+    if (carSprite.complete && carSprite.naturalWidth) {
+      context.shadowColor = "rgba(0,0,0,.5)";
+      context.shadowBlur = 14;
+      context.shadowOffsetY = 9;
+      context.drawImage(carSprite, -76, -30, 152, 60);
+    } else {
+      context.fillStyle = "#ef3e35";
+      context.beginPath();
+      context.ellipse(0, 0, 54, 14, 0, 0, Math.PI * 2);
+      context.fill();
+    }
 
     context.restore();
   }
@@ -397,7 +435,7 @@
     animationFrame = window.requestAnimationFrame(frame);
   }
 
-  startButton.addEventListener("click", startGame);
+  startButton.addEventListener("click", () => { void startGame(); });
   canvas.addEventListener("pointerdown", (event) => {
     if (state !== "playing") return;
     event.preventDefault();
@@ -406,8 +444,12 @@
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("resize", resize, { passive: true });
   if ("ResizeObserver" in window) new ResizeObserver(resize).observe(wrap);
-  document.addEventListener("visibilitychange", () => { previousTime = 0; });
-  resetRecordButton.addEventListener("click", () => {
+  document.addEventListener("visibilitychange", () => {
+    previousTime = 0;
+    if (!document.hidden) void refreshLeaderboard();
+  });
+  resetRecordButton?.addEventListener("click", () => {
+    if (isAuthenticated) return;
     best = 0;
     saveRecord(best);
     syncScores();
@@ -416,9 +458,12 @@
   resize();
   syncScores();
   draw(0);
+  void refreshLeaderboard();
+  const leaderboardTimer = window.setInterval(() => { void refreshLeaderboard(); }, 15000);
   animationFrame = window.requestAnimationFrame(frame);
 
   window.addEventListener("pagehide", () => {
     if (animationFrame) window.cancelAnimationFrame(animationFrame);
+    window.clearInterval(leaderboardTimer);
   }, { once: true });
 })();
