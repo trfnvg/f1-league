@@ -18,9 +18,12 @@
   const context = canvas.getContext("2d", { alpha: false });
   context.imageSmoothingEnabled = false;
   const bananaSprite = new Image();
-  const trackImage = new Image();
   bananaSprite.src = canvas.dataset.spriteSrc;
-  trackImage.src = canvas.dataset.trackSrc;
+  const trackImages = canvas.dataset.trackSrcs.split(",").map((source) => {
+    const image = new Image();
+    image.src = source.trim();
+    return image;
+  });
   const isAuthenticated = canvas.dataset.authenticated === "true";
   const board = document.getElementById("arcade-leaderboard-list");
   const boardStatus = document.getElementById("arcade-board-status");
@@ -32,6 +35,9 @@
   const CAR_HALF_WIDTH = 28;
   const OBSTACLE_WIDTH = 88;
   const BASE_GAP_HEIGHT = 196;
+  const BACKGROUND_SCENE_DURATION = 6.5;
+  const BACKGROUND_FADE_DURATION = 1.2;
+  const BACKGROUND_OVERSCAN = 1.16;
   const GRAVITY = 1320;
   const FLAP_VELOCITY = -445;
   const STORAGE_KEY = "f1-pit-lane-flight-record-v1";
@@ -325,25 +331,53 @@
     if (carY - CAR_HALF_HEIGHT < 26 || carY + CAR_HALF_HEIGHT > WORLD_HEIGHT - 35) endGame();
   }
 
+  function drawBackgroundScene(image, panProgress) {
+    if (!image?.complete || !image.naturalWidth) return false;
+    const backgroundScale = Math.max(
+      WORLD_WIDTH / image.naturalWidth,
+      WORLD_HEIGHT / image.naturalHeight,
+    );
+    const backgroundWidth = Math.max(
+      WORLD_WIDTH * BACKGROUND_OVERSCAN,
+      image.naturalWidth * backgroundScale,
+    );
+    const backgroundHeight = image.naturalHeight * backgroundScale;
+    const panDistance = Math.max(0, backgroundWidth - WORLD_WIDTH);
+    context.drawImage(
+      image,
+      -panDistance * panProgress,
+      (WORLD_HEIGHT - backgroundHeight) * 0.5,
+      backgroundWidth,
+      backgroundHeight,
+    );
+    return true;
+  }
+
   function drawBackground(time) {
-    if (trackImage.complete && trackImage.naturalWidth) {
-      const backgroundScale = Math.max(
-        WORLD_WIDTH / trackImage.naturalWidth,
-        WORLD_HEIGHT / trackImage.naturalHeight,
-      );
-      const backgroundWidth = trackImage.naturalWidth * backgroundScale;
-      const backgroundHeight = trackImage.naturalHeight * backgroundScale;
-      context.drawImage(
-        trackImage,
-        (WORLD_WIDTH - backgroundWidth) * 0.5,
-        (WORLD_HEIGHT - backgroundHeight) * 0.5,
-        backgroundWidth,
-        backgroundHeight,
-      );
-    } else {
-      context.fillStyle = "#111a25";
-      context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    const scenePosition = (state === "playing" || state === "gameover" ? elapsed : 0) / BACKGROUND_SCENE_DURATION;
+    const sceneIndex = Math.floor(scenePosition) % trackImages.length;
+    const sceneProgress = scenePosition % 1;
+    const currentScene = trackImages[sceneIndex];
+    const loadedFallback = trackImages.find((image) => image.complete && image.naturalWidth);
+    if (!drawBackgroundScene(currentScene, sceneProgress)) {
+      if (!drawBackgroundScene(loadedFallback, sceneProgress)) {
+        context.fillStyle = "#6fb9f2";
+        context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+      }
     }
+
+    const fadeStart = 1 - BACKGROUND_FADE_DURATION / BACKGROUND_SCENE_DURATION;
+    if (sceneProgress > fadeStart) {
+      const nextScene = trackImages[(sceneIndex + 1) % trackImages.length];
+      if (nextScene.complete && nextScene.naturalWidth) {
+        const fadeProgress = (sceneProgress - fadeStart) / (1 - fadeStart);
+        context.save();
+        context.globalAlpha = fadeProgress * fadeProgress * (3 - 2 * fadeProgress);
+        drawBackgroundScene(nextScene, 0);
+        context.restore();
+      }
+    }
+
     context.save();
     context.globalAlpha = 0.28;
     const streakWidth = Math.min(48, Math.round(getSpeed() * 0.075));
@@ -406,6 +440,7 @@
     context.translate(CAR_X, carY + idleBounce);
     context.rotate(rotation);
     if (bananaSprite.complete && bananaSprite.naturalWidth) {
+      context.scale(-1, 1);
       context.shadowColor = "rgba(0,0,0,.5)";
       context.shadowBlur = 14;
       context.shadowOffsetY = 9;
