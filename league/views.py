@@ -97,6 +97,10 @@ def _is_async_request(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
+def arcade(request):
+    return render(request, "arcade.html")
+
+
 def _wildcard_payload(assignment):
     question = assignment.question
     return {

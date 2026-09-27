@@ -1001,6 +1001,7 @@
   <link rel="stylesheet" href="{% static 'league/summer-theme.css' %}">
   <link rel="stylesheet" href="{% static 'league/editorial-rework.css' %}">
   <link rel="stylesheet" href="{% static 'league/apex-night.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
@@ -1029,6 +1030,7 @@
       <a class="{% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
       <a class="{% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
       <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
+      <a class="{% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
       <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
     </div>
 
@@ -1055,6 +1057,7 @@
     <a class="menu-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
+    <a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
@@ -1185,5 +1188,6 @@
     }
   })();
 </script>
+{% block extra_scripts %}{% endblock %}
 </body>
 </html>

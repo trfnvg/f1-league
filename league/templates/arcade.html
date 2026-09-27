@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Аркада · F1 Predictions{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="arcade-page" aria-labelledby="arcade-title">
+  <header class="arcade-heading">
+    <div>
+      <div class="arcade-kicker"><span></span> F1 PREDICTIONS ARCADE</div>
+      <h1 id="arcade-title">PIT LANE<br><em>FLIGHT</em></h1>
+      <p>Пилотируй болид через скоростные ворота. Одно касание — один рывок вверх.</p>
+    </div>
+    <div class="arcade-personal-record" aria-live="polite">
+      <span>ЛИЧНЫЙ РЕКОРД</span>
+      <strong id="personal-record">0</strong>
+      <small>ворот подряд</small>
+    </div>
+  </header>
+
+  <section class="arcade-machine" aria-label="Мини-игра Pit Lane Flight">
+    <div class="arcade-scoreboard" aria-live="polite">
+      <div><small>ЗАЕЗД</small><strong id="run-score">00</strong></div>
+      <span class="arcade-live"><i></i> ARCADE MODE</span>
+      <div class="arcade-best"><small>РЕКОРД</small><strong id="board-record">00</strong></div>
+    </div>
+    <div class="arcade-canvas-wrap" id="arcade-canvas-wrap">
+      <canvas id="arcade-canvas" tabindex="0" role="application" aria-describedby="arcade-controls" aria-label="Гоночный болид летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
+      <div class="arcade-overlay" id="arcade-overlay">
+        <div class="arcade-overlay-card" id="arcade-overlay-card">
+          <span class="arcade-overlay-mark" id="arcade-overlay-mark">01 / GRID</span>
+          <h2 id="arcade-overlay-title">Готов к выезду?</h2>
+          <p id="arcade-overlay-copy">Пролетай между воротами и не задень трассу. Каждый чистый пролёт — +1 к рекорду.</p>
+          <button class="arcade-start" id="arcade-start" type="button">На старт <span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+    </div>
+    <footer class="arcade-controls" id="arcade-controls">
+      <span><kbd>ПРОБЕЛ</kbd> или <kbd>↑</kbd> — взлёт</span>
+      <span class="arcade-touch-hint">Коснись экрана, чтобы взлететь</span>
+      <span>Без бонусных очков · только личный рекорд</span>
+    </footer>
+  </section>
+
+  <div class="arcade-bottom-row">
+    <p><strong>Короткий круг.</strong> Нажимай вовремя, держи траекторию и попробуй побить свой рекорд.</p>
+    <button class="arcade-reset" id="arcade-reset-record" type="button" title="Сбросить личный рекорд">Сбросить рекорд</button>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'league/arcade.js' %}" defer></script>
+{% endblock %}
