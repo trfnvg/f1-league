@@ -31,10 +31,10 @@
   const WORLD_WIDTH = 960;
   let WORLD_HEIGHT = 540;
   const CAR_X = 235;
-  const CAR_HALF_HEIGHT = 52;
-  const CAR_HALF_WIDTH = 28;
-  const OBSTACLE_WIDTH = 88;
-  const BASE_GAP_HEIGHT = 196;
+  const CAR_HALF_HEIGHT = 37;
+  const CAR_HALF_WIDTH = 18;
+  const OBSTACLE_WIDTH = 70;
+  const BASE_GAP_HEIGHT = 170;
   const BACKGROUND_SCENE_DURATION = 6.5;
   const BACKGROUND_FADE_DURATION = 1.2;
   const BACKGROUND_OVERSCAN = 1.16;
@@ -288,7 +288,7 @@
   }
 
   function spawnObstacle() {
-    const gapHeight = Math.max(148, BASE_GAP_HEIGHT - (getLevel() - 1) * 5);
+    const gapHeight = Math.max(132, BASE_GAP_HEIGHT - (getLevel() - 1) * 5);
     const margin = 115 + gapHeight * 0.5;
     const gapCenter = margin + Math.random() * (WORLD_HEIGHT - margin * 2);
     obstacles.push({ x: WORLD_WIDTH + 40, gapCenter, gapHeight, passed: false });
@@ -407,9 +407,9 @@
       context.fillRect(x + 13, section.y, 5, section.h);
       for (let stripeY = section.y + 8; stripeY < section.y + section.h; stripeY += 30) {
         context.fillStyle = "#ff455b";
-        context.fillRect(x + 24, stripeY, 54, 12);
+        context.fillRect(x + 14, stripeY, OBSTACLE_WIDTH - 28, 12);
         context.fillStyle = "#ffbd4a";
-        context.fillRect(x + 24, stripeY + 12, 54, 5);
+        context.fillRect(x + 14, stripeY + 12, OBSTACLE_WIDTH - 28, 5);
       }
 
       const capY = section.capY;
@@ -417,17 +417,19 @@
       context.fillRect(x - 7, capY, OBSTACLE_WIDTH + 14, 22);
       context.fillStyle = "#ffbd4a";
       context.fillRect(x - 5, capY + 2, OBSTACLE_WIDTH + 10, 18);
+      const checkerWidth = (OBSTACLE_WIDTH + 10) / 10;
       for (let cell = 0; cell < 10; cell += 1) {
+        const checkerX = x - 5 + cell * checkerWidth;
         if (cell % 2 === 0) {
           context.fillStyle = "#f34458";
-          context.fillRect(x - 5 + cell * 10, capY + 2, 10, 8);
+          context.fillRect(checkerX, capY + 2, checkerWidth, 8);
           context.fillStyle = "#fff0bb";
-          context.fillRect(x - 5 + cell * 10, capY + 12, 10, 8);
+          context.fillRect(checkerX, capY + 12, checkerWidth, 8);
         } else {
           context.fillStyle = "#fff0bb";
-          context.fillRect(x - 5 + cell * 10, capY + 2, 10, 8);
+          context.fillRect(checkerX, capY + 2, checkerWidth, 8);
           context.fillStyle = "#f34458";
-          context.fillRect(x - 5 + cell * 10, capY + 12, 10, 8);
+          context.fillRect(checkerX, capY + 12, checkerWidth, 8);
         }
       }
     }
@@ -444,17 +446,17 @@
       context.shadowColor = "rgba(0,0,0,.5)";
       context.shadowBlur = 14;
       context.shadowOffsetY = 9;
-      context.drawImage(bananaSprite, 155, 41, 207, 430, -27, -56, 54, 112);
+      context.drawImage(bananaSprite, 155, 41, 207, 430, -18, -37, 36, 74);
     } else {
       context.fillStyle = "#ffd92e";
       context.beginPath();
-      context.ellipse(0, 0, 19, 48, -.12, 0, Math.PI * 2);
+      context.ellipse(0, 0, 12, 32, -.12, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = "#644329";
-      context.fillRect(-5, -51, 10, 8);
+      context.fillRect(-4, -35, 8, 6);
       context.fillStyle = "#25233a";
-      context.fillRect(-7, -8, 3, 3);
-      context.fillRect(4, -8, 3, 3);
+      context.fillRect(-5, -5, 2, 2);
+      context.fillRect(3, -5, 2, 2);
     }
 
     context.restore();
