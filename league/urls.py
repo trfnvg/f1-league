@@ -5,6 +5,7 @@ app_name = "league"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("arcade/", views.arcade, name="arcade"),
     path("participants/", views.participants, name="participants"),
     path("duel/", views.duel, name="duel"),
     path("season-predictions/", views.season_predictions, name="season_predictions"),

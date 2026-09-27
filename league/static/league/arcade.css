@@ -1,0 +1,342 @@
+.arcade-page {
+  --arcade-line: rgba(209, 222, 237, .14);
+  --arcade-muted: #a7b2c0;
+  max-width: 1040px;
+  margin-inline: auto;
+  color: #f5f7fa;
+}
+
+.arcade-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.arcade-kicker {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  color: #a7b2c0;
+  font-size: .7rem;
+  font-weight: 850;
+  letter-spacing: .16em;
+}
+
+.arcade-kicker span,
+.arcade-live i {
+  width: .5rem;
+  height: .5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #ff4438;
+  box-shadow: 0 0 16px rgba(255, 68, 56, .72);
+}
+
+.arcade-heading h1 {
+  margin: .55rem 0 .25rem;
+  color: #fff;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: clamp(3.2rem, 8vw, 5.6rem);
+  font-weight: 900;
+  letter-spacing: -.055em;
+  line-height: .78;
+}
+
+.arcade-heading h1 em {
+  color: #ff4438;
+  font-style: normal;
+}
+
+.arcade-heading p {
+  max-width: 38rem;
+  margin: 1rem 0 0;
+  color: var(--arcade-muted);
+  font-size: .9rem;
+  line-height: 1.6;
+}
+
+.arcade-personal-record {
+  display: flex;
+  min-width: 150px;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: .8rem 1rem;
+  border: 1px solid var(--arcade-line);
+  border-radius: 3px 16px 3px 3px;
+  background: linear-gradient(145deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+}
+
+.arcade-personal-record span,
+.arcade-scoreboard small {
+  color: var(--arcade-muted);
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.arcade-personal-record strong {
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 2.5rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-personal-record small {
+  color: var(--arcade-muted);
+  font-size: .68rem;
+}
+
+.arcade-machine {
+  overflow: hidden;
+  border: 1px solid var(--arcade-line);
+  border-radius: 3px 20px 3px 3px;
+  background: #111821;
+  box-shadow: 0 24px 64px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.arcade-scoreboard {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid var(--arcade-line);
+  background: linear-gradient(90deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+}
+
+.arcade-scoreboard > div {
+  display: flex;
+  min-width: 64px;
+  flex-direction: column;
+}
+
+.arcade-scoreboard strong {
+  color: white;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-live {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #b7c2ce;
+  font-size: .65rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.arcade-live i {
+  width: .42rem;
+  height: .42rem;
+  background: #55d69e;
+  box-shadow: 0 0 14px rgba(85,214,158,.62);
+}
+
+.arcade-scoreboard .arcade-best {
+  align-items: flex-end;
+}
+
+.arcade-canvas-wrap {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: #0a1017;
+}
+
+.arcade-canvas-wrap::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border: 1px solid rgba(255,255,255,.035);
+  content: "";
+  pointer-events: none;
+}
+
+.arcade-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.arcade-canvas-wrap canvas:focus-visible {
+  outline: 2px solid #4c8dff;
+  outline-offset: -4px;
+}
+
+.arcade-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: linear-gradient(90deg, rgba(7,11,16,.62), rgba(7,11,16,.16) 75%);
+  transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.arcade-overlay[hidden] {
+  display: none;
+}
+
+.arcade-overlay-card {
+  width: min(390px, 100%);
+  margin-right: auto;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  border: 1px solid rgba(211,224,239,.17);
+  border-radius: 3px 18px 3px 3px;
+  background: rgba(15,22,31,.88);
+  box-shadow: 0 24px 70px rgba(0,0,0,.34);
+  backdrop-filter: blur(16px);
+}
+
+.arcade-overlay-mark {
+  color: #ff766e;
+  font-size: .64rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.arcade-overlay-card h2 {
+  margin: .5rem 0;
+  color: #fff;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+  line-height: .95;
+}
+
+.arcade-overlay-card p {
+  margin: 0 0 1rem;
+  color: #bdc7d2;
+  font-size: .83rem;
+  line-height: 1.55;
+}
+
+.arcade-start {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: .7rem 1rem;
+  border: 1px solid #ff4438;
+  border-radius: 3px 12px 3px 3px;
+  color: #fff;
+  background: #e52e25;
+  font: inherit;
+  font-size: .77rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.arcade-start:hover {
+  transform: translateY(-2px);
+  background: #ff4438;
+  box-shadow: 0 10px 24px rgba(229,46,37,.26);
+}
+
+.arcade-start:focus-visible,
+.arcade-reset:focus-visible {
+  outline: 2px solid #4c8dff;
+  outline-offset: 3px;
+}
+
+.arcade-controls {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .55rem 1rem;
+  padding: .65rem 1rem;
+  border-top: 1px solid var(--arcade-line);
+  color: var(--arcade-muted);
+  font-size: .68rem;
+}
+
+.arcade-controls kbd {
+  padding: .18rem .35rem;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 4px;
+  color: #f2f5f8;
+  background: rgba(255,255,255,.06);
+  font: inherit;
+  font-weight: 800;
+}
+
+.arcade-touch-hint {
+  display: none;
+}
+
+.arcade-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: .9rem;
+  color: var(--arcade-muted);
+  font-size: .75rem;
+}
+
+.arcade-bottom-row p { margin: 0; }
+.arcade-bottom-row strong { color: #e2e8ef; }
+
+.arcade-reset {
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: .4rem .65rem;
+  border: 1px solid var(--arcade-line);
+  border-radius: 3px 10px 3px 3px;
+  color: #c4cfdb;
+  background: rgba(255,255,255,.035);
+  font: inherit;
+  font-size: .68rem;
+  cursor: pointer;
+}
+
+.arcade-reset:hover { color: #fff; background: rgba(255,255,255,.08); }
+
+@media (pointer: coarse) {
+  .arcade-touch-hint { display: inline; }
+}
+
+@media (max-width: 620px) {
+  .arcade-heading { align-items: flex-start; gap: .7rem; }
+  .arcade-heading h1 { font-size: clamp(2.8rem, 14vw, 4.5rem); }
+  .arcade-heading p { max-width: 25rem; font-size: .78rem; }
+  .arcade-personal-record { min-width: 92px; padding: .6rem; }
+  .arcade-personal-record span { font-size: .49rem; letter-spacing: .07em; }
+  .arcade-personal-record strong { font-size: 2rem; }
+  .arcade-personal-record small { font-size: .58rem; }
+  .arcade-scoreboard { min-height: 62px; padding: .55rem .75rem; }
+  .arcade-scoreboard strong { font-size: 1.5rem; }
+  .arcade-scoreboard small { font-size: .55rem; }
+  .arcade-live { font-size: .52rem; letter-spacing: .08em; }
+  .arcade-overlay { padding: .55rem; }
+  .arcade-overlay-card { width: min(290px, 100%); padding: .85rem; }
+  .arcade-overlay-card h2 { font-size: 1.7rem; }
+  .arcade-overlay-card p { margin-bottom: .65rem; font-size: .7rem; }
+  .arcade-start { min-height: 40px; }
+  .arcade-controls { padding: .6rem .7rem; font-size: .6rem; }
+  .arcade-controls > span:last-child { display: none; }
+  .arcade-bottom-row { align-items: flex-start; font-size: .67rem; }
+  .arcade-bottom-row p { max-width: 70%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arcade-overlay, .arcade-start { transition: none; }
+}
