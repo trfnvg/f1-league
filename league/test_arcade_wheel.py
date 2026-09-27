@@ -103,6 +103,8 @@ class ArcadeWheelTests(TestCase):
         response = self.client.get(reverse("league:arcade"))
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="arcade-banana-speech"')
+        self.assertContains(response, "i am stupid...")
         self.assertContains(response, "Pit Lane")
         self.assertContains(response, "Сектора колеса")
         self.assertContains(response, "25% шанс")
