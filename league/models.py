@@ -99,6 +99,7 @@ class Event(models.Model):
     name = models.CharField("Название этапа", max_length=120)
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
+    qualifying_datetime = models.DateTimeField("Время окончания квалификации", null=True, blank=True)
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
     has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
@@ -964,3 +965,46 @@ class ArcadeRecord(models.Model):
 
     def __str__(self):
         return f"{self.user}: {self.best_score}"
+
+
+class ArcadeWheelSpin(models.Model):
+    class Prize(models.TextChoices):
+        PIT_WALL = "pit_wall", "Бонус пит-уолла +2"
+        CARD_BOOST = "card_boost", "ДРС личной карты +3"
+        PODIUM_EDIT = "podium_edit", "Апдейт подиума"
+        VA_BANK = "va_bank", "Ва-банк"
+        RUEL_V_GOVNE = "ruel_v_govne", "Руль в говне"
+        CRAZY_BLOCK = "crazy_block", "Блок Crazy"
+
+    event = models.OneToOneField(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="arcade_wheel_spin",
+        verbose_name="Этап",
+    )
+    winner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="arcade_wheel_spins",
+        verbose_name="Победитель аркады",
+    )
+    winner_score = models.PositiveIntegerField("Результат победителя")
+    prize = models.CharField("Приз", max_length=24, choices=Prize.choices)
+    target_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="arcade_wheel_targets",
+        verbose_name="Цель эффекта",
+    )
+    activation_data = models.JSONField("Параметры активации", default=dict, blank=True)
+    spun_at = models.DateTimeField("Время прокрутки", auto_now_add=True)
+    activated_at = models.DateTimeField("Время активации", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Прокрут колеса аркады"
+        verbose_name_plural = "Прокруты колеса аркады"
+
+    def __str__(self):
+        return f"{self.event}: {self.winner} — {self.get_prize_display()}"

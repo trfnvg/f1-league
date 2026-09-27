@@ -27,6 +27,7 @@ from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
     ArcadeRecord,
+    ArcadeWheelSpin,
     DuelChallenge,
     DuelSettings,
     Event,
@@ -55,6 +56,19 @@ from .wildcards import (
     draw_wildcard,
     get_or_create_wildcard_offer,
 )
+from .arcade_rewards import (
+    WHEEL_PRIZE_BY_KEY,
+    WHEEL_SECTORS,
+    activate_event_wheel_prize,
+    arcade_wheel_event,
+    available_va_bank_fields,
+    best_event_arcade_attempt,
+    podium_edit_is_open,
+    spin_event_wheel,
+    va_bank_answer_is_correct,
+    wheel_window_is_open,
+    ArcadeWheelError,
+)
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -78,7 +92,7 @@ def _driver_of_day_values(result):
     return [value for value in values if value]
 
 
-def _community_prediction_correctness(prediction, result):
+def _community_prediction_correctness(prediction, result, *, crazy_blocked=False):
     driver_fields = ("p1", "p2", "p3", "pole", "fastest_lap")
     correct = {
         field_name: bool(
@@ -91,6 +105,7 @@ def _community_prediction_correctness(prediction, result):
     }
     correct["crazy_prediction"] = bool(
         result
+        and not crazy_blocked
         and (prediction.crazy_prediction or "").strip()
         and prediction.crazy_prediction_approved
     )
@@ -103,6 +118,50 @@ def _is_async_request(request):
 
 def arcade(request):
     board_data = _arcade_leaderboard_data(request.user)
+    season = get_selected_season(request)
+    now = timezone.now()
+    wheel_event = arcade_wheel_event(season.year, now)
+    wheel_leader = best_event_arcade_attempt(wheel_event, through=now) if wheel_event else None
+    wheel_spin = (
+        ArcadeWheelSpin.objects.select_related("winner", "target_user")
+        .filter(event=wheel_event)
+        .first()
+        if wheel_event
+        else None
+    )
+    wheel_targets = []
+    crazy_targets = []
+    wheel_prediction_fields = []
+    if wheel_event and request.user.is_authenticated:
+        wheel_targets = list(
+            Prediction.objects.filter(
+                event=wheel_event,
+                user__is_active=True,
+                user__is_staff=False,
+            )
+            .exclude(user=request.user)
+            .select_related("user")
+            .order_by("user__username")
+        )
+        crazy_targets = [
+            prediction
+            for prediction in wheel_targets
+            if (prediction.crazy_prediction or "").strip()
+        ]
+        wheel_prediction_fields = available_va_bank_fields(wheel_event, request.user)
+    wheel_open = wheel_window_is_open(wheel_event, now)
+    can_spin_wheel = bool(
+        wheel_open
+        and wheel_event.deadline <= now
+        and wheel_leader
+        and request.user.is_authenticated
+        and wheel_leader.user_id == request.user.id
+        and wheel_spin is None
+    )
+    if wheel_spin:
+        current_prize = WHEEL_PRIZE_BY_KEY.get(wheel_spin.prize)
+    else:
+        current_prize = None
     if request.user.is_authenticated:
         own_record = ArcadeRecord.objects.filter(user=request.user).first()
     else:
@@ -111,7 +170,57 @@ def arcade(request):
         "arcade_records": board_data["records"],
         "arcade_own_record": own_record,
         "arcade_own_rank": board_data["rank"],
+        "now": now,
+        "driver_choices": DRIVER_CHOICES,
+        "wheel_event": wheel_event,
+        "wheel_leader": wheel_leader,
+        "wheel_spin": wheel_spin,
+        "wheel_prize": current_prize,
+        "wheel_sectors": list(WHEEL_SECTORS),
+        "wheel_targets": wheel_targets,
+        "crazy_targets": crazy_targets,
+        "wheel_prediction_fields": wheel_prediction_fields,
+        "wheel_open": wheel_open,
+        "can_spin_wheel": can_spin_wheel,
+        "can_activate_wheel": bool(
+            wheel_spin
+            and request.user.is_authenticated
+            and wheel_spin.winner_id == request.user.id
+            and not wheel_spin.activated_at
+            and wheel_open
+        ),
+        "podium_edit_open": bool(wheel_event and podium_edit_is_open(wheel_event, now)),
     })
+
+
+@login_required
+def arcade_wheel_spin(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    try:
+        event_id = int(request.POST.get("event_id", ""))
+        event = get_object_or_404(Event, pk=event_id)
+        spin, created = spin_event_wheel(event, request.user)
+    except (ValueError, TypeError, ArcadeWheelError) as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse({
+        "created": created,
+        "prize": spin.prize,
+        "label": WHEEL_PRIZE_BY_KEY[spin.prize]["label"],
+    })
+
+
+@login_required
+def arcade_wheel_activate(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    try:
+        event_id = int(request.POST.get("event_id", ""))
+        event = get_object_or_404(Event, pk=event_id)
+        spin = activate_event_wheel_prize(event, request.user, request.POST)
+    except (ValueError, TypeError, ArcadeWheelError) as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    return JsonResponse({"activated": True, "prize": spin.prize})
 
 
 def arcade_leaderboard(request):
@@ -475,6 +584,11 @@ def event_detail(request, event_id: int):
         form = PredictionForm(instance=prediction, event=event)
 
     score = None
+    wheel_spin = (
+        ArcadeWheelSpin.objects.filter(event=event, activated_at__isnull=False)
+        .select_related("winner", "target_user")
+        .first()
+    )
     if request.user.is_authenticated:
         score = Score.objects.filter(event=event, user=request.user).first()
 
@@ -605,13 +719,22 @@ def event_detail(request, event_id: int):
             max_points=5,
             status="hit" if prediction.dnf_count == result_obj.dnf_count else "miss",
         )
+        crazy_blocked = bool(
+            wheel_spin
+            and wheel_spin.prize == ArcadeWheelSpin.Prize.CRAZY_BLOCK
+            and wheel_spin.target_user_id == prediction.user_id
+        )
         add_row(
-            label="Crazy Prediction",
+            label="Crazy Prediction" + (" · заблокирован" if crazy_blocked else ""),
             predicted=prediction.crazy_prediction or "—",
-            actual="Засчитано судьей" if prediction.crazy_prediction_approved else "Не засчитано судьей",
-            points=5 if prediction.crazy_prediction_approved else 0,
+            actual=(
+                "Заблокировано колесом"
+                if crazy_blocked
+                else "Засчитано судьей" if prediction.crazy_prediction_approved else "Не засчитано судьей"
+            ),
+            points=5 if prediction.crazy_prediction_approved and not crazy_blocked else 0,
             max_points=5,
-            status="hit" if prediction.crazy_prediction_approved else "miss",
+            status="hit" if prediction.crazy_prediction_approved and not crazy_blocked else "miss",
         )
 
     if (
@@ -633,6 +756,74 @@ def event_detail(request, event_id: int):
                 "note": wildcard_assignment.question.question,
             }
         )
+
+    if state == "scored" and result_obj and wheel_spin:
+        if wheel_spin.winner_id == request.user.id:
+            if wheel_spin.prize == ArcadeWheelSpin.Prize.PIT_WALL:
+                add_wheel_row = {
+                    "label": "Бонус пит-уолла",
+                    "predicted": "Активирован",
+                    "actual": "+2 очка",
+                    "points": 2,
+                    "max_points": 2,
+                    "status": "hit",
+                }
+                comparison_rows.append(add_wheel_row)
+                comparison_total += 2
+            elif wheel_spin.prize == ArcadeWheelSpin.Prize.CARD_BOOST:
+                card_hit = bool(wildcard_assignment and wildcard_assignment.is_correct)
+                card_bonus = 3 if card_hit else 0
+                comparison_rows.append(
+                    {
+                        "label": "ДРС личной карты",
+                        "predicted": wildcard_assignment.selected_answer if wildcard_assignment else "—",
+                        "actual": "+3 за верную карту" if card_hit else "Карта не угадана",
+                        "points": card_bonus,
+                        "max_points": 3,
+                        "status": "hit" if card_hit else "miss",
+                    }
+                )
+                comparison_total += card_bonus
+            elif wheel_spin.prize == ArcadeWheelSpin.Prize.VA_BANK:
+                field_key = (wheel_spin.activation_data or {}).get("field", "")
+                field_label = next(
+                    (item["label"] for item in available_va_bank_fields(event, request.user) if item["key"] == field_key),
+                    "выбранный прогноз",
+                )
+                bank_hit = va_bank_answer_is_correct(
+                    prediction,
+                    result_obj,
+                    field_key,
+                    wildcard_assignment,
+                )
+                bank_points = 4 if bank_hit else -1
+                comparison_rows.append(
+                    {
+                        "label": "Ва-банк",
+                        "predicted": field_label,
+                        "actual": "+4" if bank_hit else "−1",
+                        "points": bank_points,
+                        "max_points": 4,
+                        "status": "hit" if bank_hit else "miss",
+                    }
+                )
+                comparison_total += bank_points
+
+        if (
+            wheel_spin.prize == ArcadeWheelSpin.Prize.RUEL_V_GOVNE
+            and wheel_spin.target_user_id == request.user.id
+        ):
+            comparison_rows.append(
+                {
+                    "label": "Руль в говне",
+                    "predicted": "Эффект соперника",
+                    "actual": "−3 очка",
+                    "points": -3,
+                    "max_points": 0,
+                    "status": "miss",
+                }
+            )
+            comparison_total -= 3
 
     can_view_community = state in ("closed", "scored")
     community_predictions = []
@@ -663,7 +854,15 @@ def event_detail(request, event_id: int):
                 "prediction": item,
                 "profile": getattr(item.user, "league_profile", None),
                 "score": public_scores.get(item.user_id),
-                "correct": _community_prediction_correctness(item, result_obj),
+                "correct": _community_prediction_correctness(
+                    item,
+                    result_obj,
+                    crazy_blocked=bool(
+                        wheel_spin
+                        and wheel_spin.prize == ArcadeWheelSpin.Prize.CRAZY_BLOCK
+                        and wheel_spin.target_user_id == item.user_id
+                    ),
+                ),
                 "wildcard": public_wildcards.get(item.user_id),
                 "wildcard_correct": bool(
                     state == "scored"

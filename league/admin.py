@@ -7,6 +7,7 @@ from django.utils.html import format_html
 
 from .models import (
     ArcadeRecord,
+    ArcadeWheelSpin,
     DRIVER_CHOICES,
     DuelChallenge,
     DuelSettings,
@@ -320,6 +321,7 @@ class EventAdmin(admin.ModelAdmin):
         "status",
         "wildcard_deck_status",
         "deadline",
+        "qualifying_datetime",
     )
     list_filter = ("season_year", "has_sprint", "status")
     search_fields = ("name",)
@@ -340,6 +342,7 @@ class EventAdmin(admin.ModelAdmin):
                     "has_sprint",
                     "status",
                     "deadline",
+                    "qualifying_datetime",
                     "race_datetime",
                     "cover_image",
                 ),
@@ -830,3 +833,19 @@ class ArcadeRecordAdmin(admin.ModelAdmin):
     def reset_selected_records(self, request, queryset):
         count = queryset.update(best_score=0, updated_at=timezone.now())
         self.message_user(request, f"Обнулено рекордов: {count}.")
+
+
+@admin.register(ArcadeWheelSpin)
+class ArcadeWheelSpinAdmin(admin.ModelAdmin):
+    list_display = ("event", "winner", "winner_score", "prize", "target_user", "spun_at", "activated_at")
+    list_filter = ("prize", "event__season_year", "activated_at")
+    search_fields = ("winner__username", "target_user__username", "event__name")
+    list_select_related = ("event", "winner", "target_user")
+    readonly_fields = tuple(field.name for field in ArcadeWheelSpin._meta.fields)
+    ordering = ("-spun_at",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

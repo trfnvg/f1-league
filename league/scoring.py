@@ -5,6 +5,7 @@ from django.db.models import Max
 from django.utils import timezone
 
 from .models import (
+    ArcadeWheelSpin,
     DuelChallenge,
     Event,
     PlayerWildcard,
@@ -15,6 +16,7 @@ from .models import (
     SeasonResult,
     SeasonScore,
 )
+from .arcade_rewards import va_bank_answer_is_correct
 from .wildcards import unresolved_wildcard_questions
 
 SEASON_SCORING_WEIGHTS = {
@@ -51,7 +53,7 @@ def _driver_of_day_actual_values(result):
     return set()
 
 
-def calculate_points(pred, res):
+def calculate_points(pred, res, *, crazy_blocked=False):
     points = 0
     breakdown = {}
     is_sprint_weekend = bool(getattr(getattr(res, "event", None), "has_sprint", False))
@@ -96,7 +98,9 @@ def calculate_points(pred, res):
     predicted_driver_of_day = _normalize(pred.driver_of_day)
     if predicted_driver_of_day and predicted_driver_of_day in _driver_of_day_actual_values(res):
         add("Driver of the Day", 3)
-    if pred.crazy_prediction_approved:
+    if pred.crazy_prediction_approved and crazy_blocked:
+        breakdown["Crazy Prediction · заблокирован"] = 0
+    elif pred.crazy_prediction_approved:
         add("Crazy Prediction", 5)
     if pred.safety_car_count == res.safety_car_count:
         add("Safety Car Count", 5)
@@ -132,30 +136,78 @@ def calculate_season_points(prediction, result):
 
 
 def _build_event_score_rows(event):
+    wheel_spin = (
+        ArcadeWheelSpin.objects.filter(event=event, activated_at__isnull=False)
+        .select_related("winner", "target_user")
+        .first()
+    )
     predictions = list(
         Prediction.objects.filter(event=event).select_related("user").order_by("user__username")
     )
-    standard_prediction_points = {}
-    breakdowns = {}
-    users = {}
-    for prediction in predictions:
-        points, breakdown = calculate_points(prediction, event.result)
-        standard_prediction_points[prediction.user_id] = points
-        breakdowns[prediction.user_id] = breakdown
-        users[prediction.user_id] = prediction.user
-
-    wildcard_points = {}
     wildcard_answers = list(
         PlayerWildcard.objects.filter(event=event)
         .exclude(selected_option="")
         .select_related("user", "question")
         .order_by("user__username")
     )
+    wildcard_by_user = {assignment.user_id: assignment for assignment in wildcard_answers}
+    standard_prediction_points = {}
+    breakdowns = {}
+    users = {}
+    for prediction in predictions:
+        crazy_blocked = bool(
+            wheel_spin
+            and wheel_spin.prize == ArcadeWheelSpin.Prize.CRAZY_BLOCK
+            and wheel_spin.target_user_id == prediction.user_id
+        )
+        points, breakdown = calculate_points(
+            prediction,
+            event.result,
+            crazy_blocked=crazy_blocked,
+        )
+        if wheel_spin and wheel_spin.winner_id == prediction.user_id:
+            if wheel_spin.prize == ArcadeWheelSpin.Prize.PIT_WALL:
+                points += 2
+                breakdown["Бонус пит-уолла"] = 2
+            elif wheel_spin.prize == ArcadeWheelSpin.Prize.VA_BANK:
+                field_key = (wheel_spin.activation_data or {}).get("field", "")
+                correct = va_bank_answer_is_correct(
+                    prediction,
+                    event.result,
+                    field_key,
+                    wildcard_by_user.get(prediction.user_id),
+                )
+                bank_points = 4 if correct else -1
+                points += bank_points
+                breakdown["Ва-банк"] = bank_points
+        standard_prediction_points[prediction.user_id] = points
+        breakdowns[prediction.user_id] = breakdown
+        users[prediction.user_id] = prediction.user
+
+    if (
+        wheel_spin
+        and wheel_spin.prize == ArcadeWheelSpin.Prize.RUEL_V_GOVNE
+        and wheel_spin.target_user_id in standard_prediction_points
+    ):
+        target_id = wheel_spin.target_user_id
+        standard_prediction_points[target_id] -= 3
+        breakdowns.setdefault(target_id, {})["Руль в говне"] = -3
+
+    wildcard_points = {}
     for assignment in wildcard_answers:
-        points = assignment.awarded_points
+        card_points = assignment.awarded_points
+        points = card_points
+        if (
+            wheel_spin
+            and wheel_spin.winner_id == assignment.user_id
+            and wheel_spin.prize == ArcadeWheelSpin.Prize.CARD_BOOST
+            and assignment.is_correct
+        ):
+            points += 3
+            breakdowns.setdefault(assignment.user_id, {})["ДРС личной карты"] = 3
         wildcard_points[assignment.user_id] = points
         users[assignment.user_id] = assignment.user
-        breakdowns.setdefault(assignment.user_id, {})["Личная карта этапа"] = points
+        breakdowns.setdefault(assignment.user_id, {})["Личная карта этапа"] = card_points
 
     duels = list(
         DuelChallenge.objects.filter(
