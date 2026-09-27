@@ -31,8 +31,9 @@
   const WORLD_WIDTH = 960;
   let WORLD_HEIGHT = 540;
   const CAR_X = 235;
-  const CAR_HALF_HEIGHT = 37;
-  const CAR_HALF_WIDTH = 18;
+  let playerScale = 1;
+  const PLAYER_WIDTH = 36;
+  const PLAYER_HEIGHT = 74;
   const OBSTACLE_WIDTH = 70;
   const BASE_GAP_HEIGHT = 170;
   const BACKGROUND_SCENE_DURATION = 6.5;
@@ -96,6 +97,7 @@
     const previousWorldHeight = WORLD_HEIGHT;
     width = Math.max(1, rect.width);
     height = Math.max(1, rect.height);
+    playerScale = width <= 620 || window.matchMedia("(pointer: coarse)").matches ? 1.4 : 1;
     WORLD_HEIGHT = Math.min(900, Math.max(540, Math.round(WORLD_WIDTH * height / width)));
     if (WORLD_HEIGHT !== previousWorldHeight) {
       if (state === "ready") {
@@ -295,12 +297,14 @@
   }
 
   function intersectsObstacle(obstacle) {
-    const carLeft = CAR_X - CAR_HALF_WIDTH;
-    const carRight = CAR_X + CAR_HALF_WIDTH;
+    const playerHalfWidth = PLAYER_WIDTH * playerScale * 0.5;
+    const playerHalfHeight = PLAYER_HEIGHT * playerScale * 0.5;
+    const carLeft = CAR_X - playerHalfWidth;
+    const carRight = CAR_X + playerHalfWidth;
     if (carRight < obstacle.x - 7 || carLeft > obstacle.x + OBSTACLE_WIDTH + 7) return false;
     const topEnd = obstacle.gapCenter - obstacle.gapHeight * 0.5;
     const bottomStart = obstacle.gapCenter + obstacle.gapHeight * 0.5;
-    return carY - CAR_HALF_HEIGHT < topEnd + 4 || carY + CAR_HALF_HEIGHT > bottomStart;
+    return carY - playerHalfHeight < topEnd + 4 || carY + playerHalfHeight > bottomStart;
   }
 
   function update(delta) {
@@ -317,7 +321,7 @@
     }
     for (const obstacle of obstacles) {
       obstacle.x -= speed * delta;
-      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - CAR_HALF_WIDTH) {
+      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - PLAYER_WIDTH * playerScale * 0.5) {
         obstacle.passed = true;
         score += 1;
         syncScores();
@@ -328,7 +332,8 @@
       }
     }
     obstacles = obstacles.filter((obstacle) => obstacle.x > -OBSTACLE_WIDTH - 20);
-    if (carY - CAR_HALF_HEIGHT < 26 || carY + CAR_HALF_HEIGHT > WORLD_HEIGHT - 35) endGame();
+    const playerHalfHeight = PLAYER_HEIGHT * playerScale * 0.5;
+    if (carY - playerHalfHeight < 26 || carY + playerHalfHeight > WORLD_HEIGHT - 35) endGame();
   }
 
   function drawBackgroundScene(image, panProgress) {
@@ -441,19 +446,26 @@
     context.save();
     context.translate(CAR_X, carY + idleBounce);
     context.rotate(rotation);
+    context.scale(-playerScale, playerScale);
     if (bananaSprite.complete && bananaSprite.naturalWidth) {
-      context.scale(-1, 1);
-      context.shadowColor = "rgba(0,0,0,.5)";
-      context.shadowBlur = 14;
-      context.shadowOffsetY = 9;
-      context.drawImage(bananaSprite, 155, 41, 207, 430, -18, -37, 36, 74);
+      context.drawImage(
+        bananaSprite,
+        155,
+        41,
+        207,
+        430,
+        -PLAYER_WIDTH * 0.5,
+        -PLAYER_HEIGHT * 0.5,
+        PLAYER_WIDTH,
+        PLAYER_HEIGHT,
+      );
     } else {
       context.fillStyle = "#ffd92e";
       context.beginPath();
-      context.ellipse(0, 0, 12, 32, -.12, 0, Math.PI * 2);
+      context.ellipse(0, 0, 16, 34, -.12, 0, Math.PI * 2);
       context.fill();
       context.fillStyle = "#644329";
-      context.fillRect(-4, -35, 8, 6);
+      context.fillRect(-4, -40, 8, 6);
       context.fillStyle = "#25233a";
       context.fillRect(-5, -5, 2, 2);
       context.fillRect(3, -5, 2, 2);
