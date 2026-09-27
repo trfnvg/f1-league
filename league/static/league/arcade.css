@@ -37,7 +37,7 @@
 .arcade-heading h1 {
   margin: .55rem 0 .25rem;
   color: #fff;
-  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-family: "Manrope", "Segoe UI", sans-serif;
   font-size: clamp(3.2rem, 8vw, 5.6rem);
   font-weight: 900;
   letter-spacing: -.055em;
@@ -514,7 +514,7 @@
     radial-gradient(ellipse at 12% 0%, rgba(44, 100, 153, .2), transparent 45%),
     linear-gradient(145deg, #182432, #101820 72%);
   box-shadow: 0 18px 54px rgba(0, 0, 0, .22), inset 0 1px 0 rgba(255,255,255,.04);
-  font-family: "Courier New", monospace;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
 }
 
 .arcade-wheel-heading {
@@ -529,7 +529,7 @@
 .arcade-wheel-heading h2 {
   margin: .25rem 0 0;
   color: #fff;
-  font-family: "Courier New", monospace;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
   font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 900;
   line-height: 1;
@@ -596,7 +596,7 @@
   left: 50%;
   width: 84px;
   color: #0d1721;
-  font-family: "Courier New", monospace;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
   font-size: clamp(.52rem, 1.8vw, .66rem);
   font-weight: 900;
   line-height: 1.12;
@@ -623,20 +623,15 @@
   position: absolute;
   z-index: 3;
   display: grid;
-  width: 74px;
+  width: 86px;
   aspect-ratio: 1;
-  place-content: center;
-  border: 4px solid #d8e5f1;
+  place-items: center;
   border-radius: 50%;
-  color: #fff;
-  background: radial-gradient(circle at 34% 26%, #ff655a, #bf241d 68%, #761912);
-  box-shadow: 0 0 0 4px #0b1520, 0 3px 12px rgba(0,0,0,.55);
-  font-size: .78rem;
-  font-weight: 900;
-  line-height: 1.05;
-  text-align: center;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.6));
   pointer-events: none;
 }
+
+.arcade-wheel-hub img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 .arcade-wheel-info { min-width: 0; }
 
@@ -730,7 +725,7 @@
 .arcade-wheel-prize-card h3 {
   margin: .35rem 0 .35rem;
   color: #fff;
-  font-family: "Courier New", monospace;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
   font-size: 1rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -781,11 +776,57 @@
 
 .arcade-wheel-disc.is-spinning { filter: brightness(1.08); }
 
+.arcade-wheel-panel .arcade-wheel-heading h2,
+.arcade-wheel-panel .arcade-wheel-rules-heading h3 {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+.arcade-wheel-panel .arcade-wheel-label {
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: clamp(.62rem, 1.8vw, .76rem);
+  font-weight: 800;
+  letter-spacing: .015em;
+}
+.arcade-wheel-panel .arcade-wheel-leader span,
+.arcade-wheel-panel .arcade-wheel-prize-kicker,
+.arcade-wheel-panel .arcade-section-kicker {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  letter-spacing: .075em;
+}
+
+.arcade-wheel-rules { padding: 0 clamp(1rem, 3vw, 2rem) 1.5rem; }
+.arcade-wheel-rules-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .8rem;
+}
+.arcade-wheel-rules-heading h3 { margin: .15rem 0 0; color: #f4f7fb; font-size: 1.45rem; }
+.arcade-wheel-rules-heading > p { margin: 0; color: #a9bad1; font-size: .76rem; }
+.arcade-wheel-rules-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+.arcade-wheel-rule {
+  min-width: 0;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(155,184,211,.17);
+  border-top: 2px solid var(--prize-color);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(27,40,54,.95), rgba(17,27,38,.96));
+}
+.arcade-wheel-rule-topline { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.arcade-wheel-rule-mark { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--prize-color); box-shadow: 0 0 10px color-mix(in srgb, var(--prize-color) 45%, transparent); }
+.arcade-wheel-rule-chance { margin-left: auto; color: var(--prize-color); font-size: .67rem; font-weight: 800; }
+.arcade-wheel-rule h4 { margin: .45rem 0 .25rem; color: #f4f7fb; font-size: .9rem; font-weight: 800; }
+.arcade-wheel-rule p { margin: 0; color: #afbdcb; font-size: .72rem; line-height: 1.55; }
+
 @media (max-width: 700px) {
   .arcade-wheel-layout { grid-template-columns: 1fr; gap: 1.2rem; }
   .arcade-wheel-machine { width: min(82vw, 340px); }
   .arcade-wheel-label { transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-34vw) rotate(calc(-1 * var(--label-angle))); }
   .arcade-wheel-info { width: 100%; }
+  .arcade-wheel-rules-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arcade-wheel-rules-heading { align-items: flex-start; flex-direction: column; gap: .3rem; }
 }
 
 @media (max-width: 480px) {
@@ -794,7 +835,10 @@
   .arcade-wheel-layout { padding: .9rem; }
   .arcade-wheel-machine { width: min(88vw, 310px); padding: 9px; }
   .arcade-wheel-label { width: 68px; font-size: .5rem; transform: translate(-50%, -50%) rotate(var(--label-angle)) translateY(-37vw) rotate(calc(-1 * var(--label-angle))); }
-  .arcade-wheel-hub { width: 62px; font-size: .68rem; }
+  .arcade-wheel-hub { width: 70px; }
+  .arcade-wheel-rules { padding: 0 .9rem 1rem; }
+  .arcade-wheel-rules-grid { grid-template-columns: 1fr; }
+  .arcade-wheel-rule { padding: .8rem .9rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -116,7 +116,7 @@
         <div class="arcade-wheel-machine" aria-label="Колесо бонусов">
           <span class="arcade-wheel-pointer" aria-hidden="true">▼</span>
           <div class="arcade-wheel-disc" id="arcade-wheel-disc" role="img" aria-label="Секторы колеса с игровыми бонусами"></div>
-          <span class="arcade-wheel-hub" aria-hidden="true">F1<br>GP</span>
+          <span class="arcade-wheel-hub" aria-hidden="true"><img src="{% static 'league/images/arcade-wheel-hub.png' %}" alt=""></span>
         </div>
 
         <div class="arcade-wheel-info">
@@ -217,6 +217,27 @@
           {% elif wheel_event.deadline > now %}
             <p class="arcade-wheel-login-note">Сыграй в аркаду до дедлайна прогнозов. Учитывается лучший завершённый заезд за последние 7 дней.</p>
           {% endif %}
+        </div>
+      </div>
+      <div class="arcade-wheel-rules" aria-labelledby="arcade-wheel-rules-title">
+        <div class="arcade-wheel-rules-heading">
+          <div>
+            <span class="arcade-section-kicker">ПРАВИЛА РОЗЫГРЫША</span>
+            <h3 id="arcade-wheel-rules-title">Что дают сектора</h3>
+          </div>
+          <p>Шанс выпадения указан у каждого бонуса</p>
+        </div>
+        <div class="arcade-wheel-rules-grid">
+          {% for sector in wheel_sectors %}
+            <article class="arcade-wheel-rule" style="--prize-color: {{ sector.color }}">
+              <div class="arcade-wheel-rule-topline">
+                <span class="arcade-wheel-rule-mark" aria-hidden="true"></span>
+                <span class="arcade-wheel-rule-chance">{{ sector.weight }}% шанс</span>
+              </div>
+              <h4>{{ sector.title }}</h4>
+              <p>{{ sector.description }}</p>
+            </article>
+          {% endfor %}
         </div>
       </div>
       {{ wheel_sectors|json_script:"arcade-wheel-config" }}
