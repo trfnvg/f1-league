@@ -751,22 +751,31 @@ body.apex-night-theme .activity-feed-item:hover {
 }
 
 body.apex-night-theme .activity-feed-icon {
-  border-radius: 2px 11px 2px 2px;
-  background: var(--apex-red);
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(218, 228, 239, 0.18);
+  border-radius: 12px;
+  color: transparent;
+  background-color: #151d27;
+  background-image: url("images/live-paddock-icons.png");
+  background-repeat: no-repeat;
+  background-size: 300% 300%;
+  background-position: 50% 0%;
 }
 
 body.apex-night-theme .activity-feed-item.is-movement .activity-feed-icon {
-  background: var(--apex-blue);
+  background-position: 50% 50%;
+  border-color: rgba(69, 176, 155, 0.3);
 }
 
 body.apex-night-theme .activity-feed-item.is-leader .activity-feed-icon {
-  color: #1b1203;
-  background: var(--apex-amber);
+  background-position: 0% 0%;
+  border-color: rgba(129, 198, 156, 0.32);
 }
 
 body.apex-night-theme .activity-feed-item.is-record .activity-feed-icon {
-  color: #041518;
-  background: var(--apex-cyan);
+  background-position: 100% 0%;
+  border-color: rgba(80, 197, 185, 0.3);
 }
 
 body.apex-night-theme .activity-news-list {
@@ -842,21 +851,18 @@ body.apex-night-theme .activity-news-copy > small:last-child {
 }
 
 body.apex-night-theme .activity-feed-item.is-perfect-podium .activity-feed-icon {
-  color: #06150f;
-  background: var(--apex-green);
-  font-size: 0.62rem;
-  letter-spacing: -0.04em;
+  background-position: 0% 50%;
+  border-color: rgba(96, 190, 156, 0.3);
 }
 
 body.apex-night-theme .activity-feed-item.is-duel-accepted .activity-feed-icon {
-  color: #21140b;
-  background: #d99a62;
+  background-position: 100% 50%;
+  border-color: rgba(220, 118, 93, 0.34);
 }
 
 body.apex-night-theme .activity-feed-item.is-duel-result .activity-feed-icon {
-  color: #fff;
-  background: #8a5cf5;
-  box-shadow: 0 0 0 4px rgba(138, 92, 245, 0.1);
+  background-position: 0% 100%;
+  border-color: rgba(209, 178, 123, 0.3);
 }
 
 body.apex-night-theme .activity-feed-item small {
