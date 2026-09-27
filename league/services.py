@@ -579,7 +579,6 @@ def build_activity_feed(leaderboard, limit=10):
         *,
         event,
         activity_type,
-        icon,
         text,
         meta,
         user_id,
@@ -589,7 +588,6 @@ def build_activity_feed(leaderboard, limit=10):
         entries.append(
             {
                 "type": activity_type,
-                "icon": icon,
                 "text": text,
                 "meta": meta,
                 "user_id": user_id,
@@ -617,7 +615,6 @@ def build_activity_feed(leaderboard, limit=10):
                         entries,
                         event=event,
                         activity_type="winner",
-                        icon="🏁",
                         text=f"{winner.username} выиграл этап",
                         meta=f"R{event.round_number} · {event.name} · {best_points} очков",
                         user_id=winner.id,
@@ -634,7 +631,6 @@ def build_activity_feed(leaderboard, limit=10):
                     entries,
                     event=event,
                     activity_type="record",
-                    icon="PB",
                     text=f"{user.username} обновил личный рекорд",
                     meta=f"R{event.round_number} · {event.name} · {score.points} очков",
                     user_id=user.id,
@@ -656,7 +652,6 @@ def build_activity_feed(leaderboard, limit=10):
                         entries,
                         event=event,
                         activity_type="perfect-podium",
-                        icon="123",
                         text=f"{user.username} идеально угадал подиум",
                         meta=f"R{event.round_number} · {event.name} · P1, P2 и P3 точно",
                         user_id=user.id,
@@ -707,7 +702,6 @@ def build_activity_feed(leaderboard, limit=10):
                 feed,
                 event=latest_published_event,
                 activity_type="leader",
-                icon="P1",
                 text=f"{current_leader['user'].username} стал новым лидером чемпионата",
                 meta=f"После R{latest_published_event.round_number} · {current_leader['total']} очков",
                 user_id=current_leader["user"].id,
@@ -732,7 +726,6 @@ def build_activity_feed(leaderboard, limit=10):
                 feed,
                 event=latest_published_event,
                 activity_type="movement",
-                icon="↗",
                 text=f"{mover['user'].username} поднялся на {movement} {place_word}",
                 meta=f"После R{latest_published_event.round_number} · теперь P{mover['rank']}",
                 user_id=mover["user"].id,
@@ -752,7 +745,6 @@ def build_activity_feed(leaderboard, limit=10):
             feed.append(
                 {
                     "type": "duel-accepted",
-                    "icon": "VS",
                     "text": f"Дуэль {duel.challenger.username} — {duel.opponent.username} принята",
                     "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
                     "user_id": duel.opponent_id,
@@ -766,7 +758,6 @@ def build_activity_feed(leaderboard, limit=10):
             feed.append(
                 {
                     "type": "duel-result",
-                    "icon": "+",
                     "text": f"{duel.winner.username} выиграл дуэль",
                     "meta": (
                         f"R{duel.event.round_number} · {duel.challenger.username} — "

@@ -105,7 +105,7 @@
             href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}"
           {% endif %}
         >
-          <span class="activity-feed-icon">{{ item.icon }}</span>
+          <span class="activity-feed-icon" aria-hidden="true"></span>
           <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
         </a>
       {% endfor %}
