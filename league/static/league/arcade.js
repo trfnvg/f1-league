@@ -151,8 +151,6 @@
     const thisRun = ++runSequence;
     overlay.classList.add("is-restarting");
     bananaSpeech.hidden = true;
-    startButton.disabled = false;
-    startButton.innerHTML = 'На старт <span aria-hidden="true">→</span>';
     attemptId = null;
     state = "playing";
     score = 0;
