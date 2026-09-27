@@ -101,20 +101,24 @@
   >
     <div class="arcade-wheel-heading">
       <div>
-        <span class="arcade-section-kicker">PIT LANE POWER-UP</span>
-        <h2 id="arcade-wheel-title">Колесо бонусов</h2>
+        <span class="arcade-section-kicker">ЕЖЕНЕДЕЛЬНЫЙ БОНУС</span>
+        <h2 id="arcade-wheel-title">Pit Lane <em>Power-Up</em></h2>
+        <p class="arcade-wheel-intro">Лидер аркадной недели прокручивает колесо и получает бонус на этап.</p>
       </div>
-      {% if wheel_event %}
-        <p>{{ wheel_event.name }} · прогнозы закрыты {{ wheel_event.deadline|date:"d.m H:i" }}</p>
-      {% else %}
-        <p>Колесо откроется для следующего этапа</p>
-      {% endif %}
+      <div class="arcade-wheel-event-meta">
+        <span class="arcade-wheel-event-dot" aria-hidden="true"></span>
+        {% if wheel_event %}
+          <span><strong>{{ wheel_event.name }}</strong><small>Дедлайн прогнозов · {{ wheel_event.deadline|date:"d.m H:i" }}</small></span>
+        {% else %}
+          <span><strong>Следующий этап</strong><small>Колесо откроется после дедлайна прогнозов</small></span>
+        {% endif %}
+      </div>
     </div>
 
     {% if wheel_event %}
       <div class="arcade-wheel-layout">
         <div class="arcade-wheel-machine" aria-label="Колесо бонусов">
-          <span class="arcade-wheel-pointer" aria-hidden="true">▼</span>
+          <span class="arcade-wheel-pointer" aria-hidden="true"></span>
           <div class="arcade-wheel-disc" id="arcade-wheel-disc" role="img" aria-label="Секторы колеса с игровыми бонусами"></div>
           <span class="arcade-wheel-hub" aria-hidden="true"><img src="{% static 'league/images/arcade-wheel-hub.png' %}" alt=""></span>
         </div>
@@ -222,16 +226,16 @@
       <div class="arcade-wheel-rules" aria-labelledby="arcade-wheel-rules-title">
         <div class="arcade-wheel-rules-heading">
           <div>
-            <span class="arcade-section-kicker">ПРАВИЛА РОЗЫГРЫША</span>
-            <h3 id="arcade-wheel-rules-title">Что дают сектора</h3>
+            <span class="arcade-section-kicker">ШЕСТЬ ВАРИАНТОВ БОНУСА</span>
+            <h3 id="arcade-wheel-rules-title">Сектора колеса</h3>
           </div>
-          <p>Шанс выпадения указан у каждого бонуса</p>
+          <p>Номер на колесе соответствует карточке</p>
         </div>
         <div class="arcade-wheel-rules-grid">
           {% for sector in wheel_sectors %}
-            <article class="arcade-wheel-rule" style="--prize-color: {{ sector.color }}">
+            <article class="arcade-wheel-rule" data-prize="{{ sector.key }}" style="--prize-color: {{ sector.color }}">
               <div class="arcade-wheel-rule-topline">
-                <span class="arcade-wheel-rule-mark" aria-hidden="true"></span>
+                <span class="arcade-wheel-rule-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
                 <span class="arcade-wheel-rule-chance">{{ sector.weight }}% шанс</span>
               </div>
               <h4>{{ sector.title }}</h4>

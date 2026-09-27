@@ -17,7 +17,7 @@
   let cumulative = 0;
   const gradientStops = [];
 
-  sectors.forEach((sector) => {
+  sectors.forEach((sector, index) => {
     const span = weightsTotal ? Number(sector.weight) / weightsTotal * 360 : 0;
     const center = cumulative + span / 2;
     centers.set(sector.key, center);
@@ -27,7 +27,8 @@
     const label = document.createElement("span");
     label.className = "arcade-wheel-label";
     label.dataset.prize = sector.key;
-    label.textContent = sector.label;
+    label.textContent = String(index + 1).padStart(2, "0");
+    label.setAttribute("aria-hidden", "true");
     label.style.setProperty("--label-angle", `${center}deg`);
     disc.append(label);
     cumulative += span;
@@ -47,6 +48,7 @@
     disc.style.transform = `rotate(${rotationFor(currentPrize)}deg)`;
     const selectedLabel = disc.querySelector(`.arcade-wheel-label[data-prize="${CSS.escape(currentPrize)}"]`);
     selectedLabel?.classList.add("is-selected");
+    panel.querySelector(`.arcade-wheel-rule[data-prize="${CSS.escape(currentPrize)}"]`)?.classList.add("is-selected");
   }
 
   async function submit(url, formData) {
