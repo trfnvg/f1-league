@@ -12,9 +12,11 @@
   const overlayCopy = document.getElementById("arcade-overlay-copy");
   const overlayMark = document.getElementById("arcade-overlay-mark");
   const resetRecordButton = document.getElementById("arcade-reset-record");
+  const levelOutput = document.getElementById("arcade-level");
   if (!canvas || !wrap || !overlay || !startButton) return;
 
   const context = canvas.getContext("2d", { alpha: false });
+  context.imageSmoothingEnabled = false;
   const carSprite = new Image();
   const trackImage = new Image();
   carSprite.src = canvas.dataset.carSrc;
@@ -28,7 +30,7 @@
   const CAR_X = 235;
   const CAR_RADIUS = 22;
   const OBSTACLE_WIDTH = 88;
-  const GAP_HEIGHT = 196;
+  const BASE_GAP_HEIGHT = 196;
   const GRAVITY = 1320;
   const FLAP_VELOCITY = -445;
   const STORAGE_KEY = "f1-pit-lane-flight-record-v1";
@@ -70,6 +72,15 @@
     scoreOutput.textContent = String(score).padStart(2, "0");
     recordOutput.textContent = String(best);
     boardRecordOutput.textContent = String(best).padStart(2, "0");
+    if (levelOutput) levelOutput.textContent = String(getLevel()).padStart(2, "0");
+  }
+
+  function getLevel() {
+    return Math.floor(score / 5) + 1;
+  }
+
+  function getSpeed() {
+    return Math.min(520, 250 + score * 8 + elapsed * 3.5);
   }
 
   function resize() {
@@ -79,6 +90,7 @@
     height = Math.max(1, rect.height);
     canvas.width = Math.round(width * ratio);
     canvas.height = Math.round(height * ratio);
+    context.imageSmoothingEnabled = false;
     context.setTransform(
       ratio * width / WORLD_WIDTH,
       0,
@@ -258,35 +270,36 @@
   }
 
   function spawnObstacle() {
-    const margin = 115 + GAP_HEIGHT * 0.5;
+    const gapHeight = Math.max(148, BASE_GAP_HEIGHT - (getLevel() - 1) * 5);
+    const margin = 115 + gapHeight * 0.5;
     const gapCenter = margin + Math.random() * (WORLD_HEIGHT - margin * 2);
-    obstacles.push({ x: WORLD_WIDTH + 40, gapCenter, passed: false });
+    obstacles.push({ x: WORLD_WIDTH + 40, gapCenter, gapHeight, passed: false });
   }
 
   function intersectsObstacle(obstacle) {
-    const carLeft = CAR_X - 52;
-    const carRight = CAR_X + 52;
-    if (carRight < obstacle.x || carLeft > obstacle.x + OBSTACLE_WIDTH) return false;
-    const topEnd = obstacle.gapCenter - GAP_HEIGHT * 0.5;
-    const bottomStart = obstacle.gapCenter + GAP_HEIGHT * 0.5;
-    return carY - 15 < topEnd || carY + 15 > bottomStart;
+    const carLeft = CAR_X - 68;
+    const carRight = CAR_X + 68;
+    if (carRight < obstacle.x - 7 || carLeft > obstacle.x + OBSTACLE_WIDTH + 7) return false;
+    const topEnd = obstacle.gapCenter - obstacle.gapHeight * 0.5;
+    const bottomStart = obstacle.gapCenter + obstacle.gapHeight * 0.5;
+    return carY - 22 < topEnd + 4 || carY + 22 > bottomStart;
   }
 
   function update(delta) {
     if (state !== "playing") return;
     elapsed += delta;
-    trackOffset = (trackOffset + delta * 210) % 120;
+    const speed = getSpeed();
+    trackOffset = (trackOffset + delta * speed) % (WORLD_WIDTH + 180);
     carVelocity += GRAVITY * delta;
     carY += carVelocity * delta;
     spawnTimer -= delta;
     if (spawnTimer <= 0) {
       spawnObstacle();
-      spawnTimer = Math.max(1.28, 1.68 - elapsed * 0.008);
+      spawnTimer = Math.max(1.05, 1.72 - score * 0.015 - elapsed * 0.003);
     }
-    const speed = Math.min(390, 285 + elapsed * 3.2);
     for (const obstacle of obstacles) {
       obstacle.x -= speed * delta;
-      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - 18) {
+      if (!obstacle.passed && obstacle.x + OBSTACLE_WIDTH < CAR_X - 68) {
         obstacle.passed = true;
         score += 1;
         syncScores();
@@ -300,17 +313,6 @@
     if (carY - CAR_RADIUS < 26 || carY + CAR_RADIUS > WORLD_HEIGHT - 35) endGame();
   }
 
-  function roundedRect(x, y, w, h, radius) {
-    const r = Math.min(radius, w / 2, h / 2);
-    context.beginPath();
-    context.moveTo(x + r, y);
-    context.arcTo(x + w, y, x + w, y + h, r);
-    context.arcTo(x + w, y + h, x, y + h, r);
-    context.arcTo(x, y + h, x, y, r);
-    context.arcTo(x, y, x + w, y, r);
-    context.closePath();
-  }
-
   function drawBackground(time) {
     if (trackImage.complete && trackImage.naturalWidth) {
       context.drawImage(trackImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -318,75 +320,59 @@
       context.fillStyle = "#111a25";
       context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     }
-    const floor = WORLD_HEIGHT - 34;
-    context.fillStyle = "rgba(7,11,17,.8)";
-    context.fillRect(0, floor, WORLD_WIDTH, WORLD_HEIGHT - floor);
-    for (let index = 0; index < 20; index += 1) {
-      const x = ((index * 64 - trackOffset * 1.8) % (WORLD_WIDTH + 64) + WORLD_WIDTH + 64) % (WORLD_WIDTH + 64) - 64;
-      context.fillStyle = index % 2 ? "#e8e9e7" : "#d83b33";
-      context.fillRect(x, floor + 5, 34, 5);
+    context.save();
+    context.globalAlpha = 0.28;
+    const streakWidth = Math.min(48, Math.round(getSpeed() * 0.075));
+    for (let index = 0; index < 12; index += 1) {
+      const x = ((index * 137 - trackOffset * 1.7) % (WORLD_WIDTH + 64) + WORLD_WIDTH + 64) % (WORLD_WIDTH + 64) - 64;
+      const y = 392 + (index * 29 % 88);
+      context.fillStyle = index % 3 === 0 ? "#ffbd4a" : "#8fe8ff";
+      context.fillRect(x, y, streakWidth, 3);
     }
-    const vignette = context.createLinearGradient(0, 0, 0, WORLD_HEIGHT);
-    vignette.addColorStop(0, "rgba(4,9,16,.12)");
-    vignette.addColorStop(.66, "rgba(4,9,16,0)");
-    vignette.addColorStop(1, "rgba(4,9,16,.35)");
-    context.fillStyle = vignette;
-    context.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    context.restore();
   }
 
   function drawGate(obstacle) {
     const x = obstacle.x;
-    const gapTop = obstacle.gapCenter - GAP_HEIGHT * .5;
-    const gapBottom = obstacle.gapCenter + GAP_HEIGHT * .5;
+    const gapTop = obstacle.gapCenter - obstacle.gapHeight * .5;
+    const gapBottom = obstacle.gapCenter + obstacle.gapHeight * .5;
     const sections = [
-      { y: 0, h: gapTop, capY: gapTop - 19, capDirection: -1 },
-      { y: gapBottom, h: WORLD_HEIGHT - gapBottom, capY: gapBottom, capDirection: 1 },
+      { y: 0, h: gapTop, capY: gapTop - 18 },
+      { y: gapBottom, h: WORLD_HEIGHT - gapBottom, capY: gapBottom },
     ];
     for (const section of sections) {
-      const bodyGradient = context.createLinearGradient(x, 0, x + OBSTACLE_WIDTH, 0);
-      bodyGradient.addColorStop(0, "#394b5e");
-      bodyGradient.addColorStop(.14, "#df4238");
-      bodyGradient.addColorStop(.5, "#fa5548");
-      bodyGradient.addColorStop(1, "#842d2b");
-      context.fillStyle = bodyGradient;
+      context.fillStyle = "#10182e";
       context.fillRect(x, section.y, OBSTACLE_WIDTH, section.h);
-
-      context.save();
-      context.beginPath();
-      context.rect(x, section.y, OBSTACLE_WIDTH, section.h);
-      context.clip();
-      context.globalAlpha = .4;
-      for (let stripe = -WORLD_HEIGHT; stripe < WORLD_HEIGHT * 2; stripe += 36) {
-        context.fillStyle = "#fff0e9";
-        context.beginPath();
-        context.moveTo(x + 8, stripe);
-        context.lineTo(x + 30, stripe);
-        context.lineTo(x - 35, stripe + 85);
-        context.lineTo(x - 57, stripe + 85);
-        context.closePath();
-        context.fill();
+      context.fillStyle = "#ff455b";
+      context.fillRect(x + 6, section.y, 7, section.h);
+      context.fillStyle = "#273554";
+      context.fillRect(x + 13, section.y, 5, section.h);
+      for (let stripeY = section.y + 8; stripeY < section.y + section.h; stripeY += 30) {
+        context.fillStyle = "#ff455b";
+        context.fillRect(x + 24, stripeY, 54, 12);
+        context.fillStyle = "#ffbd4a";
+        context.fillRect(x + 24, stripeY + 12, 54, 5);
       }
-      context.restore();
 
       const capY = section.capY;
-      context.fillStyle = "#d9e0e6";
-      roundedRect(x - 7, capY, OBSTACLE_WIDTH + 14, 19, 4);
-      context.fill();
-      context.fillStyle = "#e9453a";
-      context.fillRect(x - 4, capY + 3, OBSTACLE_WIDTH + 8, 5);
-      context.fillStyle = "#263747";
-      context.fillRect(x - 4, capY + 12, OBSTACLE_WIDTH + 8, 4);
-      context.fillStyle = "rgba(7,10,14,.45)";
-      for (let bolt = 0; bolt < 4; bolt += 1) {
-        context.beginPath();
-        context.arc(x + 8 + bolt * 24, capY + 9, 1.7, 0, Math.PI * 2);
-        context.fill();
+      context.fillStyle = "#090f20";
+      context.fillRect(x - 7, capY, OBSTACLE_WIDTH + 14, 22);
+      context.fillStyle = "#ffbd4a";
+      context.fillRect(x - 5, capY + 2, OBSTACLE_WIDTH + 10, 18);
+      for (let cell = 0; cell < 10; cell += 1) {
+        if (cell % 2 === 0) {
+          context.fillStyle = "#f34458";
+          context.fillRect(x - 5 + cell * 10, capY + 2, 10, 8);
+          context.fillStyle = "#fff0bb";
+          context.fillRect(x - 5 + cell * 10, capY + 12, 10, 8);
+        } else {
+          context.fillStyle = "#fff0bb";
+          context.fillRect(x - 5 + cell * 10, capY + 2, 10, 8);
+          context.fillStyle = "#f34458";
+          context.fillRect(x - 5 + cell * 10, capY + 12, 10, 8);
+        }
       }
     }
-    context.fillStyle = "rgba(238,244,249,.72)";
-    context.font = "800 13px Manrope, sans-serif";
-    context.textAlign = "center";
-    context.fillText("DRS", x + OBSTACLE_WIDTH / 2, obstacle.gapCenter + 5);
   }
 
   function drawCar(time) {
@@ -399,7 +385,7 @@
       context.shadowColor = "rgba(0,0,0,.5)";
       context.shadowBlur = 14;
       context.shadowOffsetY = 9;
-      context.drawImage(carSprite, -76, -30, 152, 60);
+      context.drawImage(carSprite, -82, -35, 164, 70);
     } else {
       context.fillStyle = "#ef3e35";
       context.beginPath();
@@ -414,8 +400,6 @@
     context.clearRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     drawBackground(time);
     for (const obstacle of obstacles) drawGate(obstacle);
-    context.fillStyle = "rgba(255,255,255,.16)";
-    context.fillRect(CAR_X - 10, 53, 1, WORLD_HEIGHT - 105);
     drawCar(time);
 
     if (state === "ready") {
