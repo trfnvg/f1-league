@@ -1058,6 +1058,9 @@
     <a class="menu-item {% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
+    {% if user.is_staff %}
+      <a class="menu-item {% if request.resolver_match.url_name == 'arcade_3d' %}is-active{% endif %}" href="{% url 'league:arcade_3d' %}">3D прототип</a>
+    {% endif %}
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>

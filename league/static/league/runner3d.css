@@ -1,0 +1,428 @@
+.runner3d-page {
+  --runner-red: #e10600;
+  --runner-mint: #79d8aa;
+  --runner-line: rgba(213, 226, 241, .14);
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: clamp(.4rem, 2vw, 1.2rem) 0 2.4rem;
+  color: #f5f7fa;
+}
+
+.runner3d-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin: 0 0 1.2rem;
+}
+
+.runner3d-kicker,
+.runner3d-overlay-kicker {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  margin: 0;
+  color: #9daaba;
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .16em;
+}
+
+.runner3d-kicker span,
+.runner3d-hud-center i {
+  width: .48rem;
+  height: .48rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--runner-red);
+  box-shadow: 0 0 14px rgba(225, 6, 0, .6);
+}
+
+.runner3d-heading h1 {
+  margin: .45rem 0 .3rem;
+  color: #fff;
+  font-size: clamp(2.3rem, 6.2vw, 4.3rem);
+  font-weight: 900;
+  letter-spacing: -.065em;
+  line-height: .93;
+}
+
+.runner3d-heading h1 em {
+  color: #ff4c43;
+  font-style: normal;
+}
+
+.runner3d-lede {
+  max-width: 40rem;
+  margin: .7rem 0 0;
+  color: #aab6c4;
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+.runner3d-admin-tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .45rem;
+  padding: .52rem .75rem;
+  border: 1px solid rgba(121, 216, 170, .24);
+  border-radius: 999px;
+  color: #bcebd3;
+  background: rgba(36, 92, 63, .22);
+  font-size: .7rem;
+  font-weight: 750;
+}
+
+.runner3d-admin-tag span {
+  color: var(--runner-mint);
+}
+
+.runner3d-machine {
+  overflow: hidden;
+  border: 1px solid var(--runner-line);
+  border-radius: 4px 20px 4px 4px;
+  background: #0d141c;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.runner3d-hud {
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: minmax(90px, 1fr) 2fr minmax(90px, 1fr);
+  align-items: center;
+  gap: .8rem;
+  padding: .7rem 1.1rem;
+  border-bottom: 1px solid var(--runner-line);
+  background: linear-gradient(90deg, #141c27, #101720 52%, #141c27);
+}
+
+.runner3d-hud > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.runner3d-hud small {
+  color: #9daaba;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+
+.runner3d-hud strong {
+  color: #fff;
+  font-family: "Barlow Condensed", "Manrope", sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.runner3d-hud strong span {
+  color: #9daaba;
+  font-family: "Manrope", sans-serif;
+  font-size: .62rem;
+  font-weight: 700;
+}
+
+.runner3d-hud-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .55rem;
+  color: #c6d0dc;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .14em;
+  white-space: nowrap;
+}
+
+.runner3d-hud-center i {
+  width: .4rem;
+  height: .4rem;
+  background: var(--runner-mint);
+  box-shadow: 0 0 12px rgba(121, 216, 170, .55);
+}
+
+.runner3d-hud-center span {
+  padding: .22rem .42rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 4px;
+  color: #aeb9c8;
+  font-size: .52rem;
+  letter-spacing: .1em;
+}
+
+.runner3d-hud-right {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.runner3d-viewport {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: clamp(420px, 57vw, 660px);
+  overflow: hidden;
+  background: linear-gradient(#67afe9, #c9e6f4 56%, #203628 57%, #131a20);
+}
+
+.runner3d-viewport::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, .04);
+  content: "";
+  pointer-events: none;
+}
+
+#runner3d-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: 0;
+  touch-action: none;
+}
+
+.runner3d-overlay {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: linear-gradient(90deg, rgba(6, 11, 16, .24), rgba(6, 11, 16, .08) 50%, rgba(6, 11, 16, .28));
+  transition: opacity .18s ease, visibility .18s ease;
+}
+
+.runner3d-overlay.is-hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.runner3d-overlay-card {
+  width: min(100%, 390px);
+  padding: clamp(1.2rem, 3vw, 1.8rem);
+  border: 1px solid rgba(224, 234, 245, .18);
+  border-radius: 4px 18px 4px 4px;
+  background: rgba(12, 18, 26, .88);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .3);
+  text-align: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.runner3d-overlay-kicker {
+  justify-content: center;
+  color: var(--runner-mint);
+  font-size: .58rem;
+}
+
+.runner3d-overlay-card h2 {
+  margin: .5rem 0 .55rem;
+  color: #fff;
+  font-size: clamp(1.5rem, 4vw, 2.05rem);
+  font-weight: 850;
+  letter-spacing: -.04em;
+}
+
+.runner3d-overlay-card > p:not(.runner3d-overlay-kicker) {
+  margin: 0;
+  color: #bac5d2;
+  font-size: .83rem;
+  line-height: 1.75;
+}
+
+.runner3d-start {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  margin-top: 1rem;
+  padding: .7rem 1.2rem;
+  border: 1px solid rgba(255, 98, 86, .65);
+  border-radius: 3px 12px 3px 3px;
+  color: #fff;
+  background: linear-gradient(135deg, #ed3029, #b90c08);
+  box-shadow: 0 8px 24px rgba(225, 6, 0, .23);
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: transform .16s ease, filter .16s ease;
+}
+
+.runner3d-start:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+.runner3d-start:focus-visible,
+.runner3d-touch-controls button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.runner3d-webgl-warning {
+  position: absolute;
+  z-index: 5;
+  inset: 1rem;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  border: 1px solid rgba(255, 193, 77, .34);
+  border-radius: 12px;
+  color: #ffe2a0;
+  background: #171d25;
+  text-align: center;
+}
+
+.runner3d-webgl-warning[hidden] {
+  display: none;
+}
+
+.runner3d-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .55rem 1.2rem;
+  padding: .8rem 1rem;
+  border-top: 1px solid var(--runner-line);
+  color: #a8b4c2;
+  background: #101720;
+  font-size: .66rem;
+}
+
+.runner3d-controls kbd {
+  display: inline-grid;
+  min-width: 1.25rem;
+  min-height: 1.2rem;
+  place-items: center;
+  margin: 0 .08rem;
+  padding: 0 .2rem;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 3px;
+  color: #e0e7ef;
+  background: #1c2733;
+  font: inherit;
+  font-size: .57rem;
+  font-weight: 800;
+}
+
+.runner3d-touch-controls {
+  display: none;
+}
+
+.runner3d-footnote {
+  margin: .85rem 0 0;
+  color: #8592a1;
+  font-size: .7rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (max-width: 700px) {
+  .runner3d-page {
+    padding-top: .15rem;
+  }
+
+  .runner3d-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .65rem;
+    margin-bottom: .85rem;
+  }
+
+  .runner3d-heading h1 {
+    font-size: clamp(2.2rem, 11vw, 3.3rem);
+  }
+
+  .runner3d-lede {
+    margin-top: .5rem;
+    font-size: .78rem;
+  }
+
+  .runner3d-admin-tag {
+    padding: .38rem .62rem;
+    font-size: .62rem;
+  }
+
+  .runner3d-hud {
+    min-height: 58px;
+    grid-template-columns: 1fr auto 1fr;
+    gap: .35rem;
+    padding: .55rem .7rem;
+  }
+
+  .runner3d-hud strong {
+    font-size: 1.45rem;
+  }
+
+  .runner3d-hud-center {
+    gap: .35rem;
+    font-size: .51rem;
+    letter-spacing: .08em;
+  }
+
+  .runner3d-hud-center span {
+    display: none;
+  }
+
+  .runner3d-hud small {
+    font-size: .5rem;
+  }
+
+  .runner3d-viewport {
+    height: min(62vh, 610px);
+    min-height: 400px;
+  }
+
+  .runner3d-overlay-card {
+    width: min(100%, 330px);
+    padding: 1.1rem;
+  }
+
+  .runner3d-controls {
+    display: none;
+  }
+
+  .runner3d-touch-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .55rem;
+    padding: .7rem;
+    border-top: 1px solid var(--runner-line);
+    background: #101720;
+  }
+
+  .runner3d-touch-controls button {
+    min-height: 48px;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 5px 12px 5px 5px;
+    color: #eef3f8;
+    background: linear-gradient(180deg, #202b38, #17212c);
+    font-size: 1.3rem;
+    font-weight: 800;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .runner3d-touch-controls button[data-runner3d-action="jump"] {
+    border-color: rgba(121, 216, 170, .32);
+    color: #bcebd3;
+    background: linear-gradient(180deg, #1d332b, #17271f);
+  }
+
+  .runner3d-footnote {
+    font-size: .65rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runner3d-overlay,
+  .runner3d-start {
+    transition: none;
+  }
+}

@@ -498,3 +498,23 @@ class SafeScorePublicationTests(TestCase):
         self.assertEqual(restored.revision, 2)
         self.assertEqual(Score.objects.get(event=event, user=player).points, 34)
         self.assertEqual(ScoreRevision.objects.filter(event=event).count(), 2)
+
+
+@override_settings(STORAGES=TEST_STORAGES)
+class Arcade3DPrototypeAccessTests(TestCase):
+    def test_prototype_is_login_and_staff_only(self):
+        url = reverse("league:arcade_3d")
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+        player = User.objects.create_user(username="runner-player", password="test")
+        self.client.force_login(player)
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+        admin = User.objects.create_user(username="runner-admin", password="test", is_staff=True)
+        self.client.force_login(admin)
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "PIT LANE")
+        self.assertContains(response, "Только для администраторов")
+        self.assertContains(response, reverse("league:arcade_3d"))
