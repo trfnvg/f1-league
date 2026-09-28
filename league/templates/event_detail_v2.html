@@ -802,10 +802,13 @@
               <td{% if row.correct.pole %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_pole_display }}</td>
               <td{% if row.correct.fastest_lap %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
               <td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}</td>
-              <td{% if row.wildcard_correct %} class="community-prediction-correct"{% elif row.wildcard_wrong %} class="community-prediction-wrong"{% endif %}>
+              <td>
                 {% if row.wildcard and row.wildcard.selected_option %}
                   <span class="community-wildcard-question">{{ row.wildcard.question.question }}</span>
-                  <strong class="community-wildcard-answer">{{ row.wildcard.selected_answer }}</strong>
+                  <strong class="community-wildcard-answer{% if row.wildcard_correct %} is-correct{% elif row.wildcard_wrong %} is-wrong{% else %} is-pending{% endif %}">
+                    {% if row.wildcard_correct %}<span aria-hidden="true">✓</span>{% elif row.wildcard_wrong %}<span aria-hidden="true">×</span>{% endif %}
+                    <span>{{ row.wildcard.selected_answer }}</span>
+                  </strong>
                 {% else %}—{% endif %}
               </td>
               <td>{% if row.score %}<span class="community-score">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
