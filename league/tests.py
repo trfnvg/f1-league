@@ -515,6 +515,6 @@ class Arcade3DPrototypeAccessTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "PIT LANE")
+        self.assertContains(response, "BOX BOX")
         self.assertContains(response, "Только для администраторов")
         self.assertContains(response, reverse("league:arcade_3d"))
