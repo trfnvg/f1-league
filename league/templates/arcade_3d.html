@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Pit Lane Rush · админ-прототип{% endblock %}
+{% block title %}Box Box Panic · админ-аркада{% endblock %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'league/runner3d.css' %}">
@@ -11,33 +11,47 @@
 <section class="runner3d-page" aria-labelledby="runner3d-title">
   <header class="runner3d-heading">
     <div>
-      <p class="runner3d-kicker"><span></span> ADMIN PLAYTEST · 3D ARCADE</p>
-      <h1 id="runner3d-title">PIT LANE <em>RUSH</em></h1>
-      <p class="runner3d-lede">Первый тестовый заезд по трём полосам. Уклоняйся от шин и конусов, перепрыгивай барьеры и держи темп.</p>
+      <p class="runner3d-kicker"><span></span> ADMIN PLAYTEST · ENDLESS PIT LANE</p>
+      <h1 id="runner3d-title">BOX BOX <em>PANIC</em></h1>
+      <p class="runner3d-lede">Бесконечный заезд по паддоку: хватай бананы, заряжай DRS, выбирай рискованные линии и не пропускай пит-стоп.</p>
     </div>
     <div class="runner3d-admin-tag"><span aria-hidden="true">✦</span> Только для администраторов</div>
   </header>
 
-  <section class="runner3d-machine" aria-label="3D-игра Pit Lane Rush">
-    <div class="runner3d-hud" aria-live="polite">
-      <div><small>ДИСТАНЦИЯ</small><strong id="runner3d-distance">0 <span>м</span></strong></div>
-      <div class="runner3d-hud-center"><i></i> PIT LANE RUSH <span id="runner3d-state">ГОТОВ</span></div>
-      <div class="runner3d-hud-right"><small>РЕКОРД</small><strong id="runner3d-best">0 <span>м</span></strong></div>
+  <section class="runner3d-machine" aria-label="3D-игра Box Box Panic">
+    <div class="runner3d-hud">
+      <div class="runner3d-score-cell"><small>ОЧКИ</small><strong id="runner3d-score">0</strong><small class="runner3d-meters" id="runner3d-distance">0 <span>м</span></small></div>
+      <div class="runner3d-hud-center"><i></i> BOX BOX PANIC <span id="runner3d-state">ГОТОВ</span></div>
+      <div class="runner3d-hud-right"><small>РЕКОРД</small><strong id="runner3d-best">0</strong></div>
+    </div>
+
+    <div class="runner3d-subhud">
+      <div class="runner3d-banana-count"><span aria-hidden="true">🍌</span><span><small>БАНАНЫ</small><strong id="runner3d-bananas">0</strong></span></div>
+      <div class="runner3d-drs-meter" aria-label="Заряд DRS">
+        <div class="runner3d-drs-copy"><small>DRS BOOST</small><strong id="runner3d-drs-label">Собери 5 бананов</strong></div>
+        <div class="runner3d-drs-track"><span id="runner3d-drs-fill"></span></div>
+      </div>
+      <div class="runner3d-pit-count"><small>ЧИСТЫЕ ПИТ-СТОПЫ</small><strong id="runner3d-pit-stops">0</strong></div>
     </div>
 
     <div class="runner3d-viewport" id="runner3d-viewport">
       <canvas
         id="runner3d-canvas"
-        data-background-src="{% static 'league/images/runner3d/coastal-circuit-bg.jpg' %}"
-        aria-label="Трёхмерная гоночная трасса. Перестраивайтесь между полосами и перепрыгивайте препятствия."
+        data-background-src="{% static 'league/images/runner3d/pitlane-backdrop.jpg' %}"
+        data-banana-src="{% static 'league/images/banana-leclerc-sprite.webp' %}"
+        aria-label="Бесконечный трёхмерный пит-лейн с препятствиями, бананами и пит-боксами."
         tabindex="0"
       ></canvas>
+      <div class="runner3d-radio" id="runner3d-radio" aria-live="polite" aria-atomic="true" hidden>
+        <span>КОМАНДНОЕ РАДИО</span><strong id="runner3d-radio-copy"></strong>
+      </div>
+      <div class="runner3d-boost-flash" id="runner3d-boost-flash" aria-hidden="true"></div>
       <div class="runner3d-overlay" id="runner3d-overlay">
         <div class="runner3d-overlay-card">
-          <p class="runner3d-overlay-kicker" id="runner3d-overlay-kicker">ПРОТОТИП · ЗАЕЗД 01</p>
-          <h2 id="runner3d-overlay-title">На трассу?</h2>
-          <p id="runner3d-overlay-copy">← → или A / D — смена полосы<br>Пробел или ↑ — прыжок</p>
-          <button class="runner3d-start" id="runner3d-start" type="button">Старт заезда <span aria-hidden="true">→</span></button>
+          <p class="runner3d-overlay-kicker" id="runner3d-overlay-kicker">БЕСКОНЕЧНЫЙ ПИТ-ЛЕЙН · ТЕСТ ДЛЯ АДМИНА</p>
+          <h2 id="runner3d-overlay-title">BOX BOX!</h2>
+          <p id="runner3d-overlay-copy">← → — меняй полосу и выбирай маршрут<br>🍌 Бананы заряжают DRS · Shift / X — ускорение<br>↑ / Пробел — перепрыгнуть барьер · лови зелёный бокс</p>
+          <button class="runner3d-start" id="runner3d-start" type="button">Выезжаем <span aria-hidden="true">→</span></button>
         </div>
       </div>
       <div class="runner3d-webgl-warning" id="runner3d-webgl-warning" hidden>
@@ -46,18 +60,20 @@
     </div>
 
     <div class="runner3d-controls" aria-label="Управление игрой">
-      <span><kbd>←</kbd><kbd>→</kbd> или <kbd>A</kbd><kbd>D</kbd> — полосы</span>
-      <span><kbd>ПРОБЕЛ</kbd> / <kbd>↑</kbd> — прыжок</span>
-      <span>После столкновения — кнопка или пробел</span>
+      <span><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> — смена полосы</span>
+      <span><kbd>ПРОБЕЛ</kbd> / <kbd>↑</kbd> — перепрыгнуть барьер</span>
+      <span><kbd>SHIFT</kbd> / <kbd>X</kbd> — выпустить DRS</span>
+      <span>Подбирай бананы и попадай в подсвеченный бокс</span>
     </div>
     <div class="runner3d-touch-controls" aria-label="Сенсорное управление">
       <button type="button" data-runner3d-action="left" aria-label="Сместиться влево">←</button>
       <button type="button" data-runner3d-action="jump" aria-label="Прыгнуть">↑</button>
       <button type="button" data-runner3d-action="right" aria-label="Сместиться вправо">→</button>
+      <button type="button" data-runner3d-action="boost" aria-label="Активировать DRS" id="runner3d-mobile-boost">DRS</button>
     </div>
   </section>
 
-  <p class="runner3d-footnote">Это закрытый игровой прототип: рекорд сохраняется только в браузере и не влияет на таблицу чемпионата или колесо бонусов.</p>
+  <p class="runner3d-footnote">Закрытый игровой прототип. Лучший счёт сохраняется в этом браузере и пока не влияет на таблицу чемпионата или колесо бонусов.</p>
 </section>
 {% endblock %}
 
