@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pit Lane Rush · админ-прототип{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'league/runner3d.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="runner3d-page" aria-labelledby="runner3d-title">
+  <header class="runner3d-heading">
+    <div>
+      <p class="runner3d-kicker"><span></span> ADMIN PLAYTEST · 3D ARCADE</p>
+      <h1 id="runner3d-title">PIT LANE <em>RUSH</em></h1>
+      <p class="runner3d-lede">Первый тестовый заезд по трём полосам. Уклоняйся от шин и конусов, перепрыгивай барьеры и держи темп.</p>
+    </div>
+    <div class="runner3d-admin-tag"><span aria-hidden="true">✦</span> Только для администраторов</div>
+  </header>
+
+  <section class="runner3d-machine" aria-label="3D-игра Pit Lane Rush">
+    <div class="runner3d-hud" aria-live="polite">
+      <div><small>ДИСТАНЦИЯ</small><strong id="runner3d-distance">0 <span>м</span></strong></div>
+      <div class="runner3d-hud-center"><i></i> PIT LANE RUSH <span id="runner3d-state">ГОТОВ</span></div>
+      <div class="runner3d-hud-right"><small>РЕКОРД</small><strong id="runner3d-best">0 <span>м</span></strong></div>
+    </div>
+
+    <div class="runner3d-viewport" id="runner3d-viewport">
+      <canvas
+        id="runner3d-canvas"
+        data-background-src="{% static 'league/images/runner3d/coastal-circuit-bg.jpg' %}"
+        aria-label="Трёхмерная гоночная трасса. Перестраивайтесь между полосами и перепрыгивайте препятствия."
+        tabindex="0"
+      ></canvas>
+      <div class="runner3d-overlay" id="runner3d-overlay">
+        <div class="runner3d-overlay-card">
+          <p class="runner3d-overlay-kicker" id="runner3d-overlay-kicker">ПРОТОТИП · ЗАЕЗД 01</p>
+          <h2 id="runner3d-overlay-title">На трассу?</h2>
+          <p id="runner3d-overlay-copy">← → или A / D — смена полосы<br>Пробел или ↑ — прыжок</p>
+          <button class="runner3d-start" id="runner3d-start" type="button">Старт заезда <span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+      <div class="runner3d-webgl-warning" id="runner3d-webgl-warning" hidden>
+        На этом устройстве не удалось запустить WebGL 2. Попробуйте открыть игру в актуальном браузере.
+      </div>
+    </div>
+
+    <div class="runner3d-controls" aria-label="Управление игрой">
+      <span><kbd>←</kbd><kbd>→</kbd> или <kbd>A</kbd><kbd>D</kbd> — полосы</span>
+      <span><kbd>ПРОБЕЛ</kbd> / <kbd>↑</kbd> — прыжок</span>
+      <span>После столкновения — кнопка или пробел</span>
+    </div>
+    <div class="runner3d-touch-controls" aria-label="Сенсорное управление">
+      <button type="button" data-runner3d-action="left" aria-label="Сместиться влево">←</button>
+      <button type="button" data-runner3d-action="jump" aria-label="Прыгнуть">↑</button>
+      <button type="button" data-runner3d-action="right" aria-label="Сместиться вправо">→</button>
+    </div>
+  </section>
+
+  <p class="runner3d-footnote">Это закрытый игровой прототип: рекорд сохраняется только в браузере и не влияет на таблицу чемпионата или колесо бонусов.</p>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script type="module" src="{% static 'league/runner3d.js' %}"></script>
+{% endblock %}

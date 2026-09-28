@@ -10,7 +10,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Count, Q, Sum
-from django.http import HttpResponseNotAllowed, JsonResponse
+from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -191,6 +191,13 @@ def arcade(request):
         ),
         "podium_edit_open": bool(wheel_event and podium_edit_is_open(wheel_event, now)),
     })
+
+
+@login_required
+def arcade_3d(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Эта страница доступна только администраторам.")
+    return render(request, "arcade_3d.html")
 
 
 @login_required
