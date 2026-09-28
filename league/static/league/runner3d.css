@@ -317,7 +317,7 @@
   width: 100%;
   height: clamp(420px, 57vw, 660px);
   overflow: hidden;
-  background: linear-gradient(#67afe9, #c9e6f4 56%, #203628 57%, #131a20);
+  background: #b8d7e8;
 }
 
 .runner3d-viewport::after {

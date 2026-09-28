@@ -517,4 +517,5 @@ class Arcade3DPrototypeAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "BOX BOX")
         self.assertContains(response, "Только для администраторов")
+        self.assertContains(response, "pit-garage-atlas.jpg")
         self.assertContains(response, reverse("league:arcade_3d"))

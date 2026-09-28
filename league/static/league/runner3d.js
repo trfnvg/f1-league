@@ -47,41 +47,117 @@ import * as THREE from "./vendor/three/three.module.min.js";
   }
 
   renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.08;
+  const desktopShadows = window.innerWidth > 760;
+  renderer.shadowMap.enabled = desktopShadows;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.65));
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x79b9e9);
-  scene.fog = new THREE.Fog(0x8ac0e8, 92, 185);
+  scene.background = new THREE.Color(0xb8d7e8);
+  scene.fog = new THREE.Fog(0xb8d7e8, 135, 285);
+
+  // A real 3D sky dome replaces the old, hard-edged photograph behind the track.
+  // Its soft horizon blends into the distant geometry and the moving pit lane.
+  const skyGeometry = new THREE.SphereGeometry(220, 48, 24);
+  const skyPositions = skyGeometry.attributes.position;
+  const skyColors = new Float32Array(skyPositions.count * 3);
+  const skyHorizon = new THREE.Color(0xe6f0ed);
+  const skyZenith = new THREE.Color(0x4b9cda);
+  const skyColor = new THREE.Color();
+  for (let vertex = 0; vertex < skyPositions.count; vertex += 1) {
+    const altitude = THREE.MathUtils.clamp((skyPositions.getY(vertex) / 220 + 0.025) / 0.9, 0, 1);
+    skyColor.copy(skyHorizon).lerp(skyZenith, Math.pow(altitude, 0.72));
+    skyColors[vertex * 3] = skyColor.r;
+    skyColors[vertex * 3 + 1] = skyColor.g;
+    skyColors[vertex * 3 + 2] = skyColor.b;
+  }
+  skyGeometry.setAttribute("color", new THREE.BufferAttribute(skyColors, 3));
+  scene.add(new THREE.Mesh(skyGeometry, new THREE.MeshBasicMaterial({
+    vertexColors: true,
+    side: THREE.BackSide,
+    fog: false,
+  })));
 
   const camera = new THREE.PerspectiveCamera(58, 1, 0.1, 220);
   camera.position.set(0, 6.2, 14.5);
   camera.lookAt(0, 1.4, -20);
 
-  scene.add(new THREE.HemisphereLight(0xdaf1ff, 0x43533c, 2.0));
-  const sunlight = new THREE.DirectionalLight(0xfff3d9, 2.1);
-  sunlight.position.set(-16, 28, 18);
+  scene.add(new THREE.HemisphereLight(0xe7f5ff, 0x5b6058, 1.8));
+  const sunlight = new THREE.DirectionalLight(0xfff5df, 2.6);
+  sunlight.position.set(-24, 34, 14);
+  sunlight.castShadow = desktopShadows;
+  sunlight.shadow.mapSize.set(1024, 1024);
+  sunlight.shadow.camera.left = -34;
+  sunlight.shadow.camera.right = 34;
+  sunlight.shadow.camera.top = 32;
+  sunlight.shadow.camera.bottom = -12;
+  sunlight.shadow.camera.near = 1;
+  sunlight.shadow.camera.far = 160;
+  sunlight.target.position.set(0, 0, -40);
+  scene.add(sunlight.target);
   scene.add(sunlight);
 
   const backgroundLoader = new THREE.TextureLoader();
-  backgroundLoader.load(
-    canvas.dataset.backgroundSrc,
-    (texture) => {
-      texture.colorSpace = THREE.SRGBColorSpace;
-      scene.background = texture;
-    },
-    undefined,
-    () => {
-      scene.background = new THREE.Color(0x83bde7);
-    },
-  );
+  const garageFacadeTexture = backgroundLoader.load(canvas.dataset.garageTextureSrc);
+  garageFacadeTexture.colorSpace = THREE.SRGBColorSpace;
+  garageFacadeTexture.wrapS = THREE.RepeatWrapping;
+  garageFacadeTexture.wrapT = THREE.ClampToEdgeWrapping;
+  garageFacadeTexture.repeat.set(2.8, 0.78);
+  garageFacadeTexture.offset.y = 0.22;
+  garageFacadeTexture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+  const garageFacadeMaterial = new THREE.MeshStandardMaterial({
+    map: garageFacadeTexture,
+    roughness: 0.82,
+    metalness: 0.08,
+    side: THREE.DoubleSide,
+  });
   const bananaCrewTexture = backgroundLoader.load(canvas.dataset.bananaSrc);
   bananaCrewTexture.colorSpace = THREE.SRGBColorSpace;
   const bananaCrewMaterial = new THREE.SpriteMaterial({ map: bananaCrewTexture, transparent: true, depthWrite: false });
 
+  function createAsphaltTexture() {
+    const textureCanvas = document.createElement("canvas");
+    textureCanvas.width = 512;
+    textureCanvas.height = 512;
+    const context = textureCanvas.getContext("2d");
+    context.fillStyle = "#454b50";
+    context.fillRect(0, 0, 512, 512);
+    let seed = 2026;
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) % 4294967296;
+      return seed / 4294967296;
+    };
+    for (let index = 0; index < 5200; index += 1) {
+      const shade = random() > 0.52 ? 255 : 0;
+      context.fillStyle = `rgba(${shade},${shade},${shade},${0.012 + random() * 0.035})`;
+      context.fillRect(random() * 512, random() * 512, 1 + random() * 2, 1 + random() * 2);
+    }
+    context.save();
+    context.globalAlpha = 0.1;
+    context.strokeStyle = "#12171b";
+    context.lineWidth = 9;
+    [-150, -45, 65, 155, 265].forEach((x, index) => {
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.bezierCurveTo(x + (index % 2 ? 8 : -8), 170, x - 10, 330, x + 4, 512);
+      context.stroke();
+    });
+    context.restore();
+    const texture = new THREE.CanvasTexture(textureCanvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2, 46);
+    return texture;
+  }
+
+  const asphaltTexture = createAsphaltTexture();
   const materials = {
-    concrete: new THREE.MeshStandardMaterial({ color: 0xaaa9a2, roughness: 0.96 }),
-    apron: new THREE.MeshStandardMaterial({ color: 0x777d80, roughness: 0.96 }),
-    asphalt: new THREE.MeshStandardMaterial({ color: 0x30353b, roughness: 0.95 }),
+    concrete: new THREE.MeshStandardMaterial({ color: 0xc6c2b8, roughness: 0.94 }),
+    apron: new THREE.MeshStandardMaterial({ color: 0xa6a9a7, roughness: 0.94 }),
+    asphalt: new THREE.MeshStandardMaterial({ color: 0xffffff, map: asphaltTexture, roughness: 0.94 }),
     lane: new THREE.MeshStandardMaterial({ color: 0xe8edf0, roughness: 0.8 }),
     curbRed: new THREE.MeshStandardMaterial({ color: 0xd92c2b, roughness: 0.85 }),
     curbWhite: new THREE.MeshStandardMaterial({ color: 0xe7e5dc, roughness: 0.85 }),
@@ -97,11 +173,12 @@ import * as THREE from "./vendor/three/three.module.min.js";
     pitBoxFloor: new THREE.MeshStandardMaterial({ color: 0x64e6a1, emissive: 0x37b979, emissiveIntensity: 0.68, transparent: true, opacity: 0.44, roughness: 0.48 }),
     banana: new THREE.MeshStandardMaterial({ color: 0xffd642, emissive: 0x765000, emissiveIntensity: 0.12, roughness: 0.42 }),
     bananaTip: new THREE.MeshStandardMaterial({ color: 0x68422a, roughness: 0.95 }),
-    garageDark: new THREE.MeshStandardMaterial({ color: 0x1c2834, roughness: 0.82 }),
+    garageDark: new THREE.MeshStandardMaterial({ color: 0x1c252e, roughness: 0.78 }),
+    garageFrame: new THREE.MeshStandardMaterial({ color: 0x89939a, roughness: 0.56, metalness: 0.34 }),
+    pitWall: new THREE.MeshStandardMaterial({ color: 0xe0e0d8, roughness: 0.86 }),
+    rail: new THREE.MeshStandardMaterial({ color: 0x78858c, roughness: 0.46, metalness: 0.62 }),
     garageRed: new THREE.MeshStandardMaterial({ color: 0xb92c2e, roughness: 0.72, metalness: 0.1 }),
     garageBlue: new THREE.MeshStandardMaterial({ color: 0x26718a, roughness: 0.72, metalness: 0.1 }),
-    garageMint: new THREE.MeshStandardMaterial({ color: 0x28745e, roughness: 0.72, metalness: 0.1 }),
-    garageGold: new THREE.MeshStandardMaterial({ color: 0xc18d36, roughness: 0.72, metalness: 0.1 }),
     led: new THREE.MeshStandardMaterial({ color: 0xffdd82, emissive: 0xff9c34, emissiveIntensity: 1.25, roughness: 0.28 }),
     white: new THREE.MeshStandardMaterial({ color: 0xe8edf2, roughness: 0.55, metalness: 0.08 }),
     carbon: new THREE.MeshStandardMaterial({ color: 0x111821, roughness: 0.68, metalness: 0.18 }),
@@ -114,27 +191,42 @@ import * as THREE from "./vendor/three/three.module.min.js";
     if (position) mesh.position.set(position[0], position[1], position[2]);
     if (scale) mesh.scale.set(scale[0], scale[1], scale[2]);
     if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+    mesh.castShadow = desktopShadows;
+    mesh.receiveShadow = desktopShadows;
     parent.add(mesh);
     return mesh;
   }
 
-  addMesh(
+  function addInstances(parent, geometry, material, transforms) {
+    const instances = new THREE.InstancedMesh(geometry, material, transforms.length);
+    const transform = new THREE.Object3D();
+    transforms.forEach(({ position, rotation }, index) => {
+      transform.position.set(position[0], position[1], position[2]);
+      transform.rotation.set(...(rotation || [0, 0, 0]));
+      transform.updateMatrix();
+      instances.setMatrixAt(index, transform.matrix);
+    });
+    instances.instanceMatrix.needsUpdate = true;
+    instances.castShadow = desktopShadows;
+    instances.receiveShadow = desktopShadows;
+    parent.add(instances);
+    return instances;
+  }
+
+  const worldGround = addMesh(
     scene,
-    new THREE.PlaneGeometry(280, 260),
+    new THREE.PlaneGeometry(280, 500),
     materials.concrete,
-    [0, -0.22, -75],
+    [0, -0.24, -210],
     null,
     [-Math.PI / 2, 0, 0],
   );
-
-  addMesh(scene, new THREE.PlaneGeometry(3.2, 250), materials.apron, [-7.8, -0.16, -70], null, [-Math.PI / 2, 0, 0]);
-  addMesh(scene, new THREE.PlaneGeometry(3.2, 250), materials.apron, [7.8, -0.16, -70], null, [-Math.PI / 2, 0, 0]);
-
+  worldGround.receiveShadow = true;
   addMesh(
     scene,
-    new THREE.PlaneGeometry(12.4, 250),
+    new THREE.PlaneGeometry(12.4, 500),
     materials.asphalt,
-    [0, -0.07, -70],
+    [0, -0.07, -210],
     null,
     [-Math.PI / 2, 0, 0],
   );
@@ -142,8 +234,8 @@ import * as THREE from "./vendor/three/three.module.min.js";
   const roadMarkings = [];
   const markerGeometry = new THREE.BoxGeometry(0.065, 0.025, 4.5);
   const curbGeometry = new THREE.BoxGeometry(0.52, 0.08, 3.2);
-  const edgeLineGeometry = new THREE.BoxGeometry(0.12, 0.035, 250);
-  [-5.72, 5.72].forEach((x) => addMesh(scene, edgeLineGeometry, materials.lane, [x, -0.035, -70]));
+  const edgeLineGeometry = new THREE.BoxGeometry(0.12, 0.035, 500);
+  [-5.72, 5.72].forEach((x) => addMesh(scene, edgeLineGeometry, materials.lane, [x, -0.035, -210]));
   for (let index = 0; index < 28; index += 1) {
     const z = 8 - index * 9;
     [-2.03, 2.03].forEach((x) => {
@@ -164,58 +256,143 @@ import * as THREE from "./vendor/three/three.module.min.js";
   const segmentCount = 8;
   const segmentLoopLength = segmentLength * segmentCount;
   const tireStackGeometry = new THREE.TorusGeometry(0.43, 0.16, 8, 14);
-  const garageSlatGeometry = new THREE.BoxGeometry(0.055, 0.045, 11.5);
   const trolleyWheelGeometry = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 8);
+  const garageShellGeometry = new THREE.BoxGeometry(7.5, 8.1, segmentLength);
+  const garageFloorGeometry = new THREE.BoxGeometry(7.75, 0.22, segmentLength + 0.35);
+  const garageFasciaGeometry = new THREE.BoxGeometry(7.95, 0.42, segmentLength + 0.5);
+  const garageAccentGeometry = new THREE.BoxGeometry(0.12, 0.1, segmentLength + 0.5);
+  const garagePierGeometry = new THREE.BoxGeometry(0.28, 8.05, 0.42);
+  const canopyLightGeometry = new THREE.BoxGeometry(2.8, 0.12, 0.38);
+  const soffitGeometry = new THREE.BoxGeometry(1.1, 0.12, segmentLength);
+  const pitWallGeometry = new THREE.BoxGeometry(0.5, 0.52, segmentLength);
+  const pitWallStripeGeometry = new THREE.BoxGeometry(0.54, 0.075, segmentLength);
+  const railPostGeometry = new THREE.BoxGeometry(0.11, 0.44, 0.13);
+  const railBeamGeometry = new THREE.BoxGeometry(0.12, 0.1, segmentLength);
+  const tireCabinetGeometry = new THREE.BoxGeometry(0.88, 0.92, 1.55);
+  const tireCabinetTopGeometry = new THREE.BoxGeometry(0.92, 0.08, 1.62);
+  const cabinetLightGeometry = new THREE.BoxGeometry(0.035, 0.54, 0.04);
+
+  const pitStencilMaterial = (() => {
+    const stencilCanvas = document.createElement("canvas");
+    stencilCanvas.width = 256;
+    stencilCanvas.height = 256;
+    const context = stencilCanvas.getContext("2d");
+    context.clearRect(0, 0, 256, 256);
+    context.fillStyle = "rgba(241, 244, 239, .72)";
+    context.textAlign = "center";
+    context.font = "900 62px system-ui, sans-serif";
+    context.fillText("PIT", 128, 91);
+    context.font = "800 31px system-ui, sans-serif";
+    context.fillText("LANE", 128, 132);
+    context.beginPath();
+    context.moveTo(128, 158);
+    context.lineTo(93, 205);
+    context.lineTo(116, 205);
+    context.lineTo(116, 238);
+    context.lineTo(140, 238);
+    context.lineTo(140, 205);
+    context.lineTo(163, 205);
+    context.closePath();
+    context.fill();
+    const texture = new THREE.CanvasTexture(stencilCanvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+  })();
+
+  function addFarHills() {
+    const landColors = [0x91ad96, 0x8aa38d, 0xa0b49a, 0x819b86];
+    const landGeometry = new THREE.SphereGeometry(1, 20, 12);
+    [-1, 1].forEach((side, sideIndex) => {
+      for (let ridge = 0; ridge < 4; ridge += 1) {
+        const hill = new THREE.Mesh(
+          landGeometry,
+          new THREE.MeshStandardMaterial({ color: landColors[(ridge + sideIndex) % landColors.length], roughness: 1, flatShading: true, fog: true }),
+        );
+        hill.scale.set(24 + ridge * 8, 8 + (ridge % 2) * 4, 14 + ridge * 2);
+        hill.position.set(side * (37 + ridge * 8), 1 + ridge * 1.8, -148 - ridge * 18);
+        scene.add(hill);
+      }
+    });
+    [-1, 1].forEach((side) => {
+      const distantStand = new THREE.Group();
+      addMesh(distantStand, new THREE.BoxGeometry(28, 4.6, 2.6), materials.garageDark, [0, 2.7, 0]);
+      addMesh(distantStand, new THREE.BoxGeometry(30, 0.34, 3.3), materials.garageFrame, [0, 5.2, 0]);
+      for (let row = 0; row < 3; row += 1) {
+        addMesh(distantStand, new THREE.BoxGeometry(25 - row * 1.4, 0.22, 2.0), row % 2 ? materials.garageBlue : materials.red, [0, 1.25 + row * 0.82, 0.42]);
+      }
+      distantStand.position.set(side * 30, 0, -205);
+      scene.add(distantStand);
+    });
+  }
+
+  addFarHills();
 
   function makeGarageSign(index) {
     const signCanvas = document.createElement("canvas");
     signCanvas.width = 512;
     signCanvas.height = 128;
     const context = signCanvas.getContext("2d");
-    context.fillStyle = "#15212d";
+    context.fillStyle = "#101923";
     context.fillRect(0, 0, signCanvas.width, signCanvas.height);
-    context.fillStyle = ["#f34a43", "#7be1b3", "#e4b24e", "#56b7d2"][index % 4];
-    context.fillRect(0, 0, 18, signCanvas.height);
-    context.font = "800 62px system-ui, sans-serif";
+    context.fillStyle = "#e10600";
+    context.fillRect(0, 0, 11, signCanvas.height);
+    context.font = "800 50px system-ui, sans-serif";
     context.fillStyle = "#f4f7fa";
     context.textBaseline = "middle";
-    context.fillText(`BOX ${String(index + 1).padStart(2, "0")}`, 42, 67);
+    context.fillText(`PIT ${String(index + 1).padStart(2, "0")}`, 36, 66);
     const texture = new THREE.CanvasTexture(signCanvas);
     texture.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.MeshStandardMaterial({ map: texture, roughness: 0.68, emissive: 0x17212b, emissiveIntensity: 0.2 });
+    return new THREE.MeshStandardMaterial({ map: texture, roughness: 0.64, emissive: 0x101923, emissiveIntensity: 0.12 });
   }
 
   function addGarageSide(segment, index, side) {
-    const accent = [materials.garageRed, materials.garageMint, materials.garageGold, materials.garageBlue][index % 4];
-    const inward = side * 6.25;
-    addMesh(segment, new THREE.BoxGeometry(5.4, 4.8, segmentLength), materials.garageDark, [side * 9.05, 2.35, 0]);
-    addMesh(segment, new THREE.BoxGeometry(0.12, 3.1, 12), accent, [inward, 1.72, 0]);
-    addMesh(segment, new THREE.BoxGeometry(0.2, 0.18, 17.8), accent, [side * 6.55, 3.88, 0]);
-    addMesh(segment, new THREE.BoxGeometry(0.24, 0.16, segmentLength), materials.garageDark, [side * 9.05, 4.82, 0]);
-    const slats = new THREE.InstancedMesh(garageSlatGeometry, materials.white, 9);
-    const slatTransform = new THREE.Object3D();
-    for (let slat = 0; slat < 9; slat += 1) {
-      slatTransform.position.set(0, slat * 0.3, 0);
-      slatTransform.updateMatrix();
-      slats.setMatrixAt(slat, slatTransform.matrix);
-    }
-    slats.position.set(inward - side * 0.085, 0.45, 0);
-    slats.instanceMatrix.needsUpdate = true;
-    segment.add(slats);
-    addMesh(segment, new THREE.BoxGeometry(0.09, 0.13, 14.5), materials.led, [side * 6.38, 3.55, 0]);
+    const buildingCenterX = side * 11.75;
+    const faceRotation = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    const fasciaMaterial = index % 2 ? materials.garageDark : materials.carbon;
 
-    const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), makeGarageSign(index));
-    sign.position.set(inward - side * 0.12, 4.35, 0);
-    sign.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+    // Continuous two-storey garage block stays entirely outside the racing surface.
+    addMesh(segment, garageShellGeometry, materials.garageDark, [buildingCenterX, 4.0, 0]);
+    addMesh(segment, garageFloorGeometry, materials.apron, [buildingCenterX, -0.08, 0]);
+    addMesh(segment, garageFasciaGeometry, fasciaMaterial, [buildingCenterX, 8.12, 0]);
+    addMesh(segment, garageAccentGeometry, materials.redLight, [side * 7.83, 7.88, 0]);
+
+    const facade = addMesh(
+      segment,
+      new THREE.PlaneGeometry(segmentLength, 8.0),
+      garageFacadeMaterial,
+      [side * 7.96, 3.98, 0],
+      null,
+      [0, faceRotation, 0],
+    );
+    facade.renderOrder = 1;
+
+    // Exposed concrete piers and canopy soffit add real depth around the generated facade texture.
+    const pierPositions = [-16.4, 0, 16.4].map((z) => ({ position: [side * 7.98, 4.0, z] }));
+    addInstances(segment, garagePierGeometry, materials.garageFrame, pierPositions);
+    const canopyPositions = [-16.4, 0, 16.4].map((z) => ({ position: [side * 8.55, 7.35, z] }));
+    addInstances(segment, canopyLightGeometry, materials.led, canopyPositions);
+    addMesh(segment, soffitGeometry, materials.garageFrame, [side * 8.55, 7.66, 0]);
+
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.7, 0.68), makeGarageSign(index));
+    sign.position.set(side * 7.91, 6.82, side > 0 ? -8 : 8);
+    sign.rotation.y = faceRotation;
     segment.add(sign);
 
-    const tireRack = new THREE.InstancedMesh(tireStackGeometry, materials.tire, 4);
+    // Short pit wall and open guard rails define the lane without forming a corridor wall.
+    addMesh(segment, pitWallGeometry, materials.pitWall, [side * 6.92, 0.25, 0]);
+    addMesh(segment, pitWallStripeGeometry, materials.red, [side * 6.92, 0.54, 0]);
+    const postPositions = [-15, -10, -5, 0, 5, 10, 15].map((z) => ({ position: [side * 6.82, 0.83, z] }));
+    addInstances(segment, railPostGeometry, materials.rail, postPositions);
+    const beamPositions = [0.98, 0.73].map((y) => ({ position: [side * 6.82, y, 0] }));
+    addInstances(segment, railBeamGeometry, materials.rail, beamPositions);
+
+    const tireRack = new THREE.InstancedMesh(tireStackGeometry, materials.tire, 8);
     const tireTransform = new THREE.Object3D();
     let tireIndex = 0;
-    [-7, 7].forEach((z) => {
+    [-10, -3, 4, 11].forEach((z) => {
       [0, 1].forEach((level) => {
-        tireTransform.position.set(side * 6.72, 0.5 + level * 0.38, z);
-        tireTransform.rotation.set(0, Math.PI / 2, 0);
+        tireTransform.position.set(side * 8.72, 0.47 + level * 0.38, z);
+        tireTransform.rotation.set(0, side * Math.PI / 2, 0);
         tireTransform.updateMatrix();
         tireRack.setMatrixAt(tireIndex, tireTransform.matrix);
         tireIndex += 1;
@@ -224,13 +401,21 @@ import * as THREE from "./vendor/three/three.module.min.js";
     tireRack.instanceMatrix.needsUpdate = true;
     segment.add(tireRack);
 
+    [-6.5, 7.5].forEach((z, cabinetIndex) => {
+      const cabinetMaterial = cabinetIndex ? materials.garageBlue : materials.garageRed;
+      addMesh(segment, tireCabinetGeometry, cabinetMaterial, [side * 8.42, 0.49, z]);
+      addMesh(segment, tireCabinetTopGeometry, materials.garageFrame, [side * 8.42, 0.99, z]);
+      addMesh(segment, cabinetLightGeometry, materials.led, [side * 7.96, 0.51, z - 0.38]);
+    });
+
     if (index % 4 === 2 && side === 1) {
       const bananaCrew = new THREE.Sprite(bananaCrewMaterial);
-      bananaCrew.position.set(side * 6.08, 1.35, -12);
-      bananaCrew.scale.set(2.2, 2.5, 1);
+      bananaCrew.position.set(side * 8.72, 1.45, -12);
+      bananaCrew.scale.set(1.8, 2.15, 1);
       segment.add(bananaCrew);
     }
 
+    if (index % 2 !== (side > 0 ? 0 : 1)) return;
     const trolley = new THREE.Group();
     addMesh(trolley, new THREE.BoxGeometry(0.8, 0.65, 1.05), index % 2 ? materials.garageBlue : materials.red, [0, 0.55, 0]);
     addMesh(trolley, new THREE.BoxGeometry(0.86, 0.09, 1.12), materials.black, [0, 0.91, 0]);
@@ -248,7 +433,7 @@ import * as THREE from "./vendor/three/three.module.min.js";
     });
     trolleyWheels.instanceMatrix.needsUpdate = true;
     trolley.add(trolleyWheels);
-    trolley.position.set(side * 6.78, 0, 10);
+    trolley.position.set(side * 8.5, 0, 12);
     segment.add(trolley);
   }
 
@@ -256,13 +441,11 @@ import * as THREE from "./vendor/three/three.module.min.js";
     const segment = new THREE.Group();
     addGarageSide(segment, index, -1);
     addGarageSide(segment, index, 1);
-    if (index % 3 === 1) {
-      [-6.4, 6.4].forEach((x) => addMesh(segment, new THREE.BoxGeometry(0.24, 4.9, 0.32), materials.garageDark, [x, 4.35, 0]));
-      addMesh(segment, new THREE.BoxGeometry(13.2, 0.34, 0.55), materials.garageDark, [0, 6.65, 0]);
-      addMesh(segment, new THREE.BoxGeometry(4.2, 0.72, 0.58), materials.red, [0, 6.62, 0]);
-      for (let light = 0; light < 5; light += 1) {
-        addMesh(segment, new THREE.SphereGeometry(0.14, 8, 6), light < 3 ? materials.led : materials.mintGlow, [-0.55 + light * 0.28, 6.18, 0.12]);
-      }
+    if (index % 2 === 0) {
+      const stencil = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 3.8), pitStencilMaterial);
+      stencil.rotation.x = -Math.PI / 2;
+      stencil.position.set(0, -0.06, -10);
+      segment.add(stencil);
     }
     segment.position.z = 12 - index * segmentLength;
     scene.add(segment);
@@ -835,6 +1018,7 @@ import * as THREE from "./vendor/three/three.module.min.js";
       const baseSpeed = 19 + Math.min(20, distanceTravelled * 0.0038);
       const worldSpeed = baseSpeed * (boostTime > 0 ? 1.38 : 1);
       distanceTravelled += delta * worldSpeed;
+      asphaltTexture.offset.y = (asphaltTexture.offset.y + worldSpeed * delta * (46 / 500)) % 1;
       preparePitStop();
       spawnClock -= delta;
       if (spawnClock <= 0) {
