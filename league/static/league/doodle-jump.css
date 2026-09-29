@@ -117,8 +117,8 @@
 .doodle-board-wrap {
   position: relative;
   width: 100%;
-  height: min(76vh, 790px);
-  min-height: 570px;
+  aspect-ratio: 16 / 9;
+  height: auto;
   margin: 0 auto;
   overflow: hidden;
   isolation: isolate;
@@ -237,7 +237,7 @@
   .doodle-scoreboard strong { font-size: 1.12rem; }
   .doodle-scoreboard small { font-size: .5rem; letter-spacing: .04em; }
   .doodle-live { font-size: .5rem; letter-spacing: .04em; }
-  .doodle-board-wrap { width: 100%; height: min(66vh, 640px); min-height: 440px; }
+  .doodle-board-wrap { width: 100%; }
   .doodle-controls { display: grid; grid-template-columns: 1fr 1fr; justify-content: center; text-align: center; }
   .doodle-desktop-instructions { display: none; }
   .doodle-mobile-instructions { display: block; grid-column: 1 / -1; }
@@ -249,10 +249,13 @@
 }
 
 @media (max-width: 390px) {
-  .doodle-board-wrap { min-height: 420px; }
   .doodle-live { display: none; }
   .doodle-scoreboard { grid-template-columns: 1fr 1fr 1fr; }
   .doodle-howto { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 620px) {
+  .doodle-board-wrap { aspect-ratio: 4 / 3; }
 }
 
 @media (prefers-reduced-motion: reduce) {

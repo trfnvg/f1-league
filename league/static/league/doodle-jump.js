@@ -98,14 +98,14 @@
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
 
-  function drawSprite(index, x, worldY, targetWidth, anchor = "center") {
+  function drawSprite(index, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
     const sprite = sprites[index];
     if (!sprite) return false;
-    const targetHeight = spriteSize(sprite, targetWidth);
+    const drawHeight = targetHeight || spriteSize(sprite, targetWidth);
     const screenY = height - (worldY - cameraY);
-    const drawY = anchor === "platform" ? screenY : screenY - targetHeight / 2;
+    const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
     ctx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
-      x - targetWidth / 2, drawY, targetWidth, targetHeight);
+      x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
   }
 
@@ -148,7 +148,7 @@
   }
 
   function visualScale() {
-    return width <= 520 ? .8 : 1;
+    return width <= 520 ? .68 : 1;
   }
 
   function enemyWidth() {
@@ -163,6 +163,7 @@
       originX: x,
       y,
       width: platformWidth,
+      height: Math.max(18, platformWidth * .32),
       kind,
       spriteIndex,
       phase: Math.random() * Math.PI * 2,
@@ -395,7 +396,7 @@
       if (banana.taken) continue;
       const bobY = banana.y + Math.sin(elapsed * 3 + banana.phase) * 7;
       if (overlapRect(player.x, player.y, player.width * .7, player.height * .72, banana.x, bobY,
-        32 * visualScale(), 36 * visualScale())) {
+        28 * visualScale(), 30 * visualScale())) {
         banana.taken = true;
         bananaCount += 1;
       }
@@ -438,12 +439,12 @@
     for (const banana of bananas) {
       if (banana.taken) continue;
       const bob = Math.sin(elapsed * 3 + banana.phase) * 7;
-      drawSprite(7, banana.x, banana.y + bob, Math.max(34, width * .085) * visualScale());
+      drawSprite(7, banana.x, banana.y + bob, Math.max(29, width * .055) * visualScale());
     }
 
     for (const platform of platforms) {
       if (platform.broken) continue;
-      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform");
+      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform", platform.height);
     }
 
     for (const enemy of enemies) {
@@ -533,6 +534,7 @@
         platform.originX *= scaleX;
         platform.y *= scaleY;
         platform.width *= scaleX;
+        platform.height *= scaleY;
         platform.range *= scaleX;
       });
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
