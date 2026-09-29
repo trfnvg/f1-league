@@ -16,7 +16,6 @@
   const art = {};
   const held = { left: false, right: false };
   const sprites = [];
-  const stars = [];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -26,6 +25,7 @@
   let height = 1;
   let dpr = 1;
   let mode = "ready";
+  let artReady = false;
   let frame = 0;
   let previousTime = 0;
   let elapsed = 0;
@@ -34,6 +34,7 @@
   let enemies = [];
   let hazards = [];
   let bananas = [];
+  let effects = [];
   let cameraY = 0;
   let worldTop = 0;
   let peakY = 0;
@@ -41,9 +42,11 @@
   let bananaCount = 0;
   let finalScore = 0;
   let lastWasRecord = false;
+  let trailTimer = 0;
   let touchOrigin = null;
 
   bestNode.textContent = String(best);
+  startButton.disabled = true;
 
   const image = (src) => new Promise((resolve) => {
     const img = new Image();
@@ -55,9 +58,9 @@
   function cropSprites(atlas) {
     if (!atlas) return;
     const cellWidth = atlas.naturalWidth / 4;
-    const cellHeight = atlas.naturalHeight / 2;
+    const cellHeight = atlas.naturalHeight / 3;
 
-    for (let index = 0; index < 8; index += 1) {
+    for (let index = 0; index < 12; index += 1) {
       const sx = (index % 4) * cellWidth;
       const sy = Math.floor(index / 4) * cellHeight;
       const tile = document.createElement("canvas");
@@ -97,7 +100,7 @@
     if (!sprite) return false;
     const targetHeight = spriteSize(sprite, targetWidth);
     const screenY = height - (worldY - cameraY);
-    const drawY = anchor === "bottom" ? screenY - targetHeight * .9 : screenY - targetHeight / 2;
+    const drawY = anchor === "platform" ? screenY : screenY - targetHeight / 2;
     ctx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
       x - targetWidth / 2, drawY, targetWidth, targetHeight);
     return true;
@@ -113,18 +116,10 @@
       for (let y = -offset - tileHeight; y < height + tileHeight; y += tileHeight) {
         ctx.drawImage(art.background, 0, y, width, tileHeight);
       }
-      ctx.fillStyle = "rgba(8, 14, 25, .22)";
+      ctx.fillStyle = "rgba(8, 14, 25, .1)";
       ctx.fillRect(0, 0, width, height);
     }
 
-    for (const star of stars) {
-      const y = (star.y + cameraY * .08) % height;
-      ctx.globalAlpha = star.alpha;
-      ctx.fillStyle = star.color;
-      ctx.beginPath();
-      ctx.arc(star.x * width, y, star.radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
     ctx.globalAlpha = 1;
   }
 
@@ -157,13 +152,15 @@
   }
 
   function buildGame() {
+    const heroSprite = sprites[8];
     const heroHeight = Math.min(88, Math.max(70, width * .18));
-    const heroWidth = heroHeight * (art.hero ? art.hero.naturalWidth / art.hero.naturalHeight : .67);
+    const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
     const firstY = 86;
     platforms = [];
     enemies = [];
     hazards = [];
     bananas = [];
+    effects = [];
     cameraY = 0;
     worldTop = firstY;
     peakY = firstY + heroHeight / 2;
@@ -171,6 +168,7 @@
     bananaCount = 0;
     finalScore = 0;
     elapsed = 0;
+    trailTimer = 0;
     held.left = false;
     held.right = false;
 
@@ -262,6 +260,7 @@
   }
 
   function startGame() {
+    if (!artReady) return;
     cancelAnimationFrame(frame);
     buildGame();
     mode = "running";
@@ -294,17 +293,22 @@
   function collideWithEnemy(previousFeet, currentFeet) {
     for (const enemy of enemies) {
       if (enemy.dead) continue;
-      const enemyHeight = Math.max(46, Math.min(62, width * .145));
-      const enemyTop = enemy.y + enemyHeight * .35;
+      const enemyWidth = Math.max(47, Math.min(61, width * .15));
+      const enemyHeight = spriteSize(sprites[4], enemyWidth);
+      const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
+      const enemyTop = enemyY + enemyHeight / 2;
       const closeX = Math.abs(player.x - enemy.x) < (player.width * .64 + 23);
       const crossedTop = previousFeet >= enemyTop && currentFeet <= enemyTop;
       if (player.vy < 0 && closeX && crossedTop) {
         enemy.dead = true;
         frags += 1;
+        player.y = enemyTop + player.height / 2;
         player.vy = 810;
+        effects.push({ index: 9, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 });
+        effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 });
         return true;
       }
-      if (overlapRect(player.x, player.y, player.width * .62, player.height * .72, enemy.x, enemy.y, 45, enemyHeight * .68)) {
+      if (overlapRect(player.x, player.y, player.width * .62, player.height * .72, enemy.x, enemyY, enemyWidth * .82, enemyHeight * .72)) {
         endGame();
         return true;
       }
@@ -347,7 +351,13 @@
         if (platform.broken || previousFeet < platform.y || currentFeet > platform.y) continue;
         if (Math.abs(player.x - platform.x) > platform.width * .48 + player.width * .32) continue;
         if (platform.kind === "break") platform.broken = true;
+        // Snap the sprite's feet to the exact contact plane; otherwise one frame of
+        // downward travel makes the character visibly sink into the platform.
+        player.y = platform.y + player.height / 2;
         player.vy = platform.kind === "spring" ? 930 : 720;
+        if (platform.kind === "spring") {
+          effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 });
+        }
         break;
       }
     }
@@ -368,6 +378,13 @@
         endGame();
         return;
       }
+    }
+
+    effects.forEach((effect) => { effect.age += dt; });
+    effects = effects.filter((effect) => effect.age < effect.duration && effect.y > cameraY - 140);
+    if (player.vy > 260 && elapsed - trailTimer > .13) {
+      effects.push({ index: 11, x: player.x, y: player.y - player.height * .38, age: 0, duration: .2, size: 46 });
+      trailTimer = elapsed;
     }
 
     if (player.y > cameraY + height * .54) cameraY = player.y - height * .54;
@@ -391,45 +408,38 @@
     for (const banana of bananas) {
       if (banana.taken) continue;
       const bob = Math.sin(elapsed * 3 + banana.phase) * 7;
-      ctx.save();
-      ctx.shadowColor = "rgba(255, 207, 73, .78)";
-      ctx.shadowBlur = 18;
       drawSprite(7, banana.x, banana.y + bob, Math.max(34, width * .085));
-      ctx.restore();
     }
 
     for (const platform of platforms) {
       if (platform.broken) continue;
-      ctx.save();
-      if (platform.kind === "spring") {
-        ctx.shadowColor = "rgba(113, 222, 210, .58)";
-        ctx.shadowBlur = 17;
-      }
-      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "bottom");
-      ctx.restore();
+      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform");
     }
 
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const bobY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      ctx.save();
-      ctx.shadowColor = "rgba(240, 68, 72, .55)";
-      ctx.shadowBlur = 13;
       drawSprite(4, enemy.x, bobY, Math.max(47, Math.min(61, width * .15)));
-      ctx.restore();
     }
 
     for (const hazard of hazards) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
+
+    for (const effect of effects) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - effect.age / effect.duration);
+      drawSprite(effect.index, effect.x, effect.y, effect.size);
+      ctx.restore();
+    }
 
     if (player) {
       const screenY = worldToScreen(player.y);
       ctx.save();
       ctx.translate(player.x, screenY);
-      if (player.vx < -5) ctx.scale(-1, 1);
-      ctx.shadowColor = "rgba(255, 209, 60, .38)";
-      ctx.shadowBlur = 17;
-      if (art.hero) {
-        ctx.drawImage(art.hero, -player.width / 2, -player.height / 2, player.width, player.height);
+      ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
+      const heroSprite = sprites[8];
+      if (heroSprite) {
+        ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
+          -player.width / 2, -player.height / 2, player.width, player.height);
       } else {
         ctx.fillStyle = "#f4d43e";
         ctx.beginPath();
@@ -470,10 +480,9 @@
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    stars.length = 0;
-    for (let i = 0; i < 62; i += 1) {
-      stars.push({ x: Math.random(), y: Math.random() * height, radius: Math.random() * 1.2 + .35,
-        alpha: Math.random() * .42 + .16, color: Math.random() < .3 ? "#ffd77d" : "#edf3ff" });
+    if (!artReady) {
+      drawBackdrop();
+      return;
     }
     if (player && previousWidth > 1 && previousHeight > 1) {
       const scaleX = width / previousWidth;
@@ -556,13 +565,13 @@
   });
 
   Promise.all([
-    image(canvas.dataset.heroSrc),
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.backgroundSrc),
-  ]).then(([hero, atlas, background]) => {
-    art.hero = hero;
+  ]).then(([atlas, background]) => {
     art.background = background;
     cropSprites(atlas);
+    artReady = true;
+    startButton.disabled = false;
     resize();
     setOverlay("ready");
   });
