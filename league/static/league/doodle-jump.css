@@ -100,7 +100,7 @@
 .doodle-scoreboard {
   display: grid;
   min-height: 72px;
-  grid-template-columns: minmax(64px, 1fr) 1.3fr minmax(64px, .8fr) minmax(64px, 1fr) auto;
+  grid-template-columns: minmax(64px, 1fr) 1.3fr minmax(64px, 1fr) auto;
   align-items: center;
   gap: .8rem;
   padding: .7rem 1.1rem;
@@ -111,10 +111,9 @@
 .doodle-scoreboard > div { display: grid; gap: .17rem; }
 .doodle-scoreboard small { color: var(--doodle-muted); font-size: .57rem; font-weight: 900; letter-spacing: .07em; }
 .doodle-scoreboard strong { color: var(--doodle-cream); font-size: 1.45rem; font-weight: 900; line-height: 1; text-shadow: 2px 2px 0 rgba(0, 0, 0, .5); font-variant-numeric: tabular-nums; }
-.doodle-scoreboard > div:nth-of-type(2) strong { color: var(--doodle-yellow); }
 .doodle-live { display: flex; align-items: center; justify-content: center; gap: .48rem; color: var(--doodle-cyan); font-size: .6rem; font-weight: 900; letter-spacing: .08em; }
 .doodle-live > i { width: .4rem; height: .4rem; background: var(--doodle-red); box-shadow: 2px 2px 0 #783444; }
-.doodle-best { justify-items: end; }
+.doodle-best { justify-items: end; padding-right: .3rem; }
 
 .doodle-fullscreen-toggle {
   display: grid;
@@ -126,6 +125,7 @@
   border-radius: 0;
   color: var(--doodle-cream);
   background: #152849;
+  margin-left: .2rem;
   cursor: pointer;
   transition: color 140ms ease, border-color 140ms ease, background 140ms ease, transform 140ms ease;
 }
@@ -262,7 +262,7 @@
   .doodle-heading { align-items: start; flex-direction: column; gap: .8rem; }
   .doodle-machine { width: 100%; }
   .doodle-admin-badge { align-self: flex-start; }
-  .doodle-scoreboard { min-height: 62px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: .35rem; padding: .55rem .65rem; }
+  .doodle-scoreboard { min-height: 62px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; gap: .35rem; padding: .55rem .65rem; }
   .doodle-scoreboard strong { font-size: 1.12rem; }
   .doodle-scoreboard small { font-size: .5rem; letter-spacing: .04em; }
   .doodle-live { font-size: .5rem; letter-spacing: .04em; }
@@ -281,7 +281,7 @@
 
 @media (max-width: 390px) {
   .doodle-live { display: none; }
-  .doodle-scoreboard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .doodle-scoreboard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
   .doodle-howto { grid-template-columns: 1fr; }
 }
 
