@@ -100,7 +100,7 @@
 .doodle-scoreboard {
   display: grid;
   min-height: 72px;
-  grid-template-columns: minmax(64px, 1fr) 1.3fr minmax(64px, .8fr) minmax(64px, 1fr);
+  grid-template-columns: minmax(64px, 1fr) 1.3fr minmax(64px, .8fr) minmax(64px, 1fr) auto;
   align-items: center;
   gap: .8rem;
   padding: .7rem 1.1rem;
@@ -115,6 +115,32 @@
 .doodle-live { display: flex; align-items: center; justify-content: center; gap: .48rem; color: var(--doodle-cyan); font-size: .6rem; font-weight: 900; letter-spacing: .08em; }
 .doodle-live > i { width: .4rem; height: .4rem; background: var(--doodle-red); box-shadow: 2px 2px 0 #783444; }
 .doodle-best { justify-items: end; }
+
+.doodle-fullscreen-toggle {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--doodle-line);
+  border-radius: 0;
+  color: var(--doodle-cream);
+  background: #152849;
+  cursor: pointer;
+  transition: color 140ms ease, border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.doodle-fullscreen-toggle:hover { transform: translateY(-1px); border-color: var(--doodle-cyan); color: var(--doodle-cyan); background: #1a3157; }
+.doodle-fullscreen-toggle:active { transform: translateY(1px); }
+.doodle-fullscreen-toggle:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: 3px; }
+.doodle-fullscreen-toggle svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: square; stroke-linejoin: miter; }
+.doodle-fullscreen-exit { display: none; }
+.doodle-machine.is-fullscreen .doodle-fullscreen-enter,
+.doodle-machine:fullscreen .doodle-fullscreen-enter,
+.doodle-machine:-webkit-full-screen .doodle-fullscreen-enter { display: none; }
+.doodle-machine.is-fullscreen .doodle-fullscreen-exit,
+.doodle-machine:fullscreen .doodle-fullscreen-exit,
+.doodle-machine:-webkit-full-screen .doodle-fullscreen-exit { display: block; }
 
 .doodle-board-wrap {
   position: relative;
@@ -236,10 +262,12 @@
   .doodle-heading { align-items: start; flex-direction: column; gap: .8rem; }
   .doodle-machine { width: 100%; }
   .doodle-admin-badge { align-self: flex-start; }
-  .doodle-scoreboard { min-height: 62px; grid-template-columns: 1fr auto 1fr 1fr; gap: .35rem; padding: .55rem .65rem; }
+  .doodle-scoreboard { min-height: 62px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) minmax(0, 1fr) auto; gap: .35rem; padding: .55rem .65rem; }
   .doodle-scoreboard strong { font-size: 1.12rem; }
   .doodle-scoreboard small { font-size: .5rem; letter-spacing: .04em; }
   .doodle-live { font-size: .5rem; letter-spacing: .04em; }
+  .doodle-fullscreen-toggle { width: 34px; height: 34px; }
+  .doodle-fullscreen-toggle svg { width: 17px; height: 17px; }
   .doodle-board-wrap { width: 100%; height: clamp(520px, 74vh, 700px); }
   .doodle-controls { display: grid; grid-template-columns: 1fr 1fr; justify-content: center; text-align: center; }
   .doodle-desktop-instructions { display: none; }
@@ -253,10 +281,90 @@
 
 @media (max-width: 390px) {
   .doodle-live { display: none; }
-  .doodle-scoreboard { grid-template-columns: 1fr 1fr 1fr; }
+  .doodle-scoreboard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
   .doodle-howto { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .doodle-overlay, .doodle-start { transition: none; }
+}
+
+body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
+
+.doodle-machine.is-fullscreen,
+.doodle-machine:fullscreen,
+.doodle-machine:-webkit-full-screen {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: flex;
+  width: 100vw;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh;
+  flex-direction: column;
+  margin: 0;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #081126;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+.doodle-machine.is-fullscreen .doodle-scoreboard,
+.doodle-machine:fullscreen .doodle-scoreboard,
+.doodle-machine:-webkit-full-screen .doodle-scoreboard {
+  flex: 0 0 auto;
+  width: min(100%, 760px);
+  align-self: center;
+}
+
+.doodle-machine.is-fullscreen .doodle-board-wrap,
+.doodle-machine:fullscreen .doodle-board-wrap,
+.doodle-machine:-webkit-full-screen .doodle-board-wrap {
+  width: min(100%, 760px);
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  align-self: center;
+}
+
+.doodle-machine.is-fullscreen .doodle-controls,
+.doodle-machine:fullscreen .doodle-controls,
+.doodle-machine:-webkit-full-screen .doodle-controls {
+  width: min(100%, 760px);
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+@media (max-width: 760px) {
+  .doodle-machine.is-fullscreen .doodle-scoreboard,
+  .doodle-machine:fullscreen .doodle-scoreboard,
+  .doodle-machine:-webkit-full-screen .doodle-scoreboard,
+  .doodle-machine.is-fullscreen .doodle-board-wrap,
+  .doodle-machine:fullscreen .doodle-board-wrap,
+  .doodle-machine:-webkit-full-screen .doodle-board-wrap,
+  .doodle-machine.is-fullscreen .doodle-controls,
+  .doodle-machine:fullscreen .doodle-controls,
+  .doodle-machine:-webkit-full-screen .doodle-controls {
+    width: 100%;
+  }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .doodle-machine.is-fullscreen .doodle-controls,
+  .doodle-machine:fullscreen .doodle-controls,
+  .doodle-machine:-webkit-full-screen .doodle-controls {
+    display: none;
+  }
+
+  .doodle-machine.is-fullscreen .doodle-scoreboard,
+  .doodle-machine:fullscreen .doodle-scoreboard,
+  .doodle-machine:-webkit-full-screen .doodle-scoreboard {
+    min-height: 54px;
+    padding-block: .35rem;
+  }
 }
