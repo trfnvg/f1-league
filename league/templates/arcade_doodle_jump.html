@@ -34,21 +34,23 @@
       </button>
     </div>
 
-    <div class="doodle-board-wrap" id="doodle-board-wrap">
-      <canvas
-        id="doodle-canvas"
-        data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
-        data-background-src="{% static 'league/images/doodle-jump/race-night-v4.png' %}"
-        tabindex="0"
-        role="application"
-        aria-label="Банана Леклер подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
-      ></canvas>
-      <div class="doodle-overlay" id="doodle-overlay">
-        <div class="doodle-overlay-card">
-          <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА</span>
-          <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-          <p id="doodle-overlay-copy">Лови платформы и набирай высоту. На телефоне касайся или удерживай левую и правую половины поля, чтобы двигаться. Одно столкновение — и заезд окончен.</p>
-          <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
+    <div class="doodle-game-stage">
+      <div class="doodle-board-wrap" id="doodle-board-wrap">
+        <canvas
+          id="doodle-canvas"
+          data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
+          data-background-src="{% static 'league/images/doodle-jump/race-night-v4.png' %}"
+          tabindex="0"
+          role="application"
+          aria-label="Банана Леклер подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
+        ></canvas>
+        <div class="doodle-overlay" id="doodle-overlay">
+          <div class="doodle-overlay-card">
+            <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА</span>
+            <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
+            <p id="doodle-overlay-copy">Лови платформы и набирай высоту. На телефоне касайся или удерживай левую и правую половины поля, чтобы двигаться. Одно столкновение — и заезд окончен.</p>
+            <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
+          </div>
         </div>
       </div>
     </div>

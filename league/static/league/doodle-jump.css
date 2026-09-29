@@ -88,12 +88,12 @@
 }
 
 .doodle-machine {
-  width: min(100%, 760px);
+  width: min(100%, 1040px);
   margin-inline: auto;
   overflow: hidden;
-  border: 2px solid var(--doodle-line);
+  border: 2px solid #344f78;
   border-radius: 0;
-  background: var(--doodle-navy);
+  background: #0c1428;
   box-shadow: 5px 5px 0 rgba(4, 8, 18, .8), 0 0 0 3px rgba(22, 36, 63, .55);
 }
 
@@ -104,8 +104,8 @@
   align-items: center;
   gap: .8rem;
   padding: .7rem 1.1rem;
-  border-bottom: 2px solid var(--doodle-line);
-  background: var(--doodle-board);
+  border-bottom: 2px solid #344f78;
+  background: #101d39;
 }
 
 .doodle-scoreboard > div { display: grid; gap: .17rem; }
@@ -142,9 +142,45 @@
 .doodle-machine:fullscreen .doodle-fullscreen-exit,
 .doodle-machine:-webkit-full-screen .doodle-fullscreen-exit { display: block; }
 
+.doodle-game-stage {
+  position: relative;
+  display: grid;
+  min-height: clamp(640px, 82vh, 900px);
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #081126;
+  background-image:
+    radial-gradient(ellipse at center, rgba(37, 77, 119, .42), transparent 58%),
+    repeating-linear-gradient(135deg, rgba(142, 234, 255, .035) 0 1px, transparent 1px 14px),
+    linear-gradient(90deg, #0a1429, #111e38 50%, #0a1429);
+}
+
+.doodle-game-stage::before,
+.doodle-game-stage::after {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 82, 103, .8) 0 14px,
+    rgba(255, 243, 207, .75) 14px 28px,
+    transparent 28px 42px
+  );
+  box-shadow: 0 0 22px rgba(142, 234, 255, .12);
+  content: "";
+  pointer-events: none;
+}
+
+.doodle-game-stage::before { left: calc(50% - 396px); }
+.doodle-game-stage::after { right: calc(50% - 396px); }
+
 .doodle-board-wrap {
   position: relative;
-  width: 100%;
+  z-index: 1;
+  width: min(100%, 760px);
   height: clamp(640px, 82vh, 900px);
   min-height: 0;
   margin: 0 auto;
@@ -236,9 +272,9 @@
   flex-wrap: wrap;
   gap: .55rem 1rem;
   padding: .65rem 1rem;
-  border-top: 1px solid var(--doodle-line);
+  border-top: 2px solid #344f78;
   color: var(--doodle-muted);
-  background: var(--doodle-navy);
+  background: #0c1428;
   font-size: .62rem;
 }
 
@@ -268,6 +304,9 @@
   .doodle-live { font-size: .5rem; letter-spacing: .04em; }
   .doodle-fullscreen-toggle { width: 34px; height: 34px; }
   .doodle-fullscreen-toggle svg { width: 17px; height: 17px; }
+  .doodle-game-stage { min-height: clamp(520px, 74vh, 700px); }
+  .doodle-game-stage::before,
+  .doodle-game-stage::after { display: none; }
   .doodle-board-wrap { width: 100%; height: clamp(520px, 74vh, 700px); }
   .doodle-controls { display: grid; grid-template-columns: 1fr 1fr; justify-content: center; text-align: center; }
   .doodle-desktop-instructions { display: none; }
@@ -317,25 +356,35 @@ body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
 .doodle-machine:fullscreen .doodle-scoreboard,
 .doodle-machine:-webkit-full-screen .doodle-scoreboard {
   flex: 0 0 auto;
-  width: min(100%, 760px);
+  width: min(100%, 1040px);
   align-self: center;
+}
+
+.doodle-machine.is-fullscreen .doodle-game-stage,
+.doodle-machine:fullscreen .doodle-game-stage,
+.doodle-machine:-webkit-full-screen .doodle-game-stage {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  place-items: center;
 }
 
 .doodle-machine.is-fullscreen .doodle-board-wrap,
 .doodle-machine:fullscreen .doodle-board-wrap,
 .doodle-machine:-webkit-full-screen .doodle-board-wrap {
   width: min(100%, 760px);
-  height: auto;
+  height: min(100%, 900px);
   min-height: 0;
   max-height: none;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   align-self: center;
 }
 
 .doodle-machine.is-fullscreen .doodle-controls,
 .doodle-machine:fullscreen .doodle-controls,
 .doodle-machine:-webkit-full-screen .doodle-controls {
-  width: min(100%, 760px);
+  width: min(100%, 1040px);
   flex: 0 0 auto;
   align-self: center;
 }
@@ -344,6 +393,9 @@ body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
   .doodle-machine.is-fullscreen .doodle-scoreboard,
   .doodle-machine:fullscreen .doodle-scoreboard,
   .doodle-machine:-webkit-full-screen .doodle-scoreboard,
+  .doodle-machine.is-fullscreen .doodle-game-stage,
+  .doodle-machine:fullscreen .doodle-game-stage,
+  .doodle-machine:-webkit-full-screen .doodle-game-stage,
   .doodle-machine.is-fullscreen .doodle-board-wrap,
   .doodle-machine:fullscreen .doodle-board-wrap,
   .doodle-machine:-webkit-full-screen .doodle-board-wrap,
