@@ -206,7 +206,7 @@
     let lastX = width * .5;
     while (nextY < height + 320) {
       nextY += 82 + Math.random() * 39;
-      const delta = (Math.random() * 2 - 1) * Math.min(width * .4, 320);
+      const delta = (Math.random() * 2 - 1) * Math.min(width * .34, 250);
       lastX = Math.max(width * .12, Math.min(width * .88, lastX + delta));
       addPlatform(nextY, lastX, selectPlatformKind());
       worldTop = nextY;
@@ -233,7 +233,7 @@
       const prior = platforms[platforms.length - 1];
       const lastX = prior ? prior.originX : width / 2;
       const nextX = Math.max(width * .12, Math.min(width * .88,
-        lastX + (Math.random() * 2 - 1) * Math.min(width * .4, 320)));
+        lastX + (Math.random() * 2 - 1) * Math.min(width * .34, 250)));
       addPlatform(y, nextX, selectPlatformKind());
       worldTop = y;
     }
@@ -349,7 +349,8 @@
   function update(dt) {
     elapsed += dt;
     const direction = Number(held.right) - Number(held.left);
-    player.vx = direction * Math.min(680, width * .76);
+    const targetVx = direction * Math.min(440, width * .62);
+    player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
     player.x += player.vx * dt;
     const halfPlayer = player.width / 2;
     if (player.x < -halfPlayer) player.x = width + halfPlayer;
