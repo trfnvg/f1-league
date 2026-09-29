@@ -501,9 +501,9 @@ class SafeScorePublicationTests(TestCase):
 
 
 @override_settings(STORAGES=TEST_STORAGES)
-class Arcade3DPrototypeAccessTests(TestCase):
+class ArcadeDoodleJumpAccessTests(TestCase):
     def test_prototype_is_login_and_staff_only(self):
-        url = reverse("league:arcade_3d")
+        url = reverse("league:arcade_doodle_jump")
         self.assertEqual(self.client.get(url).status_code, 302)
 
         player = User.objects.create_user(username="runner-player", password="test")
@@ -515,7 +515,7 @@ class Arcade3DPrototypeAccessTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "BOX BOX")
+        self.assertContains(response, "Doodle GP")
         self.assertContains(response, "Только для администраторов")
-        self.assertContains(response, "pit-garage-atlas.jpg")
-        self.assertContains(response, reverse("league:arcade_3d"))
+        self.assertContains(response, "f1-doodle-atlas.png")
+        self.assertContains(response, reverse("league:arcade_doodle_jump"))

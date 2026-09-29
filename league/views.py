@@ -194,10 +194,10 @@ def arcade(request):
 
 
 @login_required
-def arcade_3d(request):
+def arcade_doodle_jump(request):
     if not request.user.is_staff:
         return HttpResponseForbidden("Эта страница доступна только администраторам.")
-    return render(request, "arcade_3d.html")
+    return render(request, "arcade_doodle_jump.html")
 
 
 @login_required
