@@ -67,6 +67,7 @@
       tile.width = Math.ceil(cellWidth);
       tile.height = Math.ceil(cellHeight);
       const tileCtx = tile.getContext("2d", { willReadFrequently: true });
+      tileCtx.imageSmoothingEnabled = false;
       tileCtx.drawImage(atlas, sx, sy, cellWidth, cellHeight, 0, 0, tile.width, tile.height);
       const pixels = tileCtx.getImageData(0, 0, tile.width, tile.height).data;
       let minX = tile.width;
@@ -480,6 +481,7 @@
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false;
     if (!artReady) {
       drawBackdrop();
       return;
