@@ -11,7 +11,6 @@
   const kicker = document.getElementById("doodle-overlay-kicker");
   const startButton = document.getElementById("doodle-start");
   const scoreNode = document.getElementById("doodle-score");
-  const fragsNode = document.getElementById("doodle-frags");
   const bestNode = document.getElementById("doodle-best");
   const fullscreenButton = document.getElementById("doodle-fullscreen-toggle");
   const bestStorageKey = "f1-doodle-gp-best-v1";
@@ -154,6 +153,10 @@
     return width <= 520 ? .68 : 1;
   }
 
+  function bananaScale() {
+    return width <= 520 ? .82 : 1;
+  }
+
   function enemyWidth() {
     return Math.max(47, Math.min(61, width * .15)) * visualScale();
   }
@@ -269,7 +272,6 @@
     const heightPoints = Math.max(0, Math.floor((peakY - 86) / 11));
     const score = heightPoints + frags * 30 + bananaCount * 12;
     scoreNode.textContent = String(mode === "over" ? finalScore : score);
-    fragsNode.textContent = String(frags);
     bestNode.textContent = String(Math.max(best, score));
   }
 
@@ -400,7 +402,7 @@
       if (banana.taken) continue;
       const bobY = banana.y + Math.sin(elapsed * 3 + banana.phase) * 7;
       if (overlapRect(player.x, player.y, player.width * .7, player.height * .72, banana.x, bobY,
-        28 * visualScale(), 30 * visualScale())) {
+        28 * bananaScale(), 30 * bananaScale())) {
         banana.taken = true;
         bananaCount += 1;
       }
@@ -443,7 +445,7 @@
     for (const banana of bananas) {
       if (banana.taken) continue;
       const bob = Math.sin(elapsed * 3 + banana.phase) * 7;
-      drawSprite(7, banana.x, banana.y + bob, Math.max(29, width * .055) * visualScale());
+      drawSprite(7, banana.x, banana.y + bob, Math.max(29, width * .055) * bananaScale());
     }
 
     for (const platform of platforms) {
