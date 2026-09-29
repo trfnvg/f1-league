@@ -181,6 +181,7 @@
 
 .doodle-start:hover { filter: brightness(1.09); transform: translateY(-2px); box-shadow: 0 12px 27px rgba(220, 51, 61, .32); }
 .doodle-start:active { transform: translateY(0); }
+.doodle-start:disabled { opacity: .62; box-shadow: none; cursor: wait; }
 .doodle-start:focus-visible,.doodle-touch-controls button:focus-visible { outline: 3px solid rgba(255, 214, 87, .75); outline-offset: 3px; }
 .doodle-controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .55rem 1rem; padding: .8rem 1rem; color: #8998ab; font-size: .68rem; }
 .doodle-controls kbd { padding: .12rem .36rem; border: 1px solid rgba(213, 227, 245, .18); border-radius: 4px; color: #d4deea; background: #172231; font: inherit; font-size: .62rem; font-weight: 800; }

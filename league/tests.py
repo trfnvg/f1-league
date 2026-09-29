@@ -517,5 +517,5 @@ class ArcadeDoodleJumpAccessTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Doodle GP")
         self.assertContains(response, "Только для администраторов")
-        self.assertContains(response, "f1-doodle-atlas.png")
+        self.assertContains(response, "f1-doodle-atlas-v2.png")
         self.assertContains(response, reverse("league:arcade_doodle_jump"))
