@@ -43,7 +43,7 @@
   let finalScore = 0;
   let lastWasRecord = false;
   let trailTimer = 0;
-  let touchOrigin = null;
+  let touchDirection = null;
 
   bestNode.textContent = String(best);
   startButton.disabled = true;
@@ -128,9 +128,17 @@
     return height - (worldY - cameraY);
   }
 
+  function visualScale() {
+    return width <= 520 ? .8 : 1;
+  }
+
+  function enemyWidth() {
+    return Math.max(47, Math.min(61, width * .15)) * visualScale();
+  }
+
   function addPlatform(y, x, kind = "normal") {
     const spriteIndex = kind === "moving" ? 1 : kind === "break" ? 2 : kind === "spring" ? 3 : 0;
-    const platformWidth = Math.max(88, Math.min(116, width * .23));
+    const platformWidth = Math.max(88, Math.min(116, width * .23)) * visualScale();
     platforms.push({
       x,
       originX: x,
@@ -154,7 +162,7 @@
 
   function buildGame() {
     const heroSprite = sprites[8];
-    const heroHeight = Math.min(88, Math.max(70, width * .18));
+    const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
     const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
     const firstY = 86;
     platforms = [];
@@ -225,7 +233,7 @@
         y: worldTop + 90,
         speed: 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
         spriteIndex: Math.random() < .68 ? 5 : 6,
-        size: Math.max(38, Math.min(52, width * .12)),
+        size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
       });
     }
     if (!bananas.length || worldTop - bananas[bananas.length - 1].y > 385) {
@@ -294,22 +302,22 @@
   function collideWithEnemy(previousFeet, currentFeet) {
     for (const enemy of enemies) {
       if (enemy.dead) continue;
-      const enemyWidth = Math.max(47, Math.min(61, width * .15));
-      const enemyHeight = spriteSize(sprites[4], enemyWidth);
+      const targetEnemyWidth = enemyWidth();
+      const enemyHeight = spriteSize(sprites[4], targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
       const enemyTop = enemyY + enemyHeight / 2;
-      const closeX = Math.abs(player.x - enemy.x) < (player.width * .64 + 23);
+      const closeX = Math.abs(player.x - enemy.x) < (player.width * .64 + 23 * visualScale());
       const crossedTop = previousFeet >= enemyTop && currentFeet <= enemyTop;
       if (player.vy < 0 && closeX && crossedTop) {
         enemy.dead = true;
         frags += 1;
         player.y = enemyTop + player.height / 2;
         player.vy = 810;
-        effects.push({ index: 9, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 });
-        effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 });
+        effects.push({ index: 9, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 * visualScale() });
+        effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 * visualScale() });
         return true;
       }
-      if (overlapRect(player.x, player.y, player.width * .62, player.height * .72, enemy.x, enemyY, enemyWidth * .82, enemyHeight * .72)) {
+      if (overlapRect(player.x, player.y, player.width * .62, player.height * .72, enemy.x, enemyY, targetEnemyWidth * .82, enemyHeight * .72)) {
         endGame();
         return true;
       }
@@ -357,7 +365,7 @@
         player.y = platform.y + player.height / 2;
         player.vy = platform.kind === "spring" ? 930 : 720;
         if (platform.kind === "spring") {
-          effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 });
+          effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 * visualScale() });
         }
         break;
       }
@@ -366,7 +374,8 @@
     for (const banana of bananas) {
       if (banana.taken) continue;
       const bobY = banana.y + Math.sin(elapsed * 3 + banana.phase) * 7;
-      if (overlapRect(player.x, player.y, player.width * .7, player.height * .72, banana.x, bobY, 32, 36)) {
+      if (overlapRect(player.x, player.y, player.width * .7, player.height * .72, banana.x, bobY,
+        32 * visualScale(), 36 * visualScale())) {
         banana.taken = true;
         bananaCount += 1;
       }
@@ -384,7 +393,7 @@
     effects.forEach((effect) => { effect.age += dt; });
     effects = effects.filter((effect) => effect.age < effect.duration && effect.y > cameraY - 140);
     if (player.vy > 260 && elapsed - trailTimer > .13) {
-      effects.push({ index: 11, x: player.x, y: player.y - player.height * .38, age: 0, duration: .2, size: 46 });
+      effects.push({ index: 11, x: player.x, y: player.y - player.height * .38, age: 0, duration: .2, size: 46 * visualScale() });
       trailTimer = elapsed;
     }
 
@@ -409,7 +418,7 @@
     for (const banana of bananas) {
       if (banana.taken) continue;
       const bob = Math.sin(elapsed * 3 + banana.phase) * 7;
-      drawSprite(7, banana.x, banana.y + bob, Math.max(34, width * .085));
+      drawSprite(7, banana.x, banana.y + bob, Math.max(34, width * .085) * visualScale());
     }
 
     for (const platform of platforms) {
@@ -420,7 +429,7 @@
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const bobY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      drawSprite(4, enemy.x, bobY, Math.max(47, Math.min(61, width * .15)));
+      drawSprite(4, enemy.x, bobY, enemyWidth());
     }
 
     for (const hazard of hazards) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
@@ -516,8 +525,6 @@
 
   function setDirection(direction, value) {
     held[direction] = value;
-    const button = document.querySelector(`[data-doodle-action="${direction}"]`);
-    if (button) button.classList.toggle("is-pressed", value);
   }
 
   function clearDirections() {
@@ -540,30 +547,25 @@
   window.addEventListener("blur", clearDirections);
   startButton.addEventListener("click", startGame);
 
-  document.querySelectorAll("[data-doodle-action]").forEach((button) => {
-    const direction = button.dataset.doodleAction;
-    button.addEventListener("pointerdown", (event) => {
-      event.preventDefault();
-      button.setPointerCapture?.(event.pointerId);
-      setDirection(direction, true);
-    });
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-      button.addEventListener(type, () => setDirection(direction, false));
-    });
-  });
-
   canvas.addEventListener("pointerdown", (event) => {
-    touchOrigin = event.clientX;
+    if (event.pointerType === "mouse") return;
+    event.preventDefault();
+    const bounds = canvas.getBoundingClientRect();
+    touchDirection = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
+    setDirection(touchDirection, true);
     canvas.setPointerCapture?.(event.pointerId);
   });
   canvas.addEventListener("pointermove", (event) => {
-    if (touchOrigin === null || event.pointerType === "mouse") return;
-    const delta = event.clientX - touchOrigin;
-    setDirection("left", delta < -10);
-    setDirection("right", delta > 10);
+    if (touchDirection === null || event.pointerType === "mouse") return;
+    const bounds = canvas.getBoundingClientRect();
+    const direction = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
+    if (direction === touchDirection) return;
+    setDirection(touchDirection, false);
+    touchDirection = direction;
+    setDirection(touchDirection, true);
   });
   ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-    canvas.addEventListener(type, () => { touchOrigin = null; clearDirections(); });
+    canvas.addEventListener(type, () => { touchDirection = null; clearDirections(); });
   });
 
   Promise.all([
