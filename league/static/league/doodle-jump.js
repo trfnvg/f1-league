@@ -2,6 +2,7 @@
   const canvas = document.getElementById("doodle-canvas");
   if (!canvas) return;
 
+  const machine = canvas.closest(".doodle-machine");
   const wrap = document.getElementById("doodle-board-wrap");
   const ctx = canvas.getContext("2d", { alpha: false });
   const overlay = document.getElementById("doodle-overlay");
@@ -12,6 +13,7 @@
   const scoreNode = document.getElementById("doodle-score");
   const fragsNode = document.getElementById("doodle-frags");
   const bestNode = document.getElementById("doodle-best");
+  const fullscreenButton = document.getElementById("doodle-fullscreen-toggle");
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const art = {};
   const held = { left: false, right: false };
@@ -46,6 +48,7 @@
   let lastWasRecord = false;
   let trailTimer = 0;
   let touchDirection = null;
+  let nativeFullscreenRequested = false;
 
   bestNode.textContent = String(best);
   startButton.disabled = true;
@@ -520,7 +523,10 @@
     cacheBackground();
     if (player && previousWidth > 1 && previousHeight > 1) {
       const scaleX = width / previousWidth;
-      const scaleY = height / previousHeight;
+      // Keep the playfield's world geometry proportional when its visible height
+      // changes (e.g. entering fullscreen). The taller viewport simply reveals
+      // more of the level instead of stretching sprites and platforms vertically.
+      const scaleY = scaleX;
       player.x *= scaleX;
       player.y *= scaleY;
       player.vx *= scaleX;
@@ -556,8 +562,73 @@
     setDirection("right", false);
   }
 
+  function isGameFullscreen() {
+    return machine.classList.contains("is-fullscreen")
+      || document.fullscreenElement === machine
+      || document.webkitFullscreenElement === machine;
+  }
+
+  function updateFullscreenButton() {
+    const active = isGameFullscreen();
+    fullscreenButton.setAttribute("aria-pressed", String(active));
+    fullscreenButton.setAttribute("aria-label", active ? "Выйти из полноэкранного режима" : "На весь экран");
+    fullscreenButton.title = active ? "Выйти из полноэкранного режима (Esc)" : "На весь экран";
+  }
+
+  function handleFullscreenChange() {
+    const nativeActive = document.fullscreenElement === machine
+      || document.webkitFullscreenElement === machine;
+    if (nativeActive) {
+      machine.classList.add("is-fullscreen");
+      document.body.classList.add("doodle-fullscreen-active");
+    } else if (nativeFullscreenRequested) {
+      nativeFullscreenRequested = false;
+      machine.classList.remove("is-fullscreen");
+      document.body.classList.remove("doodle-fullscreen-active");
+    }
+    updateFullscreenButton();
+    requestAnimationFrame(resize);
+  }
+
+  async function toggleFullscreen() {
+    if (isGameFullscreen()) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      machine.classList.remove("is-fullscreen");
+      document.body.classList.remove("doodle-fullscreen-active");
+      nativeFullscreenRequested = false;
+      if (exit && (document.fullscreenElement === machine || document.webkitFullscreenElement === machine)) {
+        try { await exit.call(document); } catch (error) { /* The CSS fullscreen fallback is already closed. */ }
+      }
+      updateFullscreenButton();
+      requestAnimationFrame(resize);
+      return;
+    }
+
+    machine.classList.add("is-fullscreen");
+    document.body.classList.add("doodle-fullscreen-active");
+    updateFullscreenButton();
+    resize();
+
+    const request = machine.requestFullscreen || machine.webkitRequestFullscreen;
+    if (request) {
+      nativeFullscreenRequested = true;
+      try {
+        await request.call(machine);
+      } catch (error) {
+        // Keep the fixed-position fallback for browsers that deny native fullscreen.
+        nativeFullscreenRequested = false;
+      }
+    }
+    requestAnimationFrame(resize);
+  }
+
   document.addEventListener("keydown", (event) => {
     const key = event.key.toLowerCase();
+    if (key === "escape" && isGameFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      event.preventDefault();
+      toggleFullscreen();
+      return;
+    }
     if (["arrowleft", "arrowright", " "].includes(key)) event.preventDefault();
     if (key === "arrowleft" || key === "a") setDirection("left", true);
     if (key === "arrowright" || key === "d") setDirection("right", true);
@@ -570,6 +641,9 @@
   });
   window.addEventListener("blur", clearDirections);
   startButton.addEventListener("click", startGame);
+  fullscreenButton.addEventListener("click", toggleFullscreen);
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
+  document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
   canvas.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse") return;
