@@ -958,6 +958,7 @@ class ArcadeAttempt(models.Model):
 class ArcadeRecord(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="arcade_record")
     best_score = models.PositiveIntegerField(default=0)
+    total_attempts = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

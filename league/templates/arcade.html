@@ -61,7 +61,10 @@
         <span class="arcade-section-kicker">PIT LANE FLIGHT</span>
         <h2 id="arcade-leaderboard-title">Таблица рекордов</h2>
       </div>
-      <p id="arcade-board-status">Лучший результат каждого · автообновление 15 сек.</p>
+      <div class="arcade-board-meta">
+        <p id="arcade-board-status">Рекорд и попытки · онлайн-обновление каждые 15 сек.</p>
+        <p class="arcade-total-attempts">ВСЕГО ПОПЫТОК <strong id="arcade-total-attempts">{{ arcade_total_attempts }}</strong></p>
+      </div>
     </div>
     <form hidden id="arcade-csrf-form">{% csrf_token %}</form>
     {% if user.is_authenticated %}
@@ -70,14 +73,14 @@
           <li class="{% if record.is_current_user %}is-you{% endif %}" data-username="{{ record.username }}">
             <span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span>
             <span class="arcade-driver-name">{{ record.username }}</span>
-            <strong>{{ record.score }}</strong>
-            <small>ворот</small>
+            <span class="arcade-record-score"><strong>{{ record.score }}</strong><small>ворот</small></span>
+            <span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span>
           </li>
         {% empty %}
           <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов — первым в таблице можешь стать ты.</li>
         {% endfor %}
       </ol>
-      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong></p>
+      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_record.total_attempts }}</strong></p>
     {% else %}
       <div class="arcade-board-login">
         <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
@@ -85,7 +88,7 @@
       </div>
       <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
-          <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><strong>{{ record.score }}</strong><small>ворот</small></li>
+          <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong><small>ворот</small></span><span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span></li>
         {% empty %}
           <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов.</li>
         {% endfor %}
