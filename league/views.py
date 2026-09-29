@@ -9,7 +9,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -170,6 +170,7 @@ def arcade(request):
         "arcade_records": board_data["records"],
         "arcade_own_record": own_record,
         "arcade_own_rank": board_data["rank"],
+        "arcade_total_attempts": board_data["total_attempts"],
         "now": now,
         "driver_choices": DRIVER_CHOICES,
         "wheel_event": wheel_event,
@@ -244,6 +245,7 @@ def _arcade_leaderboard_data(user):
     rows = [{
         "username": row.user.get_full_name().strip() or row.user.username,
         "score": row.best_score,
+        "attempts": row.total_attempts,
         "rank": index,
         "is_current_user": bool(user.is_authenticated and row.user_id == user.id),
     } for index, row in enumerate(records, start=1)]
@@ -251,6 +253,8 @@ def _arcade_leaderboard_data(user):
     return {
         "records": rows,
         "record": own_record.best_score if own_record else 0,
+        "attempts": own_record.total_attempts if own_record else 0,
+        "total_attempts": ArcadeRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0,
         "rank": _arcade_rank(own_record) if own_record and own_record.best_score else None,
     }
 
@@ -260,9 +264,16 @@ def arcade_run_start(request):
         return HttpResponseNotAllowed(["POST"])
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
-    ArcadeAttempt.objects.filter(user=request.user, started_at__lt=timezone.now() - timedelta(days=30)).delete()
-    attempt = ArcadeAttempt.objects.create(user=request.user)
-    return JsonResponse({"attempt_id": attempt.pk})
+    with transaction.atomic():
+        ArcadeAttempt.objects.filter(
+            user=request.user,
+            started_at__lt=timezone.now() - timedelta(days=30),
+        ).delete()
+        attempt = ArcadeAttempt.objects.create(user=request.user)
+        record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
+        ArcadeRecord.objects.filter(pk=record.pk).update(total_attempts=F("total_attempts") + 1)
+        board_data = _arcade_leaderboard_data(request.user)
+    return JsonResponse({"attempt_id": attempt.pk, **board_data})
 
 
 def arcade_run_finish(request):

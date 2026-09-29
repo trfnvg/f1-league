@@ -28,6 +28,7 @@
   const isAuthenticated = canvas.dataset.authenticated === "true";
   const board = document.getElementById("arcade-leaderboard-list");
   const boardStatus = document.getElementById("arcade-board-status");
+  const totalAttemptsOutput = document.getElementById("arcade-total-attempts");
   const csrfToken = document.querySelector("#arcade-csrf-form input[name=csrfmiddlewaretoken]")?.value || "";
   const WORLD_WIDTH = 960;
   let WORLD_HEIGHT = 540;
@@ -175,7 +176,11 @@
           credentials: "same-origin",
         });
         if (response.ok) {
-          const startedAttemptId = (await response.json()).attempt_id;
+          const startResult = await response.json();
+          const startedAttemptId = startResult.attempt_id;
+          renderLeaderboard(startResult.records || []);
+          syncOwnRank(startResult);
+          syncLeaderboardStats(startResult);
           const completedScore = pendingRunScores.get(thisRun);
           if (completedScore !== undefined) {
             pendingRunScores.delete(thisRun);
@@ -247,11 +252,21 @@
       const name = document.createElement("span");
       name.className = "arcade-driver-name";
       name.textContent = row.username;
+      const scoreStat = document.createElement("span");
+      scoreStat.className = "arcade-record-score";
       const scoreValue = document.createElement("strong");
       scoreValue.textContent = String(row.score);
-      const unit = document.createElement("small");
-      unit.textContent = "ворот";
-      item.append(place, name, scoreValue, unit);
+      const scoreUnit = document.createElement("small");
+      scoreUnit.textContent = "ворот";
+      scoreStat.append(scoreValue, scoreUnit);
+      const attemptStat = document.createElement("span");
+      attemptStat.className = "arcade-attempt-count";
+      const attemptLabel = document.createElement("small");
+      attemptLabel.textContent = "ПОПЫТОК";
+      const attemptCount = document.createElement("strong");
+      attemptCount.textContent = new Intl.NumberFormat("ru-RU").format(Number(row.attempts) || 0);
+      attemptStat.append(attemptLabel, attemptCount);
+      item.append(place, name, scoreStat, attemptStat);
       board.append(item);
     }
   }
@@ -267,7 +282,16 @@
     ownRankLine.append(rankValue, document.createTextNode(" · рекорд "));
     const ownScore = document.createElement("strong");
     ownScore.textContent = String(result.record || 0);
-    ownRankLine.append(ownScore);
+    ownRankLine.append(ownScore, document.createTextNode(" · попыток "));
+    const attempts = document.createElement("strong");
+    attempts.id = "arcade-own-attempts";
+    attempts.textContent = String(result.attempts || 0);
+    ownRankLine.append(attempts);
+  }
+
+  function syncLeaderboardStats(result) {
+    if (!totalAttemptsOutput) return;
+    totalAttemptsOutput.textContent = new Intl.NumberFormat("ru-RU").format(Number(result.total_attempts) || 0);
   }
 
   async function refreshLeaderboard() {
@@ -279,6 +303,7 @@
       const result = await response.json();
       renderLeaderboard(result.records || []);
       syncOwnRank(result);
+      syncLeaderboardStats(result);
       if (isAuthenticated) {
         best = Number(result.record || 0);
         canvas.dataset.record = String(best);
@@ -312,6 +337,7 @@
       syncScores();
       renderLeaderboard(result.records || []);
       syncOwnRank(result);
+      syncLeaderboardStats(result);
       if (boardStatus) boardStatus.textContent = result.is_record
         ? `Новый рекорд сохранён · место ${result.rank}`
         : `Твоё место в таблице: ${result.rank}`;

@@ -407,6 +407,10 @@
   text-align: right;
 }
 
+.arcade-board-meta { display: grid; justify-items: end; gap: .35rem; }
+.arcade-board-meta .arcade-total-attempts { color: #9cabb9; font-size: .55rem; font-weight: 800; letter-spacing: .1em; }
+.arcade-total-attempts strong { margin-left: .35rem; color: #ffbd4a; font-family: "Barlow Condensed", sans-serif; font-size: .95rem; font-variant-numeric: tabular-nums; letter-spacing: 0; }
+
 .arcade-leaderboard-list {
   margin: 0;
   padding: .3rem 1.3rem .75rem;
@@ -415,7 +419,7 @@
 
 .arcade-leaderboard-list li {
   display: grid;
-  grid-template-columns: 2.6rem minmax(0, 1fr) auto 3.2rem;
+  grid-template-columns: 2.6rem minmax(0, 1fr) auto auto;
   align-items: center;
   gap: .65rem;
   min-height: 48px;
@@ -463,6 +467,27 @@
   color: #8592a0;
   font-size: .62rem;
 }
+
+.arcade-record-score,
+.arcade-attempt-count {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  gap: .05rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.arcade-record-score small { font-size: .55rem !important; }
+
+.arcade-attempt-count {
+  min-width: 3.4rem;
+  padding-left: .75rem;
+  border-left: 1px solid rgba(209,222,237,.12);
+}
+
+.arcade-attempt-count small { color: #8592a0; font-size: .48rem !important; letter-spacing: .08em; }
+.arcade-leaderboard-list li .arcade-attempt-count strong { color: #bdc9d5; font-size: .94rem; }
 
 .arcade-board-empty {
   display: block !important;
@@ -547,9 +572,11 @@
   .arcade-bottom-row p { max-width: 70%; }
   .arcade-leaderboard { margin-top: 1.4rem; }
   .arcade-leaderboard-heading { align-items: flex-start; flex-direction: column; gap: .35rem; padding: .9rem; }
+  .arcade-board-meta { justify-items: start; }
   .arcade-leaderboard-heading p { text-align: left; }
   .arcade-leaderboard-list { padding: .25rem .9rem .6rem; }
-  .arcade-leaderboard-list li { grid-template-columns: 2rem minmax(0, 1fr) auto 2.5rem; gap: .45rem; min-height: 44px; }
+  .arcade-leaderboard-list li { grid-template-columns: 2rem minmax(0, 1fr) auto auto; gap: .45rem; min-height: 44px; }
+  .arcade-attempt-count { min-width: 3.1rem; padding-left: .4rem; }
   .arcade-driver-name { font-size: .73rem; }
   .arcade-board-login { align-items: flex-start; flex-direction: column; padding: .75rem .9rem; }
   .arcade-own-rank { margin-inline: .9rem; }
