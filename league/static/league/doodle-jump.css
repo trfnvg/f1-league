@@ -198,7 +198,7 @@
 .doodle-start:hover { transform: translate(-1px, -1px); color: #10182c; background: #ffcf70; box-shadow: 5px 5px 0 #a84950; }
 .doodle-start:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 #a84950; }
 .doodle-start:disabled { opacity: .62; box-shadow: none; cursor: wait; }
-.doodle-start:focus-visible, .doodle-touch-controls button:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: 3px; }
+.doodle-start:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: 3px; }
 
 .doodle-controls {
   display: flex;
@@ -216,10 +216,7 @@
 
 .doodle-controls kbd { padding: .16rem .33rem; border: 1px solid var(--doodle-cyan); border-radius: 0; color: var(--doodle-cream); background: #152849; font: inherit; font-size: .58rem; font-weight: 900; }
 
-.doodle-touch-controls { display: none; align-items: center; justify-content: center; gap: 1rem; padding: .62rem .8rem; border-top: 1px solid var(--doodle-line); background: var(--doodle-board); }
-.doodle-touch-controls span { color: var(--doodle-muted); font-size: .53rem; font-weight: 900; letter-spacing: .07em; }
-.doodle-touch-controls button { width: 52px; height: 42px; border: 2px solid var(--doodle-line); border-radius: 0; color: var(--doodle-cream); background: #152849; box-shadow: 3px 3px 0 rgba(4, 8, 18, .75); font: inherit; font-size: 1.3rem; font-weight: 900; touch-action: none; user-select: none; -webkit-user-select: none; }
-.doodle-touch-controls button.is-pressed { border-color: var(--doodle-yellow); color: #17203a; background: var(--doodle-yellow); transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(4, 8, 18, .75); }
+.doodle-mobile-instructions { display: none; }
 
 .doodle-howto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
 .doodle-howto article { display: flex; align-items: center; gap: .7rem; min-height: 76px; padding: .7rem .8rem; border: 1px solid var(--doodle-line); border-radius: 0; background: var(--doodle-navy); box-shadow: 3px 3px 0 rgba(4, 8, 18, .45); }
@@ -240,10 +237,10 @@
   .doodle-scoreboard strong { font-size: 1.12rem; }
   .doodle-scoreboard small { font-size: .5rem; letter-spacing: .04em; }
   .doodle-live { font-size: .5rem; letter-spacing: .04em; }
-  .doodle-board-wrap { width: 100%; height: min(70vh, 720px); min-height: 500px; }
-  .doodle-controls { justify-content: center; text-align: center; }
-  .doodle-controls span:last-child { flex-basis: 100%; }
-  .doodle-touch-controls { display: flex; }
+  .doodle-board-wrap { width: 100%; height: min(66vh, 640px); min-height: 440px; }
+  .doodle-controls { display: grid; grid-template-columns: 1fr 1fr; justify-content: center; text-align: center; }
+  .doodle-desktop-instructions { display: none; }
+  .doodle-mobile-instructions { display: block; grid-column: 1 / -1; }
   .doodle-howto { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
   .doodle-howto article { min-height: 70px; gap: .55rem; padding: .6rem; }
   .doodle-howto-mark { width: 28px; height: 28px; }
@@ -252,7 +249,7 @@
 }
 
 @media (max-width: 390px) {
-  .doodle-board-wrap { min-height: 470px; }
+  .doodle-board-wrap { min-height: 420px; }
   .doodle-live { display: none; }
   .doodle-scoreboard { grid-template-columns: 1fr 1fr 1fr; }
   .doodle-howto { grid-template-columns: 1fr; }

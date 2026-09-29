@@ -33,25 +33,21 @@
         data-background-src="{% static 'league/images/doodle-jump/race-night-v4.png' %}"
         tabindex="0"
         role="application"
-        aria-label="Банана Леклер подпрыгивает по платформам. Управляйте стрелками влево и вправо или клавишами A и D."
+        aria-label="Банана Леклер подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
       ></canvas>
       <div class="doodle-overlay" id="doodle-overlay">
         <div class="doodle-overlay-card">
           <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА</span>
           <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-          <p id="doodle-overlay-copy">Лови платформы и набирай высоту. Приземляйся на шинных гремлинов сверху, чтобы получить фраг. Одно столкновение — и заезд окончен.</p>
+          <p id="doodle-overlay-copy">Лови платформы и набирай высоту. На телефоне касайся или удерживай левую и правую половины поля, чтобы двигаться. Одно столкновение — и заезд окончен.</p>
           <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
         </div>
       </div>
     </div>
 
-    <div class="doodle-touch-controls" aria-label="Сенсорное управление">
-      <button type="button" data-doodle-action="left" aria-label="Двигаться влево">←</button>
-      <span>УДЕРЖИВАЙ НАПРАВЛЕНИЕ</span>
-      <button type="button" data-doodle-action="right" aria-label="Двигаться вправо">→</button>
-    </div>
     <footer class="doodle-controls">
-      <span><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение</span>
+      <span class="doodle-desktop-instructions"><kbd>←</kbd> <kbd>→</kbd> или <kbd>A</kbd> <kbd>D</kbd> — движение</span>
+      <span class="doodle-mobile-instructions">Касайся или удерживай левую / правую половину поля, чтобы двигаться</span>
       <span><kbd>ПРОБЕЛ</kbd> — начать / сыграть ещё раз</span>
       <span>Рекорд сохраняется только в этом браузере</span>
     </footer>
