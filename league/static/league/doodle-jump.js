@@ -16,6 +16,8 @@
   const art = {};
   const held = { left: false, right: false };
   const sprites = [];
+  let backgroundCache = null;
+  let backgroundTileHeight = 0;
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -107,17 +109,34 @@
     return true;
   }
 
-  function drawBackdrop() {
-    ctx.fillStyle = "#111a2c";
-    ctx.fillRect(0, 0, width, height);
+  function cacheBackground() {
+    backgroundCache = null;
+    backgroundTileHeight = 0;
+    if (!art.background || !width || !height) return;
 
-    if (art.background) {
-      const tileHeight = width * art.background.naturalHeight / art.background.naturalWidth;
-      const offset = (cameraY * .16) % tileHeight;
-      for (let y = -offset - tileHeight; y < height + tileHeight; y += tileHeight) {
-        ctx.drawImage(art.background, 0, y, width, tileHeight);
+    const pixelWidth = Math.max(1, Math.round(width * dpr));
+    const pixelHeight = Math.max(1, Math.round(width * art.background.naturalHeight
+      / art.background.naturalWidth * dpr));
+    const cache = document.createElement("canvas");
+    cache.width = pixelWidth;
+    cache.height = pixelHeight;
+    const cacheCtx = cache.getContext("2d", { alpha: false });
+    cacheCtx.imageSmoothingEnabled = false;
+    cacheCtx.drawImage(art.background, 0, 0, pixelWidth, pixelHeight);
+    backgroundCache = cache;
+    backgroundTileHeight = pixelHeight / dpr;
+  }
+
+  function drawBackdrop() {
+    if (backgroundCache) {
+      const offset = (cameraY * .16) % backgroundTileHeight;
+      for (let y = -offset; y < height; y += backgroundTileHeight) {
+        ctx.drawImage(backgroundCache, 0, y, width, backgroundTileHeight);
       }
       ctx.fillStyle = "rgba(8, 14, 25, .1)";
+      ctx.fillRect(0, 0, width, height);
+    } else {
+      ctx.fillStyle = "#111a2c";
       ctx.fillRect(0, 0, width, height);
     }
 
@@ -186,7 +205,7 @@
     let lastX = width * .5;
     while (nextY < height + 320) {
       nextY += 82 + Math.random() * 39;
-      const delta = (Math.random() * 2 - 1) * width * .4;
+      const delta = (Math.random() * 2 - 1) * Math.min(width * .4, 320);
       lastX = Math.max(width * .12, Math.min(width * .88, lastX + delta));
       addPlatform(nextY, lastX, selectPlatformKind());
       worldTop = nextY;
@@ -212,7 +231,8 @@
       const y = worldTop + 82 + Math.random() * 40;
       const prior = platforms[platforms.length - 1];
       const lastX = prior ? prior.originX : width / 2;
-      const nextX = Math.max(width * .12, Math.min(width * .88, lastX + (Math.random() * 2 - 1) * width * .4));
+      const nextX = Math.max(width * .12, Math.min(width * .88,
+        lastX + (Math.random() * 2 - 1) * Math.min(width * .4, 320)));
       addPlatform(y, nextX, selectPlatformKind());
       worldTop = y;
     }
@@ -328,7 +348,7 @@
   function update(dt) {
     elapsed += dt;
     const direction = Number(held.right) - Number(held.left);
-    player.vx = direction * Math.min(425, width * .76);
+    player.vx = direction * Math.min(680, width * .76);
     player.x += player.vx * dt;
     const halfPlayer = player.width / 2;
     if (player.x < -halfPlayer) player.x = width + halfPlayer;
@@ -486,7 +506,7 @@
     const previousHeight = height;
     width = bounds.width;
     height = bounds.height;
-    dpr = Math.min(2, window.devicePixelRatio || 1);
+    dpr = Math.min(1.5, window.devicePixelRatio || 1);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -495,6 +515,7 @@
       drawBackdrop();
       return;
     }
+    cacheBackground();
     if (player && previousWidth > 1 && previousHeight > 1) {
       const scaleX = width / previousWidth;
       const scaleY = height / previousHeight;
