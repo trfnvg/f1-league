@@ -813,4 +813,6 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(home_response, "Сохранено ✓")
         self.assertContains(home_response, "Рассчитано")
         self.assertContains(leaderboard_response, "Победитель последнего этапа")
+        self.assertNotContains(leaderboard_response, "round-winner-badge")
+        self.assertTrue(next(row for row in leaderboard_response.context["rows"] if row["user"] == winner)["is_round_winner"])
         self.assertContains(event_response, "Победитель этапа")
