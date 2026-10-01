@@ -320,6 +320,24 @@
   </div>
 </section>
 
+{% if arcade_mascot_reward_unlocked %}
+<section class="profile-arcade-trophycase mb-4" aria-label="Награда за победу в аркаде">
+  <div class="profile-arcade-trophycase-heading">
+    <span>ARCADE HALL OF FAME</span>
+    <small>НАГРАДА ПОБЕДИТЕЛЯ</small>
+  </div>
+  <div class="profile-arcade-trophycase-stage">
+    <span class="profile-arcade-trophycase-glow" aria-hidden="true"></span>
+    <img class="profile-arcade-trophycase-shelf" src="{% static 'league/images/arcade-trophy-shelf.png' %}" alt="" aria-hidden="true">
+    <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="Пиксельный Банана Леклер — трофей победителя аркады">
+  </div>
+  <div class="profile-arcade-trophycase-caption">
+    <strong>Банана Леклер</strong>
+    <span><b>{{ arcade_total_attempts }}</b><small>ВСЕГО ПОПЫТОК</small></span>
+  </div>
+</section>
+{% endif %}
+
 <section class="profile-analytics-shell mb-4">
   <div class="profile-analytics-head">
     <div>

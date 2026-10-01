@@ -340,6 +340,42 @@ class InterfaceRefinementTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class CompetitiveFeaturesTests(TestCase):
+    def test_any_arcade_leader_gets_pixel_banana_trophycase_with_lifetime_attempt_count(self):
+        player = User.objects.create_user("pixel-banana-driver")
+        current_leader = User.objects.create_user("current-arcade-leader")
+        ArcadeRecord.objects.create(user=player, best_score=42, total_attempts=1234)
+        ArcadeRecord.objects.create(user=current_leader, best_score=80, total_attempts=50)
+
+        response = self.client.get(reverse("league:player_profile", args=[player.id]))
+        self.assertNotContains(response, "profile-arcade-trophycase")
+
+        ArcadeLeadChange.objects.create(
+            player=player,
+            best_score=42,
+            attempts=7,
+        )
+        response = self.client.get(reverse("league:player_profile", args=[player.id]))
+        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
+        self.assertContains(response, "Банана Леклер")
+        self.assertContains(response, "1234")
+        self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, "banana-leclerc-pixel-reward.png")
+        self.assertContains(response, "arcade-trophy-shelf.png")
+
+    def test_current_arcade_leader_and_site_admin_get_trophycase_without_lead_history(self):
+        leader = User.objects.create_user("new-current-leader")
+        admin = User.objects.create_superuser("arcade-test-admin", "admin@example.com", "test")
+        ArcadeRecord.objects.create(user=leader, best_score=25, total_attempts=3)
+
+        response = self.client.get(reverse("league:player_profile", args=[leader.id]))
+        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
+        self.assertContains(response, "3")
+
+        response = self.client.get(reverse("league:player_profile", args=[admin.id]))
+        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
+        self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, ">0</b>")
+
     def test_arcade_takeover_is_saved_and_announced_with_attempt_count(self):
         previous_leader = User.objects.create_user("old-arcade-leader")
         new_leader = User.objects.create_user("new-arcade-leader", password="test")
