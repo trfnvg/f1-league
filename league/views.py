@@ -210,6 +210,18 @@ def arcade_doodle_jump(request):
 
 
 @login_required
+def arcade_wheel_test(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Тест колеса доступен только администраторам.")
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    return render(request, "arcade_wheel_test.html", {
+        "wheel_sectors": list(WHEEL_SECTORS),
+        "driver_choices": DRIVER_CHOICES,
+    })
+
+
+@login_required
 def arcade_wheel_spin(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])

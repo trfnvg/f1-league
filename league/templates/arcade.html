@@ -110,6 +110,7 @@
         <span class="arcade-section-kicker">ЕЖЕНЕДЕЛЬНЫЙ БОНУС</span>
         <h2 id="arcade-wheel-title">Pit Lane <em>Power-Up</em></h2>
         <p class="arcade-wheel-intro">Лидер аркадной недели прокручивает колесо и получает бонус на этап.</p>
+        {% if user.is_staff %}<a class="arcade-wheel-admin-test-link" href="{% url 'league:arcade_wheel_test' %}">Тестовый режим колеса <span aria-hidden="true">↗</span></a>{% endif %}
       </div>
       <div class="arcade-wheel-event-meta">
         <span class="arcade-wheel-event-dot" aria-hidden="true"></span>
