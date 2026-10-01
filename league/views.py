@@ -1262,9 +1262,13 @@ def player_profile(request, user_id: int):
     player_statistics = build_player_statistics(player, season.year, leaderboard=leaderboard_data)
     achievements = build_achievements(player, player_statistics)
     arcade_record = ArcadeRecord.objects.filter(user=player).first()
-    arcade_mascot_reward_unlocked = (
-        player.is_staff or ArcadeLeadChange.objects.filter(player=player).exists()
+    arcade_lead_change = (
+        ArcadeLeadChange.objects.filter(player=player)
+        .order_by("created_at", "pk")
+        .first()
     )
+    arcade_mascot_reward_unlocked = player.is_staff or arcade_lead_change is not None
+    arcade_trophy_date = arcade_lead_change.created_at if arcade_lead_change else None
     if not arcade_mascot_reward_unlocked and arcade_record and arcade_record.best_score > 0:
         current_arcade_leader_id = (
             ArcadeRecord.objects.filter(best_score__gt=0)
@@ -1273,6 +1277,8 @@ def player_profile(request, user_id: int):
             .first()
         )
         arcade_mascot_reward_unlocked = current_arcade_leader_id == player.id
+    if arcade_mascot_reward_unlocked and arcade_trophy_date is None and arcade_record:
+        arcade_trophy_date = arcade_record.updated_at
     arcade_total_attempts = arcade_record.total_attempts if arcade_record else 0
 
     return render(
@@ -1299,6 +1305,7 @@ def player_profile(request, user_id: int):
             "achievements": achievements,
             "arcade_mascot_reward_unlocked": arcade_mascot_reward_unlocked,
             "arcade_total_attempts": arcade_total_attempts,
+            "arcade_trophy_date": arcade_trophy_date,
         },
     )
 

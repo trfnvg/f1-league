@@ -4181,10 +4181,10 @@ body.apex-night-theme .profile-arcade-trophycase-heading small {
 
 body.apex-night-theme .profile-arcade-trophycase-stage {
   position: relative;
-  width: min(100%, 900px);
+  width: min(100%, 780px);
   aspect-ratio: 3 / 1;
-  min-height: 128px;
-  max-height: 300px;
+  min-height: 116px;
+  max-height: 260px;
   margin: .1rem auto -.15rem;
 }
 
@@ -4216,11 +4216,11 @@ body.apex-night-theme .profile-arcade-trophycase-glow {
 body.apex-night-theme .profile-arcade-trophycase-figure {
   position: absolute;
   z-index: 2;
-  bottom: 48%;
+  bottom: 47%;
   left: 50%;
   display: block;
   width: auto;
-  height: 61%;
+  height: 49%;
   max-width: 24%;
   object-fit: contain;
   image-rendering: pixelated;
@@ -4228,6 +4228,80 @@ body.apex-night-theme .profile-arcade-trophycase-figure {
   transform: translateX(-50%);
   transform-origin: 50% 100%;
   animation: arcade-figurine-bob 2.7s ease-in-out infinite;
+  cursor: help;
+  outline: none;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-figure:focus-visible {
+  filter: drop-shadow(0 0 5px rgba(244, 192, 72, .75));
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip {
+  position: absolute;
+  z-index: 4;
+  top: 49%;
+  left: calc(50% + 72px);
+  display: grid;
+  width: min(240px, calc(50% - 88px));
+  gap: .48rem;
+  padding: .72rem .82rem;
+  border: 1px solid rgba(222, 177, 82, .38);
+  border-radius: 11px;
+  background: rgba(12, 18, 26, .97);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .04);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-50% + 6px));
+  transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+  visibility: hidden;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip::before {
+  position: absolute;
+  top: 50%;
+  left: -5px;
+  width: 8px;
+  height: 8px;
+  border-bottom: 1px solid rgba(222, 177, 82, .38);
+  border-left: 1px solid rgba(222, 177, 82, .38);
+  background: #0c121a;
+  content: "";
+  transform: translateY(-50%) rotate(45deg);
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip > strong {
+  margin-bottom: .08rem;
+  color: var(--apex-amber);
+  font-size: .72rem;
+  letter-spacing: .04em;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .55rem;
+  line-height: 1.2;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip small {
+  color: var(--apex-muted);
+  font-size: .57rem;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-tooltip b {
+  color: var(--apex-ink);
+  font-size: .62rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-stage:hover .profile-arcade-trophycase-tooltip,
+body.apex-night-theme .profile-arcade-trophycase-stage:focus-within .profile-arcade-trophycase-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(-50%);
+  visibility: visible;
 }
 
 body.apex-night-theme .profile-arcade-trophycase-caption {
@@ -4287,11 +4361,32 @@ body.apex-night-theme .profile-arcade-trophycase-caption small {
   }
 
   body.apex-night-theme .profile-arcade-trophycase-stage {
-    min-height: 118px;
+    min-height: 108px;
   }
 
   body.apex-night-theme .profile-arcade-trophycase-caption > strong {
     font-size: .78rem;
+  }
+
+  body.apex-night-theme .profile-arcade-trophycase-tooltip {
+    top: 48%;
+    left: 50%;
+    width: min(240px, calc(100% - 24px));
+    transform: translate(-50%, calc(-50% + 6px));
+  }
+
+  body.apex-night-theme .profile-arcade-trophycase-stage:hover .profile-arcade-trophycase-tooltip,
+  body.apex-night-theme .profile-arcade-trophycase-stage:focus-within .profile-arcade-trophycase-tooltip {
+    transform: translate(-50%, -50%);
+  }
+
+  body.apex-night-theme .profile-arcade-trophycase-tooltip::before {
+    top: -5px;
+    left: 50%;
+    border: 0;
+    border-top: 1px solid rgba(222, 177, 82, .38);
+    border-left: 1px solid rgba(222, 177, 82, .38);
+    transform: translateX(-50%) rotate(45deg);
   }
 }
 
