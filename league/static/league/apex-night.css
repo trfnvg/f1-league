@@ -5201,6 +5201,12 @@ body.apex-night-theme .western-avatar {
 }
 
 body.apex-night-theme .western-stake-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .06rem;
+  box-sizing: border-box;
   width: 88px;
   height: 88px;
   min-height: 88px;
@@ -5216,17 +5222,23 @@ body.apex-night-theme .western-stake-seal {
 
 body.apex-night-theme .western-stake-seal small,
 body.apex-night-theme .western-stake-seal span {
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
   color: #aaa39d;
   font-size: .46rem;
   font-weight: 700;
   letter-spacing: .035em;
+  line-height: 1;
+  text-align: center;
 }
 
 body.apex-night-theme .western-stake-seal strong {
-  margin: .1rem 0;
+  margin: 0;
   color: #d6bca8;
   font-size: 1.9rem;
-  line-height: .85;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 body.apex-night-theme .western-duel-state {
