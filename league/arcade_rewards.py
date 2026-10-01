@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
+    ArcadeTrophyAward,
     ArcadeWheelSpin,
     Event,
     PlayerWildcard,
@@ -68,6 +69,7 @@ WHEEL_SECTORS = (
 
 WHEEL_PRIZE_BY_KEY = {sector["key"]: sector for sector in WHEEL_SECTORS}
 WHEEL_WINDOW = timedelta(days=7)
+ARCADE_TROPHY_GAME_KEY = "pit_lane_flight"
 
 
 class ArcadeWheelError(ValueError):
@@ -104,6 +106,57 @@ def best_event_arcade_attempt(event, *, through=None):
         .order_by("-score", "finished_at", "user__username")
         .first()
     )
+
+
+def award_event_arcade_trophy(event, now=None):
+    """Award one Pit Lane Flight trophy to this event's deadline-period winner."""
+    now = now or timezone.now()
+    if not event or now < event.deadline:
+        return None, False
+
+    with transaction.atomic():
+        locked_event = Event.objects.select_for_update().get(pk=event.pk)
+        existing = ArcadeTrophyAward.objects.filter(
+            event=locked_event,
+            game_key=ARCADE_TROPHY_GAME_KEY,
+        ).first()
+        if existing:
+            return existing, False
+
+        attempt = best_event_arcade_attempt(locked_event, through=locked_event.deadline)
+        if not attempt:
+            return None, False
+
+        attempts_at_deadline = ArcadeAttempt.objects.filter(
+            user_id=attempt.user_id,
+            started_at__lte=locked_event.deadline,
+        ).count()
+        award, created = ArcadeTrophyAward.objects.get_or_create(
+            event=locked_event,
+            game_key=ARCADE_TROPHY_GAME_KEY,
+            defaults={
+                "player": attempt.user,
+                "game_name": "Pit Lane Flight",
+                "trophy_name": "Банана Леклер",
+                "attempts": attempts_at_deadline,
+                "awarded_at": locked_event.deadline,
+            },
+        )
+        return award, created
+
+
+def award_due_arcade_trophies(season_year, now=None):
+    """Materialize trophies for all completed prediction periods in a season."""
+    now = now or timezone.now()
+    created_count = 0
+    due_events = Event.objects.filter(
+        season_year=season_year,
+        deadline__lte=now,
+    ).order_by("deadline", "round_number")
+    for event in due_events.iterator():
+        _, created = award_event_arcade_trophy(event, now=now)
+        created_count += int(created)
+    return created_count
 
 
 def wheel_window_is_open(event, now=None):

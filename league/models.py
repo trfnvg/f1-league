@@ -1018,6 +1018,12 @@ class ArcadeTrophyAward(models.Model):
         verbose_name="Игрок",
     )
     game_name = models.CharField("Игра", max_length=120, default="Pit Lane Flight")
+    game_key = models.CharField(
+        "Код игры",
+        max_length=80,
+        default="pit_lane_flight",
+        help_text="Стабильный идентификатор игры; для одной игры можно выдать один трофей за этап.",
+    )
     trophy_name = models.CharField("Название трофея", max_length=120, default="Банана Леклер")
     image = models.ImageField(
         "Изображение трофея",
@@ -1027,17 +1033,23 @@ class ArcadeTrophyAward(models.Model):
     )
     attempts = models.PositiveIntegerField("Попытки к моменту победы", default=0)
     awarded_at = models.DateTimeField("Дата получения", default=timezone.now)
-    source_lead_change = models.OneToOneField(
-        ArcadeLeadChange,
-        on_delete=models.SET_NULL,
-        related_name="trophy_award",
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name="arcade_trophy_awards",
         null=True,
         blank=True,
-        verbose_name="Смена лидера",
+        verbose_name="Этап",
     )
 
     class Meta:
         ordering = ("awarded_at", "pk")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("event", "game_key"),
+                name="uniq_arcade_trophy_event_game",
+            ),
+        ]
         verbose_name = "Трофей аркады"
         verbose_name_plural = "Трофеи аркады"
 

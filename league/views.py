@@ -64,6 +64,7 @@ from .arcade_rewards import (
     arcade_wheel_event,
     available_va_bank_fields,
     best_event_arcade_attempt,
+    award_due_arcade_trophies,
     podium_edit_is_open,
     spin_event_wheel,
     va_bank_answer_is_correct,
@@ -126,9 +127,10 @@ def _is_async_request(request):
 
 
 def arcade(request):
-    board_data = _arcade_leaderboard_data(request.user)
     season = get_selected_season(request)
     now = timezone.now()
+    award_due_arcade_trophies(season.year, now=now)
+    board_data = _arcade_leaderboard_data(request.user)
     wheel_event = arcade_wheel_event(season.year, now)
     wheel_leader = best_event_arcade_attempt(wheel_event, through=now) if wheel_event else None
     wheel_spin = (
@@ -352,18 +354,10 @@ def arcade_run_finish(request):
             .first()
         )
         if leader_after_id == request.user.id and leader_before_id != leader_after_id:
-            lead_change = ArcadeLeadChange.objects.create(
+            ArcadeLeadChange.objects.create(
                 player=request.user,
                 best_score=record.best_score,
                 attempts=record.total_attempts,
-            )
-            ArcadeTrophyAward.objects.create(
-                player=request.user,
-                game_name="Pit Lane Flight",
-                trophy_name="Банана Леклер",
-                attempts=record.total_attempts,
-                awarded_at=lead_change.created_at,
-                source_lead_change=lead_change,
             )
         board_data = _arcade_leaderboard_data(request.user)
     return JsonResponse({**board_data, "is_record": is_record})
@@ -1197,6 +1191,7 @@ def player_profile(request, user_id: int):
     can_edit_avatar = request.user.is_authenticated and request.user.id == player.id
     season = get_selected_season(request)
     now = timezone.now()
+    award_due_arcade_trophies(season.year, now=now)
 
     avatar_form = None
     if request.method == "POST":
@@ -1283,16 +1278,7 @@ def player_profile(request, user_id: int):
         for award in ArcadeTrophyAward.objects.filter(player=player).order_by("awarded_at", "pk")
     ]
 
-    arcade_is_current_leader = False
-    if not arcade_trophies and arcade_record and arcade_record.best_score > 0:
-        current_arcade_leader_id = (
-            ArcadeRecord.objects.filter(best_score__gt=0)
-            .order_by("-best_score", "updated_at", "user__username")
-            .values_list("user_id", flat=True)
-            .first()
-        )
-        arcade_is_current_leader = current_arcade_leader_id == player.id
-    if not arcade_trophies and (player.is_staff or arcade_is_current_leader):
+    if not arcade_trophies and player.is_staff:
         arcade_trophies.append(
             {
                 "trophy_name": "Банана Леклер",

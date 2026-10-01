@@ -838,22 +838,22 @@ class ArcadeRecordAdmin(admin.ModelAdmin):
 
 @admin.register(ArcadeTrophyAward)
 class ArcadeTrophyAwardAdmin(admin.ModelAdmin):
-    list_display = ("player", "trophy_name", "game_name", "attempts", "awarded_at")
-    list_filter = ("game_name", "awarded_at")
-    search_fields = ("player__username", "trophy_name", "game_name")
-    list_select_related = ("player",)
+    list_display = ("player", "trophy_name", "game_name", "event", "attempts", "awarded_at")
+    list_filter = ("game_name", "event__season_year", "awarded_at")
+    search_fields = ("player__username", "trophy_name", "game_name", "event__name")
+    list_select_related = ("player", "event")
     date_hierarchy = "awarded_at"
     ordering = ("-awarded_at", "-pk")
     fields = (
         "player",
         "game_name",
+        "game_key",
         "trophy_name",
         "image",
+        "event",
         "attempts",
         "awarded_at",
-        "source_lead_change",
     )
-    readonly_fields = ("source_lead_change",)
 
 
 @admin.register(ArcadeWheelSpin)
