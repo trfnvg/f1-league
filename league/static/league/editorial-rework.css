@@ -148,7 +148,7 @@ body.editorial-theme .nav-chip-primary:hover {
 .movement-up { color:#18765d; }
 .movement-down { color:#bd3423; }
 .movement-flat { color:#829098; }
-.round-winner-badge,.achievement-count { display:inline-flex; align-items:center; padding:.18rem .38rem; color:#745114; border:1px solid rgba(162,113,24,.18); border-radius:999px; background:#fff0bc; font-size:.61rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.achievement-count { display:inline-flex; align-items:center; padding:.18rem .38rem; color:#745114; border:1px solid rgba(162,113,24,.18); border-radius:999px; background:#fff0bc; font-size:.61rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
 
 .live-dot {
   width: 7px;
@@ -610,7 +610,7 @@ body.editorial-theme footer { color:#6f7c82; border-color:var(--race-line); back
 .page-kicker::before,.achievement-kicker::before,.community-kicker::before { content:""; width:18px; height:3px; background:currentColor; transform:skewX(-18deg); }
 .movement-up,.movement-down,.movement-flat { display:inline-flex; align-items:center; font-size:.66rem; font-weight:900; }
 .movement-up { color:#18755d; }.movement-down { color:#c33c2b; }.movement-flat { color:#8a999f; }
-.round-winner-badge,.achievement-count { display:inline-flex; align-items:center; padding:.2rem .42rem; border:1px solid rgba(191,135,15,.2); border-radius:999px; color:#80580c; background:#fff0b9; font-size:.62rem; font-weight:900; white-space:nowrap; }
+.achievement-count { display:inline-flex; align-items:center; padding:.2rem .42rem; border:1px solid rgba(191,135,15,.2); border-radius:999px; color:#80580c; background:#fff0b9; font-size:.62rem; font-weight:900; white-space:nowrap; }
 
 .profile-stat-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.55rem; }
 .profile-stat-card { padding:.75rem; border:1px solid var(--race-line); border-radius:4px 12px 4px 4px; background:#f8f6ee; }

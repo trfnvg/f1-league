@@ -1921,17 +1921,10 @@ body.apex-night-theme .profile-avatar {
   box-shadow: none;
 }
 
-body.apex-night-theme .round-winner-badge,
 body.apex-night-theme .achievement-count {
   color: #241903;
   border-color: var(--apex-amber);
   background: var(--apex-amber);
-}
-
-body.apex-night-theme .leaderboard-table .round-winner-badge {
-  color: #143b2a;
-  border-color: #8bd6aa;
-  background: #b9edce;
 }
 
 body.apex-night-theme .leaderboard-table tr.is-round-winner td {
