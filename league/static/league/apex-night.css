@@ -2148,8 +2148,7 @@ body.apex-night-theme .achievement-card small {
 }
 
 body.apex-night-theme .achievement-icon {
-  color: #171003;
-  background: var(--apex-amber);
+  background: rgba(255, 255, 255, 0.045);
 }
 
 body.apex-night-theme .mini-trend {
