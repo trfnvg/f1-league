@@ -1,0 +1,15 @@
+{% for item in activity_feed %}
+  <a
+    class="activity-feed-item activity-news-item is-{{ item.type }}"
+    {% if item.event_id %}
+      href="{% url 'league:event_detail' event_id=item.event_id %}{{ item.anchor|default:'' }}"
+    {% else %}
+      href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}"
+    {% endif %}
+  >
+    <span class="activity-feed-icon" aria-hidden="true"></span>
+    <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% elif item.type == "arcade-leader" %}Arcade record{% elif item.type == "arcade-winner" %}Arcade winner{% elif item.type == "duel-accepted" %}Duel accepted{% elif item.type == "duel-result" %}Duel result{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
+  </a>
+{% empty %}
+  <div class="activity-news-empty">Пока нет новых событий. Новости появятся здесь после гонок, дуэлей и аркады.</div>
+{% endfor %}
