@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ player.username }} · F1 Predictions {{ season.year }}{% endblock %}
 
@@ -376,7 +377,7 @@
         <div class="achievement-grid">
           {% for item in achievements %}
             <article class="achievement-card">
-              <span class="achievement-icon">{{ item.icon }}</span>
+              <span class="achievement-icon"><img src="{% static item.icon %}" alt="" loading="lazy" decoding="async"></span>
               <span><strong>{{ item.title }}</strong><small>{{ item.description }}</small></span>
             </article>
           {% endfor %}

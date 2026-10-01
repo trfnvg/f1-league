@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from django.contrib.auth.models import User
 from .models import (
     DRIVER_CHOICES,
+    ArcadeRecord,
     DuelChallenge,
     Event,
     Prediction,
@@ -740,15 +741,40 @@ def build_achievements(player, statistics):
         )
 
     if profile and profile.is_world_predict_champion:
-        add("wpc", "World Predict Champion", "Чемпион общего зачёта", "◆")
+        add(
+            "wpc",
+            "World Predict Champion",
+            "Чемпион общего зачёта",
+            "league/images/achievements/world-predict-champion.png",
+        )
     if statistics["stage_wins"]:
-        add("stage_winner", "Победитель этапа", "Лучший результат хотя бы на одном Гран-при", "🏁")
+        add(
+            "stage_winner",
+            "Победитель этапа",
+            "Лучший результат хотя бы на одном Гран-при",
+            "league/images/achievements/stage-winner.png",
+        )
     if statistics["perfect_podiums"]:
-        add("perfect_podium", "Идеальный подиум", "Точно угаданы P1, P2 и P3", "🏆")
+        add(
+            "perfect_podium",
+            "Идеальный подиум",
+            "Точно угаданы P1, P2 и P3",
+            "league/images/achievements/perfect-podium.png",
+        )
     if statistics["pole_hits"] >= 3:
-        add("pole_master", "Король квалификации", "Три и более угаданных поула", "⚡")
+        add(
+            "pole_master",
+            "Король квалификации",
+            "Три и более угаданных поула",
+            "league/images/achievements/pole-master.png",
+        )
     if statistics["crazy_hits"]:
-        add("crazy", "Это было безумно", "Сбылся Crazy Prediction", "✦")
+        add(
+            "crazy",
+            "Это было безумно",
+            "Сбылся Crazy Prediction",
+            "league/images/achievements/crazy-prediction.png",
+        )
 
     positive_streak = 0
     longest_streak = 0
@@ -760,5 +786,24 @@ def build_achievements(player, statistics):
             positive_streak = 0
     if longest_streak >= 3:
         stage_word = _russian_plural(longest_streak, ("этап", "этапа", "этапов"))
-        add("streak", "Стабильный темп", f"{longest_streak} {stage_word} подряд с очками", "↗")
+        add(
+            "streak",
+            "Стабильный темп",
+            f"{longest_streak} {stage_word} подряд с очками",
+            "league/images/achievements/stable-pace.png",
+        )
+
+    arcade_champion_id = (
+        ArcadeRecord.objects.filter(best_score__gt=0)
+        .order_by("-best_score", "updated_at", "user__username")
+        .values_list("user_id", flat=True)
+        .first()
+    )
+    if arcade_champion_id == player.id:
+        add(
+            "arcade_champion",
+            "Аркадный чемпион",
+            "Лидер таблицы рекордов Pit Lane Flight",
+            "league/images/achievements/arcade-champion.png",
+        )
     return achievements

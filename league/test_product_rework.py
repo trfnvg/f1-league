@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
+    ArcadeRecord,
     DuelChallenge,
     Event,
     Prediction,
@@ -303,6 +304,38 @@ class InterfaceRefinementTests(TestCase):
 
         stable_pace = next(item for item in achievements if item["code"] == "streak")
         self.assertEqual(stable_pace["description"], "11 этапов подряд с очками")
+        self.assertTrue(stable_pace["icon"].endswith("stable-pace.png"))
+
+    def test_arcade_champion_achievement_follows_current_leader(self):
+        first = User.objects.create_user("arcade-first")
+        second = User.objects.create_user("arcade-second")
+        first_record = ArcadeRecord.objects.create(user=first, best_score=120)
+        ArcadeRecord.objects.create(user=second, best_score=90)
+        statistics = {
+            "stage_wins": 0,
+            "perfect_podiums": 0,
+            "pole_hits": 0,
+            "crazy_hits": 0,
+            "points": [],
+        }
+
+        first_achievements = build_achievements(first, statistics)
+        second_achievements = build_achievements(second, statistics)
+        self.assertIn("arcade_champion", [item["code"] for item in first_achievements])
+        self.assertNotIn("arcade_champion", [item["code"] for item in second_achievements])
+
+        first_record.best_score = 80
+        first_record.save(update_fields=("best_score", "updated_at"))
+        second_record = ArcadeRecord.objects.get(user=second)
+        second_record.best_score = 130
+        second_record.save(update_fields=("best_score", "updated_at"))
+
+        first_achievements = build_achievements(first, statistics)
+        second_achievements = build_achievements(second, statistics)
+        self.assertNotIn("arcade_champion", [item["code"] for item in first_achievements])
+        champion = next(item for item in second_achievements if item["code"] == "arcade_champion")
+        self.assertEqual(champion["title"], "Аркадный чемпион")
+        self.assertEqual(champion["description"], "Лидер таблицы рекордов Pit Lane Flight")
 
 
 @override_settings(STORAGES=TEST_STORAGES)
