@@ -13,15 +13,46 @@
     <div>
       <div class="arcade-kicker"><span></span> 16-BIT RACE MODE</div>
       <h1 id="arcade-title">PIT LANE<br><em>FLIGHT</em></h1>
+      {% if arcade_closed_event %}
+      <p>Игра завершена после дедлайна прогнозов. Результаты и победитель зафиксированы.</p>
+      {% else %}
       <p>Дневной Гран-при: держи траекторию, проходи ворота и доберись до нового уровня сложности.</p>
+      {% endif %}
     </div>
     <div class="arcade-personal-record" aria-live="polite">
+      {% if arcade_closed_event %}
+      <span>РЕЗУЛЬТАТ ДО ДЕДЛАЙНА</span>
+      <strong id="personal-record">{{ arcade_own_closed_record.score|default:0 }}</strong>
+      <small>ворот</small>
+      {% else %}
       <span>ЛИЧНЫЙ РЕКОРД</span>
       <strong id="personal-record">0</strong>
       <small>ворот подряд</small>
+      {% endif %}
     </div>
   </header>
 
+  {% if arcade_closed_event %}
+  <section class="arcade-closed-panel" aria-labelledby="arcade-closed-title" role="status">
+    <div class="arcade-closed-copy">
+      <span class="arcade-closed-kicker"><i aria-hidden="true"></i> ФИНИШНАЯ ЧЕРТА</span>
+      <h2 id="arcade-closed-title">Заезды завершены</h2>
+      <p>Результаты мини-игры зафиксированы после дедлайна прогнозов этапа <strong>{{ arcade_closed_event.name }}</strong>.</p>
+    </div>
+    {% if arcade_closure.winner %}
+    <div class="arcade-closed-winner">
+      <span>ПОБЕДИТЕЛЬ</span>
+      <strong>{{ arcade_closure.winner.get_full_name|default:arcade_closure.winner.username }}</strong>
+      {% if arcade_closure.winner_score %}<small>{{ arcade_closure.winner_score }} ворот · {{ arcade_closure.attempts }} попыток</small>{% endif %}
+    </div>
+    {% else %}
+    <div class="arcade-closed-winner is-empty">
+      <span>ПОБЕДИТЕЛЬ НЕ ОПРЕДЕЛЁН</span>
+      <small>До дедлайна не было завершённых заездов участников этапа.</small>
+    </div>
+    {% endif %}
+  </section>
+  {% else %}
   <section class="arcade-machine" aria-label="Мини-игра Pit Lane Flight">
     <div class="arcade-scoreboard" aria-live="polite">
       <div><small>ЗАЕЗД</small><strong id="run-score">00</strong></div>
@@ -30,7 +61,7 @@
       <div class="arcade-best"><small>РЕКОРД</small><strong id="board-record">00</strong></div>
     </div>
     <div class="arcade-canvas-wrap" id="arcade-canvas-wrap">
-      <canvas id="arcade-canvas" tabindex="0" role="application" data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}" data-record="{{ arcade_own_record.best_score|default:0 }}" data-sprite-src="{% static 'league/images/banana-leclerc-sprite.webp' %}" data-track-srcs="{% static 'league/images/pit-lane-flight-track-day.png' %},{% static 'league/images/pit-lane-flight-track-hills.png' %},{% static 'league/images/pit-lane-flight-track-coast.png' %},{% static 'league/images/pit-lane-flight-track-monaco-tunnel.png' %},{% static 'league/images/pit-lane-flight-track-city.png' %}" data-start-url="{% url 'league:arcade_run_start' %}" data-finish-url="{% url 'league:arcade_run_finish' %}" data-board-url="{% url 'league:arcade_leaderboard' %}" aria-describedby="arcade-controls" aria-label="Банан Леклер летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
+      <canvas id="arcade-canvas" tabindex="0" role="application" data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}" data-record="{{ arcade_own_record.best_score|default:0 }}" data-close-at="{% if arcade_next_deadline %}{{ arcade_next_deadline.deadline|date:'c' }}{% endif %}" data-close-event="{{ arcade_next_deadline.name|default:'' }}" data-sprite-src="{% static 'league/images/banana-leclerc-sprite.webp' %}" data-track-srcs="{% static 'league/images/pit-lane-flight-track-day.png' %},{% static 'league/images/pit-lane-flight-track-hills.png' %},{% static 'league/images/pit-lane-flight-track-coast.png' %},{% static 'league/images/pit-lane-flight-track-monaco-tunnel.png' %},{% static 'league/images/pit-lane-flight-track-city.png' %}" data-start-url="{% url 'league:arcade_run_start' %}" data-finish-url="{% url 'league:arcade_run_finish' %}" data-board-url="{% url 'league:arcade_leaderboard' %}" aria-describedby="arcade-controls" aria-label="Банан Леклер летит между воротами. Нажимайте пробел, стрелку вверх или касайтесь экрана, чтобы взлетать."></canvas>
       <div class="arcade-overlay" id="arcade-overlay">
         <div class="arcade-overlay-card" id="arcade-overlay-card">
           <span class="arcade-overlay-mark" id="arcade-overlay-mark">PLAYER 1 · GRID</span>
@@ -54,6 +85,7 @@
     <p><strong>Короткий круг.</strong> Нажимай вовремя, держи траекторию и попробуй побить свой рекорд.</p>
     {% if not user.is_authenticated %}<button class="arcade-reset" id="arcade-reset-record" type="button" title="Сбросить личный рекорд">Сбросить рекорд</button>{% else %}<span class="arcade-saved-note">Рекорд сохраняется в профиле</span>{% endif %}
   </div>
+  {% endif %}
 
   <section class="arcade-leaderboard" aria-labelledby="arcade-leaderboard-title" aria-live="polite">
     <div class="arcade-leaderboard-heading">
@@ -62,7 +94,7 @@
         <h2 id="arcade-leaderboard-title">Таблица рекордов</h2>
       </div>
       <div class="arcade-board-meta">
-        <p id="arcade-board-status">Рекорд и попытки · онлайн-обновление каждые 15 сек.</p>
+        <p id="arcade-board-status">{% if arcade_closed_event %}Лучшие заезды до дедлайна · результаты зафиксированы{% else %}Рекорд и попытки · онлайн-обновление каждые 15 сек.{% endif %}</p>
         <p class="arcade-total-attempts">ВСЕГО ПОПЫТОК <strong id="arcade-total-attempts">{{ arcade_total_attempts }}</strong></p>
       </div>
     </div>
@@ -77,10 +109,10 @@
             <span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span>
           </li>
         {% empty %}
-          <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов — первым в таблице можешь стать ты.</li>
+          <li class="arcade-board-empty" id="arcade-board-empty">{% if arcade_closed_event %}До дедлайна не было завершённых заездов.{% else %}Пока нет рекордов — первым в таблице можешь стать ты.{% endif %}</li>
         {% endfor %}
       </ol>
-      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_record.total_attempts }}</strong></p>
+      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · {% if arcade_closed_event %}результат <strong id="arcade-own-score">{{ arcade_own_closed_record.score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_closed_record.attempts }}</strong>{% else %}рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_record.total_attempts }}</strong>{% endif %}</p>
     {% else %}
       <div class="arcade-board-login">
         <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
@@ -90,7 +122,7 @@
         {% for record in arcade_records %}
           <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong><small>ворот</small></span><span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span></li>
         {% empty %}
-          <li class="arcade-board-empty" id="arcade-board-empty">Пока нет рекордов.</li>
+          <li class="arcade-board-empty" id="arcade-board-empty">{% if arcade_closed_event %}До дедлайна не было завершённых заездов.{% else %}Пока нет рекордов.{% endif %}</li>
         {% endfor %}
       </ol>
     {% endif %}

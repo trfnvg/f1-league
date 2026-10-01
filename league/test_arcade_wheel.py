@@ -15,6 +15,8 @@ from .arcade_rewards import (
 )
 from .models import (
     ArcadeAttempt,
+    ArcadeGameClosure,
+    ArcadeTrophyAward,
     ArcadeWheelSpin,
     DuelChallenge,
     Event,
@@ -103,14 +105,147 @@ class ArcadeWheelTests(TestCase):
         response = self.client.get(reverse("league:arcade"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'id="arcade-banana-speech"')
-        self.assertContains(response, "i am stupid...")
+        self.assertNotContains(response, 'id="arcade-canvas"')
+        self.assertContains(response, "Заезды завершены")
         self.assertContains(response, "Pit Lane")
         self.assertContains(response, "Сектора колеса")
         self.assertContains(response, "25% шанс")
         self.assertContains(response, "arcade-wheel-config")
         self.assertEqual(len(response.context["wheel_sectors"]), 6)
         self.assertEqual(response.context["wheel_sectors"][4]["title"], "Руль в говне")
+
+    def test_game_accepts_runs_before_deadline_and_closes_after_it(self):
+        self.event.deadline = self.now + timedelta(days=1)
+        self.event.save(update_fields=("deadline",))
+        self.client.force_login(self.winner)
+
+        response = self.client.get(reverse("league:arcade"))
+        self.assertContains(response, 'id="arcade-canvas"')
+        started = self.client.post(reverse("league:arcade_run_start"))
+        self.assertEqual(started.status_code, 200)
+
+        self.event.deadline = self.now - timedelta(seconds=1)
+        self.event.save(update_fields=("deadline",))
+        response = self.client.get(reverse("league:arcade"))
+        self.assertContains(response, "Заезды завершены")
+        self.assertNotContains(response, 'id="arcade-canvas"')
+
+        rejected = self.client.post(reverse("league:arcade_run_start"))
+        self.assertEqual(rejected.status_code, 410)
+        self.assertEqual(ArcadeAttempt.objects.count(), 1)
+
+    def test_old_deadline_does_not_close_game_before_next_event_deadline(self):
+        self.event.race_datetime = self.now - timedelta(minutes=10)
+        self.event.save(update_fields=("race_datetime",))
+        next_event = Event.objects.create(
+            season_year=2026,
+            name="Next GP",
+            round_number=9,
+            deadline=self.now + timedelta(hours=1),
+            qualifying_datetime=self.now + timedelta(hours=2),
+            race_datetime=self.now + timedelta(hours=3),
+        )
+        self.client.force_login(self.winner)
+
+        response = self.client.get(reverse("league:arcade"))
+
+        self.assertContains(response, 'id="arcade-canvas"')
+        self.assertFalse(ArcadeGameClosure.objects.exists())
+
+        next_event.deadline = self.now - timedelta(seconds=1)
+        next_event.save(update_fields=("deadline",))
+        response = self.client.get(reverse("league:arcade"))
+
+        self.assertNotContains(response, 'id="arcade-canvas"')
+        self.assertEqual(response.context["arcade_closed_event"], next_event)
+
+    def test_closure_fixes_deadline_winner_and_rejects_late_result(self):
+        valid_run = self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=5))
+        ArcadeAttempt.objects.filter(pk=valid_run.pk).update(
+            started_at=self.event.deadline - timedelta(minutes=8),
+        )
+        late_run = self._attempt(self.challenger, 99, self.event.deadline + timedelta(minutes=1))
+        ArcadeAttempt.objects.filter(pk=late_run.pk).update(
+            started_at=self.event.deadline - timedelta(minutes=2),
+        )
+        unfinished = ArcadeAttempt.objects.create(user=self.winner)
+        ArcadeAttempt.objects.filter(pk=unfinished.pk).update(
+            started_at=self.event.deadline - timedelta(seconds=20),
+        )
+        self.client.force_login(self.winner)
+
+        response = self.client.get(reverse("league:arcade"))
+
+        self.assertContains(response, "Заезды завершены")
+        self.assertContains(response, "ПОБЕДИТЕЛЬ")
+        self.assertContains(response, "arcade-winner")
+        self.assertContains(response, ">12 ворот")
+        self.assertContains(response, "Лучшие заезды до дедлайна")
+        self.assertEqual(
+            [row["username"] for row in response.context["arcade_records"]],
+            ["arcade-winner"],
+        )
+        award = ArcadeTrophyAward.objects.get(event=self.event, game_key="pit_lane_flight")
+        self.assertEqual(award.player, self.winner)
+
+        rejected = self.client.post(
+            reverse("league:arcade_run_finish"),
+            data='{"attempt_id": %d, "score": 20}' % unfinished.pk,
+            content_type="application/json",
+        )
+        self.assertEqual(rejected.status_code, 410)
+        unfinished.refresh_from_db()
+        self.assertIsNone(unfinished.score)
+
+    def test_closed_game_does_not_reopen_for_a_later_event(self):
+        self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=5))
+        ArcadeAttempt.objects.filter(user=self.winner).update(
+            started_at=self.event.deadline - timedelta(minutes=8),
+        )
+        self.client.force_login(self.winner)
+        self.client.get(reverse("league:arcade"))
+
+        next_event = Event.objects.create(
+            season_year=2026,
+            name="Next GP",
+            round_number=9,
+            deadline=self.now - timedelta(minutes=30),
+            qualifying_datetime=self.now - timedelta(minutes=10),
+            race_datetime=self.now + timedelta(hours=3),
+        )
+        Prediction.objects.create(
+            event=next_event,
+            user=self.challenger,
+            p1="albon",
+            p2="sainz",
+            p3="lawson",
+            pole="albon",
+            fastest_lap="albon",
+            driver_of_day="albon",
+            safety_car_count=3,
+            dnf_count=3,
+        )
+        next_run = ArcadeAttempt.objects.create(
+            user=self.challenger,
+            score=99,
+            finished_at=next_event.deadline - timedelta(minutes=1),
+        )
+        ArcadeAttempt.objects.filter(pk=next_run.pk).update(
+            started_at=next_event.deadline - timedelta(minutes=2),
+        )
+
+        response = self.client.get(reverse("league:arcade"))
+
+        self.assertEqual(response.context["arcade_closed_event"], self.event)
+        closure = ArcadeGameClosure.objects.get(game_key="pit_lane_flight", season_year=2026)
+        self.assertEqual(closure.event, self.event)
+        self.assertEqual(closure.winner, self.winner)
+        self.assertEqual(ArcadeGameClosure.objects.count(), 1)
+        self.assertFalse(ArcadeTrophyAward.objects.filter(event=next_event).exists())
+        self.assertEqual(
+            [row["username"] for row in response.context["arcade_records"]],
+            ["arcade-winner"],
+        )
 
     def test_only_weekly_leader_can_spin_and_event_has_one_spin(self):
         self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=10))
