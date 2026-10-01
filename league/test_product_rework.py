@@ -7,6 +7,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
+    ArcadeAttempt,
+    ArcadeLeadChange,
     ArcadeRecord,
     DuelChallenge,
     Event,
@@ -338,6 +340,34 @@ class InterfaceRefinementTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class CompetitiveFeaturesTests(TestCase):
+    def test_arcade_takeover_is_saved_and_announced_with_attempt_count(self):
+        previous_leader = User.objects.create_user("old-arcade-leader")
+        new_leader = User.objects.create_user("new-arcade-leader", password="test")
+        ArcadeRecord.objects.create(user=previous_leader, best_score=10, total_attempts=4)
+        ArcadeRecord.objects.create(user=new_leader, best_score=5, total_attempts=7)
+        self.client.force_login(new_leader)
+
+        started = self.client.post(reverse("league:arcade_run_start"))
+        attempt_id = started.json()["attempt_id"]
+        ArcadeAttempt.objects.filter(pk=attempt_id).update(
+            started_at=timezone.now() - timedelta(seconds=20)
+        )
+        finished = self.client.post(
+            reverse("league:arcade_run_finish"),
+            data=json.dumps({"attempt_id": attempt_id, "score": 11}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(finished.status_code, 200)
+        lead_change = ArcadeLeadChange.objects.get(player=new_leader)
+        self.assertEqual(lead_change.best_score, 11)
+        self.assertEqual(lead_change.attempts, 8)
+
+        response = self.client.get(reverse("league:home"))
+        self.assertContains(response, "new-arcade-leader занял первое место в аркаде")
+        self.assertContains(response, "С 8 попытками")
+        self.assertContains(response, 'class="activity-feed-item activity-news-item is-arcade-leader"')
+
     def test_player_profile_accuracy_and_favorite_driver(self):
         player = User.objects.create_user("analytics-driver")
         first_event = Event.objects.create(

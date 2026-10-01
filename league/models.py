@@ -990,6 +990,26 @@ class ArcadeRecord(models.Model):
         return f"{self.user}: {self.best_score}"
 
 
+class ArcadeLeadChange(models.Model):
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="arcade_lead_changes",
+        verbose_name="Игрок",
+    )
+    best_score = models.PositiveIntegerField("Рекорд на момент лидерства")
+    attempts = models.PositiveIntegerField("Попытки к моменту лидерства")
+    created_at = models.DateTimeField("Время смены лидера", auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+        verbose_name = "Смена лидера аркады"
+        verbose_name_plural = "Смены лидера аркады"
+
+    def __str__(self):
+        return f"{self.player} занял первое место в аркаде"
+
+
 class ArcadeWheelSpin(models.Model):
     class Prize(models.TextChoices):
         PIT_WALL = "pit_wall", "Бонус пит-уолла +2"
