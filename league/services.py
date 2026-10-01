@@ -776,23 +776,6 @@ def build_achievements(player, statistics):
             "league/images/achievements/crazy-prediction.png",
         )
 
-    positive_streak = 0
-    longest_streak = 0
-    for points in statistics["points"]:
-        if points > 0:
-            positive_streak += 1
-            longest_streak = max(longest_streak, positive_streak)
-        else:
-            positive_streak = 0
-    if longest_streak >= 3:
-        stage_word = _russian_plural(longest_streak, ("этап", "этапа", "этапов"))
-        add(
-            "streak",
-            "Стабильный темп",
-            f"{longest_streak} {stage_word} подряд с очками",
-            "league/images/achievements/stable-pace.png",
-        )
-
     arcade_champion_id = (
         ArcadeRecord.objects.filter(best_score__gt=0)
         .order_by("-best_score", "updated_at", "user__username")

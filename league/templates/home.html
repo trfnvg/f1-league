@@ -177,12 +177,14 @@
 {% endif %}
 
 <section class="editorial-section">
-  <div class="section-heading-row">
-    <div>
-      <span class="eyebrow">Календарь {{ season.year }}</span>
+  <div class="section-heading-row calendar-heading-row">
+    <div class="calendar-heading-copy">
+      <div class="calendar-heading-meta">
+        <span class="eyebrow">Календарь {{ season.year }}</span>
+        <span class="section-count">{{ total_events }} этапов</span>
+      </div>
       <h2>Все этапы</h2>
     </div>
-    <span class="section-count">{{ total_events }} этапов</span>
   </div>
 
   <div class="event-editorial-grid">

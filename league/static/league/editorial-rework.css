@@ -375,6 +375,9 @@ body.editorial-theme .section-title,
 body.editorial-theme .section-title::after { display:none; }
 .section-heading-row p { margin:.45rem 0 0; color:var(--race-muted); font-size:.88rem; }
 .section-count { color:var(--race-muted); white-space:nowrap; }
+.calendar-heading-copy { width:100%; min-width:0; }
+.calendar-heading-meta { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+.calendar-heading-meta .eyebrow { margin-bottom:0; }
 
 .results-stage { overflow:hidden; border-radius:5px 22px 5px 5px; background:var(--race-ink); box-shadow:var(--race-shadow); }
 .results-stage-image { display:block; width:100%; height:min(55vw,560px); min-height:300px; object-fit:contain; }
