@@ -226,17 +226,14 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <a href="{% url 'league:leaderboard' %}?season={{ season.year }}" class="text-decoration-none">&larr; Назад к таблице</a>
-  <div class="profile-page-controls">
-    <div class="season-tabs">
-      {% for item in available_seasons %}<a class="season-tab {% if item.year == season.year %}is-current{% endif %}" href="?season={{ item.year }}">{{ item.year }}</a>{% endfor %}
-    </div>
-    {% if can_edit_avatar %}
+  {% if can_edit_avatar %}
+    <div class="profile-page-controls">
       <form method="post" action="{% url 'logout' %}">
         {% csrf_token %}
         <button type="submit" class="profile-logout-btn" aria-label="Выйти из аккаунта">Выйти</button>
       </form>
-    {% endif %}
-  </div>
+    </div>
+  {% endif %}
 </div>
 
 <section class="profile-hero profile-race-card p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">

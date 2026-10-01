@@ -145,9 +145,6 @@ body.editorial-theme .nav-chip-primary:hover {
   color: var(--race-red);
 }
 
-.season-tabs { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:.35rem; }
-.season-tab { min-width:44px; padding:.3rem .5rem; color:var(--race-ink) !important; border:1px solid var(--race-line); border-radius:4px 8px 4px 4px; background:rgba(255,255,255,.75); text-align:center; text-decoration:none; font-size:.72rem; font-weight:800; }
-.season-tab.is-current { color:#fff !important; border-color:var(--race-red); background:var(--race-red); }
 .movement-up { color:#18765d; }
 .movement-down { color:#bd3423; }
 .movement-flat { color:#829098; }
@@ -608,9 +605,6 @@ body.editorial-theme footer { color:#6f7c82; border-color:var(--race-line); back
   text-transform:uppercase;
 }
 .page-kicker::before,.achievement-kicker::before,.community-kicker::before { content:""; width:18px; height:3px; background:currentColor; transform:skewX(-18deg); }
-.season-tabs { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.35rem; }
-.season-tab { padding:.38rem .62rem; border:1px solid var(--race-line); border-radius:8px; color:var(--race-ink)!important; background:rgba(255,255,255,.72); text-decoration:none; font-size:.74rem; font-weight:900; }
-.season-tab.is-current { color:#fff!important; border-color:var(--race-red); background:var(--race-red); }
 .movement-up,.movement-down,.movement-flat { display:inline-flex; align-items:center; font-size:.66rem; font-weight:900; }
 .movement-up { color:#18755d; }.movement-down { color:#c33c2b; }.movement-flat { color:#8a999f; }
 .round-winner-badge,.achievement-count { display:inline-flex; align-items:center; padding:.2rem .42rem; border:1px solid rgba(191,135,15,.2); border-radius:999px; color:#80580c; background:#fff0b9; font-size:.62rem; font-weight:900; white-space:nowrap; }
@@ -651,7 +645,7 @@ body.editorial-theme footer { color:#6f7c82; border-color:var(--race-line); back
 .menu-logout-btn:hover .menu-logout-arrow,.menu-logout-btn:focus-visible .menu-logout-arrow { transform:translateX(2px); }
 
 @media (max-width: 992px) { .profile-stat-grid { grid-template-columns:repeat(3,1fr); } }
-@media (max-width: 576px) { .profile-stat-grid { grid-template-columns:repeat(2,1fr); } .season-tabs { justify-content:flex-start; } }
+@media (max-width: 576px) { .profile-stat-grid { grid-template-columns:repeat(2,1fr); } }
 
 /* Fine tuning: profile controls, subtle race artwork and denser event pages. */
 .profile-page-controls { display:flex; flex-wrap:wrap; align-items:center; justify-content:flex-end; gap:.55rem; }

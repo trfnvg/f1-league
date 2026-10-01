@@ -10,5 +10,4 @@ def league_context(request):
     selected = Season.objects.filter(year=year).first() if year else active
     return {
         "current_season": selected or active,
-        "available_seasons": Season.objects.all(),
     }

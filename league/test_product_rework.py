@@ -252,6 +252,7 @@ class InterfaceRefinementTests(TestCase):
         self.assertContains(response, "Загрузить аватар")
         self.assertContains(response, "avatarUploadMenu")
         self.assertContains(response, "profile-logout-btn")
+        self.assertNotContains(response, 'class="season-tabs"')
         self.assertNotContains(response, "profile-avatar-overlay")
         self.assertNotContains(response, 'class="avatar-editor"')
 
