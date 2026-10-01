@@ -26,6 +26,7 @@ from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, Register
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
+    ArcadeLeadChange,
     ArcadeRecord,
     ArcadeWheelSpin,
     DuelChallenge,
@@ -325,11 +326,36 @@ def arcade_run_finish(request):
         attempt.score = score
         attempt.save(update_fields=("finished_at", "score"))
 
+        # Lock the small leaderboard consistently so concurrent finishes cannot
+        # both announce themselves as the arcade leader.
+        list(
+            ArcadeRecord.objects.select_for_update()
+            .order_by("pk")
+            .values_list("pk", flat=True)
+        )
+        leader_before_id = (
+            ArcadeRecord.objects.filter(best_score__gt=0)
+            .order_by("-best_score", "updated_at", "user__username")
+            .values_list("user_id", flat=True)
+            .first()
+        )
         record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
         is_record = score > record.best_score
         if is_record:
             record.best_score = score
             record.save(update_fields=("best_score", "updated_at"))
+        leader_after_id = (
+            ArcadeRecord.objects.filter(best_score__gt=0)
+            .order_by("-best_score", "updated_at", "user__username")
+            .values_list("user_id", flat=True)
+            .first()
+        )
+        if leader_after_id == request.user.id and leader_before_id != leader_after_id:
+            ArcadeLeadChange.objects.create(
+                player=request.user,
+                best_score=record.best_score,
+                attempts=record.total_attempts,
+            )
         board_data = _arcade_leaderboard_data(request.user)
     return JsonResponse({**board_data, "is_record": is_record})
 

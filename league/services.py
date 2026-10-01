@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from django.contrib.auth.models import User
 from .models import (
     DRIVER_CHOICES,
+    ArcadeLeadChange,
     ArcadeRecord,
     DuelChallenge,
     Event,
@@ -479,9 +480,34 @@ def build_duel(player_a, player_b, season_year, leaderboard=None):
 
 
 def build_activity_feed(leaderboard, limit=10):
+    arcade_lead = ArcadeLeadChange.objects.select_related("player").first()
+    arcade_news = None
+    if arcade_lead:
+        attempt_word = _russian_plural(
+            arcade_lead.attempts,
+            ("попыткой", "попытками", "попытками"),
+        )
+        score_word = _russian_plural(
+            arcade_lead.best_score,
+            ("очко", "очка", "очков"),
+        )
+        arcade_news = {
+            "type": "arcade-leader",
+            "text": f"{arcade_lead.player.username} занял первое место в аркаде",
+            "meta": (
+                f"С {arcade_lead.attempts} {attempt_word} · "
+                f"рекорд {arcade_lead.best_score} {score_word}"
+            ),
+            "user_id": arcade_lead.player_id,
+            "event_id": None,
+            "source_event_id": None,
+            "anchor": "",
+            "occurred_at": arcade_lead.created_at,
+        }
+
     users = [row["user"] for row in leaderboard["rows"]]
     if not users:
-        return []
+        return [arcade_news] if arcade_news else []
 
     season_year = leaderboard["season_year"]
     scored_events = leaderboard["scored_events"]
@@ -506,7 +532,7 @@ def build_activity_feed(leaderboard, limit=10):
         and result.published_at is not None
     ]
     if not published_events:
-        return []
+        return [arcade_news] if arcade_news else []
 
     def event_timestamp(event):
         result = results.get(event.id)
@@ -716,6 +742,7 @@ def build_activity_feed(leaderboard, limit=10):
     type_priority = {
         "duel-result": 100,
         "winner": 95,
+        "arcade-leader": 92,
         "leader": 90,
         "duel-accepted": 85,
         "movement": 80,
@@ -724,8 +751,13 @@ def build_activity_feed(leaderboard, limit=10):
     }
     latest_event_id = latest_published_event.id
     feed = [item for item in feed if item["source_event_id"] == latest_event_id]
+    if arcade_news:
+        feed.append(arcade_news)
     feed.sort(
-        key=lambda item: (item["occurred_at"], type_priority.get(item["type"], 0)),
+        key=lambda item: (
+            item["occurred_at"],
+            type_priority.get(item["type"], 0),
+        ),
         reverse=True,
     )
     return feed[:limit]
