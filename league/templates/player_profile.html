@@ -329,7 +329,13 @@
   <div class="profile-arcade-trophycase-stage">
     <span class="profile-arcade-trophycase-glow" aria-hidden="true"></span>
     <img class="profile-arcade-trophycase-shelf" src="{% static 'league/images/arcade-trophy-shelf.png' %}" alt="" aria-hidden="true">
-    <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="Пиксельный Банана Леклер — трофей победителя аркады">
+    <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="Банана Леклер — показать детали награды" tabindex="0" aria-describedby="arcade-trophy-details">
+    <div class="profile-arcade-trophycase-tooltip" id="arcade-trophy-details" role="tooltip">
+      <strong>Награда аркады</strong>
+      <span><small>Дата получения</small><b>{% if arcade_trophy_date %}{{ arcade_trophy_date|date:"d.m.Y" }}{% else %}Тестовый доступ{% endif %}</b></span>
+      <span><small>Игра</small><b>Pit Lane Flight</b></span>
+      <span><small>Всего попыток</small><b>{{ arcade_total_attempts }}</b></span>
+    </div>
   </div>
   <div class="profile-arcade-trophycase-caption">
     <strong>Банана Леклер</strong>

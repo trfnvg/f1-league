@@ -349,7 +349,7 @@ class CompetitiveFeaturesTests(TestCase):
         response = self.client.get(reverse("league:player_profile", args=[player.id]))
         self.assertNotContains(response, "profile-arcade-trophycase")
 
-        ArcadeLeadChange.objects.create(
+        lead_change = ArcadeLeadChange.objects.create(
             player=player,
             best_score=42,
             attempts=7,
@@ -359,6 +359,8 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Банана Леклер")
         self.assertContains(response, "1234")
         self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, lead_change.created_at.strftime("%d.%m.%Y"))
+        self.assertContains(response, "Pit Lane Flight")
         self.assertContains(response, "banana-leclerc-pixel-reward.png")
         self.assertContains(response, "arcade-trophy-shelf.png")
 
@@ -374,6 +376,7 @@ class CompetitiveFeaturesTests(TestCase):
         response = self.client.get(reverse("league:player_profile", args=[admin.id]))
         self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
         self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, "Тестовый доступ")
         self.assertContains(response, ">0</b>")
 
     def test_arcade_takeover_is_saved_and_announced_with_attempt_count(self):
