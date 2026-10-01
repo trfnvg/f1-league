@@ -1261,6 +1261,19 @@ def player_profile(request, user_id: int):
     leaderboard_data = build_leaderboard(season.year)
     player_statistics = build_player_statistics(player, season.year, leaderboard=leaderboard_data)
     achievements = build_achievements(player, player_statistics)
+    arcade_record = ArcadeRecord.objects.filter(user=player).first()
+    arcade_mascot_reward_unlocked = (
+        player.is_staff or ArcadeLeadChange.objects.filter(player=player).exists()
+    )
+    if not arcade_mascot_reward_unlocked and arcade_record and arcade_record.best_score > 0:
+        current_arcade_leader_id = (
+            ArcadeRecord.objects.filter(best_score__gt=0)
+            .order_by("-best_score", "updated_at", "user__username")
+            .values_list("user_id", flat=True)
+            .first()
+        )
+        arcade_mascot_reward_unlocked = current_arcade_leader_id == player.id
+    arcade_total_attempts = arcade_record.total_attempts if arcade_record else 0
 
     return render(
         request,
@@ -1284,6 +1297,8 @@ def player_profile(request, user_id: int):
             "season": season,
             "player_statistics": player_statistics,
             "achievements": achievements,
+            "arcade_mascot_reward_unlocked": arcade_mascot_reward_unlocked,
+            "arcade_total_attempts": arcade_total_attempts,
         },
     )
 
