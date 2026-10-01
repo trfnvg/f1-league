@@ -391,22 +391,19 @@ body.apex-night-theme .menu-meta {
   color: var(--apex-muted);
 }
 
-body.apex-night-theme .season-switcher-link,
-body.apex-night-theme .season-tab {
+body.apex-night-theme .season-switcher-link {
   color: var(--apex-ink-soft) !important;
   border-color: var(--apex-line);
   border-radius: 2px 9px 2px 2px;
   background: rgba(255, 255, 255, 0.035);
 }
 
-body.apex-night-theme .season-switcher-link:hover,
-body.apex-night-theme .season-tab:hover {
+body.apex-night-theme .season-switcher-link:hover {
   color: #fff !important;
   border-color: var(--apex-line-strong);
 }
 
-body.apex-night-theme .season-switcher-link.is-current,
-body.apex-night-theme .season-tab.is-current {
+body.apex-night-theme .season-switcher-link.is-current {
   color: #fff !important;
   border-color: var(--apex-red);
   background: var(--apex-red);
