@@ -274,6 +274,12 @@ class InterfaceRefinementTests(TestCase):
         self.assertContains(response, 'class="footer-signature"')
         self.assertContains(response, "F1</strong> Predictions League")
 
+    def test_participants_list_page_is_removed_from_navigation(self):
+        response = self.client.get(reverse("league:home"))
+
+        self.assertEqual(self.client.get("/participants/").status_code, 404)
+        self.assertNotContains(response, 'href="/participants/"')
+
     def test_chart_uses_unique_curated_colors(self):
         users = [User.objects.create_user(f"driver-{index}") for index in range(12)]
 
@@ -341,12 +347,6 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Норрис (McLaren)")
         self.assertContains(response, "R1 · First GP")
         self.assertNotContains(response, "Зона роста")
-
-        participants_response = self.client.get(reverse("league:participants"))
-        self.assertNotContains(
-            participants_response,
-            '<div class="participant-stat-label">Сезонный предикт</div>',
-        )
 
     def test_duel_compares_scores_rounds_and_accuracy(self):
         player_a = User.objects.create_user("Alpha")
@@ -554,10 +554,6 @@ class CompetitiveFeaturesTests(TestCase):
 
         leaderboard = build_leaderboard(2026)
         feed = build_activity_feed(leaderboard)
-        participants_page = self.client.get(reverse("league:participants"))
-        participant = next(row for row in participants_page.context["rows"] if row["user"] == alice)
-
-        self.assertEqual(participant["rank"], 3)
         self.assertEqual(next(row for row in leaderboard["rows"] if row["user"] == alice)["rank"], 3)
         self.assertFalse(any(item["type"] in {"movement", "leader"} for item in feed))
 

@@ -9,7 +9,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import F, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -46,7 +46,6 @@ from .services import (
     build_activity_feed,
     build_duel,
     build_leaderboard,
-    build_participant_achievement_counts,
     build_player_statistics,
     get_selected_season,
 )
@@ -1261,67 +1260,6 @@ def player_profile(request, user_id: int):
             "achievements": achievements,
         },
     )
-
-
-def participants(request):
-    season = get_selected_season(request)
-    event_totals_qs = Score.objects.filter(event__season_year=season.year).values("user_id").annotate(total=Sum("points"))
-    season_totals_qs = SeasonScore.objects.filter(season_year=season.year).values("user_id").annotate(total=Sum("points"))
-    event_totals = {item["user_id"]: int(item["total"] or 0) for item in event_totals_qs}
-    season_totals = {item["user_id"]: int(item["total"] or 0) for item in season_totals_qs}
-
-    event_submissions_qs = Prediction.objects.filter(event__season_year=season.year).values("user_id").annotate(total=Count("id"))
-    season_submissions_qs = SeasonPrediction.objects.filter(season_year=season.year).values("user_id").annotate(total=Count("id"))
-    event_submissions = {item["user_id"]: int(item["total"] or 0) for item in event_submissions_qs}
-    season_submissions = {item["user_id"]: int(item["total"] or 0) for item in season_submissions_qs}
-
-    users = list(User.objects.filter(is_staff=False, is_active=True).order_by("username"))
-    user_ids = [user.id for user in users]
-    profile_map = {
-        profile.user_id: profile for profile in UserProfile.objects.filter(user_id__in=user_ids)
-    }
-    leaderboard_data = build_leaderboard(season.year)
-    leaderboard_rows = {row["user"].id: row for row in leaderboard_data["rows"]}
-    achievement_counts = build_participant_achievement_counts(
-        users,
-        leaderboard_data,
-    )
-
-    rows = []
-    for user in users:
-        event_count = event_submissions.get(user.id, 0)
-        season_count = season_submissions.get(user.id, 0)
-        if event_count == 0 and season_count == 0:
-            continue
-
-        profile_obj = profile_map.get(user.id)
-        avatar_url = profile_obj.avatar.url if profile_obj and profile_obj.avatar else None
-        total_points = event_totals.get(user.id, 0) + season_totals.get(user.id, 0)
-        achievement_data = achievement_counts.get(user.id, {})
-        achievement_count = (
-            int(bool(profile_obj and profile_obj.is_world_predict_champion))
-            + int(achievement_data.get("stage_wins", 0) > 0)
-            + int(achievement_data.get("perfect_podiums", 0) > 0)
-            + int(achievement_data.get("pole_hits", 0) >= 3)
-            + int(achievement_data.get("crazy_hits", 0) > 0)
-        )
-        rows.append(
-            {
-                "user": user,
-                "avatar_url": avatar_url,
-                "event_count": event_count,
-                "season_count": season_count,
-                "total_points": total_points,
-                "is_wpc": bool(profile_obj and profile_obj.is_world_predict_champion),
-                "rank": leaderboard_rows.get(user.id, {}).get("rank"),
-                "movement": leaderboard_rows.get(user.id, {}).get("movement", 0),
-                "achievement_count": achievement_count,
-            }
-        )
-
-    rows.sort(key=lambda item: (-item["total_points"], item["user"].username.lower()))
-
-    return render(request, "participants.html", {"rows": rows, "season": season})
 
 
 def leaderboard(request):
