@@ -12,6 +12,7 @@ from django.db import transaction
 from django.db.models import F, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
@@ -427,6 +428,7 @@ def _wildcard_payload(assignment):
 def home(request):
     now = timezone.now()
     season = get_selected_season(request)
+    award_due_arcade_trophies(season.year, now=now)
     events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
     upcoming_events = []
     past_events = []
@@ -526,6 +528,22 @@ def home(request):
             "crazy_jury": crazy_jury_context(jury_event, request.user, now) if jury_event else None,
         },
     )
+
+
+def activity_feed_updates(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    season = get_selected_season(request)
+    award_due_arcade_trophies(season.year, now=timezone.now())
+    activity_feed = build_activity_feed(build_leaderboard(season.year))
+    html = render_to_string(
+        "activity_feed_items.html",
+        {"activity_feed": activity_feed, "season": season},
+        request=request,
+    )
+    response = JsonResponse({"html": html})
+    response["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return response
 
 
 @login_required

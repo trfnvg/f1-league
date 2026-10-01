@@ -128,29 +128,15 @@
   </section>
 {% endif %}
 
-{% if activity_feed %}
-  <section class="activity-feed-shell editorial-section mb-4">
-    <div class="section-heading-row">
-      <div><span class="eyebrow">Live paddock</span><h2>Последние события</h2></div>
-      <a class="section-inline-link" href="{% url 'league:leaderboard' %}?season={{ season.year }}">Таблица →</a>
-    </div>
-    <div class="activity-news-list">
-      {% for item in activity_feed %}
-        <a
-          class="activity-feed-item activity-news-item is-{{ item.type }}"
-          {% if item.event_id %}
-            href="{% url 'league:event_detail' event_id=item.event_id %}{{ item.anchor|default:'' }}"
-          {% else %}
-            href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}"
-          {% endif %}
-        >
-          <span class="activity-feed-icon" aria-hidden="true"></span>
-          <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% elif item.type == "arcade-leader" %}Arcade record{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
-        </a>
-      {% endfor %}
-    </div>
-  </section>
-{% endif %}
+<section class="activity-feed-shell editorial-section mb-4">
+  <div class="section-heading-row">
+    <div><span class="eyebrow">Live paddock</span><h2>Последние события</h2></div>
+    <a class="section-inline-link" href="{% url 'league:leaderboard' %}?season={{ season.year }}">Таблица →</a>
+  </div>
+  <div class="activity-news-list" id="live-paddock-list" data-feed-url="{% url 'league:activity_feed' %}?season={{ season.year }}">
+    {% include "activity_feed_items.html" %}
+  </div>
+</section>
 
 {% if result_images %}
   <section class="editorial-section mb-4">
@@ -228,5 +214,35 @@
     render();
     window.setInterval(render, 60000);
   });
+
+  (() => {
+    const list = document.getElementById("live-paddock-list");
+    if (!list) return;
+    let refreshing = false;
+    const refreshLivePaddock = async () => {
+      if (refreshing || document.hidden) return;
+      refreshing = true;
+      try {
+        const response = await fetch(list.dataset.feedUrl, {
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (typeof data.html === "string" && list.innerHTML !== data.html) {
+          list.innerHTML = data.html;
+        }
+      } catch (_) {
+        // Keep the last rendered news if a short poll fails.
+      } finally {
+        refreshing = false;
+      }
+    };
+    window.setInterval(refreshLivePaddock, 15000);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) void refreshLivePaddock();
+    });
+  })();
 </script>
 {% endblock %}

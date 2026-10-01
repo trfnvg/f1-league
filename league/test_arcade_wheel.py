@@ -25,6 +25,7 @@ from .models import (
     PlayerWildcard,
     Prediction,
     Result,
+    Season,
 )
 from .scoring import _build_event_score_rows
 
@@ -250,6 +251,25 @@ class ArcadeWheelTests(TestCase):
         self.assertEqual(
             [row["username"] for row in response.context["arcade_records"]],
             ["arcade-winner"],
+        )
+
+    def test_live_paddock_poll_closes_arcade_and_publishes_final_winner(self):
+        Season.objects.update_or_create(
+            year=2026,
+            defaults={"title": "Season 2026", "is_active": True},
+        )
+        self._attempt(self.winner, 17, self.event.deadline - timedelta(minutes=5))
+        ArcadeRecord.objects.create(user=self.winner, best_score=17, total_attempts=2006)
+
+        response = self.client.get(reverse("league:activity_feed"), {"season": 2026})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "arcade-winner", html=False)
+        self.assertIn("arcade-winner выиграл аркаду", response.json()["html"])
+        self.assertIn("2006 попытками", response.json()["html"])
+        self.assertEqual(
+            ArcadeGameClosure.objects.get(game_key="pit_lane_flight", season_year=2026).winner,
+            self.winner,
         )
 
     def test_only_weekly_leader_can_spin_and_event_has_one_spin(self):

@@ -24,6 +24,7 @@ from .models import (
 )
 from .scoring import publish_event_scores, restore_score_revision
 from .arcade_rewards import award_due_arcade_trophies
+from .duels import respond_to_duel
 from .services import (
     build_achievements,
     build_activity_feed,
@@ -787,6 +788,41 @@ class CompetitiveFeaturesTests(TestCase):
             response,
             f'{reverse("league:event_detail", args=(duel.event_id,))}#event-duel',
         )
+
+    def test_accepting_duel_for_upcoming_event_is_published_without_waiting_for_results(self):
+        player_a = User.objects.create_user("duel-sender")
+        player_b = User.objects.create_user("duel-acceptor")
+        now = timezone.now()
+        scored_event = Event.objects.create(
+            name="Latest Scored GP",
+            round_number=1,
+            deadline=now - timedelta(days=2),
+            status=Event.Status.SCORED,
+        )
+        Score.objects.create(event=scored_event, user=player_a, points=12)
+        Score.objects.create(event=scored_event, user=player_b, points=9)
+        result = create_result(scored_event)
+        result.published_at = now - timedelta(hours=1)
+        result.save(update_fields=("published_at",))
+        upcoming_event = Event.objects.create(
+            name="Upcoming GP",
+            round_number=2,
+            deadline=now + timedelta(days=2),
+            race_datetime=now + timedelta(days=3),
+        )
+        duel = DuelChallenge.objects.create(
+            event=upcoming_event,
+            challenger=player_a,
+            opponent=player_b,
+            stake=4,
+        )
+        respond_to_duel(duel, player_b, accept=True)
+
+        response = self.client.get(reverse("league:activity_feed"), {"season": 2026})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Дуэль duel-sender — duel-acceptor принята", response.json()["html"])
+        self.assertIn("Duel accepted", response.json()["html"])
 
     def test_saved_scored_and_round_winner_states_are_rendered(self):
         winner = User.objects.create_user("Winner", password="test")

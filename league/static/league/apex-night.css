@@ -1147,17 +1147,20 @@ body.apex-night-theme .activity-feed-item.is-duel-result .activity-feed-icon::be
   background-position: 0 100%;
 }
 
-body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-feed-icon {
+body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-feed-icon,
+body.apex-night-theme .activity-feed-item.is-arcade-winner .activity-feed-icon {
   --paddock-icon-dx: -2.1px;
   --paddock-icon-dy: 1.8px;
   border-color: rgba(209, 178, 123, 0.3);
 }
 
-body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-feed-icon::before {
+body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-feed-icon::before,
+body.apex-night-theme .activity-feed-item.is-arcade-winner .activity-feed-icon::before {
   background-position: 0 100%;
 }
 
-body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-news-label {
+body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-news-label,
+body.apex-night-theme .activity-feed-item.is-arcade-winner .activity-news-label {
   color: var(--apex-amber) !important;
 }
 

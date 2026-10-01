@@ -3,6 +3,7 @@ from collections import Counter, defaultdict
 from django.contrib.auth.models import User
 from .models import (
     DRIVER_CHOICES,
+    ArcadeGameClosure,
     ArcadeLeadChange,
     ArcadeRecord,
     DuelChallenge,
@@ -480,36 +481,111 @@ def build_duel(player_a, player_b, season_year, leaderboard=None):
 
 
 def build_activity_feed(leaderboard, limit=10):
-    arcade_lead = ArcadeLeadChange.objects.select_related("player").first()
+    season_year = leaderboard["season_year"]
+    closure = (
+        ArcadeGameClosure.objects.select_related("winner", "event")
+        .filter(game_key="pit_lane_flight", season_year=season_year)
+        .first()
+    )
     arcade_news = None
-    if arcade_lead:
-        attempt_word = _russian_plural(
-            arcade_lead.attempts,
-            ("попыткой", "попытками", "попытками"),
+    if closure:
+        if closure.winner:
+            attempt_word = _russian_plural(closure.attempts, ("попыткой", "попытками", "попытками"))
+            score_word = _russian_plural(closure.winner_score or 0, ("очко", "очка", "очков"))
+            arcade_news = {
+                "type": "arcade-winner",
+                "text": f"{closure.winner.username} выиграл аркаду",
+                "meta": (
+                    f"Pit Lane Flight · {closure.attempts} {attempt_word} · "
+                    f"рекорд {closure.winner_score or 0} {score_word}"
+                ),
+                "user_id": closure.winner_id,
+                "event_id": None,
+                "source_event_id": None,
+                "anchor": "",
+                "occurred_at": closure.closed_at,
+            }
+    else:
+        arcade_lead = ArcadeLeadChange.objects.select_related("player").first()
+        if arcade_lead:
+            attempt_word = _russian_plural(
+                arcade_lead.attempts,
+                ("попыткой", "попытками", "попытками"),
+            )
+            score_word = _russian_plural(
+                arcade_lead.best_score,
+                ("очко", "очка", "очков"),
+            )
+            arcade_news = {
+                "type": "arcade-leader",
+                "text": f"{arcade_lead.player.username} занял первое место в аркаде",
+                "meta": (
+                    f"С {arcade_lead.attempts} {attempt_word} · "
+                    f"рекорд {arcade_lead.best_score} {score_word}"
+                ),
+                "user_id": arcade_lead.player_id,
+                "event_id": None,
+                "source_event_id": None,
+                "anchor": "",
+                "occurred_at": arcade_lead.created_at,
+            }
+
+    duels = (
+        DuelChallenge.objects.filter(
+            event__season_year=season_year,
+            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
+            responded_at__isnull=False,
         )
-        score_word = _russian_plural(
-            arcade_lead.best_score,
-            ("очко", "очка", "очков"),
+        .select_related("event", "challenger", "opponent", "winner")
+        .order_by("responded_at", "id")
+    )
+    duel_news = []
+    for duel in duels:
+        stake_word = _russian_plural(duel.stake, ("очко", "очка", "очков"))
+        duel_news.append(
+            {
+                "type": "duel-accepted",
+                "text": f"Дуэль {duel.challenger.username} — {duel.opponent.username} принята",
+                "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
+                "user_id": duel.opponent_id,
+                "event_id": duel.event_id,
+                "source_event_id": duel.event_id,
+                "anchor": "#event-duel",
+                "occurred_at": duel.responded_at,
+            }
         )
-        arcade_news = {
-            "type": "arcade-leader",
-            "text": f"{arcade_lead.player.username} занял первое место в аркаде",
-            "meta": (
-                f"С {arcade_lead.attempts} {attempt_word} · "
-                f"рекорд {arcade_lead.best_score} {score_word}"
+        if duel.status == DuelChallenge.Status.SETTLED and duel.settled_at and duel.winner_id:
+            duel_news.append(
+                {
+                    "type": "duel-result",
+                    "text": f"{duel.winner.username} выиграл дуэль",
+                    "meta": (
+                        f"R{duel.event.round_number} · {duel.challenger.username} — "
+                        f"{duel.opponent.username} · +{duel.stake} {stake_word}"
+                    ),
+                    "user_id": duel.winner_id,
+                    "event_id": duel.event_id,
+                    "source_event_id": duel.event_id,
+                    "anchor": "#event-duel",
+                    "occurred_at": duel.settled_at,
+                }
+            )
+
+    def newest(items):
+        priority = {"duel-result": 100, "arcade-winner": 98, "duel-accepted": 85}
+        return sorted(
+            items,
+            key=lambda item: (
+                item["occurred_at"],
+                priority.get(item["type"], 0),
             ),
-            "user_id": arcade_lead.player_id,
-            "event_id": None,
-            "source_event_id": None,
-            "anchor": "",
-            "occurred_at": arcade_lead.created_at,
-        }
+            reverse=True,
+        )[:limit]
 
     users = [row["user"] for row in leaderboard["rows"]]
     if not users:
-        return [arcade_news] if arcade_news else []
+        return newest([item for item in [arcade_news, *duel_news] if item])
 
-    season_year = leaderboard["season_year"]
     scored_events = leaderboard["scored_events"]
     event_ids = [event.id for event in scored_events]
     user_ids = [user.id for user in users]
@@ -532,7 +608,7 @@ def build_activity_feed(leaderboard, limit=10):
         and result.published_at is not None
     ]
     if not published_events:
-        return [arcade_news] if arcade_news else []
+        return newest([item for item in [arcade_news, *duel_news] if item])
 
     def event_timestamp(event):
         result = results.get(event.id)
@@ -699,64 +775,25 @@ def build_activity_feed(leaderboard, limit=10):
                 user_id=mover["user"].id,
             )
 
-    duels = (
-        DuelChallenge.objects.filter(
-            event__season_year=season_year,
-            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
-        )
-        .select_related("event", "challenger", "opponent", "winner")
-        .order_by("responded_at", "id")
-    )
-    for duel in duels:
-        stake_word = _russian_plural(duel.stake, ("очко", "очка", "очков"))
-        if duel.responded_at:
-            feed.append(
-                {
-                    "type": "duel-accepted",
-                    "text": f"Дуэль {duel.challenger.username} — {duel.opponent.username} принята",
-                    "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
-                    "user_id": duel.opponent_id,
-                    "event_id": duel.event_id,
-                    "source_event_id": duel.event_id,
-                    "anchor": "#event-duel",
-                    "occurred_at": duel.responded_at,
-                }
-            )
-        if duel.status == DuelChallenge.Status.SETTLED and duel.settled_at and duel.winner_id:
-            feed.append(
-                {
-                    "type": "duel-result",
-                    "text": f"{duel.winner.username} выиграл дуэль",
-                    "meta": (
-                        f"R{duel.event.round_number} · {duel.challenger.username} — "
-                        f"{duel.opponent.username} · +{duel.stake} {stake_word}"
-                    ),
-                    "user_id": duel.winner_id,
-                    "event_id": duel.event_id,
-                    "source_event_id": duel.event_id,
-                    "anchor": "#event-duel",
-                    "occurred_at": duel.settled_at,
-                }
-            )
-
-    type_priority = {
-        "duel-result": 100,
-        "winner": 95,
-        "arcade-leader": 92,
-        "leader": 90,
-        "duel-accepted": 85,
-        "movement": 80,
-        "perfect-podium": 75,
-        "record": 70,
-    }
     latest_event_id = latest_published_event.id
     feed = [item for item in feed if item["source_event_id"] == latest_event_id]
+    feed.extend(duel_news)
     if arcade_news:
         feed.append(arcade_news)
     feed.sort(
         key=lambda item: (
             item["occurred_at"],
-            type_priority.get(item["type"], 0),
+            {
+                "duel-result": 100,
+                "winner": 95,
+                "arcade-winner": 94,
+                "arcade-leader": 92,
+                "leader": 90,
+                "duel-accepted": 85,
+                "movement": 80,
+                "perfect-podium": 75,
+                "record": 70,
+            }.get(item["type"], 0),
         ),
         reverse=True,
     )
