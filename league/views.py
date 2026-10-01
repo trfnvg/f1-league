@@ -65,6 +65,8 @@ from .arcade_rewards import (
     available_va_bank_fields,
     best_event_arcade_attempt,
     award_due_arcade_trophies,
+    closed_event_arcade_leaderboard,
+    get_or_create_arcade_game_closure,
     podium_edit_is_open,
     spin_event_wheel,
     va_bank_answer_is_correct,
@@ -131,7 +133,13 @@ def arcade(request):
     now = timezone.now()
     award_due_arcade_trophies(season.year, now=now)
     board_data = _arcade_leaderboard_data(request.user)
-    wheel_event = arcade_wheel_event(season.year, now)
+    arcade_closure, _ = get_or_create_arcade_game_closure(season.year, now=now)
+    arcade_closed_event = arcade_closure.event if arcade_closure else None
+    arcade_own_closed_record = None
+    if arcade_closed_event:
+        board_data = closed_event_arcade_leaderboard(arcade_closed_event, request.user)
+        arcade_own_closed_record = board_data["own_record"]
+    wheel_event = arcade_closed_event or arcade_wheel_event(season.year, now)
     wheel_leader = best_event_arcade_attempt(wheel_event, through=now) if wheel_event else None
     wheel_spin = (
         ArcadeWheelSpin.objects.select_related("winner", "target_user")
@@ -182,9 +190,17 @@ def arcade(request):
         "arcade_own_record": own_record,
         "arcade_own_rank": board_data["rank"],
         "arcade_total_attempts": board_data["total_attempts"],
+        "arcade_closure": arcade_closure,
+        "arcade_closed_event": arcade_closed_event,
+        "arcade_own_closed_record": arcade_own_closed_record,
         "now": now,
         "driver_choices": DRIVER_CHOICES,
         "wheel_event": wheel_event,
+        "arcade_next_deadline": (
+            wheel_event
+            if not arcade_closed_event and wheel_event and wheel_event.deadline > now
+            else None
+        ),
         "wheel_leader": wheel_leader,
         "wheel_spin": wheel_spin,
         "wheel_prize": current_prize,
@@ -257,6 +273,12 @@ def arcade_wheel_activate(request):
 def arcade_leaderboard(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
+    season = get_selected_season(request)
+    now = timezone.now()
+    award_due_arcade_trophies(season.year, now=now)
+    closure, _ = get_or_create_arcade_game_closure(season.year, now=now)
+    if closure:
+        return JsonResponse(closed_event_arcade_leaderboard(closure.event, request.user))
     return JsonResponse(_arcade_leaderboard_data(request.user))
 
 
@@ -287,6 +309,13 @@ def arcade_run_start(request):
         return HttpResponseNotAllowed(["POST"])
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    now = timezone.now()
+    closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
+    if closure:
+        return JsonResponse(
+            {"error": "Pit Lane Flight закрыта после дедлайна — результаты зафиксированы."},
+            status=410,
+        )
     with transaction.atomic():
         ArcadeAttempt.objects.filter(
             user=request.user,
@@ -304,6 +333,13 @@ def arcade_run_finish(request):
         return HttpResponseNotAllowed(["POST"])
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    now = timezone.now()
+    closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
+    if closure:
+        return JsonResponse(
+            {"error": "Pit Lane Flight закрыта после дедлайна — результаты зафиксированы."},
+            status=410,
+        )
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id = int(payload.get("attempt_id"))

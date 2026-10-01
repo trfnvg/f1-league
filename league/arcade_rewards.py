@@ -1,4 +1,5 @@
 import secrets
+from collections import Counter
 from datetime import timedelta
 
 from django.db import transaction
@@ -7,6 +8,7 @@ from django.utils import timezone
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
+    ArcadeGameClosure,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     Event,
@@ -89,6 +91,10 @@ def arcade_wheel_event(season_year, now=None):
 
 
 def best_event_arcade_attempt(event, *, through=None):
+    return event_arcade_attempts(event, through=through).first()
+
+
+def event_arcade_attempts(event, *, through=None):
     if through is None:
         through = timezone.now()
     window_start = event.deadline - WHEEL_WINDOW
@@ -104,8 +110,90 @@ def best_event_arcade_attempt(event, *, through=None):
         )
         .select_related("user")
         .order_by("-score", "finished_at", "user__username")
-        .first()
     )
+
+
+def get_or_create_arcade_game_closure(season_year, now=None):
+    """Freeze Pit Lane Flight once the active event's prediction deadline passes."""
+    now = now or timezone.now()
+    with transaction.atomic():
+        closure = ArcadeGameClosure.objects.filter(
+            game_key=ARCADE_TROPHY_GAME_KEY,
+            season_year=season_year,
+        ).select_related("event", "winner").first()
+        if closure:
+            return closure, False
+
+        event = arcade_wheel_event(season_year, now)
+        if event and event.deadline > now:
+            return None, False
+        if event is None:
+            event = (
+                Event.objects.filter(season_year=season_year, deadline__lte=now)
+                .order_by("-deadline", "-round_number")
+                .first()
+            )
+        if not event:
+            return None, False
+
+        award, _ = award_event_arcade_trophy(event, now=now)
+        attempt = best_event_arcade_attempt(event, through=event.deadline)
+        winner = award.player if award else (attempt.user if attempt else None)
+        score = attempt.score if attempt and winner and attempt.user_id == winner.id else None
+        attempts = award.attempts if award else 0
+        closure, created = ArcadeGameClosure.objects.get_or_create(
+            game_key=ARCADE_TROPHY_GAME_KEY,
+            season_year=season_year,
+            defaults={
+                "event": event,
+                "winner": winner,
+                "winner_score": score,
+                "attempts": attempts,
+                "closed_at": event.deadline,
+            },
+        )
+        return closure, created
+
+
+def closed_event_arcade_leaderboard(event, user=None):
+    if not event:
+        return {
+            "records": [],
+            "total_attempts": 0,
+            "rank": None,
+            "own_record": None,
+            "record": 0,
+            "attempts": 0,
+        }
+
+    attempts = list(event_arcade_attempts(event, through=event.deadline))
+    best_by_user = {}
+    counts = Counter()
+    for attempt in attempts:
+        counts[attempt.user_id] += 1
+        best_by_user.setdefault(attempt.user_id, attempt)
+
+    ordered_best = list(best_by_user.values())
+    rows = [
+        {
+            "username": attempt.user.get_full_name().strip() or attempt.user.username,
+            "score": attempt.score,
+            "attempts": counts[attempt.user_id],
+            "rank": index,
+            "is_current_user": bool(user and user.is_authenticated and attempt.user_id == user.id),
+        }
+        for index, attempt in enumerate(ordered_best, start=1)
+    ]
+    own_record = next((row for row in rows if row["is_current_user"]), None)
+    total_attempts = sum(counts.values())
+    return {
+        "records": rows[:10],
+        "total_attempts": total_attempts,
+        "rank": own_record["rank"] if own_record else None,
+        "own_record": own_record,
+        "record": own_record["score"] if own_record else 0,
+        "attempts": own_record["attempts"] if own_record else 0,
+    }
 
 
 def award_event_arcade_trophy(event, now=None):
@@ -146,17 +234,9 @@ def award_event_arcade_trophy(event, now=None):
 
 
 def award_due_arcade_trophies(season_year, now=None):
-    """Materialize trophies for all completed prediction periods in a season."""
-    now = now or timezone.now()
-    created_count = 0
-    due_events = Event.objects.filter(
-        season_year=season_year,
-        deadline__lte=now,
-    ).order_by("deadline", "round_number")
-    for event in due_events.iterator():
-        _, created = award_event_arcade_trophy(event, now=now)
-        created_count += int(created)
-    return created_count
+    """Close the game's single competition and persist its winner after a deadline."""
+    _, created = get_or_create_arcade_game_closure(season_year, now=now)
+    return int(created)
 
 
 def wheel_window_is_open(event, now=None):

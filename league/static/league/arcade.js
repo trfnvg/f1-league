@@ -26,6 +26,8 @@
     return image;
   });
   const isAuthenticated = canvas.dataset.authenticated === "true";
+  const closeAt = Date.parse(canvas.dataset.closeAt || "");
+  const closeEventName = canvas.dataset.closeEvent || "этапа";
   const board = document.getElementById("arcade-leaderboard-list");
   const boardStatus = document.getElementById("arcade-board-status");
   const totalAttemptsOutput = document.getElementById("arcade-total-attempts");
@@ -64,6 +66,31 @@
   let runSequence = 0;
   const pendingRunScores = new Map();
   let refreshingBoard = false;
+  let deadlineClosed = false;
+  let deadlineCloseTimer = 0;
+  let leaderboardTimer = 0;
+
+  function closeGameAtDeadline() {
+    if (deadlineClosed) return;
+    deadlineClosed = true;
+    state = "closed";
+    attemptId = null;
+    runSequence += 1;
+    pendingRunScores.clear();
+    overlay.classList.remove("is-gameover", "is-restarting");
+    overlay.hidden = false;
+    overlayMark.textContent = "ДЕДЛАЙН · РЕЗУЛЬТАТЫ ЗАФИКСИРОВАНЫ";
+    overlayTitle.textContent = "Игра завершена";
+    overlayCopy.textContent = `Заезды закрыты после дедлайна прогнозов этапа ${closeEventName}. Победитель зафиксирован.`;
+    startButton.hidden = true;
+    if (bananaSpeech) bananaSpeech.hidden = true;
+    if (boardStatus) boardStatus.textContent = "Дедлайн прошёл · финальная таблица зафиксирована";
+    window.clearTimeout(deadlineCloseTimer);
+    window.clearInterval(leaderboardTimer);
+    if (animationFrame) window.cancelAnimationFrame(animationFrame);
+    draw(performance.now());
+    void refreshLeaderboard(true);
+  }
 
   function readRecord() {
     try {
@@ -148,6 +175,10 @@
   }
 
   async function startGame() {
+    if (deadlineClosed || (Number.isFinite(closeAt) && Date.now() >= closeAt)) {
+      closeGameAtDeadline();
+      return;
+    }
     window.clearTimeout(overlayTimer);
     const thisRun = ++runSequence;
     overlay.classList.add("is-restarting");
@@ -177,6 +208,7 @@
         });
         if (response.ok) {
           const startResult = await response.json();
+          if (deadlineClosed || thisRun !== runSequence) return;
           const startedAttemptId = startResult.attempt_id;
           renderLeaderboard(startResult.records || []);
           syncOwnRank(startResult);
@@ -188,6 +220,8 @@
           } else if (thisRun === runSequence && state === "playing") {
             attemptId = startedAttemptId;
           }
+        } else if (response.status === 410) {
+          closeGameAtDeadline();
         } else if (boardStatus && (thisRun === runSequence || pendingRunScores.has(thisRun))) {
           pendingRunScores.delete(thisRun);
           boardStatus.textContent = "Заезд можно пройти, но сейчас он не сохранится в таблице.";
@@ -239,7 +273,9 @@
     if (!rows.length) {
       const empty = document.createElement("li");
       empty.className = "arcade-board-empty";
-      empty.textContent = "Пока нет рекордов — первым в таблице можешь стать ты.";
+      empty.textContent = deadlineClosed
+        ? "До дедлайна не было завершённых заездов."
+        : "Пока нет рекордов — первым в таблице можешь стать ты.";
       board.append(empty);
       return;
     }
@@ -294,8 +330,12 @@
     totalAttemptsOutput.textContent = new Intl.NumberFormat("ru-RU").format(Number(result.total_attempts) || 0);
   }
 
-  async function refreshLeaderboard() {
-    if (refreshingBoard || document.hidden) return;
+  async function refreshLeaderboard(force = false) {
+    if (refreshingBoard) {
+      if (force) window.setTimeout(() => { void refreshLeaderboard(true); }, 250);
+      return;
+    }
+    if (document.hidden || (deadlineClosed && !force)) return;
     refreshingBoard = true;
     try {
       const response = await fetch(canvas.dataset.boardUrl, { credentials: "same-origin", cache: "no-store" });
@@ -330,6 +370,7 @@
         body: JSON.stringify({ attempt_id: runId, score: runScore }),
       });
       const result = await response.json();
+      if (response.status === 410) closeGameAtDeadline();
       if (!response.ok) throw new Error(result.error || "Не удалось сохранить рекорд.");
       best = result.record;
       saveRecord(best);
@@ -598,7 +639,7 @@
   if ("ResizeObserver" in window) new ResizeObserver(resize).observe(wrap);
   document.addEventListener("visibilitychange", () => {
     previousTime = 0;
-    if (!document.hidden) void refreshLeaderboard();
+    if (!document.hidden) void refreshLeaderboard(deadlineClosed);
   });
   resetRecordButton?.addEventListener("click", () => {
     if (isAuthenticated) return;
@@ -611,11 +652,18 @@
   syncScores();
   draw(0);
   void refreshLeaderboard();
-  const leaderboardTimer = window.setInterval(() => { void refreshLeaderboard(); }, 15000);
+  leaderboardTimer = window.setInterval(() => { void refreshLeaderboard(); }, 15000);
   animationFrame = window.requestAnimationFrame(frame);
+
+  if (Number.isFinite(closeAt)) {
+    const remainingUntilDeadline = closeAt - Date.now();
+    if (remainingUntilDeadline <= 0) closeGameAtDeadline();
+    else deadlineCloseTimer = window.setTimeout(closeGameAtDeadline, remainingUntilDeadline);
+  }
 
   window.addEventListener("pagehide", () => {
     if (animationFrame) window.cancelAnimationFrame(animationFrame);
     window.clearInterval(leaderboardTimer);
+    window.clearTimeout(deadlineCloseTimer);
   }, { once: true });
 })();

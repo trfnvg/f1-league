@@ -1057,6 +1057,43 @@ class ArcadeTrophyAward(models.Model):
         return f"{self.trophy_name} — {self.player} ({self.game_name})"
 
 
+class ArcadeGameClosure(models.Model):
+    game_key = models.CharField("Код игры", max_length=80, default="pit_lane_flight")
+    season_year = models.PositiveSmallIntegerField("Сезон", default=2026)
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.PROTECT,
+        related_name="arcade_game_closures",
+        verbose_name="Этап закрытия",
+    )
+    winner = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name="arcade_game_closures",
+        null=True,
+        blank=True,
+        verbose_name="Зафиксированный победитель",
+    )
+    winner_score = models.PositiveIntegerField("Результат победителя", null=True, blank=True)
+    attempts = models.PositiveIntegerField("Попытки победителя", default=0)
+    closed_at = models.DateTimeField("Дедлайн закрытия")
+
+    class Meta:
+        ordering = ("-closed_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=("game_key", "season_year"),
+                name="uniq_arcade_game_closure_season",
+            ),
+        ]
+        verbose_name = "Закрытие мини-игры"
+        verbose_name_plural = "Закрытия мини-игр"
+
+    def __str__(self):
+        winner = self.winner or "победитель не определён"
+        return f"{self.game_key} · {self.season_year} · {winner}"
+
+
 class ArcadeWheelSpin(models.Model):
     class Prize(models.TextChoices):
         PIT_WALL = "pit_wall", "Бонус пит-уолла +2"

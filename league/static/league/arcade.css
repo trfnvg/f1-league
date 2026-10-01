@@ -97,6 +97,117 @@
   box-shadow: 0 24px 64px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.035);
 }
 
+.arcade-closed-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, .62fr);
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
+  padding: clamp(1rem, 3vw, 1.65rem);
+  overflow: hidden;
+  border: 1px solid rgba(209, 222, 237, .16);
+  border-left: 3px solid #ff4438;
+  border-radius: 3px 18px 3px 3px;
+  background:
+    radial-gradient(ellipse at 3% 0%, rgba(255, 68, 56, .13), transparent 48%),
+    linear-gradient(135deg, #18222e, #101720 72%);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.arcade-closed-panel::after {
+  position: absolute;
+  right: -2.2rem;
+  bottom: -3.8rem;
+  width: 10rem;
+  height: 10rem;
+  border: 1px solid rgba(255, 68, 56, .13);
+  border-radius: 50%;
+  box-shadow: 0 0 0 14px rgba(255, 68, 56, .025), 0 0 0 30px rgba(255, 68, 56, .018);
+  content: "";
+  pointer-events: none;
+}
+
+.arcade-closed-copy,
+.arcade-closed-winner {
+  position: relative;
+  z-index: 1;
+}
+
+.arcade-closed-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: .48rem;
+  color: #ff776d;
+  font-size: .62rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+}
+
+.arcade-closed-kicker i {
+  width: .42rem;
+  height: .42rem;
+  border-radius: 50%;
+  background: #ff4438;
+  box-shadow: 0 0 12px rgba(255, 68, 56, .55);
+}
+
+.arcade-closed-copy h2 {
+  margin: .45rem 0 .35rem;
+  color: #f7f9fc;
+  font-size: clamp(1.25rem, 3vw, 1.8rem);
+  font-weight: 850;
+  letter-spacing: -.035em;
+}
+
+.arcade-closed-copy p {
+  max-width: 40rem;
+  margin: 0;
+  color: #a7b2c0;
+  font-size: .8rem;
+  line-height: 1.55;
+}
+
+.arcade-closed-copy p strong { color: #e8edf3; }
+
+.arcade-closed-winner {
+  display: grid;
+  min-width: 0;
+  gap: .28rem;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(242, 200, 109, .2);
+  border-radius: 3px 12px 3px 3px;
+  background: linear-gradient(145deg, rgba(242, 200, 109, .08), rgba(255, 255, 255, .025));
+}
+
+.arcade-closed-winner > span {
+  color: #d7b65f;
+  font-size: .57rem;
+  font-weight: 850;
+  letter-spacing: .14em;
+}
+
+.arcade-closed-winner > strong {
+  overflow: hidden;
+  color: #fff;
+  font-size: clamp(.95rem, 2vw, 1.2rem);
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arcade-closed-winner > small {
+  color: #a7b2c0;
+  font-size: .68rem;
+}
+
+.arcade-closed-winner.is-empty {
+  border-color: var(--arcade-line);
+  background: rgba(255, 255, 255, .025);
+}
+
+.arcade-closed-winner.is-empty > span { color: #a7b2c0; }
+
 .arcade-scoreboard {
   display: flex;
   min-height: 76px;
@@ -544,6 +655,8 @@
 @media (max-width: 620px) {
   .arcade-canvas-wrap { aspect-ratio: 4 / 3; }
   .arcade-heading { align-items: flex-start; gap: .7rem; }
+  .arcade-closed-panel { grid-template-columns: minmax(0, 1fr); gap: .8rem; }
+  .arcade-closed-winner { padding: .75rem .85rem; }
   .arcade-heading h1 { font-size: clamp(2.8rem, 14vw, 4.5rem); }
   .arcade-heading p { max-width: 25rem; font-size: .78rem; }
   .arcade-personal-record { min-width: 92px; padding: .6rem; }
