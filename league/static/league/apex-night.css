@@ -442,7 +442,6 @@ body.apex-night-theme .profile-logout-btn:hover {
 body.apex-night-theme.editorial-theme .card,
 body.apex-night-theme.editorial-theme .glass-panel,
 body.apex-night-theme.editorial-theme .table-shell,
-body.apex-night-theme.editorial-theme .participants-hero,
 body.apex-night-theme.editorial-theme .profile-hero,
 body.apex-night-theme.editorial-theme .points-chart-shell,
 body.apex-night-theme.editorial-theme .season-priority-banner,
@@ -1904,7 +1903,6 @@ body.apex-night-theme .leaderboard-table .player-link:active {
 }
 
 body.apex-night-theme .table-avatar,
-body.apex-night-theme .participant-avatar,
 body.apex-night-theme .profile-avatar {
   color: #fff;
   border: 0;
@@ -1982,55 +1980,6 @@ body.apex-night-theme .points-chart-tooltip {
   color: var(--apex-ink);
   border-color: var(--apex-line-strong);
   background: rgba(7, 10, 14, 0.94);
-}
-
-/* Participants */
-body.apex-night-theme .participants-hero {
-  background:
-    linear-gradient(112deg, transparent 68%, rgba(255, 51, 38, 0.1) 68.2%, transparent 68.5%),
-    radial-gradient(520px 190px at 100% 0, rgba(76, 141, 255, 0.1), transparent 70%),
-    var(--apex-surface);
-}
-
-body.apex-night-theme .participants-duel-link {
-  color: #fff !important;
-  border-color: var(--apex-line-strong);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-body.apex-night-theme .participant-card,
-body.apex-night-theme.editorial-theme .participant-card {
-  color: var(--apex-ink) !important;
-  border-color: var(--apex-line);
-  border-radius: var(--apex-corner);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 44%),
-    var(--apex-surface);
-  box-shadow: var(--apex-shadow-soft);
-}
-
-body.apex-night-theme .participant-card:hover,
-body.apex-night-theme.editorial-theme .participant-card:hover {
-  color: #fff !important;
-  border-color: rgba(76, 141, 255, 0.4);
-  background: var(--apex-surface-2);
-  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.34);
-}
-
-body.apex-night-theme .participant-meta,
-body.apex-night-theme .participant-stat-label {
-  color: var(--apex-muted);
-}
-
-body.apex-night-theme .participant-stat {
-  color: var(--apex-ink);
-  border-color: var(--apex-line);
-  border-radius: var(--apex-corner-sm);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-body.apex-night-theme .participant-stat-value {
-  color: var(--apex-ink);
 }
 
 /* Player profile */
@@ -2368,18 +2317,6 @@ body.apex-night-theme .season-banner-subtitle {
 
 body.apex-night-theme .season-banner-subtitle strong {
   color: var(--apex-ink);
-}
-
-body.apex-night-theme .season-banner-badge {
-  margin-top: 0.7rem;
-  padding: 0.25rem 0;
-  color: var(--apex-red);
-  border: 0;
-  border-bottom: 1px solid rgba(255, 51, 38, 0.7);
-  border-radius: 0;
-  background: transparent;
-  font-size: 0.65rem;
-  letter-spacing: 0.11em;
 }
 
 body.apex-night-theme .status-pill {
@@ -4616,21 +4553,6 @@ body.apex-night-theme .western-btn {
     position: static;
   }
 
-  body.apex-night-theme .western-stake-field input {
-    padding-right: 0.82rem;
-  }
-
-  body.apex-night-theme .western-stake-field small {
-    position: static;
-    display: block;
-    margin-top: 0.38rem;
-    color: #af9c8d;
-    font-size: 0.65rem;
-    line-height: 1.25;
-    letter-spacing: 0;
-    text-transform: none;
-  }
-
   body.apex-night-theme .western-btn {
     min-height: 48px;
     padding: 0.7rem 1rem;
@@ -4909,7 +4831,7 @@ body.apex-night-theme .site-header-actions .nav-chip {
   align-content: center;
 }
 
-body.apex-night-theme :is(.event-card-copy h3, .home-command h1, .event-hero-copy h1, .participant-name, .insight-card strong) {
+body.apex-night-theme :is(.event-card-copy h3, .home-command h1, .event-hero-copy h1, .insight-card strong) {
   overflow-wrap: anywhere;
 }
 
@@ -5145,12 +5067,17 @@ body.apex-night-theme .western-duel-empty {
 }
 
 body.apex-night-theme .western-challenge-form {
-  grid-template-columns: minmax(180px, 1.1fr) minmax(170px, 1fr) minmax(130px, .65fr) auto;
+  grid-template-columns: minmax(0, 1.15fr) minmax(170px, 1.25fr) minmax(140px, .85fr) minmax(190px, auto);
+  align-items: end;
   gap: .85rem;
   padding: 1rem;
 }
 
-body.apex-night-theme .western-form-intro { gap: .65rem; }
+body.apex-night-theme .western-form-intro {
+  min-height: 62px;
+  align-self: end;
+  gap: .65rem;
+}
 
 body.apex-night-theme .western-form-intro > span {
   width: 34px;
@@ -5182,6 +5109,8 @@ body.apex-night-theme .western-form-intro small {
 }
 
 body.apex-night-theme .western-challenge-form label > span {
+  display: block;
+  min-height: 1.15em;
   margin-bottom: .38rem;
   color: #b8a18e;
   font-size: .65rem;
@@ -5215,17 +5144,10 @@ body.apex-night-theme .western-challenge-form .form-select option {
   background: #11161b;
 }
 
-body.apex-night-theme .western-stake-field { position: static; }
-body.apex-night-theme .western-stake-field input { padding-right: .72rem; }
-body.apex-night-theme .western-stake-field small {
-  position: static;
+body.apex-night-theme .western-challenge-form label {
   display: block;
-  margin-top: .32rem;
-  color: #878e94;
-  font-size: .62rem;
-  font-weight: 550;
-  letter-spacing: 0;
-  text-transform: none;
+  min-width: 0;
+  margin: 0;
 }
 
 body.apex-night-theme .western-btn {
@@ -5245,6 +5167,7 @@ body.apex-night-theme .western-btn {
 
 body.apex-night-theme .western-btn.is-challenge {
   min-height: 44px;
+  white-space: nowrap;
   color: #f7f2ec;
   border-color: #8b6a55;
   background: #765844;
@@ -5342,6 +5265,7 @@ body.apex-night-theme .western-duel-history span {
   body.apex-night-theme .western-challenge-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.apex-night-theme .western-form-intro,
   body.apex-night-theme .western-btn.is-challenge { grid-column: 1 / -1; }
+  body.apex-night-theme .western-form-intro { min-height: 0; }
 }
 
 @media (max-width: 620px) {

@@ -279,12 +279,6 @@ body.summer-theme .season-priority-banner::before {
   background: linear-gradient(90deg, var(--summer-sun), var(--summer-coral), var(--summer-teal));
 }
 
-body.summer-theme .season-banner-badge {
-  color: #8a5a16;
-  border-color: rgba(204, 142, 37, 0.24);
-  background: rgba(255, 255, 255, 0.66);
-}
-
 body.summer-theme .season-banner-title {
   color: #193d52;
 }
@@ -435,54 +429,12 @@ body.summer-theme .home-results-image {
   background: linear-gradient(180deg, #fffdf8, #fff8e9);
 }
 
-/* Участники */
-body.summer-theme .participants-hero {
-  border-color: rgba(212, 142, 37, 0.16);
-  background:
-    radial-gradient(470px 190px at 100% 0%, rgba(255, 116, 81, 0.17), transparent 68%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 246, 216, 0.92));
-  box-shadow: 0 20px 46px rgba(105, 79, 36, 0.12);
-}
-
-body.summer-theme .participant-card,
-body.summer-theme .participant-card:visited {
-  color: #24475a;
-  border-color: rgba(51, 102, 113, 0.12);
-  background:
-    radial-gradient(190px 90px at 100% 0%, rgba(255, 207, 91, 0.16), transparent 75%),
-    rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(105, 79, 36, 0.1);
-}
-
-body.summer-theme .participant-card:hover,
-body.summer-theme .participant-card:focus,
-body.summer-theme .participant-card:active {
-  color: #183d52;
-  border-color: rgba(255, 125, 82, 0.3);
-  box-shadow: 0 20px 42px rgba(105, 79, 36, 0.15);
-}
-
-body.summer-theme .participant-avatar,
 body.summer-theme .profile-avatar,
 body.summer-theme .table-avatar {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.78);
   background: linear-gradient(145deg, #ffbf48, #ff7357 72%);
   box-shadow: 0 7px 18px rgba(221, 102, 51, 0.18);
-}
-
-body.summer-theme .participant-meta,
-body.summer-theme .participant-stat-label {
-  color: #71838e;
-}
-
-body.summer-theme .participant-stat {
-  border-color: rgba(42, 100, 110, 0.1);
-  background: #fff9e9;
-}
-
-body.summer-theme .participant-stat-value {
-  color: #1d5967;
 }
 
 /* Профиль */

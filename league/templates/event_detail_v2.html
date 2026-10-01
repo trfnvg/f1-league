@@ -491,7 +491,7 @@
       {% csrf_token %}
       <div class="western-form-intro"><span aria-hidden="true">VS</span><div><strong>Новый вызов</strong><small>Выбери соперника и размер ставки.</small></div></div>
       <label><span>Соперник</span>{{ duel_form.opponent }}</label>
-      <label class="western-stake-field"><span>Ставка</span>{{ duel_form.stake }}<small>от 1 до 10 очков</small></label>
+      <label class="western-stake-field"><span>Ставка · 1–10 очков</span>{{ duel_form.stake }}</label>
       <button type="submit" class="western-btn is-challenge">Вызвать на дуэль <span aria-hidden="true">→</span></button>
     </form>
   {% elif state != "open" %}

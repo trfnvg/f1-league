@@ -14,7 +14,6 @@ urlpatterns = [
     path("arcade/run/finish/", views.arcade_run_finish, name="arcade_run_finish"),
     path("arcade/wheel/spin/", views.arcade_wheel_spin, name="arcade_wheel_spin"),
     path("arcade/wheel/activate/", views.arcade_wheel_activate, name="arcade_wheel_activate"),
-    path("participants/", views.participants, name="participants"),
     path("duel/", views.duel, name="duel"),
     path("season-predictions/", views.season_predictions, name="season_predictions"),
     path("register/", views.register, name="register"),

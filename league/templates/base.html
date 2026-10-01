@@ -265,20 +265,6 @@
       opacity: 0.95;
     }
 
-    .season-banner-badge {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 0.3rem 0.7rem;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.9);
-      background: rgba(255, 255, 255, 0.08);
-    }
-
     .season-banner-title {
       font-size: clamp(1.35rem, 2vw, 2rem);
       font-weight: 800;
@@ -1028,7 +1014,6 @@
     <div class="desktop-nav" aria-label="Основная навигация">
       <a class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Этапы</a>
       <a class="{% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
-      <a class="{% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
       <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
       <a class="{% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
       <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
@@ -1055,7 +1040,6 @@
 
   <div class="offcanvas-body">
     <a class="menu-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Главная</a>
-    <a class="menu-item {% if request.resolver_match.url_name == 'participants' or request.resolver_match.url_name == 'player_profile' %}is-active{% endif %}" href="{% url 'league:participants' %}">Участники</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
     {% if user.is_staff %}
