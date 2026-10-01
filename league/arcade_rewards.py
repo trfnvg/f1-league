@@ -1,14 +1,15 @@
 import secrets
-from collections import Counter
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
     ArcadeGameClosure,
+    ArcadeRecord,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     Event,
@@ -168,24 +169,32 @@ def closed_event_arcade_leaderboard(event, user=None):
 
     attempts = list(event_arcade_attempts(event, through=event.deadline))
     best_by_user = {}
-    counts = Counter()
     for attempt in attempts:
-        counts[attempt.user_id] += 1
         best_by_user.setdefault(attempt.user_id, attempt)
 
     ordered_best = list(best_by_user.values())
+    record_counts = dict(
+        ArcadeRecord.objects.filter(user_id__in=best_by_user)
+        .values_list("user_id", "total_attempts")
+    )
+    missing_record_user_ids = set(best_by_user) - set(record_counts)
+    fallback_counts = {
+        user_id: ArcadeAttempt.objects.filter(user_id=user_id).count()
+        for user_id in missing_record_user_ids
+    }
     rows = [
         {
             "username": attempt.user.get_full_name().strip() or attempt.user.username,
             "score": attempt.score,
-            "attempts": counts[attempt.user_id],
+            "attempts": record_counts.get(attempt.user_id, fallback_counts.get(attempt.user_id, 0)),
             "rank": index,
             "is_current_user": bool(user and user.is_authenticated and attempt.user_id == user.id),
         }
         for index, attempt in enumerate(ordered_best, start=1)
     ]
     own_record = next((row for row in rows if row["is_current_user"]), None)
-    total_attempts = sum(counts.values())
+    total_attempts = ArcadeRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0
+    total_attempts += sum(fallback_counts.values())
     return {
         "records": rows[:10],
         "total_attempts": total_attempts,
@@ -215,10 +224,14 @@ def award_event_arcade_trophy(event, now=None):
         if not attempt:
             return None, False
 
-        attempts_at_deadline = ArcadeAttempt.objects.filter(
-            user_id=attempt.user_id,
-            started_at__lte=locked_event.deadline,
-        ).count()
+        attempts_at_deadline = ArcadeRecord.objects.filter(user_id=attempt.user_id).values_list(
+            "total_attempts", flat=True
+        ).first()
+        if attempts_at_deadline is None:
+            attempts_at_deadline = ArcadeAttempt.objects.filter(
+                user_id=attempt.user_id,
+                started_at__lte=locked_event.deadline,
+            ).count()
         award, created = ArcadeTrophyAward.objects.get_or_create(
             event=locked_event,
             game_key=ARCADE_TROPHY_GAME_KEY,

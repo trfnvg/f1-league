@@ -16,6 +16,7 @@ from .arcade_rewards import (
 from .models import (
     ArcadeAttempt,
     ArcadeGameClosure,
+    ArcadeRecord,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DuelChallenge,
@@ -172,6 +173,7 @@ class ArcadeWheelTests(TestCase):
         ArcadeAttempt.objects.filter(pk=unfinished.pk).update(
             started_at=self.event.deadline - timedelta(seconds=20),
         )
+        ArcadeRecord.objects.create(user=self.winner, total_attempts=2006)
         self.client.force_login(self.winner)
 
         response = self.client.get(reverse("league:arcade"))
@@ -185,8 +187,11 @@ class ArcadeWheelTests(TestCase):
             [row["username"] for row in response.context["arcade_records"]],
             ["arcade-winner"],
         )
+        self.assertEqual(response.context["arcade_records"][0]["attempts"], 2006)
+        self.assertEqual(response.context["arcade_total_attempts"], 2006)
         award = ArcadeTrophyAward.objects.get(event=self.event, game_key="pit_lane_flight")
         self.assertEqual(award.player, self.winner)
+        self.assertEqual(award.attempts, 2006)
 
         rejected = self.client.post(
             reverse("league:arcade_run_finish"),
