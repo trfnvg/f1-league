@@ -7,6 +7,7 @@ from django.utils.html import format_html
 
 from .models import (
     ArcadeRecord,
+    ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
     DuelChallenge,
@@ -833,6 +834,26 @@ class ArcadeRecordAdmin(admin.ModelAdmin):
     def reset_selected_records(self, request, queryset):
         count = queryset.update(best_score=0, updated_at=timezone.now())
         self.message_user(request, f"Обнулено рекордов: {count}.")
+
+
+@admin.register(ArcadeTrophyAward)
+class ArcadeTrophyAwardAdmin(admin.ModelAdmin):
+    list_display = ("player", "trophy_name", "game_name", "attempts", "awarded_at")
+    list_filter = ("game_name", "awarded_at")
+    search_fields = ("player__username", "trophy_name", "game_name")
+    list_select_related = ("player",)
+    date_hierarchy = "awarded_at"
+    ordering = ("-awarded_at", "-pk")
+    fields = (
+        "player",
+        "game_name",
+        "trophy_name",
+        "image",
+        "attempts",
+        "awarded_at",
+        "source_lead_change",
+    )
+    readonly_fields = ("source_lead_change",)
 
 
 @admin.register(ArcadeWheelSpin)

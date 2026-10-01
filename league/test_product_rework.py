@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -10,6 +11,7 @@ from .models import (
     ArcadeAttempt,
     ArcadeLeadChange,
     ArcadeRecord,
+    ArcadeTrophyAward,
     DuelChallenge,
     Event,
     Prediction,
@@ -340,7 +342,7 @@ class InterfaceRefinementTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class CompetitiveFeaturesTests(TestCase):
-    def test_any_arcade_leader_gets_pixel_banana_trophycase_with_lifetime_attempt_count(self):
+    def test_arcade_trophycase_lists_multiple_game_wins_on_one_shelf(self):
         player = User.objects.create_user("pixel-banana-driver")
         current_leader = User.objects.create_user("current-arcade-leader")
         ArcadeRecord.objects.create(user=player, best_score=42, total_attempts=1234)
@@ -354,11 +356,27 @@ class CompetitiveFeaturesTests(TestCase):
             best_score=42,
             attempts=7,
         )
+        ArcadeTrophyAward.objects.create(
+            player=player,
+            game_name="Pit Lane Flight",
+            trophy_name="Банана Леклер",
+            attempts=7,
+            awarded_at=lead_change.created_at,
+            source_lead_change=lead_change,
+        )
+        ArcadeTrophyAward.objects.create(
+            player=player,
+            game_name="Doodle Jump: Pit Lane",
+            trophy_name="Золотой шлем",
+            attempts=12,
+        )
         response = self.client.get(reverse("league:player_profile", args=[player.id]))
-        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
+        self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
         self.assertContains(response, "Банана Леклер")
-        self.assertContains(response, "1234")
-        self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, "Золотой шлем")
+        self.assertContains(response, ">7</b>")
+        self.assertContains(response, ">12</b>")
+        self.assertEqual(response.content.count(b"profile-arcade-trophycase-item"), 2)
         self.assertContains(response, lead_change.created_at.strftime("%d.%m.%Y"))
         self.assertContains(response, "Pit Lane Flight")
         self.assertContains(response, "banana-leclerc-pixel-reward.png")
@@ -370,12 +388,11 @@ class CompetitiveFeaturesTests(TestCase):
         ArcadeRecord.objects.create(user=leader, best_score=25, total_attempts=3)
 
         response = self.client.get(reverse("league:player_profile", args=[leader.id]))
-        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
+        self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
         self.assertContains(response, "3")
 
         response = self.client.get(reverse("league:player_profile", args=[admin.id]))
-        self.assertContains(response, 'class="profile-arcade-trophycase mb-4"')
-        self.assertContains(response, "ВСЕГО ПОПЫТОК")
+        self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
         self.assertContains(response, "Тестовый доступ")
         self.assertContains(response, ">0</b>")
 
@@ -401,6 +418,10 @@ class CompetitiveFeaturesTests(TestCase):
         lead_change = ArcadeLeadChange.objects.get(player=new_leader)
         self.assertEqual(lead_change.best_score, 11)
         self.assertEqual(lead_change.attempts, 8)
+        trophy = ArcadeTrophyAward.objects.get(source_lead_change=lead_change)
+        self.assertEqual(trophy.trophy_name, "Банана Леклер")
+        self.assertEqual(trophy.game_name, "Pit Lane Flight")
+        self.assertEqual(trophy.attempts, 8)
 
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, "new-arcade-leader занял первое место в аркаде")

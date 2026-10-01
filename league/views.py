@@ -28,6 +28,7 @@ from .models import (
     ArcadeAttempt,
     ArcadeLeadChange,
     ArcadeRecord,
+    ArcadeTrophyAward,
     ArcadeWheelSpin,
     DuelChallenge,
     DuelSettings,
@@ -351,10 +352,18 @@ def arcade_run_finish(request):
             .first()
         )
         if leader_after_id == request.user.id and leader_before_id != leader_after_id:
-            ArcadeLeadChange.objects.create(
+            lead_change = ArcadeLeadChange.objects.create(
                 player=request.user,
                 best_score=record.best_score,
                 attempts=record.total_attempts,
+            )
+            ArcadeTrophyAward.objects.create(
+                player=request.user,
+                game_name="Pit Lane Flight",
+                trophy_name="Банана Леклер",
+                attempts=record.total_attempts,
+                awarded_at=lead_change.created_at,
+                source_lead_change=lead_change,
             )
         board_data = _arcade_leaderboard_data(request.user)
     return JsonResponse({**board_data, "is_record": is_record})
@@ -1262,24 +1271,38 @@ def player_profile(request, user_id: int):
     player_statistics = build_player_statistics(player, season.year, leaderboard=leaderboard_data)
     achievements = build_achievements(player, player_statistics)
     arcade_record = ArcadeRecord.objects.filter(user=player).first()
-    arcade_lead_change = (
-        ArcadeLeadChange.objects.filter(player=player)
-        .order_by("created_at", "pk")
-        .first()
-    )
-    arcade_mascot_reward_unlocked = player.is_staff or arcade_lead_change is not None
-    arcade_trophy_date = arcade_lead_change.created_at if arcade_lead_change else None
-    if not arcade_mascot_reward_unlocked and arcade_record and arcade_record.best_score > 0:
+    arcade_trophies = [
+        {
+            "trophy_name": award.trophy_name,
+            "game_name": award.game_name,
+            "image_url": award.image.url if award.image else "",
+            "awarded_at": award.awarded_at,
+            "attempts": award.attempts,
+            "is_test": False,
+        }
+        for award in ArcadeTrophyAward.objects.filter(player=player).order_by("awarded_at", "pk")
+    ]
+
+    arcade_is_current_leader = False
+    if not arcade_trophies and arcade_record and arcade_record.best_score > 0:
         current_arcade_leader_id = (
             ArcadeRecord.objects.filter(best_score__gt=0)
             .order_by("-best_score", "updated_at", "user__username")
             .values_list("user_id", flat=True)
             .first()
         )
-        arcade_mascot_reward_unlocked = current_arcade_leader_id == player.id
-    if arcade_mascot_reward_unlocked and arcade_trophy_date is None and arcade_record:
-        arcade_trophy_date = arcade_record.updated_at
-    arcade_total_attempts = arcade_record.total_attempts if arcade_record else 0
+        arcade_is_current_leader = current_arcade_leader_id == player.id
+    if not arcade_trophies and (player.is_staff or arcade_is_current_leader):
+        arcade_trophies.append(
+            {
+                "trophy_name": "Банана Леклер",
+                "game_name": "Pit Lane Flight",
+                "image_url": "",
+                "awarded_at": arcade_record.updated_at if arcade_record and not player.is_staff else None,
+                "attempts": arcade_record.total_attempts if arcade_record else 0,
+                "is_test": player.is_staff,
+            }
+        )
 
     return render(
         request,
@@ -1303,9 +1326,7 @@ def player_profile(request, user_id: int):
             "season": season,
             "player_statistics": player_statistics,
             "achievements": achievements,
-            "arcade_mascot_reward_unlocked": arcade_mascot_reward_unlocked,
-            "arcade_total_attempts": arcade_total_attempts,
-            "arcade_trophy_date": arcade_trophy_date,
+            "arcade_trophies": arcade_trophies,
         },
     )
 
