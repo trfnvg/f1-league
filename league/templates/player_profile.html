@@ -320,17 +320,27 @@
   </div>
 </section>
 
-{% if arcade_mascot_reward_unlocked %}
-<section class="profile-arcade-trophycase mb-4" aria-label="Награда за победу в аркаде">
+{% if arcade_trophies %}
+<section class="profile-arcade-trophycase mb-4" aria-label="Коллекция трофеев аркады">
   <div class="profile-arcade-trophycase-stage">
     <span class="profile-arcade-trophycase-glow" aria-hidden="true"></span>
     <img class="profile-arcade-trophycase-shelf" src="{% static 'league/images/arcade-trophy-shelf.png' %}" alt="" aria-hidden="true">
-    <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="Банана Леклер — показать детали награды" tabindex="0" aria-describedby="arcade-trophy-details">
-    <div class="profile-arcade-trophycase-tooltip" id="arcade-trophy-details" role="tooltip">
-      <strong>Награда аркады</strong>
-      <span><small>Дата получения</small><b>{% if arcade_trophy_date %}{{ arcade_trophy_date|date:"d.m.Y" }}{% else %}Тестовый доступ{% endif %}</b></span>
-      <span><small>Игра</small><b>Pit Lane Flight</b></span>
-      <span><small>Всего попыток</small><b>{{ arcade_total_attempts }}</b></span>
+    <div class="profile-arcade-trophycase-row">
+      {% for trophy in arcade_trophies %}
+      <div class="profile-arcade-trophycase-item">
+        {% if trophy.image_url %}
+        <img class="profile-arcade-trophycase-figure" src="{{ trophy.image_url }}" alt="{{ trophy.trophy_name }} — показать сведения о награде" tabindex="0" aria-describedby="arcade-trophy-details-{{ forloop.counter }}">
+        {% else %}
+        <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="{{ trophy.trophy_name }} — показать сведения о награде" tabindex="0" aria-describedby="arcade-trophy-details-{{ forloop.counter }}">
+        {% endif %}
+        <div class="profile-arcade-trophycase-tooltip" id="arcade-trophy-details-{{ forloop.counter }}" role="tooltip">
+          <strong>{{ trophy.trophy_name }}</strong>
+          <span><small>Дата получения</small><b>{% if trophy.is_test %}Тестовый доступ{% elif trophy.awarded_at %}{{ trophy.awarded_at|date:"d.m.Y" }}{% else %}—{% endif %}</b></span>
+          <span><small>Игра</small><b>{{ trophy.game_name }}</b></span>
+          <span><small>Попытки</small><b>{{ trophy.attempts }}</b></span>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </section>

@@ -1010,6 +1010,41 @@ class ArcadeLeadChange(models.Model):
         return f"{self.player} занял первое место в аркаде"
 
 
+class ArcadeTrophyAward(models.Model):
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="arcade_trophies",
+        verbose_name="Игрок",
+    )
+    game_name = models.CharField("Игра", max_length=120, default="Pit Lane Flight")
+    trophy_name = models.CharField("Название трофея", max_length=120, default="Банана Леклер")
+    image = models.ImageField(
+        "Изображение трофея",
+        upload_to="arcade/trophies/",
+        blank=True,
+        help_text="Загрузи отдельную фигурку для этой игры. Для старых наград без картинки используется Банана Леклер.",
+    )
+    attempts = models.PositiveIntegerField("Попытки к моменту победы", default=0)
+    awarded_at = models.DateTimeField("Дата получения", default=timezone.now)
+    source_lead_change = models.OneToOneField(
+        ArcadeLeadChange,
+        on_delete=models.SET_NULL,
+        related_name="trophy_award",
+        null=True,
+        blank=True,
+        verbose_name="Смена лидера",
+    )
+
+    class Meta:
+        ordering = ("awarded_at", "pk")
+        verbose_name = "Трофей аркады"
+        verbose_name_plural = "Трофеи аркады"
+
+    def __str__(self):
+        return f"{self.trophy_name} — {self.player} ({self.game_name})"
+
+
 class ArcadeWheelSpin(models.Model):
     class Prize(models.TextChoices):
         PIT_WALL = "pit_wall", "Бонус пит-уолла +2"
