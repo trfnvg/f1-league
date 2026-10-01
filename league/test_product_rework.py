@@ -387,7 +387,7 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, ">7</b>")
         self.assertContains(response, ">12</b>")
         self.assertEqual(response.content.count(b"profile-arcade-trophycase-item"), 2)
-        self.assertContains(response, first_event.deadline.strftime("%d.%m.%Y"))
+        self.assertContains(response, timezone.localtime(first_event.deadline).strftime("%d.%m.%Y"))
         self.assertContains(response, "Pit Lane Flight")
         self.assertContains(response, "banana-leclerc-pixel-reward.png")
         self.assertContains(response, "arcade-trophy-shelf.png")
