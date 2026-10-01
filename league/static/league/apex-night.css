@@ -4164,15 +4164,34 @@ body.apex-night-theme .profile-arcade-trophycase {
 }
 
 body.apex-night-theme .profile-arcade-trophycase-title {
-  width: min(100%, 700px);
-  margin: .45rem auto -.15rem;
+  display: flex;
+  width: fit-content;
+  max-width: calc(100% - 1rem);
+  align-items: center;
+  gap: .55rem;
+  margin: .4rem 0 .15rem .65rem;
+  padding: .32rem .7rem .32rem .55rem;
+  border-left: 2px solid var(--apex-red, #ef3c32);
+  border-radius: 0 7px 7px 0;
+  background: linear-gradient(90deg, rgba(239, 60, 50, .14), rgba(239, 60, 50, 0));
   color: var(--apex-ink);
-  font-size: .78rem;
+  font-size: .7rem;
   font-weight: 800;
-  letter-spacing: .1em;
-  line-height: 1.2;
+  letter-spacing: .12em;
+  line-height: 1.25;
   text-align: left;
   text-transform: uppercase;
+}
+
+body.apex-night-theme .profile-arcade-trophycase-title::before {
+  width: .38rem;
+  height: .38rem;
+  flex: 0 0 .38rem;
+  border: 1px solid rgba(239, 60, 50, .78);
+  border-radius: 50%;
+  background: var(--apex-red, #ef3c32);
+  box-shadow: 0 0 10px rgba(239, 60, 50, .42);
+  content: "";
 }
 
 body.apex-night-theme .profile-arcade-trophycase-stage {
@@ -4215,7 +4234,7 @@ body.apex-night-theme .profile-arcade-trophycase-row {
   position: absolute;
   z-index: 2;
   right: 5%;
-  bottom: 46%;
+  bottom: 42%;
   left: 5%;
   display: flex;
   align-items: flex-end;
@@ -4227,9 +4246,9 @@ body.apex-night-theme .profile-arcade-trophycase-item {
   position: relative;
   display: flex;
   min-width: 0;
-  max-width: 90px;
-  height: clamp(64px, 8.6vw, 92px);
-  flex: 1 1 90px;
+  max-width: 100px;
+  height: clamp(72px, 9vw, 100px);
+  flex: 1 1 98px;
   align-items: flex-end;
   justify-content: center;
 }
@@ -4240,7 +4259,7 @@ body.apex-night-theme .profile-arcade-trophycase-figure {
   display: block;
   width: auto;
   max-width: 100%;
-  height: 88%;
+  height: 100%;
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .3)) drop-shadow(0 0 7px rgba(244, 192, 72, .18));
@@ -4350,8 +4369,8 @@ body.apex-night-theme .profile-arcade-trophycase-item:last-child:not(:first-chil
 }
 
 @keyframes arcade-figurine-bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  0%, 100% { transform: scale(1.2) translateY(0); }
+  50% { transform: scale(1.2) translateY(-3px); }
 }
 
 @keyframes arcade-trophy-glow {
@@ -4365,13 +4384,14 @@ body.apex-night-theme .profile-arcade-trophycase-item:last-child:not(:first-chil
   }
 
   body.apex-night-theme .profile-arcade-trophycase-item {
-    max-width: 66px;
-    height: 68px;
-    flex-basis: 66px;
+    max-width: 74px;
+    height: 74px;
+    flex-basis: 74px;
   }
 
   body.apex-night-theme .profile-arcade-trophycase-row {
     right: 3%;
+    bottom: 34%;
     left: 3%;
     gap: .18rem;
   }
