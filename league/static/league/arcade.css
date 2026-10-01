@@ -1285,3 +1285,107 @@
 @media (prefers-reduced-motion: reduce) {
   .arcade-wheel-rule { transition: none; }
 }
+
+.arcade-wheel-test-back {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: .65rem .95rem;
+  border: 1px solid rgba(139,193,236,.25);
+  border-radius: 10px;
+  color: #d8e3ee;
+  background: rgba(17,27,38,.72);
+  font-size: .78rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.arcade-wheel-test-back:hover { color: #fff; border-color: rgba(241,189,75,.48); }
+
+.arcade-wheel-test-notice {
+  margin: 0 0 1rem;
+  padding: .9rem 1rem;
+  border: 1px solid rgba(241,189,75,.34);
+  border-left: 3px solid #f1bd4b;
+  border-radius: 3px 12px 3px 3px;
+  color: #c2ced9;
+  background: linear-gradient(100deg, rgba(241,189,75,.1), rgba(17,27,38,.72));
+  font-size: .77rem;
+  line-height: 1.6;
+}
+
+.arcade-wheel-test-notice strong { display: block; margin-bottom: .12rem; color: #f4d17e; }
+.arcade-wheel-test-info { gap: .8rem; }
+
+.arcade-wheel-demo-controls {
+  display: grid;
+  gap: .55rem;
+  padding: 1rem;
+  border: 1px solid rgba(139,193,236,.16);
+  border-radius: 13px;
+  background: rgba(7,13,20,.3);
+}
+
+.arcade-wheel-demo-controls label {
+  display: grid;
+  gap: .4rem;
+  color: #bac6d2;
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.arcade-wheel-demo-controls select,
+.arcade-wheel-demo-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: .55rem .7rem;
+  border: 1px solid rgba(139,193,236,.28);
+  border-radius: 10px;
+  color: #f4f7fb;
+  background: #142231;
+  font: inherit;
+  font-size: .76rem;
+}
+
+.arcade-wheel-demo-controls select:focus,
+.arcade-wheel-demo-field select:focus {
+  border-color: #f1bd4b;
+  outline: 2px solid rgba(241,189,75,.22);
+}
+
+.arcade-wheel-demo-controls > p {
+  margin: 0;
+  color: #899bac;
+  font-size: .68rem;
+  line-height: 1.5;
+}
+
+.arcade-wheel-demo-prize[hidden],
+.arcade-wheel-test-outcome[hidden] { display: none !important; }
+.arcade-wheel-demo-prize { margin-top: .1rem; }
+.arcade-wheel-demo-prize.is-applied { border-color: rgba(85,214,158,.48); }
+.arcade-wheel-demo-prize.is-applied .arcade-wheel-prize-kicker { color: #6ae0a6; }
+.arcade-wheel-demo-field { display: grid; gap: .3rem; color: #bac6d2; font-size: .73rem; font-weight: 800; }
+.arcade-wheel-test-outcome { margin: .75rem 0 0 !important; padding: .7rem .8rem; border-left: 2px solid #63d69d; border-radius: 0 9px 9px 0; color: #c6e6d7 !important; background: rgba(85,214,158,.07); }
+.arcade-wheel-test-reset { width: 100%; min-height: 42px; margin-top: .55rem; border: 1px solid rgba(139,193,236,.22); border-radius: 10px; color: #c3d0dd; background: rgba(255,255,255,.035); font: inherit; font-size: .74rem; font-weight: 800; cursor: pointer; }
+.arcade-wheel-test-reset:hover { border-color: rgba(241,189,75,.42); color: #fff; }
+.arcade-wheel-admin-test-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  margin-top: .55rem;
+  color: #f1bd4b;
+  font-size: .7rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.arcade-wheel-admin-test-link:hover { color: #ffe09a; }
+
+@media (max-width: 700px) {
+  .arcade-wheel-test-page > .arcade-heading { align-items: flex-start; flex-direction: column; }
+  .arcade-wheel-test-back { align-self: stretch; }
+  .arcade-wheel-test-notice { font-size: .72rem; }
+}

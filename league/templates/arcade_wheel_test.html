@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Тест колеса · F1 Predictions{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="arcade-page arcade-wheel-test-page" aria-labelledby="arcade-wheel-test-title">
+  <header class="arcade-heading">
+    <div>
+      <div class="arcade-kicker"><span></span> ADMIN PREVIEW · ИЗОЛИРОВАННЫЙ РЕЖИМ</div>
+      <h1 id="arcade-wheel-test-title">PIT LANE<br><em>POWER-UP</em></h1>
+      <p>Здесь можно пройти весь сценарий колеса: прокрутить, выбрать настройки и проверить экран активации.</p>
+    </div>
+    <a class="arcade-wheel-test-back" href="{% url 'league:arcade' %}">← Вернуться в аркаду</a>
+  </header>
+
+  <aside class="arcade-wheel-test-notice" role="note">
+    <strong>Тестовый режим — безопасно для лиги.</strong>
+    Все действия происходят только в этой вкладке браузера. Ничего не отправляется на сервер: реальные бонусы, прогнозы, дуэли, рекорды и очки игроков не меняются.
+  </aside>
+
+  <section class="arcade-wheel-panel arcade-wheel-test-panel" id="arcade-wheel-test" aria-labelledby="arcade-wheel-test-panel-title">
+    <div class="arcade-wheel-heading">
+      <div>
+        <span class="arcade-section-kicker">ДЕМО-РОЗЫГРЫШ</span>
+        <h2 id="arcade-wheel-test-panel-title">Pit Lane <em>Power-Up</em></h2>
+        <p class="arcade-wheel-intro">Выбери случайный результат или укажи сектор вручную, чтобы проверить конкретный бонус.</p>
+      </div>
+      <div class="arcade-wheel-event-meta">
+        <span class="arcade-wheel-event-dot" aria-hidden="true"></span>
+        <span><strong>Тестовый этап</strong><small>Никаких реальных результатов</small></span>
+      </div>
+    </div>
+
+    <div class="arcade-wheel-layout">
+      <div class="arcade-wheel-machine" aria-label="Демо-колесо бонусов">
+        <span class="arcade-wheel-pointer" aria-hidden="true"></span>
+        <div class="arcade-wheel-disc" id="test-wheel-disc" role="img" aria-label="Секторы демо-колеса бонусов"></div>
+        <span class="arcade-wheel-hub" aria-hidden="true"><img src="{% static 'league/images/arcade-wheel-hub.png' %}" alt=""></span>
+      </div>
+
+      <div class="arcade-wheel-info arcade-wheel-test-info">
+        <div class="arcade-wheel-leader">
+          <span>Участник демо-режима</span>
+          <strong>Администратор-пилот</strong>
+          <small>Это тестовая подпись, она не связана с аккаунтами лиги.</small>
+        </div>
+
+        <div class="arcade-wheel-demo-controls">
+          <label for="test-wheel-outcome">Как разыграть сектор?
+            <select id="test-wheel-outcome">
+              <option value="random">Случайно — по шансам секторов</option>
+              {% for sector in wheel_sectors %}<option value="{{ sector.key }}">Проверить: {{ sector.title }}</option>{% endfor %}
+            </select>
+          </label>
+          <p>Ручной выбор нужен только для теста и не меняет вероятности настоящего колеса.</p>
+          <button class="arcade-wheel-action" id="test-wheel-spin" type="button">Крутить демо-колесо <span aria-hidden="true">↻</span></button>
+        </div>
+
+        <p class="arcade-wheel-status" id="test-wheel-status" aria-live="polite">Нажми кнопку, чтобы начать демонстрацию.</p>
+
+        <section class="arcade-wheel-prize-card arcade-wheel-demo-prize" id="test-wheel-prize" aria-live="polite" hidden>
+          <span class="arcade-wheel-prize-kicker" id="test-wheel-prize-kicker">РЕЗУЛЬТАТ ДЕМО-РОЗЫГРЫША</span>
+          <h3 id="test-wheel-prize-title"></h3>
+          <p id="test-wheel-prize-description"></p>
+          <div class="arcade-wheel-activation" id="test-wheel-fields"></div>
+          <p class="arcade-wheel-test-outcome" id="test-wheel-outcome-summary" hidden></p>
+          <button class="arcade-wheel-action" id="test-wheel-apply" type="button">Смоделировать применение бонуса</button>
+          <button class="arcade-wheel-test-reset" id="test-wheel-reset" type="button" hidden>Проверить другой бонус ↻</button>
+        </section>
+      </div>
+    </div>
+
+    <div class="arcade-wheel-rules" aria-labelledby="test-wheel-rules-title">
+      <div class="arcade-wheel-rules-heading">
+        <div><span class="arcade-section-kicker">НАСТОЯЩИЕ СЕКТОРА</span><h3 id="test-wheel-rules-title">Что может выпасть</h3></div>
+        <p>Те же бонусы и шансы, что в основном колесе</p>
+      </div>
+      <div class="arcade-wheel-rules-grid">
+        {% for sector in wheel_sectors %}
+          <article class="arcade-wheel-rule" data-test-prize="{{ sector.key }}" style="--prize-color: {{ sector.color }}">
+            <div class="arcade-wheel-rule-topline"><span class="arcade-wheel-rule-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span><span class="arcade-wheel-rule-chance">{{ sector.weight }}% шанс</span></div>
+            <h4>{{ sector.title }}</h4>
+            <p>{{ sector.description }}</p>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</section>
+{{ wheel_sectors|json_script:"test-wheel-config" }}
+{{ driver_choices|json_script:"test-driver-config" }}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'league/arcade-wheel-test.js' %}" defer></script>
+{% endblock %}

@@ -9,6 +9,7 @@ urlpatterns = [
     path("arcade/", views.arcade, name="arcade"),
     path("arcade/doodle-jump/", views.arcade_doodle_jump, name="arcade_doodle_jump"),
     path("arcade/leaderboard/", views.arcade_leaderboard, name="arcade_leaderboard"),
+    path("arcade/wheel/test/", views.arcade_wheel_test, name="arcade_wheel_test"),
     path("arcade/run/start/", views.arcade_run_start, name="arcade_run_start"),
     path("arcade/run/finish/", views.arcade_run_finish, name="arcade_run_finish"),
     path("arcade/wheel/spin/", views.arcade_wheel_spin, name="arcade_wheel_spin"),
