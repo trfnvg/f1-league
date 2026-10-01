@@ -782,12 +782,12 @@
     <div class="community-head">
       <div class="community-kicker">Parc fermé</div>
       <h2 class="community-title">Предикты участников</h2>
-      <p class="community-copy">После дедлайна прогнозы открываются для всех — сравни стратегии игроков.</p>
+      <p class="community-copy">После дедлайна прогнозы открываются для всех — сравни стратегии игроков. {% if crazy_vote_open %}Crazy Prediction скрыты до старта гонки, пока идёт анонимное голосование.{% endif %}</p>
     </div>
     <div class="table-responsive community-table-viewport">
       <table class="table community-table align-middle">
         <thead>
-          <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th><th>Crazy prediction</th><th>Личная карта</th><th>Очки</th></tr>
+          <tr><th>Игрок</th><th>P1</th><th>P2</th><th>P3</th><th>Поул</th><th>Fastest lap</th>{% if not crazy_vote_open %}<th>Crazy prediction</th>{% endif %}<th>Личная карта</th><th>Очки</th></tr>
         </thead>
         <tbody>
           {% for row in community_predictions %}
@@ -801,7 +801,7 @@
               <td{% if row.correct.p3 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p3_display }}</td>
               <td{% if row.correct.pole %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_pole_display }}</td>
               <td{% if row.correct.fastest_lap %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_fastest_lap_display|default:"—" }}</td>
-              <td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}</td>
+              {% if not crazy_vote_open %}<td{% if row.correct.crazy_prediction %} class="community-prediction-correct"{% endif %}>{{ row.prediction.crazy_prediction|default:"—" }}{% if row.crazy_vetoed %}<small class="d-block mt-1">Снято голосованием</small>{% endif %}</td>{% endif %}
               <td>
                 {% if row.wildcard and row.wildcard.selected_option %}
                   <span class="community-wildcard-question">{{ row.wildcard.question.question }}</span>
@@ -814,7 +814,7 @@
               <td>{% if row.score %}<span class="community-score">{{ row.score.points }}</span>{% else %}—{% endif %}</td>
             </tr>
           {% empty %}
-            <tr><td colspan="9" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>
+            <tr><td colspan="{% if crazy_vote_open %}8{% else %}9{% endif %}" class="text-muted">На этот этап никто не отправил прогноз.</td></tr>
           {% endfor %}
         </tbody>
       </table>

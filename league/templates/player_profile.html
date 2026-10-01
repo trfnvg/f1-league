@@ -427,7 +427,7 @@
                   <div class="prediction-item"><div class="prediction-item-label">DNF</div><div class="prediction-item-value">{{ row.prediction.dnf_count }}</div></div>
                   <div class="prediction-item" style="grid-column: 1 / -1;">
                     <div class="prediction-item-label">Crazy Prediction</div>
-                    <div class="prediction-item-value">{{ row.prediction.crazy_prediction|default:"-" }}</div>
+                    <div class="prediction-item-value">{% if row.crazy_prediction_hidden %}Скрыто до завершения анонимного голосования{% else %}{{ row.prediction.crazy_prediction|default:"-" }}{% endif %}</div>
                   </div>
                 </div>
               {% elif row.prediction_hidden %}

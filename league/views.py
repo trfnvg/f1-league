@@ -69,6 +69,13 @@ from .arcade_rewards import (
     wheel_window_is_open,
     ArcadeWheelError,
 )
+from .crazy_jury import (
+    CrazyVoteError,
+    cast_crazy_prediction_vote,
+    crazy_jury_context,
+    crazy_vote_is_open,
+    vetoed_crazy_prediction_id,
+)
 
 
 DRIVER_LABELS = dict(DRIVER_CHOICES)
@@ -92,7 +99,7 @@ def _driver_of_day_values(result):
     return [value for value in values if value]
 
 
-def _community_prediction_correctness(prediction, result, *, crazy_blocked=False):
+def _community_prediction_correctness(prediction, result, *, crazy_blocked=False, crazy_vetoed=False):
     driver_fields = ("p1", "p2", "p3", "pole", "fastest_lap")
     correct = {
         field_name: bool(
@@ -106,6 +113,7 @@ def _community_prediction_correctness(prediction, result, *, crazy_blocked=False
     correct["crazy_prediction"] = bool(
         result
         and not crazy_blocked
+        and not crazy_vetoed
         and (prediction.crazy_prediction or "").strip()
         and prediction.crazy_prediction_approved
     )
@@ -148,7 +156,7 @@ def arcade(request):
             for prediction in wheel_targets
             if (prediction.crazy_prediction or "").strip()
         ]
-        wheel_prediction_fields = available_va_bank_fields(wheel_event, request.user)
+        wheel_prediction_fields = available_va_bank_fields(wheel_event, request.user, now=now)
     wheel_open = wheel_window_is_open(wheel_event, now)
     can_spin_wheel = bool(
         wheel_open
@@ -393,6 +401,11 @@ def home(request):
         if request.user.is_authenticated and featured_event
         else None
     )
+    jury_event = min(
+        (event for event in events if crazy_vote_is_open(event, now)),
+        key=lambda event: event.race_datetime,
+        default=None,
+    )
     if request.user.is_authenticated:
         user_row = next(
             (row for row in leaderboard_data["rows"] if row["user"].id == request.user.id),
@@ -434,8 +447,27 @@ def home(request):
             "featured_is_upcoming": featured_is_upcoming,
             "leaderboard_top": leaderboard_data["rows"][:3],
             "activity_feed": build_activity_feed(leaderboard_data),
+            "crazy_jury": crazy_jury_context(jury_event, request.user, now) if jury_event else None,
         },
     )
+
+
+@login_required
+def cast_crazy_vote(request, event_id):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    event = get_object_or_404(Event, pk=event_id)
+    try:
+        cast_crazy_prediction_vote(
+            event,
+            request.user,
+            request.POST.get("target_prediction"),
+        )
+    except CrazyVoteError as exc:
+        messages.error(request, str(exc))
+    else:
+        messages.success(request, "Голос принят. Итоги останутся скрыты до старта гонки.")
+    return redirect(f"{reverse('league:home')}?season={event.season_year}#crazy-jury")
 
 
 def season_predictions(request):
@@ -541,10 +573,13 @@ def register(request):
 
 def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
+    now = timezone.now()
+    crazy_vote_open = crazy_vote_is_open(event, now)
+    vetoed_crazy_id = vetoed_crazy_prediction_id(event, now)
     photos = event.photos.all()
     result_obj = getattr(event, "result", None)
     event_time = event.race_datetime or event.deadline
-    is_past_event = event.status == Event.Status.SCORED or (event_time and event_time < timezone.now())
+    is_past_event = event.status == Event.Status.SCORED or (event_time and event_time < now)
 
     state = event.voting_state()
     prediction = None
@@ -636,6 +671,7 @@ def event_detail(request, event_id: int):
 
     comparison_rows = []
     comparison_total = 0
+    crazy_vetoed = bool(prediction and vetoed_crazy_id == prediction.id)
     if prediction and result_obj:
         actual_podium = {
             "p1": _normalize(result_obj.p1),
@@ -743,16 +779,25 @@ def event_detail(request, event_id: int):
             and wheel_spin.target_user_id == prediction.user_id
         )
         add_row(
-            label="Crazy Prediction" + (" · заблокирован" if crazy_blocked else ""),
+            label=(
+                "Crazy Prediction · вето паддока и блок колеса" if crazy_vetoed and crazy_blocked
+                else "Crazy Prediction · вето паддока" if crazy_vetoed
+                else "Crazy Prediction · заблокирован" if crazy_blocked
+                else "Crazy Prediction"
+            ),
             predicted=prediction.crazy_prediction or "—",
             actual=(
-                "Заблокировано колесом"
+                "Снят анонимным голосованием и заблокирован колесом"
+                if crazy_vetoed and crazy_blocked
+                else "Снят анонимным голосованием"
+                if crazy_vetoed
+                else "Заблокировано колесом"
                 if crazy_blocked
                 else "Засчитано судьей" if prediction.crazy_prediction_approved else "Не засчитано судьей"
             ),
-            points=5 if prediction.crazy_prediction_approved and not crazy_blocked else 0,
+            points=5 if prediction.crazy_prediction_approved and not crazy_blocked and not crazy_vetoed else 0,
             max_points=5,
-            status="hit" if prediction.crazy_prediction_approved and not crazy_blocked else "miss",
+            status="hit" if prediction.crazy_prediction_approved and not crazy_blocked and not crazy_vetoed else "miss",
         )
 
     if (
@@ -805,21 +850,26 @@ def event_detail(request, event_id: int):
             elif wheel_spin.prize == ArcadeWheelSpin.Prize.VA_BANK:
                 field_key = (wheel_spin.activation_data or {}).get("field", "")
                 field_label = next(
-                    (item["label"] for item in available_va_bank_fields(event, request.user) if item["key"] == field_key),
+                    (item["label"] for item in available_va_bank_fields(event, request.user, now=now) if item["key"] == field_key),
                     "выбранный прогноз",
                 )
-                bank_hit = va_bank_answer_is_correct(
+                bank_neutralized = field_key == "crazy_prediction" and crazy_vetoed
+                bank_hit = False if bank_neutralized else va_bank_answer_is_correct(
                     prediction,
                     result_obj,
                     field_key,
                     wildcard_assignment,
                 )
-                bank_points = 4 if bank_hit else -1
+                bank_points = 0 if bank_neutralized else 4 if bank_hit else -1
                 comparison_rows.append(
                     {
                         "label": "Ва-банк",
                         "predicted": field_label,
-                        "actual": "+4" if bank_hit else "−1",
+                        "actual": (
+                            "Ставка отменена: прогноз снят голосованием"
+                            if bank_neutralized
+                            else "+4" if bank_hit else "−1"
+                        ),
                         "points": bank_points,
                         "max_points": 4,
                         "status": "hit" if bank_hit else "miss",
@@ -880,7 +930,9 @@ def event_detail(request, event_id: int):
                         and wheel_spin.prize == ArcadeWheelSpin.Prize.CRAZY_BLOCK
                         and wheel_spin.target_user_id == item.user_id
                     ),
+                    crazy_vetoed=vetoed_crazy_id == item.id,
                 ),
+                "crazy_vetoed": vetoed_crazy_id == item.id,
                 "wildcard": public_wildcards.get(item.user_id),
                 "wildcard_correct": bool(
                     state == "scored"
@@ -965,6 +1017,9 @@ def event_detail(request, event_id: int):
             "comparison_total": comparison_total,
             "can_view_community": can_view_community,
             "community_predictions": community_predictions,
+            "crazy_vote_open": crazy_vote_open,
+            "crazy_vote_event": event if crazy_vote_open else None,
+            "vetoed_crazy_prediction_id": vetoed_crazy_id,
             "own_duel": own_duel,
             "duel_settings": duel_settings,
             "duel_form": duel_form,
@@ -1095,6 +1150,7 @@ def player_profile(request, user_id: int):
     profile_obj, _ = UserProfile.objects.get_or_create(user=player)
     can_edit_avatar = request.user.is_authenticated and request.user.id == player.id
     season = get_selected_season(request)
+    now = timezone.now()
 
     avatar_form = None
     if request.method == "POST":
@@ -1128,6 +1184,9 @@ def player_profile(request, user_id: int):
                 "event": event,
                 "prediction": prediction_map.get(event.id) if can_view_prediction else None,
                 "prediction_hidden": bool(prediction_map.get(event.id)) and not can_view_prediction,
+                "crazy_prediction_hidden": bool(
+                    prediction_map.get(event.id) and crazy_vote_is_open(event, now)
+                ),
                 "score": score_map.get(event.id),
             }
         )
@@ -1135,7 +1194,7 @@ def player_profile(request, user_id: int):
     season_deadline = season.predictions_deadline or datetime(
         season.year, 3, 5, 23, 59, tzinfo=ZoneInfo("Europe/Moscow")
     )
-    can_view_season_prediction = can_edit_avatar or timezone.now() > season_deadline
+    can_view_season_prediction = can_edit_avatar or now > season_deadline
     season_predictions = list(
         SeasonPrediction.objects.filter(user=player, season_year=season.year)
         if can_view_season_prediction

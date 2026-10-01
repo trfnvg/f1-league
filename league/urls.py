@@ -5,6 +5,7 @@ app_name = "league"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("events/<int:event_id>/crazy-vote/", views.cast_crazy_vote, name="crazy_prediction_vote"),
     path("arcade/", views.arcade, name="arcade"),
     path("arcade/doodle-jump/", views.arcade_doodle_jump, name="arcade_doodle_jump"),
     path("arcade/leaderboard/", views.arcade_leaderboard, name="arcade_leaderboard"),

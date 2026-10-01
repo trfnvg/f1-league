@@ -17,6 +17,7 @@ from .models import (
     SeasonScore,
 )
 from .arcade_rewards import va_bank_answer_is_correct
+from .crazy_jury import vetoed_crazy_prediction_id
 from .wildcards import unresolved_wildcard_questions
 
 SEASON_SCORING_WEIGHTS = {
@@ -53,7 +54,7 @@ def _driver_of_day_actual_values(result):
     return set()
 
 
-def calculate_points(pred, res, *, crazy_blocked=False):
+def calculate_points(pred, res, *, crazy_blocked=False, crazy_vetoed=False):
     points = 0
     breakdown = {}
     is_sprint_weekend = bool(getattr(getattr(res, "event", None), "has_sprint", False))
@@ -98,7 +99,11 @@ def calculate_points(pred, res, *, crazy_blocked=False):
     predicted_driver_of_day = _normalize(pred.driver_of_day)
     if predicted_driver_of_day and predicted_driver_of_day in _driver_of_day_actual_values(res):
         add("Driver of the Day", 3)
-    if pred.crazy_prediction_approved and crazy_blocked:
+    if crazy_vetoed and crazy_blocked:
+        breakdown["Crazy Prediction · вето паддока и блок колеса"] = 0
+    elif crazy_vetoed:
+        breakdown["Crazy Prediction · вето паддока"] = 0
+    elif pred.crazy_prediction_approved and crazy_blocked:
         breakdown["Crazy Prediction · заблокирован"] = 0
     elif pred.crazy_prediction_approved:
         add("Crazy Prediction", 5)
@@ -154,6 +159,7 @@ def _build_event_score_rows(event):
     standard_prediction_points = {}
     breakdowns = {}
     users = {}
+    vetoed_prediction_id = vetoed_crazy_prediction_id(event)
     for prediction in predictions:
         crazy_blocked = bool(
             wheel_spin
@@ -164,6 +170,7 @@ def _build_event_score_rows(event):
             prediction,
             event.result,
             crazy_blocked=crazy_blocked,
+            crazy_vetoed=prediction.id == vetoed_prediction_id,
         )
         if wheel_spin and wheel_spin.winner_id == prediction.user_id:
             if wheel_spin.prize == ArcadeWheelSpin.Prize.PIT_WALL:
@@ -171,15 +178,18 @@ def _build_event_score_rows(event):
                 breakdown["Бонус пит-уолла"] = 2
             elif wheel_spin.prize == ArcadeWheelSpin.Prize.VA_BANK:
                 field_key = (wheel_spin.activation_data or {}).get("field", "")
-                correct = va_bank_answer_is_correct(
-                    prediction,
-                    event.result,
-                    field_key,
-                    wildcard_by_user.get(prediction.user_id),
-                )
-                bank_points = 4 if correct else -1
-                points += bank_points
-                breakdown["Ва-банк"] = bank_points
+                if field_key == "crazy_prediction" and prediction.id == vetoed_prediction_id:
+                    breakdown["Ва-банк · Crazy Prediction снят голосованием"] = 0
+                else:
+                    correct = va_bank_answer_is_correct(
+                        prediction,
+                        event.result,
+                        field_key,
+                        wildcard_by_user.get(prediction.user_id),
+                    )
+                    bank_points = 4 if correct else -1
+                    points += bank_points
+                    breakdown["Ва-банк"] = bank_points
         standard_prediction_points[prediction.user_id] = points
         breakdowns[prediction.user_id] = breakdown
         users[prediction.user_id] = prediction.user

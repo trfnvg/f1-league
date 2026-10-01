@@ -12,6 +12,7 @@ from .models import (
     PlayerWildcard,
     Prediction,
 )
+from .crazy_jury import crazy_vote_is_open
 
 
 WHEEL_SECTORS = (
@@ -174,12 +175,14 @@ PREDICTION_FIELDS = (
 )
 
 
-def available_va_bank_fields(event, user):
+def available_va_bank_fields(event, user, now=None):
     prediction = Prediction.objects.filter(event=event, user=user).first()
     if not prediction:
         return []
     fields = []
     for key, label in PREDICTION_FIELDS:
+        if key == "crazy_prediction" and crazy_vote_is_open(event, now):
+            continue
         if key.startswith("sprint_") and not event.has_sprint:
             continue
         value = getattr(prediction, key, None)
@@ -275,7 +278,7 @@ def activate_event_wheel_prize(event, user, payload, now=None):
 
     elif spin.prize == ArcadeWheelSpin.Prize.VA_BANK:
         field_key = str(payload.get("field", "")).strip()
-        fields = available_va_bank_fields(locked_event, user)
+        fields = available_va_bank_fields(locked_event, user, now=now)
         if field_key not in {field["key"] for field in fields}:
             raise ArcadeWheelError("Выбери один из своих сохранённых прогнозов для Ва-банка.")
         activation_data = {"field": field_key}

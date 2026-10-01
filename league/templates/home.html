@@ -89,6 +89,45 @@
   </aside>
 </section>
 
+{% if crazy_jury %}
+  <section class="crazy-jury-shell" id="crazy-jury" aria-labelledby="crazy-jury-title">
+    <div class="crazy-jury-heading">
+      <div>
+        <span class="crazy-jury-kicker">LIVE PADDOCK · АНОНИМНОЕ ГОЛОСОВАНИЕ</span>
+        <h2 id="crazy-jury-title">Вето паддока</h2>
+        <p>Выбери самый сомнительный Crazy Prediction этапа. Авторов и счёт голосов не показываем.</p>
+      </div>
+      <div class="crazy-jury-event"><small>ЭТАП</small><strong>{{ crazy_jury.event.name }}</strong><span>до старта · {{ crazy_jury.event.race_datetime|date:"d.m · H:i" }} МСК</span></div>
+    </div>
+
+    {% if not request.user.is_authenticated %}
+      <div class="crazy-jury-notice">Войди в аккаунт участника, чтобы увидеть карточки и проголосовать. <a href="{% url 'login' %}?next=/">Войти →</a></div>
+    {% elif not crazy_jury.eligible %}
+      <div class="crazy-jury-notice">Голосовать могут участники лиги.</div>
+    {% elif not crazy_jury.has_enough_candidates %}
+      <div class="crazy-jury-notice">На этом этапе нужно минимум два Crazy Prediction — пока голосование не запускаем.</div>
+    {% else %}
+      <form class="crazy-jury-form" method="post" action="{% url 'league:crazy_prediction_vote' event_id=crazy_jury.event.id %}">
+        {% csrf_token %}
+        <fieldset class="crazy-jury-candidates" {% if crazy_jury.has_voted %}disabled{% endif %}>
+          <legend class="visually-hidden">Выбери один анонимный Crazy Prediction</legend>
+          {% for candidate in crazy_jury.candidates %}
+            <label class="crazy-jury-card{% if candidate.is_own %} is-own{% endif %}{% if candidate.is_selected %} is-selected{% endif %}">
+              <input type="radio" name="target_prediction" value="{{ candidate.id }}" {% if candidate.is_selected %}checked{% endif %} {% if candidate.is_own or crazy_jury.has_voted %}disabled{% else %}required{% endif %}>
+              <span class="crazy-jury-card-top"><span>АНОНИМНЫЙ ПРЕДИКТ {{ candidate.number|stringformat:"02d" }}</span>{% if candidate.is_own %}<b>ТВОЙ · НЕЛЬЗЯ ВЫБРАТЬ</b>{% elif candidate.is_selected %}<b>ТВОЙ ВЫБОР</b>{% endif %}</span>
+              <span class="crazy-jury-card-copy">{{ candidate.text }}</span>
+            </label>
+          {% endfor %}
+        </fieldset>
+        <div class="crazy-jury-footer">
+          <p>{% if crazy_jury.has_voted %}<strong>Голос принят.</strong> Изменить его нельзя; итоги откроются после старта гонки.{% else %}Один голос на игрока. Голосование закроется перед стартом гонки; при равенстве прогнозы останутся в зачёте.{% endif %}</p>
+          {% if crazy_jury.can_vote %}<button class="crazy-jury-submit" type="submit">Отдать голос <span aria-hidden="true">→</span></button>{% endif %}
+        </div>
+      </form>
+    {% endif %}
+  </section>
+{% endif %}
+
 {% if activity_feed %}
   <section class="activity-feed-shell editorial-section mb-4">
     <div class="section-heading-row">

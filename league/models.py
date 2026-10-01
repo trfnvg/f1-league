@@ -320,6 +320,28 @@ class Prediction(models.Model):
         return f"{self.user} - {self.event}"
 
 
+class CrazyPredictionVote(models.Model):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="crazy_prediction_votes")
+    voter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="crazy_prediction_votes_cast")
+    target_prediction = models.ForeignKey(
+        Prediction,
+        on_delete=models.CASCADE,
+        related_name="crazy_prediction_votes_received",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("event", "voter"), name="crazy_vote_event_user_uniq"),
+        ]
+        indexes = [models.Index(fields=("event", "target_prediction"), name="crazy_vote_ev_target_idx")]
+        verbose_name = "Голос за Crazy Prediction"
+        verbose_name_plural = "Голоса за Crazy Prediction"
+
+    def __str__(self):
+        return f"{self.event}: {self.voter} → предикт #{self.target_prediction_id}"
+
+
 class EventWildcardQuestion(models.Model):
     class Option(models.TextChoices):
         A = "a", "Вариант A"
