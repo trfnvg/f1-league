@@ -4154,13 +4154,25 @@ body.apex-night-theme .profile-arcade-trophycase {
   position: relative;
   overflow: visible;
   margin-top: .8rem;
-  padding: .15rem clamp(.35rem, 1vw, .75rem);
+  padding: .15rem clamp(.35rem, 1vw, .75rem) .3rem;
   border: 1px solid rgba(222, 177, 82, .24);
   border-radius: 16px;
   background:
     radial-gradient(ellipse at 50% 60%, rgba(220, 54, 45, .10), transparent 53%),
     linear-gradient(145deg, rgba(25, 34, 45, .98), rgba(12, 18, 26, .98));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035), 0 14px 36px rgba(0, 0, 0, .18);
+}
+
+body.apex-night-theme .profile-arcade-trophycase-title {
+  width: min(100%, 700px);
+  margin: .45rem auto -.15rem;
+  color: var(--apex-ink);
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  line-height: 1.2;
+  text-align: left;
+  text-transform: uppercase;
 }
 
 body.apex-night-theme .profile-arcade-trophycase-stage {
@@ -4215,9 +4227,9 @@ body.apex-night-theme .profile-arcade-trophycase-item {
   position: relative;
   display: flex;
   min-width: 0;
-  max-width: 82px;
-  height: clamp(60px, 8vw, 84px);
-  flex: 1 1 82px;
+  max-width: 90px;
+  height: clamp(64px, 8.6vw, 92px);
+  flex: 1 1 90px;
   align-items: flex-end;
   justify-content: center;
 }
@@ -4349,13 +4361,13 @@ body.apex-night-theme .profile-arcade-trophycase-item:last-child:not(:first-chil
 
 @media (max-width: 575.98px) {
   body.apex-night-theme .profile-arcade-trophycase-stage {
-    min-height: 105px;
+    min-height: 120px;
   }
 
   body.apex-night-theme .profile-arcade-trophycase-item {
-    max-width: 60px;
-    height: 62px;
-    flex-basis: 60px;
+    max-width: 66px;
+    height: 68px;
+    flex-basis: 66px;
   }
 
   body.apex-night-theme .profile-arcade-trophycase-row {

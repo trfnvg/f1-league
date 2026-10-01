@@ -23,6 +23,7 @@ from .models import (
     UserProfile,
 )
 from .scoring import publish_event_scores, restore_score_revision
+from .arcade_rewards import award_due_arcade_trophies
 from .services import (
     build_achievements,
     build_activity_feed,
@@ -351,50 +352,100 @@ class CompetitiveFeaturesTests(TestCase):
         response = self.client.get(reverse("league:player_profile", args=[player.id]))
         self.assertNotContains(response, "profile-arcade-trophycase")
 
-        lead_change = ArcadeLeadChange.objects.create(
-            player=player,
-            best_score=42,
-            attempts=7,
+        first_event = Event.objects.create(
+            name="Trophy GP 1",
+            round_number=1,
+            deadline=timezone.now() - timedelta(days=2),
+        )
+        second_event = Event.objects.create(
+            name="Trophy GP 2",
+            round_number=2,
+            deadline=timezone.now() - timedelta(days=1),
         )
         ArcadeTrophyAward.objects.create(
             player=player,
             game_name="Pit Lane Flight",
+            game_key="pit_lane_flight",
             trophy_name="Банана Леклер",
             attempts=7,
-            awarded_at=lead_change.created_at,
-            source_lead_change=lead_change,
+            awarded_at=first_event.deadline,
+            event=first_event,
         )
         ArcadeTrophyAward.objects.create(
             player=player,
             game_name="Doodle Jump: Pit Lane",
+            game_key="doodle_jump",
             trophy_name="Золотой шлем",
             attempts=12,
+            event=second_event,
         )
         response = self.client.get(reverse("league:player_profile", args=[player.id]))
         self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
+        self.assertContains(response, "Трофеи аркады")
         self.assertContains(response, "Банана Леклер")
         self.assertContains(response, "Золотой шлем")
         self.assertContains(response, ">7</b>")
         self.assertContains(response, ">12</b>")
         self.assertEqual(response.content.count(b"profile-arcade-trophycase-item"), 2)
-        self.assertContains(response, lead_change.created_at.strftime("%d.%m.%Y"))
+        self.assertContains(response, first_event.deadline.strftime("%d.%m.%Y"))
         self.assertContains(response, "Pit Lane Flight")
         self.assertContains(response, "banana-leclerc-pixel-reward.png")
         self.assertContains(response, "arcade-trophy-shelf.png")
 
-    def test_current_arcade_leader_and_site_admin_get_trophycase_without_lead_history(self):
+    def test_current_all_time_leader_does_not_get_period_trophy_but_admin_can_preview(self):
         leader = User.objects.create_user("new-current-leader")
         admin = User.objects.create_superuser("arcade-test-admin", "admin@example.com", "test")
         ArcadeRecord.objects.create(user=leader, best_score=25, total_attempts=3)
 
         response = self.client.get(reverse("league:player_profile", args=[leader.id]))
-        self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
-        self.assertContains(response, "3")
+        self.assertNotContains(response, "profile-arcade-trophycase")
 
         response = self.client.get(reverse("league:player_profile", args=[admin.id]))
         self.assertContains(response, 'aria-label="Коллекция трофеев аркады"')
         self.assertContains(response, "Тестовый доступ")
         self.assertContains(response, ">0</b>")
+
+    def test_event_trophy_goes_to_best_prediction_period_arcade_score_once(self):
+        winner = User.objects.create_user("period-winner")
+        other = User.objects.create_user("late-high-score")
+        now = timezone.now()
+        deadline = now - timedelta(hours=4)
+        event = Event.objects.create(
+            name="Period Trophy GP",
+            round_number=1,
+            deadline=deadline,
+        )
+        create_prediction(winner, event)
+        create_prediction(other, event)
+
+        winner_run = ArcadeAttempt.objects.create(user=winner, score=17)
+        ArcadeAttempt.objects.filter(pk=winner_run.pk).update(
+            started_at=deadline - timedelta(hours=2),
+            finished_at=deadline - timedelta(minutes=1),
+        )
+        unfinished_run = ArcadeAttempt.objects.create(user=winner)
+        ArcadeAttempt.objects.filter(pk=unfinished_run.pk).update(
+            started_at=deadline - timedelta(minutes=30),
+        )
+        late_run = ArcadeAttempt.objects.create(user=other, score=999)
+        ArcadeAttempt.objects.filter(pk=late_run.pk).update(
+            started_at=deadline - timedelta(minutes=2),
+            finished_at=deadline + timedelta(minutes=1),
+        )
+
+        self.assertEqual(
+            award_due_arcade_trophies(event.season_year, now=deadline - timedelta(seconds=1)),
+            0,
+        )
+        self.assertEqual(ArcadeTrophyAward.objects.count(), 0)
+        self.assertEqual(award_due_arcade_trophies(event.season_year, now=now), 1)
+        self.assertEqual(award_due_arcade_trophies(event.season_year, now=now), 0)
+
+        trophy = ArcadeTrophyAward.objects.get(event=event, game_key="pit_lane_flight")
+        self.assertEqual(trophy.player, winner)
+        self.assertEqual(trophy.attempts, 2)
+        self.assertEqual(trophy.awarded_at, deadline)
+        self.assertEqual(ArcadeTrophyAward.objects.count(), 1)
 
     def test_arcade_takeover_is_saved_and_announced_with_attempt_count(self):
         previous_leader = User.objects.create_user("old-arcade-leader")
@@ -418,10 +469,7 @@ class CompetitiveFeaturesTests(TestCase):
         lead_change = ArcadeLeadChange.objects.get(player=new_leader)
         self.assertEqual(lead_change.best_score, 11)
         self.assertEqual(lead_change.attempts, 8)
-        trophy = ArcadeTrophyAward.objects.get(source_lead_change=lead_change)
-        self.assertEqual(trophy.trophy_name, "Банана Леклер")
-        self.assertEqual(trophy.game_name, "Pit Lane Flight")
-        self.assertEqual(trophy.attempts, 8)
+        self.assertFalse(ArcadeTrophyAward.objects.exists())
 
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, "new-arcade-leader занял первое место в аркаде")
