@@ -290,7 +290,7 @@ class InterfaceRefinementTests(TestCase):
         self.assertEqual(len(colors), len(users))
         self.assertEqual(len(set(colors)), len(colors))
 
-    def test_stable_pace_uses_correct_russian_plural(self):
+    def test_stable_pace_achievement_is_retired(self):
         user = User.objects.create_user("consistent-driver")
         statistics = {
             "stage_wins": 0,
@@ -302,9 +302,7 @@ class InterfaceRefinementTests(TestCase):
 
         achievements = build_achievements(user, statistics)
 
-        stable_pace = next(item for item in achievements if item["code"] == "streak")
-        self.assertEqual(stable_pace["description"], "11 этапов подряд с очками")
-        self.assertTrue(stable_pace["icon"].endswith("stable-pace.png"))
+        self.assertNotIn("streak", [item["code"] for item in achievements])
 
     def test_arcade_champion_achievement_follows_current_leader(self):
         first = User.objects.create_user("arcade-first")
