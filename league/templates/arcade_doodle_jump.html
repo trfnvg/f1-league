@@ -13,7 +13,7 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Зелёный гонщик прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
+      <p class="doodle-lede">Пиксельный пилот прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -39,11 +39,11 @@
         <canvas
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
-          data-hero-src="{% static 'league/images/doodle-jump/f1-green-doodle-racer-v3.png' %}"
+          data-hero-src="{% static 'league/images/doodle-jump/f1-reference-racer-v1.png' %}"
           data-background-src="{% static 'league/images/doodle-jump/race-day-v1.png' %}"
           tabindex="0"
           role="application"
-          aria-label="Зелёный гонщик подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
+          aria-label="Пиксельный пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
         ></canvas>
         <div class="doodle-overlay" id="doodle-overlay">
           <div class="doodle-overlay-card">
