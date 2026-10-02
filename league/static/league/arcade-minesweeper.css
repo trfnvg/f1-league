@@ -355,8 +355,8 @@
 }
 
 .minesweeper-hazard-panel > strong { display: flex; align-items: center; justify-content: center; padding: 0 0 .5em; font-size: clamp(4px, .88cqw, 13px); line-height: 1.15; letter-spacing: .045em; text-align: center; }
-.minesweeper-hazard-item { display: grid; min-height: 0; grid-template-columns: minmax(0, 49%) minmax(0, 1fr); align-items: center; gap: 2%; padding: 1% 1%; }
-.minesweeper-hazard-item small { grid-column: 2; color: #e3e9f1; font-size: clamp(4px, .78cqw, 11px); font-weight: 900; line-height: 1.2; text-shadow: 1px 1px 0 #091323; }
+.minesweeper-hazard-item { position: relative; min-height: 0; }
+.minesweeper-hazard-item small { position: absolute; top: 50%; left: 55%; right: 1%; color: #e3e9f1; font-size: clamp(4px, .68cqw, 10px); font-weight: 900; line-height: 1.2; text-shadow: 1px 1px 0 #091323; white-space: nowrap; transform: translateY(-50%); }
 
 .minesweeper-coffee {
   position: absolute;
