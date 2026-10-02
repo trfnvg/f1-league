@@ -7,6 +7,7 @@ from django.utils.html import format_html
 
 from .models import (
     ArcadeRecord,
+    ArcadeSettings,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
@@ -32,6 +33,7 @@ from .models import (
     UserProfile,
     WildcardCardTemplate,
     WildcardSettings,
+    MinesweeperAttempt,
 )
 from .scoring import (
     calculate_season_scores,
@@ -834,6 +836,35 @@ class ArcadeRecordAdmin(admin.ModelAdmin):
     def reset_selected_records(self, request, queryset):
         count = queryset.update(best_score=0, updated_at=timezone.now())
         self.message_user(request, f"Обнулено рекордов: {count}.")
+
+
+@admin.register(ArcadeSettings)
+class ArcadeSettingsAdmin(admin.ModelAdmin):
+    list_display = ("active_game", "public_enabled", "updated_at")
+    fields = ("active_game", "public_enabled", "updated_at")
+    readonly_fields = ("updated_at",)
+
+    def has_add_permission(self, request):
+        return not ArcadeSettings.objects.filter(pk=1).exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(MinesweeperAttempt)
+class MinesweeperAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "week_start", "completed", "elapsed_ms", "started_at", "finished_at")
+    list_filter = ("week_start", "completed")
+    search_fields = ("user__username",)
+    list_select_related = ("user",)
+    readonly_fields = tuple(field.name for field in MinesweeperAttempt._meta.fields)
+    ordering = ("-week_start", "elapsed_ms")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ArcadeTrophyAward)

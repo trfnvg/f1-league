@@ -11,6 +11,7 @@ from .models import (
     ArcadeAttempt,
     ArcadeLeadChange,
     ArcadeRecord,
+    ArcadeSettings,
     ArcadeTrophyAward,
     DuelChallenge,
     Event,
@@ -344,6 +345,12 @@ class InterfaceRefinementTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class CompetitiveFeaturesTests(TestCase):
+    def setUp(self):
+        ArcadeSettings.objects.update_or_create(
+            pk=1,
+            defaults={"active_game": ArcadeSettings.Game.FLAPPY, "public_enabled": True},
+        )
+
     def test_arcade_trophycase_lists_multiple_game_wins_on_one_shelf(self):
         player = User.objects.create_user("pixel-banana-driver")
         current_leader = User.objects.create_user("current-arcade-leader")

@@ -17,6 +17,7 @@ from .models import (
     ArcadeAttempt,
     ArcadeGameClosure,
     ArcadeRecord,
+    ArcadeSettings,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DuelChallenge,
@@ -39,6 +40,10 @@ TEST_STORAGES = {
 @override_settings(STORAGES=TEST_STORAGES)
 class ArcadeWheelTests(TestCase):
     def setUp(self):
+        ArcadeSettings.objects.update_or_create(
+            pk=1,
+            defaults={"active_game": ArcadeSettings.Game.FLAPPY, "public_enabled": True},
+        )
         self.now = timezone.now()
         self.event = Event.objects.create(
             season_year=2026,
