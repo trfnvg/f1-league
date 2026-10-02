@@ -53,31 +53,33 @@
       <div class="minesweeper-board-wrap">
         <div class="minesweeper-board" id="minesweeper-board" role="grid" aria-label="Игровое поле, 30 столбцов на 16 строк"></div>
       </div>
-      <aside class="minesweeper-hazard-panel" aria-label="На поле случайно размещены три типа мин. При подрыве их тип раскрывается; в числовых подсказках все мины считаются одинаково.">
-        <strong>ОПАСНОСТИ<br>НА ТРАССЕ:</strong>
-        <div class="minesweeper-hazard-item"><small>МАСЛЯНОЕ<br>ПЯТНО</small></div>
-        <div class="minesweeper-hazard-item"><small>СОРВАННОЕ<br>КОЛЕСО</small></div>
-        <div class="minesweeper-hazard-item"><small>ОБЛОМКИ<br>КАРБОНА</small></div>
+      <aside class="minesweeper-hazard-panel" aria-label="Виды опасностей на поле: масло, колесо, карбон. Каждая считается миной.">
+        <strong>ОПАСНОСТИ<br>НА ТРАССЕ</strong>
+        <div class="minesweeper-hazard-item">
+          <img src="{% static 'league/images/minesweeper-hazard-oil.png' %}" alt="">
+          <small>МАСЛО</small>
+        </div>
+        <div class="minesweeper-hazard-item">
+          <img src="{% static 'league/images/minesweeper-hazard-wheel.png' %}" alt="">
+          <small>КОЛЕСО</small>
+        </div>
+        <div class="minesweeper-hazard-item">
+          <img src="{% static 'league/images/minesweeper-hazard-carbon.png' %}" alt="">
+          <small>КАРБОН</small>
+        </div>
       </aside>
 
-      <div class="minesweeper-coffee" aria-hidden="true">
+      <div class="minesweeper-driver-steam" aria-hidden="true">
         <span class="minesweeper-steam steam-one"></span>
         <span class="minesweeper-steam steam-two"></span>
-        <svg viewBox="0 0 32 32" shape-rendering="crispEdges">
-          <path fill="#07101d" d="M5 8h22v4h3v10h-3v4H8v-2H5z"/>
-          <path fill="#e8dfc8" d="M7 10h18v3h2v7h-2v4H9v-2H7z"/>
-          <path fill="#4e2c20" d="M8 9h17v3H8z"/>
-          <path fill="#b93436" d="M9 15h15v5H9z"/>
-          <path fill="#f6e8c9" d="M24 13h3v2h2v5h-2v2h-3v-3h2v-3h-2zM10 24h12v2H10z"/>
-          <path fill="#fff4d8" d="M9 12h2v2H9zM11 21h8v2h-8z"/>
-        </svg>
+        <span class="minesweeper-steam steam-three"></span>
       </div>
 
       <div class="minesweeper-overlay" id="minesweeper-overlay">
         <div class="minesweeper-overlay-card">
           <span class="minesweeper-overlay-kicker" id="minesweeper-overlay-kicker">{% if arcade_admin_preview %}ЗАКРЫТЫЙ ТЕСТ · ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
           <h2 id="minesweeper-overlay-title">На старт, сапёр!</h2>
-          <p id="minesweeper-overlay-copy">Открывай клетки по подсказкам и не попади на одну из 99 мин. На поле три вида опасностей — масло, колесо и обломки; числа считают их одинаково. На компьютере — ЛКМ/ПКМ, на телефоне включи режим флага.</p>
+          <p id="minesweeper-overlay-copy">На поле 99 мин: масло, колесо и карбон. Числа показывают, сколько мин рядом. ЛКМ — открыть клетку, ПКМ или режим флага — отметить опасность.</p>
           {% if user.is_authenticated %}
             <button class="minesweeper-start" id="minesweeper-start" type="button">Начать попытку <span aria-hidden="true">→</span></button>
           {% else %}
@@ -85,6 +87,12 @@
           {% endif %}
         </div>
       </div>
+    </div>
+
+    <div class="minesweeper-hazard-mobile-legend" role="group" aria-label="Виды мин на поле">
+      <span><img src="{% static 'league/images/minesweeper-hazard-oil.png' %}" alt=""> Масло</span>
+      <span><img src="{% static 'league/images/minesweeper-hazard-wheel.png' %}" alt=""> Колесо</span>
+      <span><img src="{% static 'league/images/minesweeper-hazard-carbon.png' %}" alt=""> Карбон</span>
     </div>
 
     <footer class="minesweeper-controls">
@@ -113,7 +121,7 @@
         <li class="minesweeper-board-empty" id="minesweeper-board-empty">Поле ещё никто не прошёл — первым рекордом можешь стать ты.</li>
       {% endfor %}
     </ol>
-    <p class="minesweeper-footnote">Каждая попытка начинается с чистого случайного поля. В недельный рейтинг попадает самый быстрый полностью пройденный заезд.</p>
+    <p class="minesweeper-footnote">После попытки поле показывает, где были масло, колесо и карбон. В недельный рейтинг попадает самое быстрое полное прохождение.</p>
   </section>
 
   <form hidden id="minesweeper-csrf-form">{% csrf_token %}</form>
