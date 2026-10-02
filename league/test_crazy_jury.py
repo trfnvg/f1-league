@@ -13,6 +13,7 @@ from .crazy_jury import (
 )
 from .models import CrazyPredictionVote, DuelChallenge, Event, Prediction, Result, Season
 from .scoring import _build_event_score_rows
+from .services import build_activity_feed, build_leaderboard
 
 
 TEST_STORAGES = {
@@ -119,6 +120,15 @@ class CrazyJuryTests(TestCase):
             vetoed_crazy_prediction_id(self.event, now=self.now),
             self.prediction_a.id,
         )
+
+        feed = build_activity_feed(build_leaderboard(self.season.year))
+        jury_news = next(item for item in feed if item["type"] == "crazy-veto")
+        self.assertIn(self.owner_a.username, jury_news["text"])
+        self.assertEqual(jury_news["event_id"], self.event.id)
+
+        home = self.client.get(reverse("league:home"))
+        self.assertContains(home, f"Crazy Prediction игрока {self.owner_a.username} исключён")
+        self.assertContains(home, "Paddock Jury")
 
         audit = self.client.get(reverse("league:paddock_jury_admin"), {"event": self.event.id})
         self.assertContains(audit, "Завершено")

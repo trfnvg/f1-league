@@ -1,11 +1,16 @@
 from collections import Counter, defaultdict
 
 from django.contrib.auth.models import User
+from django.db.models import Q
+from django.utils import timezone
+
+from .crazy_jury import vetoed_crazy_prediction_id
 from .models import (
     DRIVER_CHOICES,
     ArcadeGameClosure,
     ArcadeLeadChange,
     ArcadeRecord,
+    CrazyPredictionVote,
     DuelChallenge,
     Event,
     Prediction,
@@ -530,6 +535,56 @@ def build_activity_feed(leaderboard, limit=10):
                 "occurred_at": arcade_lead.created_at,
             }
 
+    jury_news = None
+    now = timezone.now()
+    finalized_jury_events = (
+        Event.objects.filter(
+            season_year=season_year,
+            crazy_prediction_votes__isnull=False,
+        )
+        .filter(
+            Q(status=Event.Status.SCORED)
+            | Q(crazy_vote_closed_at__isnull=False)
+            | Q(race_datetime__lte=now)
+        )
+        .distinct()
+        .order_by("-round_number")
+    )
+    for jury_event in finalized_jury_events:
+        vetoed_prediction_id = vetoed_crazy_prediction_id(jury_event, now=now)
+        if not vetoed_prediction_id:
+            continue
+        excluded_prediction = (
+            Prediction.objects.select_related("user")
+            .filter(pk=vetoed_prediction_id)
+            .first()
+        )
+        if not excluded_prediction:
+            continue
+        vote_count = CrazyPredictionVote.objects.filter(
+            event=jury_event,
+            target_prediction_id=vetoed_prediction_id,
+        ).count()
+        vote_word = _russian_plural(vote_count, ("голос", "голоса", "голосов"))
+        jury_news = {
+            "type": "crazy-veto",
+            "text": f"Crazy Prediction игрока {excluded_prediction.user.username} исключён",
+            "meta": (
+                f"R{jury_event.round_number} · {jury_event.name} · "
+                f"Paddock Jury · {vote_count} {vote_word}"
+            ),
+            "user_id": excluded_prediction.user_id,
+            "event_id": jury_event.id,
+            "source_event_id": jury_event.id,
+            "anchor": "",
+            "occurred_at": (
+                jury_event.crazy_vote_closed_at
+                or jury_event.race_datetime
+                or jury_event.deadline
+            ),
+        }
+        break
+
     duels = (
         DuelChallenge.objects.filter(
             event__season_year=season_year,
@@ -572,7 +627,12 @@ def build_activity_feed(leaderboard, limit=10):
             )
 
     def newest(items):
-        priority = {"duel-result": 100, "arcade-winner": 98, "duel-accepted": 85}
+        priority = {
+            "duel-result": 100,
+            "crazy-veto": 99,
+            "arcade-winner": 98,
+            "duel-accepted": 85,
+        }
         return sorted(
             items,
             key=lambda item: (
@@ -584,7 +644,7 @@ def build_activity_feed(leaderboard, limit=10):
 
     users = [row["user"] for row in leaderboard["rows"]]
     if not users:
-        return newest([item for item in [arcade_news, *duel_news] if item])
+        return newest([item for item in [arcade_news, jury_news, *duel_news] if item])
 
     scored_events = leaderboard["scored_events"]
     event_ids = [event.id for event in scored_events]
@@ -608,7 +668,7 @@ def build_activity_feed(leaderboard, limit=10):
         and result.published_at is not None
     ]
     if not published_events:
-        return newest([item for item in [arcade_news, *duel_news] if item])
+        return newest([item for item in [arcade_news, jury_news, *duel_news] if item])
 
     def event_timestamp(event):
         result = results.get(event.id)
@@ -778,6 +838,8 @@ def build_activity_feed(leaderboard, limit=10):
     latest_event_id = latest_published_event.id
     feed = [item for item in feed if item["source_event_id"] == latest_event_id]
     feed.extend(duel_news)
+    if jury_news:
+        feed.append(jury_news)
     if arcade_news:
         feed.append(arcade_news)
     feed.sort(
@@ -785,6 +847,7 @@ def build_activity_feed(leaderboard, limit=10):
             item["occurred_at"],
             {
                 "duel-result": 100,
+                "crazy-veto": 99,
                 "winner": 95,
                 "arcade-winner": 94,
                 "arcade-leader": 92,
