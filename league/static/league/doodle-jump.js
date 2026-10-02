@@ -187,7 +187,7 @@
   }
 
   function buildGame() {
-    const heroSprite = sprites[8];
+    const heroSprite = art.hero || sprites[8];
     const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
     const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
     const firstY = 86;
@@ -473,7 +473,7 @@
       ctx.save();
       ctx.translate(player.x, screenY);
       ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
-      const heroSprite = sprites[8];
+      const heroSprite = art.hero || sprites[8];
       if (heroSprite) {
         ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
           -player.width / 2, -player.height / 2, player.width, player.height);
@@ -670,9 +670,13 @@
 
   Promise.all([
     image(canvas.dataset.atlasSrc),
+    image(canvas.dataset.heroSrc),
     image(canvas.dataset.backgroundSrc),
-  ]).then(([atlas, background]) => {
+  ]).then(([atlas, hero, background]) => {
     art.background = background;
+    art.hero = hero
+      ? { image: hero, sx: 0, sy: 0, sw: hero.naturalWidth, sh: hero.naturalHeight }
+      : null;
     cropSprites(atlas);
     artReady = true;
     startButton.disabled = false;
