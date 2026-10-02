@@ -98,6 +98,75 @@
     }
   }
 
+  function splitHeroSheet(sheet) {
+    if (!sheet) return [];
+    const frameWidth = Math.ceil(sheet.naturalWidth / 4);
+    const frameHeight = sheet.naturalHeight;
+    const frames = [];
+
+    for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
+      const tile = document.createElement("canvas");
+      tile.width = frameWidth;
+      tile.height = frameHeight;
+      const tileCtx = tile.getContext("2d", { willReadFrequently: true });
+      tileCtx.imageSmoothingEnabled = false;
+      tileCtx.drawImage(sheet, frameIndex * sheet.naturalWidth / 4, 0,
+        sheet.naturalWidth / 4, frameHeight, 0, 0, frameWidth, frameHeight);
+
+      // Keep only the largest connected alpha component in each panel. The
+      // generated sheet has transparent gaps between poses, but this guard
+      // prevents a stray edge pixel from the neighboring pose becoming a
+      // black artifact in the game.
+      const imageData = tileCtx.getImageData(0, 0, frameWidth, frameHeight);
+      const pixels = imageData.data;
+      const seen = new Uint8Array(frameWidth * frameHeight);
+      let largestComponent = null;
+      for (let y = 0; y < frameHeight; y += 1) {
+        for (let x = 0; x < frameWidth; x += 1) {
+          const start = y * frameWidth + x;
+          if (seen[start] || pixels[start * 4 + 3] <= 18) continue;
+          const stack = [start];
+          const component = [];
+          seen[start] = 1;
+          while (stack.length) {
+            const position = stack.pop();
+            const pointX = position % frameWidth;
+            const pointY = Math.floor(position / frameWidth);
+            component.push(position);
+            for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+              for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+                if (!offsetX && !offsetY) continue;
+                const nextX = pointX + offsetX;
+                const nextY = pointY + offsetY;
+                if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight) continue;
+                const next = nextY * frameWidth + nextX;
+                if (seen[next] || pixels[next * 4 + 3] <= 18) continue;
+                seen[next] = 1;
+                stack.push(next);
+              }
+            }
+          }
+          if (!largestComponent || component.length > largestComponent.length) largestComponent = component;
+        }
+      }
+
+      if (largestComponent) {
+        const cleaned = tileCtx.createImageData(frameWidth, frameHeight);
+        for (const position of largestComponent) {
+          const sourceOffset = position * 4;
+          cleaned.data[sourceOffset] = pixels[sourceOffset];
+          cleaned.data[sourceOffset + 1] = pixels[sourceOffset + 1];
+          cleaned.data[sourceOffset + 2] = pixels[sourceOffset + 2];
+          cleaned.data[sourceOffset + 3] = pixels[sourceOffset + 3];
+        }
+        tileCtx.clearRect(0, 0, frameWidth, frameHeight);
+        tileCtx.putImageData(cleaned, 0, 0);
+      }
+      frames.push({ image: tile, sx: 0, sy: 0, sw: frameWidth, sh: frameHeight });
+    }
+    return frames;
+  }
+
   function spriteSize(sprite, targetWidth) {
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
@@ -770,25 +839,13 @@
   ));
   Promise.all([
     image(canvas.dataset.atlasSrc),
-    image(canvas.dataset.heroFrame1Src),
-    image(canvas.dataset.heroFrame2Src),
-    image(canvas.dataset.heroFrame3Src),
-    image(canvas.dataset.heroFrame4Src),
+    image(canvas.dataset.heroSheetSrc),
     image(canvas.dataset.backgroundSrc),
     ...backgroundZoneSources.map((source) => image(source)),
-  ]).then(([atlas, frame1, frame2, frame3, frame4, background, ...backgroundZones]) => {
+  ]).then(([atlas, heroSheet, background, ...backgroundZones]) => {
     art.background = background;
     art.backgroundZones = backgroundZones.every(Boolean) ? backgroundZones : [];
-    const heroFrames = [frame1, frame2, frame3, frame4];
-    art.heroFrames = heroFrames.every(Boolean)
-      ? heroFrames.map((imageAsset) => ({
-        image: imageAsset,
-        sx: 0,
-        sy: 0,
-        sw: imageAsset.naturalWidth,
-        sh: imageAsset.naturalHeight,
-      }))
-      : null;
+    art.heroFrames = splitHeroSheet(heroSheet);
     cropSprites(atlas);
     artReady = true;
     startButton.disabled = false;
