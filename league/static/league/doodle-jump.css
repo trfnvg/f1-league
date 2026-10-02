@@ -64,6 +64,8 @@
   line-height: 1.6;
 }
 
+.doodle-admin-settings-link { display: inline-block; margin-top: .45rem; color: var(--doodle-cyan); font-size: .62rem; font-weight: 900; text-underline-offset: .2rem; }
+
 .doodle-admin-badge {
   display: inline-flex;
   flex: 0 0 auto;

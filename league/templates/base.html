@@ -1015,7 +1015,7 @@
       <a class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Этапы</a>
       <a class="{% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
       <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
-      <a class="{% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
+      {% if user.is_staff or arcade_public_enabled %}<a class="{% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>{% endif %}
       <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
       {% if user.is_staff %}<a class="{% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury</a>{% endif %}
     </div>
@@ -1042,10 +1042,11 @@
   <div class="offcanvas-body">
     <a class="menu-item {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Главная</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль участников</a>
-    <a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
+    {% if user.is_staff or arcade_public_enabled %}<a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>{% endif %}
     {% if user.is_staff %}
       <a class="menu-item {% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury · голоса</a>
       <a class="menu-item {% if request.resolver_match.url_name == 'arcade_doodle_jump' %}is-active{% endif %}" href="{% url 'league:arcade_doodle_jump' %}">Doodle Jump · тест</a>
+      {% if perms.league.change_arcadesettings %}<a class="menu-item" href="{% url 'admin:league_arcadesettings_change' 1 %}">Управление аркадой</a>{% endif %}
     {% endif %}
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}

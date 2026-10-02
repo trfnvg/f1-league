@@ -9,7 +9,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import F, Q, Sum
+from django.db.models import Count, F, Min, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -29,6 +29,7 @@ from .models import (
     ArcadeAttempt,
     ArcadeLeadChange,
     ArcadeRecord,
+    ArcadeSettings,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     CrazyPredictionVote,
@@ -36,6 +37,7 @@ from .models import (
     DuelSettings,
     Event,
     HomeResultImage,
+    MinesweeperAttempt,
     PlayerWildcard,
     Prediction,
     Score,
@@ -133,7 +135,96 @@ def _is_async_request(request):
     return request.headers.get("X-Requested-With") == "XMLHttpRequest"
 
 
+def _get_arcade_settings():
+    return ArcadeSettings.objects.filter(pk=1).first() or ArcadeSettings()
+
+
+def _arcade_is_visible_to_user(request, arcade_settings):
+    return bool(arcade_settings.public_enabled or request.user.is_staff)
+
+
+def _current_arcade_week_start():
+    today = timezone.localdate()
+    return today - timedelta(days=today.weekday())
+
+
+def _minesweeper_leaderboard_data(user, week_start=None):
+    week_start = week_start or _current_arcade_week_start()
+    attempts = MinesweeperAttempt.objects.filter(week_start=week_start)
+    records = list(
+        attempts.values("user_id", "user__username")
+        .annotate(
+            attempts=Count("id"),
+            wins=Count("id", filter=Q(completed=True)),
+            best_time_ms=Min("elapsed_ms"),
+        )
+        .filter(best_time_ms__isnull=False)
+        .order_by("best_time_ms", "user__username")[:10]
+    )
+    rows = []
+    previous_time = None
+    previous_rank = None
+    for index, record in enumerate(records, start=1):
+        rank = previous_rank if record["best_time_ms"] == previous_time else index
+        rows.append({
+            "username": record["user__username"],
+            "attempts": record["attempts"],
+            "wins": record["wins"],
+            "best_time_ms": record["best_time_ms"],
+            "rank": rank,
+            "is_current_user": bool(user.is_authenticated and record["user_id"] == user.id),
+        })
+        previous_time = record["best_time_ms"]
+        previous_rank = rank
+    own_attempts = attempts.filter(user=user) if user.is_authenticated else attempts.none()
+    return {
+        "records": rows,
+        "attempts": own_attempts.count(),
+        "wins": own_attempts.filter(completed=True).count(),
+        "best_time_ms": own_attempts.aggregate(best=Min("elapsed_ms"))["best"],
+        "total_attempts": attempts.count(),
+        "week_start": week_start.isoformat(),
+    }
+
+
+def minesweeper_leaderboard(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
+    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
+        return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
+    return JsonResponse(_minesweeper_leaderboard_data(request.user))
+
+
 def arcade(request):
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
+
+    if arcade_settings.active_game == ArcadeSettings.Game.MINESWEEPER:
+        board_data = _minesweeper_leaderboard_data(request.user)
+        return render(request, "arcade_minesweeper.html", {
+            "minesweeper_attempts": board_data["attempts"],
+            "minesweeper_wins": board_data["wins"],
+            "minesweeper_best_time_ms": board_data["best_time_ms"],
+            "minesweeper_records": board_data["records"],
+            "minesweeper_total_attempts": board_data["total_attempts"],
+            "minesweeper_week_start": board_data["week_start"],
+            "arcade_admin_preview": not arcade_settings.public_enabled,
+            "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+            "minesweeper_attempt_start_url": reverse("league:minesweeper_attempt_start"),
+            "minesweeper_attempt_finish_url": reverse("league:minesweeper_attempt_finish"),
+            "minesweeper_leaderboard_url": reverse("league:minesweeper_leaderboard"),
+        })
+
+    if arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP:
+        return render(request, "arcade_doodle_jump.html", {
+            "arcade_admin_preview": not arcade_settings.public_enabled,
+            "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+        })
+
     season = get_selected_season(request)
     now = timezone.now()
     award_due_arcade_trophies(season.year, now=now)
@@ -223,14 +314,25 @@ def arcade(request):
             and wheel_open
         ),
         "podium_edit_open": bool(wheel_event and podium_edit_is_open(wheel_event, now)),
+        "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
     })
 
 
 @login_required
 def arcade_doodle_jump(request):
-    if not request.user.is_staff:
+    arcade_settings = _get_arcade_settings()
+    if not request.user.is_staff and not (
+        arcade_settings.public_enabled
+        and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
+    ):
         return HttpResponseForbidden("Эта страница доступна только администраторам.")
-    return render(request, "arcade_doodle_jump.html")
+    return render(request, "arcade_doodle_jump.html", {
+        "arcade_admin_preview": not (
+            arcade_settings.public_enabled
+            and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
+        ),
+        "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+    })
 
 
 @login_required
@@ -278,6 +380,13 @@ def arcade_wheel_activate(request):
 def arcade_leaderboard(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
+    if arcade_settings.active_game == ArcadeSettings.Game.MINESWEEPER:
+        return JsonResponse(_minesweeper_leaderboard_data(request.user))
+    if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
+        return JsonResponse({"records": [], "attempts": 0, "wins": 0, "best_time_ms": None})
     season = get_selected_season(request)
     now = timezone.now()
     award_due_arcade_trophies(season.year, now=now)
@@ -314,6 +423,11 @@ def arcade_run_start(request):
         return HttpResponseNotAllowed(["POST"])
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
+        return JsonResponse({"error": "Pit Lane Flight сейчас не выбрана как активная аркада."}, status=410)
     now = timezone.now()
     closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
     if closure:
@@ -338,6 +452,11 @@ def arcade_run_finish(request):
         return HttpResponseNotAllowed(["POST"])
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
+        return JsonResponse({"error": "Pit Lane Flight сейчас не выбрана как активная аркада."}, status=410)
     now = timezone.now()
     closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
     if closure:
@@ -402,6 +521,71 @@ def arcade_run_finish(request):
             )
         board_data = _arcade_leaderboard_data(request.user)
     return JsonResponse({**board_data, "is_record": is_record})
+
+
+@login_required
+def minesweeper_attempt_start(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
+        return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
+
+    attempt = MinesweeperAttempt.objects.create(
+        user=request.user,
+        week_start=_current_arcade_week_start(),
+    )
+    return JsonResponse({
+        "attempt_id": attempt.pk,
+        **_minesweeper_leaderboard_data(request.user, attempt.week_start),
+    })
+
+
+@login_required
+def minesweeper_attempt_finish(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
+        return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
+    try:
+        payload = json.loads(request.body or b"{}")
+        attempt_id = int(payload.get("attempt_id"))
+        completed = payload.get("completed")
+        elapsed_ms = payload.get("elapsed_ms")
+        if not isinstance(completed, bool):
+            raise ValueError
+        if completed and (
+            isinstance(elapsed_ms, bool)
+            or not isinstance(elapsed_ms, int)
+            or elapsed_ms < 3000
+            or elapsed_ms > 24 * 60 * 60 * 1000
+        ):
+            raise ValueError
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "Некорректный результат попытки."}, status=400)
+
+    with transaction.atomic():
+        attempt = MinesweeperAttempt.objects.select_for_update().filter(
+            pk=attempt_id,
+            user=request.user,
+        ).first()
+        if not attempt or attempt.finished_at:
+            return JsonResponse({"error": "Попытка уже сохранена или не найдена."}, status=409)
+        now = timezone.now()
+        elapsed_server_ms = int((now - attempt.started_at).total_seconds() * 1000)
+        if completed and elapsed_ms > elapsed_server_ms + 2500:
+            return JsonResponse({"error": "Время прохождения не совпадает с началом попытки."}, status=400)
+        attempt.finished_at = now
+        attempt.completed = completed
+        attempt.elapsed_ms = elapsed_ms if completed else None
+        attempt.save(update_fields=("finished_at", "completed", "elapsed_ms"))
+        data = _minesweeper_leaderboard_data(request.user, attempt.week_start)
+    return JsonResponse(data)
 
 
 def _arcade_rank(record):

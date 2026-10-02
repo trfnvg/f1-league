@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Doodle GP · тест для администратора{% endblock %}
+{% block title %}Doodle GP · аркада{% endblock %}
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}">
@@ -11,11 +11,12 @@
 <section class="doodle-page" aria-labelledby="doodle-title">
   <header class="doodle-heading">
     <div>
-      <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE · ADMIN ONLY</p>
+      <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
       <p class="doodle-lede">Банана Леклер прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
+      {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
-    <span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>
+    {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
   </header>
 
   <section class="doodle-machine" aria-label="Doodle GP — прыжковая аркада">
@@ -46,7 +47,7 @@
         ></canvas>
         <div class="doodle-overlay" id="doodle-overlay">
           <div class="doodle-overlay-card">
-            <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА</span>
+            <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
             <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
             <p id="doodle-overlay-copy">Лови платформы и набирай высоту. На телефоне касайся или удерживай левую и правую половины поля, чтобы двигаться. Одно столкновение — и заезд окончен.</p>
             <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
@@ -70,7 +71,7 @@
     <article><span class="doodle-howto-mark doodle-mark-banana" aria-hidden="true">✦</span><div><strong>Золотой банан</strong><small>Подбери его, чтобы добавить очки.</small></div></article>
   </section>
 
-  <p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>
+  {% if arcade_admin_preview %}<p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>{% endif %}
 </section>
 {% endblock %}
 

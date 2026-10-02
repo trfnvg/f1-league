@@ -1099,6 +1099,61 @@ class ArcadeGameClosure(models.Model):
         return f"{self.game_key} · {self.season_year} · {winner}"
 
 
+class ArcadeSettings(models.Model):
+    class Game(models.TextChoices):
+        FLAPPY = "flappy", "Pit Lane Flight · Flappy Bird"
+        DOODLE_JUMP = "doodle_jump", "Doodle GP · прототип"
+        MINESWEEPER = "minesweeper", "Сапёр · Pitwall Sweep"
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    active_game = models.CharField(
+        "Активная аркада недели",
+        max_length=24,
+        choices=Game.choices,
+        default=Game.MINESWEEPER,
+        help_text="Выбор меняет игру на вкладке «Аркада», но не удаляет результаты других игр.",
+    )
+    public_enabled = models.BooleanField(
+        "Открыть участникам",
+        default=False,
+        help_text="Если выключено, страницу и игру видят только администраторы. Можно включить позже без удаления результатов.",
+    )
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "Настройки аркады"
+        verbose_name_plural = "Настройки аркады"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Активная мини-игра и доступ"
+
+
+class MinesweeperAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="minesweeper_attempts")
+    week_start = models.DateField("Начало игровой недели", db_index=True)
+    started_at = models.DateTimeField("Начало попытки", auto_now_add=True)
+    finished_at = models.DateTimeField("Завершено", null=True, blank=True)
+    completed = models.BooleanField("Поле пройдено", default=False)
+    elapsed_ms = models.PositiveIntegerField("Время прохождения, мс", null=True, blank=True)
+
+    class Meta:
+        ordering = ("week_start", "elapsed_ms", "started_at")
+        indexes = [
+            models.Index(fields=("week_start", "user"), name="mine_week_user_idx"),
+            models.Index(fields=("week_start", "completed", "elapsed_ms"), name="mine_week_result_idx"),
+        ]
+        verbose_name = "Попытка Сапёра"
+        verbose_name_plural = "Попытки Сапёра"
+
+    def __str__(self):
+        result = f"{self.elapsed_ms} мс" if self.completed and self.elapsed_ms else "не пройдено"
+        return f"{self.user} · {self.week_start} · {result}"
+
+
 class ArcadeWheelSpin(models.Model):
     class Prize(models.TextChoices):
         PIT_WALL = "pit_wall", "Бонус пит-уолла +2"

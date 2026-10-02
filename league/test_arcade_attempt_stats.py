@@ -2,11 +2,15 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import ArcadeAttempt, ArcadeRecord
+from .models import ArcadeAttempt, ArcadeRecord, ArcadeSettings
 
 
 class ArcadeAttemptStatsTests(TestCase):
     def setUp(self):
+        ArcadeSettings.objects.update_or_create(
+            pk=1,
+            defaults={"active_game": ArcadeSettings.Game.FLAPPY, "public_enabled": True},
+        )
         self.user = User.objects.create_user(username="arcade-player", password="test-password")
         self.record = ArcadeRecord.objects.create(user=self.user, best_score=7)
         self.client.force_login(self.user)

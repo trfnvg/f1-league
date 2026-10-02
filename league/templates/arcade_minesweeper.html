@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pitwall Sweep · аркада{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="{% static 'league/arcade-minesweeper.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="minesweeper-page" aria-labelledby="minesweeper-title">
+  <header class="minesweeper-heading">
+    <div>
+      <p class="minesweeper-kicker"><span aria-hidden="true"></span> 16-BIT ARCADE · PADDOCK CHALLENGE</p>
+      <h1 id="minesweeper-title">PITWALL <em>SWEEP</em></h1>
+      <p class="minesweeper-lede">Разминируй поле быстрее остальных. Каждая попытка начинается заново, а в недельный рейтинг попадает лучшее время полного прохождения.</p>
+    </div>
+    {% if user.is_staff %}
+      <span class="minesweeper-admin-badge"><i aria-hidden="true"></i>{% if arcade_admin_preview %}Только администратор{% else %}Участникам доступна{% endif %}</span>
+      {% if perms.league.change_arcadesettings %}<a class="minesweeper-admin-badge" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
+    {% else %}
+      <span class="minesweeper-week-badge"><i aria-hidden="true"></i> НЕДЕЛЯ С {{ minesweeper_week_start }}</span>
+    {% endif %}
+  </header>
+
+  <section class="minesweeper-machine" id="minesweeper-machine" aria-label="Pitwall Sweep — сапёр в стиле Формулы-1">
+    <div class="minesweeper-scoreboard" aria-live="polite">
+      <div class="minesweeper-readout">
+        <small>МИНЫ</small>
+        <strong id="minesweeper-mines-left">099</strong>
+      </div>
+      <div class="minesweeper-readout minesweeper-clock-readout">
+        <small>ВРЕМЯ</small>
+        <strong id="minesweeper-clock">00:00.00</strong>
+      </div>
+      <div class="minesweeper-readout">
+        <small>ПОПЫТКИ</small>
+        <strong class="minesweeper-attempt-value"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 1h2v14H2zM4 2h9v2H4zm0 4h5v2H4zm5-2h2v2H9zM4 10h9v2H4z"/></svg><span id="minesweeper-attempts">{{ minesweeper_attempts }}</span></strong>
+      </div>
+      <div class="minesweeper-readout minesweeper-record-readout">
+        <small>ЛИЧНЫЙ РЕКОРД</small>
+        <strong id="minesweeper-best">—</strong>
+      </div>
+      <button class="minesweeper-fullscreen" id="minesweeper-fullscreen" type="button" aria-label="На весь экран" aria-pressed="false" title="На весь экран">
+        <svg class="minesweeper-fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5"/></svg>
+        <svg class="minesweeper-fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3v5H3M16 8h5V3M21 16h-5v5M8 21v-5H3"/></svg>
+      </button>
+    </div>
+
+    <div class="minesweeper-game-screen" id="minesweeper-game-screen"
+      data-start-url="{{ minesweeper_attempt_start_url }}"
+      data-finish-url="{{ minesweeper_attempt_finish_url }}"
+      data-leaderboard-url="{{ minesweeper_leaderboard_url }}"
+      data-attempts="{{ minesweeper_attempts }}"
+      data-best-time="{{ minesweeper_best_time_ms|default_if_none:'' }}"
+      data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}">
+      <div class="minesweeper-play-layout">
+        <div class="minesweeper-board-wrap">
+          <div class="minesweeper-board" id="minesweeper-board" role="grid" aria-label="Игровое поле, 30 столбцов на 16 строк"></div>
+        </div>
+        <aside class="minesweeper-hazard-panel" aria-label="Опасности, отмечаемые флагом">
+          <strong>ОПАСНОСТИ<br>НА ТРАССЕ</strong>
+          <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-oil" aria-hidden="true"></span><small>МАСЛЯНОЕ<br>ПЯТНО</small></div>
+          <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-wheel" aria-hidden="true"></span><small>ОТОРВАВШЕЕСЯ<br>КОЛЕСО</small></div>
+          <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-carbon" aria-hidden="true"></span><small>ОБЛОМКИ<br>КАРБОНА</small></div>
+        </aside>
+      </div>
+
+      <div class="minesweeper-overlay" id="minesweeper-overlay">
+        <div class="minesweeper-overlay-card">
+          <span class="minesweeper-overlay-kicker" id="minesweeper-overlay-kicker">{% if arcade_admin_preview %}ЗАКРЫТЫЙ ТЕСТ · ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
+          <h2 id="minesweeper-overlay-title">На старт, сапёр!</h2>
+          <p id="minesweeper-overlay-copy">Открывай клетки, используй числа как подсказки и не попади на мину. Поле — 30 × 16 клеток и 99 опасностей. На компьютере — левая и правая кнопки мыши, на телефоне включи режим флага.</p>
+          {% if user.is_authenticated %}
+            <button class="minesweeper-start" id="minesweeper-start" type="button">Начать попытку <span aria-hidden="true">→</span></button>
+          {% else %}
+            <a class="minesweeper-start" href="{% url 'login' %}?next=/arcade/">Войти, чтобы играть <span aria-hidden="true">→</span></a>
+          {% endif %}
+        </div>
+      </div>
+      <p class="minesweeper-status" id="minesweeper-status" role="status" aria-live="polite"></p>
+    </div>
+
+    <footer class="minesweeper-controls">
+      <span class="minesweeper-desktop-hint"><kbd>ЛКМ</kbd> открыть клетку <kbd>ПКМ</kbd> поставить флаг</span>
+      <button class="minesweeper-flag-mode" id="minesweeper-flag-mode" type="button" aria-pressed="false"><span class="minesweeper-flag-mark" aria-hidden="true"></span> Режим флага</button>
+      <span class="minesweeper-mobile-hint">На телефоне: нажми «Режим флага», чтобы отметить мину</span>
+      <span><kbd>F</kbd> флаг · <kbd>ПРОБЕЛ</kbd> новая попытка</span>
+    </footer>
+  </section>
+
+  <section class="minesweeper-leaderboard" aria-labelledby="minesweeper-leaderboard-title">
+    <div class="minesweeper-leaderboard-heading">
+      <div><span class="minesweeper-section-kicker">PITWALL SWEEP · ЭТА НЕДЕЛЯ</span><h2 id="minesweeper-leaderboard-title">Лучшие круги</h2></div>
+      <p><span id="minesweeper-total-attempts">{{ minesweeper_total_attempts }}</span> попыток всего · побеждает лучшее время полного прохождения</p>
+    </div>
+    <ol class="minesweeper-leaderboard-list" id="minesweeper-leaderboard-list">
+      {% for row in minesweeper_records %}
+        <li{% if row.is_current_user %} class="is-current-user"{% endif %}>
+          <span class="minesweeper-rank">{{ row.rank|stringformat:'02d' }}</span>
+          <strong class="minesweeper-driver-name">{{ row.username }}</strong>
+          <span class="minesweeper-record-time" data-time-ms="{{ row.best_time_ms }}">—</span>
+          <span class="minesweeper-record-meta">{{ row.wins }} прохожд. · {{ row.attempts }} попыток</span>
+        </li>
+      {% empty %}
+        <li class="minesweeper-board-empty" id="minesweeper-board-empty">Поле ещё никто не прошёл — первым рекордом можешь стать ты.</li>
+      {% endfor %}
+    </ol>
+    <p class="minesweeper-footnote">Каждая попытка начинается с чистого случайного поля. В недельный рейтинг попадает самый быстрый полностью пройденный заезд.</p>
+  </section>
+
+  <form hidden id="minesweeper-csrf-form">{% csrf_token %}</form>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'league/arcade-minesweeper.js' %}" defer></script>
+{% endblock %}

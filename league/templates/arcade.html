@@ -18,6 +18,7 @@
       {% else %}
       <p>Дневной Гран-при: держи траекторию, проходи ворота и доберись до нового уровня сложности.</p>
       {% endif %}
+      {% if perms.league.change_arcadesettings %}<p class="arcade-admin-control"><a href="{{ arcade_settings_admin_url }}">Управление аркадой →</a></p>{% endif %}
     </div>
     <div class="arcade-personal-record" aria-live="polite">
       {% if arcade_closed_event %}
