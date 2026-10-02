@@ -136,25 +136,22 @@
         setCellAccessibleName(button, null, index);
         return;
       }
-      const showLostMine = mode === "lost" && cell.mine;
+      const showRevealedHazard = (mode === "lost" || mode === "won") && cell.mine;
 
-      if (cell.opened) {
+      if (showRevealedHazard) {
+        button.classList.add("is-open", index === lastExplodedIndex ? "is-exploded" : "is-mine-revealed", `hazard-${cell.hazard}`);
+      } else if (cell.opened) {
         button.classList.add("is-open");
-        if (cell.mine) {
-          button.classList.add(mode === "lost" && index === lastExplodedIndex ? "is-exploded" : "is-mine-revealed");
-          button.classList.add(`hazard-${cell.hazard}`);
-        } else if (cell.count > 0) {
+        if (cell.count > 0) {
           button.textContent = String(cell.count);
           button.classList.add(`number-${cell.count}`);
           button.dataset.number = String(cell.count);
         }
-      } else if (showLostMine) {
-        button.classList.add("is-open", "is-mine-revealed", `hazard-${cell.hazard}`);
       } else if (cell.flagged) {
         button.classList.add("is-flagged");
         if (mode === "lost" && !cell.mine) button.classList.add("is-wrong-flag");
       }
-      setCellAccessibleName(button, cell, index, mode === "lost");
+      setCellAccessibleName(button, cell, index, mode === "lost" || mode === "won");
     });
     minesLeftNode.textContent = String(Math.max(0, mineTotal - flagCount)).padStart(3, "0");
   }
@@ -278,11 +275,11 @@
     field[index].opened = true;
     mode = "lost";
     paint();
-    statusNode.textContent = "Мина! Попытка завершена — поле откроется заново.";
+    statusNode.textContent = "Мина! Все опасности раскрыты — можно начать новую попытку.";
     overlayTitle.textContent = "Жёлтые флаги!";
     overlayCopy.textContent = "Попытка завершена. На поле раскрыты типы мин: масло, колесо и обломки карбона. Запускай новый заезд.";
     startButton.innerHTML = "Ещё попытка <span aria-hidden=\"true\">↻</span>";
-    overlay.hidden = false;
+    window.setTimeout(() => { if (mode === "lost") overlay.hidden = false; }, 700);
     finishAttempt(false);
   }
 
@@ -297,7 +294,7 @@
     overlayTitle.textContent = "Чистый круг!";
     overlayCopy.textContent = `Поле пройдено за ${formatTime(currentElapsed())}. Попробуй побить это время в следующей попытке.`;
     startButton.innerHTML = "Новый заезд <span aria-hidden=\"true\">↻</span>";
-    overlay.hidden = false;
+    window.setTimeout(() => { if (mode === "won") overlay.hidden = false; }, 700);
     finishAttempt(true);
   }
 
