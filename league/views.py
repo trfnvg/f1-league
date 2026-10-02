@@ -52,6 +52,7 @@ from .services import (
     build_leaderboard,
     build_player_statistics,
     get_selected_season,
+    _russian_plural,
 )
 from .wildcards import (
     WildcardActionError,
@@ -80,6 +81,7 @@ from .crazy_jury import (
     cast_crazy_prediction_vote,
     crazy_vote_candidates,
     crazy_jury_context,
+    crazy_vote_is_finished,
     crazy_vote_is_open,
     vetoed_crazy_prediction_id,
 )
@@ -616,11 +618,7 @@ def paddock_jury_admin(request):
             for index, candidate in enumerate(candidates, start=1)
         ]
         vote_is_open = crazy_vote_is_open(event, now)
-        vote_is_final = bool(
-            event.status == Event.Status.SCORED
-            or event.crazy_vote_closed_at
-            or (event.race_datetime and now >= event.race_datetime)
-        )
+        vote_is_final = crazy_vote_is_finished(event, now)
         if vote_is_final:
             vetoed_prediction_id = vetoed_crazy_prediction_id(event, now)
 
@@ -778,6 +776,7 @@ def event_detail(request, event_id: int):
     event = get_object_or_404(Event, id=event_id)
     now = timezone.now()
     crazy_vote_open = crazy_vote_is_open(event, now)
+    crazy_vote_finished = crazy_vote_is_finished(event, now)
     vetoed_crazy_id = vetoed_crazy_prediction_id(event, now)
     photos = event.photos.all()
     result_obj = getattr(event, "result", None)
@@ -1098,6 +1097,8 @@ def event_detail(request, event_id: int):
 
     can_view_community = state in ("closed", "scored")
     community_predictions = []
+    crazy_vote_results = []
+    crazy_vote_total = 0
     if can_view_community:
         public_predictions = list(
             Prediction.objects.filter(event=event, user__is_active=True, user__is_staff=False)
@@ -1120,6 +1121,31 @@ def event_detail(request, event_id: int):
             (item.points for item in public_scores.values()),
             default=None,
         )
+        if crazy_vote_finished:
+            ballots = list(
+                CrazyPredictionVote.objects.filter(event=event)
+                .select_related("voter")
+                .order_by("created_at", "id")
+            )
+            crazy_vote_total = len(ballots)
+            voters_by_target = {}
+            for ballot in ballots:
+                voters_by_target.setdefault(ballot.target_prediction_id, []).append(ballot.voter)
+            crazy_vote_results = [
+                {
+                    "number": index,
+                    "prediction": candidate,
+                    "voters": voters_by_target[candidate.id],
+                    "vote_count": len(voters_by_target[candidate.id]),
+                    "vote_word": _russian_plural(
+                        len(voters_by_target[candidate.id]),
+                        ("голос", "голоса", "голосов"),
+                    ),
+                    "is_excluded": candidate.id == vetoed_crazy_id,
+                }
+                for index, candidate in enumerate(crazy_vote_candidates(event), start=1)
+                if candidate.id in voters_by_target
+            ]
         community_predictions = [
             {
                 "prediction": item,
@@ -1221,6 +1247,9 @@ def event_detail(request, event_id: int):
             "can_view_community": can_view_community,
             "community_predictions": community_predictions,
             "crazy_vote_open": crazy_vote_open,
+            "crazy_vote_finished": crazy_vote_finished,
+            "crazy_vote_results": crazy_vote_results,
+            "crazy_vote_total": crazy_vote_total,
             "crazy_vote_event": event if crazy_vote_open else None,
             "vetoed_crazy_prediction_id": vetoed_crazy_id,
             "own_duel": own_duel,

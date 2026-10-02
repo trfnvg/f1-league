@@ -784,6 +784,41 @@
       <h2 class="community-title">Предикты участников</h2>
       <p class="community-copy">После дедлайна прогнозы открываются для всех — сравни стратегии игроков. {% if crazy_vote_open %}Crazy Prediction скрыты до старта гонки, пока идёт анонимное голосование.{% endif %}</p>
     </div>
+    {% if crazy_vote_finished %}
+      <section class="crazy-jury-results" aria-labelledby="crazy-jury-results-title">
+        <header class="crazy-jury-results-header">
+          <div>
+            <span class="crazy-jury-results-kicker">PADDOCK JURY · ИТОГИ</span>
+            <h3 id="crazy-jury-results-title">Голоса за Crazy Prediction</h3>
+            <p>{{ crazy_vote_total }} голосов · результаты открыты после завершения анонимного голосования</p>
+          </div>
+          {% if vetoed_crazy_prediction_id %}
+            {% for row in crazy_vote_results %}
+              {% if row.is_excluded %}<div class="crazy-jury-excluded-summary"><small>ИСКЛЮЧЁН</small><strong>{{ row.prediction.user.username }}</strong><span>предикт №{{ row.number }}</span></div>{% endif %}
+            {% endfor %}
+          {% elif crazy_vote_total %}
+            <div class="crazy-jury-excluded-summary is-tied"><small>ИТОГ</small><strong>Ничья</strong><span>исключения нет</span></div>
+          {% else %}
+            <div class="crazy-jury-excluded-summary is-tied"><small>ИТОГ</small><strong>Нет голосов</strong><span>исключения нет</span></div>
+          {% endif %}
+        </header>
+        {% if crazy_vote_results %}
+          <div class="crazy-jury-results-grid">
+            {% for row in crazy_vote_results %}
+              <article class="crazy-jury-result-card{% if row.is_excluded %} is-excluded{% endif %}">
+                <div class="crazy-jury-result-top"><span>ПРЕДИКТ №{{ row.number }}</span><strong>{{ row.vote_count }} {{ row.vote_word }}</strong></div>
+                {% if row.is_excluded %}<span class="crazy-jury-result-status">Снят Paddock Jury</span>{% endif %}
+                <p class="crazy-jury-result-text">{{ row.prediction.crazy_prediction }}</p>
+                <div class="crazy-jury-result-author">Автор: <strong>{{ row.prediction.user.username }}</strong></div>
+                <div class="crazy-jury-result-voters"><small>Голосовали</small><div>{% for voter in row.voters %}<span>{{ voter.username }}</span>{% endfor %}</div></div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="crazy-jury-no-votes">Никто не проголосовал — все Crazy Prediction остаются в зачёте.</p>
+        {% endif %}
+      </section>
+    {% endif %}
     <div class="table-responsive community-table-viewport">
       <table class="table community-table align-middle">
         <thead>

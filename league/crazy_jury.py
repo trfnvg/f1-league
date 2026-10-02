@@ -22,6 +22,18 @@ def crazy_vote_is_open(event, now=None):
     )
 
 
+def crazy_vote_is_finished(event, now=None):
+    now = now or timezone.now()
+    return bool(
+        event
+        and (
+            event.status == Event.Status.SCORED
+            or event.crazy_vote_closed_at
+            or (event.race_datetime and now >= event.race_datetime)
+        )
+    )
+
+
 def crazy_vote_candidates(event):
     candidates = list(
         Prediction.objects.filter(
@@ -30,7 +42,8 @@ def crazy_vote_candidates(event):
             user__is_staff=False,
         )
         .exclude(crazy_prediction="")
-        .only("id", "event_id", "user_id", "crazy_prediction")
+        .select_related("user")
+        .only("id", "event_id", "user_id", "user__username", "crazy_prediction")
         .order_by("id")
     )
     candidates = [item for item in candidates if item.crazy_prediction.strip()]
@@ -43,14 +56,7 @@ def crazy_vote_candidates(event):
 def vetoed_crazy_prediction_id(event, now=None):
     """Return the unique top-voted prediction after the vote closes; ties do nothing."""
     now = now or timezone.now()
-    if not event:
-        return None
-    vote_is_final = bool(
-        event.status == Event.Status.SCORED
-        or event.crazy_vote_closed_at
-        or (event.race_datetime and now >= event.race_datetime)
-    )
-    if not vote_is_final:
+    if not crazy_vote_is_finished(event, now):
         return None
 
     candidate_ids = [item.id for item in crazy_vote_candidates(event)]

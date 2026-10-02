@@ -940,6 +940,157 @@ body.apex-night-theme .crazy-jury-notice a {
   text-decoration: none;
 }
 
+body.apex-night-theme .crazy-jury-results {
+  margin: .9rem 0 1rem;
+  padding: clamp(.8rem, 2vw, 1rem);
+  border: 1px solid rgba(230, 173, 101, .22);
+  border-radius: 4px 14px 4px 4px;
+  background: linear-gradient(145deg, rgba(230, 173, 101, .055), rgba(8, 13, 19, .55));
+}
+body.apex-night-theme .crazy-jury-results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  margin-bottom: .75rem;
+}
+body.apex-night-theme .crazy-jury-results-kicker {
+  color: #e6ad65;
+  font-size: .54rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+body.apex-night-theme .crazy-jury-results-header h3 {
+  margin: .12rem 0 .15rem;
+  color: var(--apex-ink);
+  font-size: .95rem;
+  font-weight: 900;
+}
+body.apex-night-theme .crazy-jury-results-header p {
+  margin: 0;
+  color: var(--apex-muted);
+  font-size: .62rem;
+}
+body.apex-night-theme .crazy-jury-excluded-summary {
+  display: grid;
+  flex: 0 0 auto;
+  gap: .08rem;
+  min-width: 122px;
+  padding: .45rem .65rem;
+  border: 1px solid rgba(255, 88, 76, .28);
+  border-radius: 3px 9px 3px 3px;
+  background: rgba(255, 51, 38, .08);
+}
+body.apex-night-theme .crazy-jury-excluded-summary small {
+  color: #ff897f;
+  font-size: .48rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+body.apex-night-theme .crazy-jury-excluded-summary strong {
+  color: var(--apex-ink);
+  font-size: .77rem;
+}
+body.apex-night-theme .crazy-jury-excluded-summary span {
+  color: var(--apex-muted);
+  font-size: .57rem;
+}
+body.apex-night-theme .crazy-jury-excluded-summary.is-tied {
+  border-color: var(--apex-line);
+  background: rgba(255, 255, 255, .025);
+}
+body.apex-night-theme .crazy-jury-excluded-summary.is-tied small { color: var(--apex-muted); }
+body.apex-night-theme .crazy-jury-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: .5rem;
+}
+body.apex-night-theme .crazy-jury-result-card {
+  min-width: 0;
+  padding: .65rem .7rem;
+  border: 1px solid var(--apex-line);
+  border-radius: 3px 10px 3px 3px;
+  background: rgba(7, 12, 18, .5);
+}
+body.apex-night-theme .crazy-jury-result-card.is-excluded {
+  border-color: rgba(255, 88, 76, .42);
+  background: linear-gradient(135deg, rgba(255, 51, 38, .09), rgba(7, 12, 18, .58));
+}
+body.apex-night-theme .crazy-jury-result-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+body.apex-night-theme .crazy-jury-result-top span {
+  color: var(--apex-muted);
+  font-size: .49rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+body.apex-night-theme .crazy-jury-result-top strong {
+  color: #e6ad65;
+  font-size: .63rem;
+}
+body.apex-night-theme .crazy-jury-result-status {
+  display: inline-flex;
+  margin-top: .35rem;
+  padding: .15rem .35rem;
+  border: 1px solid rgba(255, 88, 76, .28);
+  border-radius: 999px;
+  color: #ff978e;
+  font-size: .48rem;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+body.apex-night-theme .crazy-jury-result-text {
+  margin: .4rem 0 .3rem;
+  color: var(--apex-ink);
+  font-size: .68rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+body.apex-night-theme .crazy-jury-result-author {
+  color: var(--apex-muted);
+  font-size: .56rem;
+}
+body.apex-night-theme .crazy-jury-result-author strong { color: var(--apex-ink-soft); }
+body.apex-night-theme .crazy-jury-result-voters {
+  display: flex;
+  align-items: flex-start;
+  gap: .35rem;
+  margin-top: .45rem;
+  padding-top: .4rem;
+  border-top: 1px solid var(--apex-line);
+}
+body.apex-night-theme .crazy-jury-result-voters > small {
+  flex: 0 0 auto;
+  padding-top: .14rem;
+  color: var(--apex-muted);
+  font-size: .52rem;
+}
+body.apex-night-theme .crazy-jury-result-voters > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+  min-width: 0;
+}
+body.apex-night-theme .crazy-jury-result-voters span {
+  max-width: 100%;
+  padding: .12rem .35rem;
+  border: 1px solid rgba(230, 173, 101, .2);
+  border-radius: 999px;
+  color: var(--apex-ink-soft);
+  font-size: .52rem;
+  overflow-wrap: anywhere;
+}
+body.apex-night-theme .crazy-jury-no-votes {
+  margin: 0;
+  color: var(--apex-muted);
+  font-size: .66rem;
+}
+
 @media (max-width: 760px) {
   body.apex-night-theme .crazy-jury-heading { flex-direction: column; }
   body.apex-night-theme .crazy-jury-event { width: 100%; }
@@ -953,6 +1104,10 @@ body.apex-night-theme .crazy-jury-notice a {
   body.apex-night-theme .crazy-jury-card { min-height: 86px; }
   body.apex-night-theme .crazy-jury-footer { align-items: stretch; flex-direction: column; }
   body.apex-night-theme .crazy-jury-submit { width: 100%; }
+  body.apex-night-theme .crazy-jury-results-header { align-items: stretch; flex-direction: column; }
+  body.apex-night-theme .crazy-jury-excluded-summary { width: 100%; }
+  body.apex-night-theme .crazy-jury-results-grid { grid-template-columns: minmax(0, 1fr); }
+  body.apex-night-theme .crazy-jury-result-voters { flex-direction: column; }
 }
 
 body.apex-night-theme .section-heading-row h2 {
