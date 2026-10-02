@@ -173,15 +173,14 @@
 
   function currentHeroSprite() {
     const frames = art.heroFrames;
-    const fallback = (frames && frames[1]) || sprites[8];
-    if (!frames || frames.length < 4 || !player) return fallback;
+    if (!frames || frames.length < 4 || !player) return frames && frames[1] ? frames[1] : null;
 
     // The generated sheet follows the jump arc: crouch, takeoff, peak, descent.
     // Mapping from velocity keeps the pose synced to the actual physics instead
     // of playing a separate animation that could drift away from a landing.
     const velocity = player.vy;
     const frameIndex = velocity > 560 ? 1 : velocity > 100 ? 2 : velocity > -180 ? 3 : 0;
-    return frames[frameIndex] || fallback;
+    return frames[frameIndex] || frames[1];
   }
 
   function drawSprite(index, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
@@ -344,7 +343,7 @@
   }
 
   function buildGame() {
-    const heroSprite = (art.heroFrames && art.heroFrames[1]) || sprites[8];
+    const heroSprite = art.heroFrames && art.heroFrames[1];
     const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
     const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
     const firstY = Math.max(86, Math.min(118, height * .14));
@@ -846,6 +845,11 @@
     art.background = background;
     art.backgroundZones = backgroundZones.every(Boolean) ? backgroundZones : [];
     art.heroFrames = splitHeroSheet(heroSheet);
+    if (art.heroFrames.length !== 4) {
+      copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
+      startButton.disabled = true;
+      return;
+    }
     cropSprites(atlas);
     artReady = true;
     startButton.disabled = false;

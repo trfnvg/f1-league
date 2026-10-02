@@ -39,7 +39,7 @@
         <canvas
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
-          data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}"
+          data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
           data-background-src="{% static 'league/images/doodle-jump/race-day-v1.png' %}"
           data-background-zone-1-src="{% static 'league/images/doodle-jump/doodle-background-zone-01.png' %}"
           data-background-zone-2-src="{% static 'league/images/doodle-jump/doodle-background-zone-02.png' %}"
@@ -86,5 +86,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=7bfa5cf" defer></script>
 {% endblock %}
