@@ -1017,6 +1017,7 @@
       <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
       <a class="{% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>
       <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
+      {% if user.is_staff %}<a class="{% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury</a>{% endif %}
     </div>
 
     <div class="site-header-actions">

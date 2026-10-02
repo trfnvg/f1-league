@@ -1147,6 +1147,20 @@ body.apex-night-theme .activity-feed-item.is-duel-result .activity-feed-icon::be
   background-position: 0 100%;
 }
 
+body.apex-night-theme .activity-feed-item.is-crazy-veto .activity-feed-icon {
+  --paddock-icon-dx: 1.1px;
+  --paddock-icon-dy: -2.3px;
+  border-color: rgba(255, 88, 76, 0.34);
+}
+
+body.apex-night-theme .activity-feed-item.is-crazy-veto .activity-feed-icon::before {
+  background-position: 100% 50%;
+}
+
+body.apex-night-theme .activity-feed-item.is-crazy-veto .activity-news-label {
+  color: #ff897f !important;
+}
+
 body.apex-night-theme .activity-feed-item.is-arcade-leader .activity-feed-icon,
 body.apex-night-theme .activity-feed-item.is-arcade-winner .activity-feed-icon {
   --paddock-icon-dx: -2.1px;
@@ -5163,6 +5177,7 @@ body.apex-night-theme [aria-invalid="true"] {
 
 @media (max-width: 1100px) {
   body.apex-night-theme .desktop-nav { display: none; }
+  body.apex-night-theme.editorial-theme .site-menu-btn { display: inline-flex; }
 }
 
 @media (max-width: 576px) {
@@ -5748,4 +5763,9 @@ body.apex-night-theme .jury-admin-empty { padding: 1.1rem; }
   body.apex-night-theme .jury-admin-back { align-self: flex-start; }
   body.apex-night-theme .jury-admin-close-button { width: 100%; }
   body.apex-night-theme .jury-admin-event-picker { grid-template-columns: 1fr; gap: .35rem; }
+  body.apex-night-theme .jury-admin-candidates { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 621px) {
+  body.apex-night-theme .jury-admin-candidates { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

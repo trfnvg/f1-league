@@ -8,7 +8,7 @@
     {% endif %}
   >
     <span class="activity-feed-icon" aria-hidden="true"></span>
-    <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% elif item.type == "arcade-leader" %}Arcade record{% elif item.type == "arcade-winner" %}Arcade winner{% elif item.type == "duel-accepted" %}Duel accepted{% elif item.type == "duel-result" %}Duel result{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
+    <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% elif item.type == "arcade-leader" %}Arcade record{% elif item.type == "arcade-winner" %}Arcade winner{% elif item.type == "duel-accepted" %}Duel accepted{% elif item.type == "duel-result" %}Duel result{% elif item.type == "crazy-veto" %}Paddock Jury{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
   </a>
 {% empty %}
   <div class="activity-news-empty">Пока нет новых событий. Новости появятся здесь после гонок, дуэлей и аркады.</div>
