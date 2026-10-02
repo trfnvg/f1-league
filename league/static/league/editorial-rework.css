@@ -352,8 +352,8 @@ body.editorial-theme .action-secondary {
   border-top: 1px solid rgba(255,255,255,.1);
 }
 .mini-position { color:#8297a1; font-family:"Barlow Condensed",sans-serif; font-weight:800; }
-.mini-avatar { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; overflow:hidden; background:var(--race-red); font-size:.75rem; font-weight:800; }
-.mini-avatar img { width:100%; height:100%; object-fit:cover; }
+.mini-avatar { width:32px; height:32px; min-width:32px; aspect-ratio:1; box-sizing:border-box; border-radius:50%; display:grid; place-items:center; overflow:hidden; background:var(--race-red); font-size:.75rem; font-weight:800; }
+.mini-avatar img { display:block; width:100%; height:100%; object-fit:cover; object-position:50% 50%; border-radius:inherit; }
 .mini-name { overflow:hidden; text-overflow:ellipsis; font-size:.82rem; font-weight:700; }
 .mini-standings strong { font-family:"Barlow Condensed",sans-serif; font-size:1.1rem; }
 .text-link { display:inline-flex; gap:.5rem; margin-top:1rem; color:#fff !important; font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; text-decoration:none; }

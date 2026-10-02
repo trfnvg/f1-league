@@ -31,6 +31,7 @@ from .models import (
     ArcadeRecord,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
+    CrazyPredictionVote,
     DuelChallenge,
     DuelSettings,
     Event,
@@ -77,6 +78,7 @@ from .arcade_rewards import (
 from .crazy_jury import (
     CrazyVoteError,
     cast_crazy_prediction_vote,
+    crazy_vote_candidates,
     crazy_jury_context,
     crazy_vote_is_open,
     vetoed_crazy_prediction_id,
@@ -562,6 +564,113 @@ def cast_crazy_vote(request, event_id):
     else:
         messages.success(request, "Голос принят. Итоги останутся скрыты до старта гонки.")
     return redirect(f"{reverse('league:home')}?season={event.season_year}#crazy-jury")
+
+
+@login_required
+def paddock_jury_admin(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Эта страница доступна только администраторам.")
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+
+    season = get_selected_season(request)
+    now = timezone.now()
+    events = list(
+        Event.objects.filter(season_year=season.year)
+        .filter(
+            Q(crazy_prediction_votes__isnull=False)
+            | Q(deadline__lte=now, race_datetime__gt=now)
+            | Q(crazy_vote_closed_at__isnull=False)
+        )
+        .distinct()
+        .order_by("-round_number")
+    )
+    requested_event_id = request.GET.get("event")
+    event = next(
+        (item for item in events if str(item.pk) == requested_event_id),
+        events[0] if events else None,
+    )
+
+    candidate_rows = []
+    votes = []
+    vetoed_prediction_id = None
+    vote_is_open = False
+    vote_is_final = False
+    if event:
+        candidates = crazy_vote_candidates(event)
+        votes = list(
+            CrazyPredictionVote.objects.filter(event=event)
+            .select_related("voter", "target_prediction", "target_prediction__user")
+            .order_by("created_at", "id")
+        )
+        votes_by_prediction = {}
+        for vote in votes:
+            votes_by_prediction.setdefault(vote.target_prediction_id, []).append(vote)
+
+        candidate_rows = [
+            {
+                "number": index,
+                "prediction": candidate,
+                "votes": votes_by_prediction.get(candidate.pk, []),
+            }
+            for index, candidate in enumerate(candidates, start=1)
+        ]
+        vote_is_open = crazy_vote_is_open(event, now)
+        vote_is_final = bool(
+            event.status == Event.Status.SCORED
+            or event.crazy_vote_closed_at
+            or (event.race_datetime and now >= event.race_datetime)
+        )
+        if vote_is_final:
+            vetoed_prediction_id = vetoed_crazy_prediction_id(event, now)
+
+    return render(
+        request,
+        "paddock_jury_admin.html",
+        {
+            "season": season,
+            "events": events,
+            "jury_event": event,
+            "candidate_rows": candidate_rows,
+            "vote_total": len(votes),
+            "vote_is_open": vote_is_open,
+            "vote_is_final": vote_is_final,
+            "vetoed_prediction_id": vetoed_prediction_id,
+        },
+    )
+
+
+@login_required
+def close_crazy_vote(request, event_id):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Эта операция доступна только администраторам.")
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+
+    with transaction.atomic():
+        event = get_object_or_404(Event.objects.select_for_update(), pk=event_id)
+        now = timezone.now()
+        if not crazy_vote_is_open(event, now):
+            messages.warning(request, "Голосование уже закрыто или ещё не началось.")
+        else:
+            event.crazy_vote_closed_at = now
+            event.save(update_fields=("crazy_vote_closed_at",))
+            vetoed_id = vetoed_crazy_prediction_id(event, now)
+            if vetoed_id:
+                target = Prediction.objects.select_related("user").get(pk=vetoed_id)
+                messages.success(
+                    request,
+                    f"Paddock Jury закрыт. Исключён предикт участника {target.user.username}.",
+                )
+            else:
+                messages.success(
+                    request,
+                    "Paddock Jury закрыт. Из-за ничьей или отсутствия голосов предикт не исключён.",
+                )
+
+    return redirect(
+        f"{reverse('league:paddock_jury_admin')}?season={event.season_year}&event={event.pk}"
+    )
 
 
 def season_predictions(request):

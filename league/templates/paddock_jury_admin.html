@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Paddock Jury · администрирование{% endblock %}
+
+{% block content %}
+<section class="jury-admin-shell">
+  <header class="jury-admin-header">
+    <div>
+      <span class="jury-admin-kicker">ADMIN CONTROL · {{ season.year }}</span>
+      <h1>Paddock Jury</h1>
+      <p>Здесь видны голоса, авторы прогнозов и итог исключения. Эта панель доступна только администраторам.</p>
+    </div>
+    <a class="jury-admin-back" href="{% url 'league:home' %}?season={{ season.year }}">← На главную</a>
+  </header>
+
+  {% if events %}
+    <form class="jury-admin-event-picker" method="get">
+      <input type="hidden" name="season" value="{{ season.year }}">
+      <label for="jury-event-select">Этап</label>
+      <select id="jury-event-select" name="event" onchange="this.form.submit()">
+        {% for item in events %}
+          <option value="{{ item.id }}" {% if item.id == jury_event.id %}selected{% endif %}>R{{ item.round_number }} · {{ item.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <section class="jury-admin-status">
+      <div>
+        <span class="jury-admin-label">ГОЛОСОВАНИЕ</span>
+        <strong>{% if vote_is_open %}Идёт{% elif vote_is_final %}Завершено{% else %}Не началось{% endif %}</strong>
+        <small>R{{ jury_event.round_number }} · {{ jury_event.name }} · {{ vote_total }} голосов</small>
+      </div>
+      {% if vote_is_open %}
+        <form method="post" action="{% url 'league:close_crazy_vote' event_id=jury_event.id %}" onsubmit="return confirm('Завершить голосование Paddock Jury сейчас? После этого изменить решение будет нельзя.');">
+          {% csrf_token %}
+          <button class="jury-admin-close-button" type="submit">Завершить голосование</button>
+        </form>
+      {% elif jury_event.crazy_vote_closed_at %}
+        <span class="jury-admin-closed-note">Закрыто администратором · {{ jury_event.crazy_vote_closed_at|date:"d.m.Y H:i" }}</span>
+      {% endif %}
+    </section>
+
+    {% if vote_is_final %}
+      <div class="jury-admin-outcome {% if vetoed_prediction_id %}has-veto{% endif %}">
+        {% if vetoed_prediction_id %}
+          <strong>Исключён предикт №{% for row in candidate_rows %}{% if row.prediction.id == vetoed_prediction_id %}{{ row.number }}{% endif %}{% endfor %}</strong>
+          <span>Уникальный лидер голосования; прогноз больше не принесёт очки за Crazy Prediction.</span>
+        {% elif vote_total %}
+          <strong>Ничья — исключения нет</strong>
+          <span>Несколько прогнозов набрали одинаковое максимальное число голосов.</span>
+        {% else %}
+          <strong>Нет голосов — исключения нет</strong>
+          <span>Голосование завершилось без голосов участников.</span>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="jury-admin-candidates">
+      {% for row in candidate_rows %}
+        <article class="jury-admin-candidate{% if row.prediction.id == vetoed_prediction_id %} is-vetoed{% endif %}">
+          <header>
+            <span>ПРЕДИКТ №{{ row.number }}</span>
+            <strong>{{ row.votes|length }} голосов</strong>
+          </header>
+          <blockquote>{{ row.prediction.crazy_prediction }}</blockquote>
+          <div class="jury-admin-author">Автор прогноза: <strong>{{ row.prediction.user.username }}</strong></div>
+          <div class="jury-admin-voters">
+            <span class="jury-admin-label">КТО ГОЛОСОВАЛ ЗА ЭТОТ ПРЕДИКТ</span>
+            {% if row.votes %}
+              <ul>
+                {% for vote in row.votes %}
+                  <li><strong>{{ vote.voter.username }}</strong><time datetime="{{ vote.created_at|date:'c' }}">{{ vote.created_at|date:"d.m · H:i" }}</time></li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <p>Пока никто.</p>
+            {% endif %}
+          </div>
+        </article>
+      {% empty %}
+        <div class="jury-admin-empty">На этом этапе пока нет Crazy Prediction для голосования.</div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="jury-admin-empty">Для сезона {{ season.year }} пока нет активного или уже проведённого голосования.</div>
+  {% endif %}
+</section>
+{% endblock %}
