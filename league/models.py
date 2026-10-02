@@ -101,6 +101,11 @@ class Event(models.Model):
     deadline = models.DateTimeField("Дедлайн предиктов")
     qualifying_datetime = models.DateTimeField("Время окончания квалификации", null=True, blank=True)
     race_datetime = models.DateTimeField("Дата/время гонки", null=True, blank=True)
+    crazy_vote_closed_at = models.DateTimeField(
+        "Время досрочного закрытия Paddock Jury",
+        null=True,
+        blank=True,
+    )
     has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
 

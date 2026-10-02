@@ -76,6 +76,54 @@ class CrazyJuryTests(TestCase):
         self.assertContains(profile, "Скрыто до завершения анонимного голосования")
         self.assertNotContains(profile, "Test crazy idea Alpha")
 
+    def test_admin_audit_shows_voter_and_target_but_is_forbidden_to_players(self):
+        CrazyPredictionVote.objects.create(
+            event=self.event,
+            voter=self.voter,
+            target_prediction=self.prediction_a,
+        )
+        url = reverse("league:paddock_jury_admin")
+
+        self.client.force_login(self.voter)
+        denied = self.client.get(url)
+        self.assertEqual(denied.status_code, 403)
+
+        admin = User.objects.create_superuser("jury-admin", "admin@example.com", "test")
+        self.client.force_login(admin)
+        response = self.client.get(url, {"event": self.event.id})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Test crazy idea Alpha")
+        self.assertContains(response, "Автор прогноза: ")
+        self.assertContains(response, self.owner_a.username)
+        self.assertContains(response, self.voter.username)
+
+    def test_admin_can_close_vote_and_freeze_veto_before_race(self):
+        admin = User.objects.create_superuser("jury-admin", "admin@example.com", "test")
+        CrazyPredictionVote.objects.create(
+            event=self.event,
+            voter=self.voter,
+            target_prediction=self.prediction_a,
+        )
+        self.client.force_login(admin)
+
+        response = self.client.post(
+            reverse("league:close_crazy_vote", args=(self.event.id,)),
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.event.refresh_from_db()
+        self.assertIsNotNone(self.event.crazy_vote_closed_at)
+        self.assertFalse(crazy_vote_is_open(self.event, self.now))
+        self.assertEqual(
+            vetoed_crazy_prediction_id(self.event, now=self.now),
+            self.prediction_a.id,
+        )
+
+        audit = self.client.get(reverse("league:paddock_jury_admin"), {"event": self.event.id})
+        self.assertContains(audit, "Завершено")
+        self.assertContains(audit, "Исключён предикт")
+
     def test_one_vote_only_and_voter_cannot_vote_for_own_prediction(self):
         with self.assertRaisesMessage(CrazyVoteError, "Нельзя голосовать за свой"):
             cast_crazy_prediction_vote(self.event, self.owner_a, self.prediction_a.id, now=self.now)
