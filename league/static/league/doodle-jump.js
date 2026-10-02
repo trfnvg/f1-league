@@ -101,6 +101,21 @@
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
 
+  function currentHeroSprite() {
+    const sprite = art.hero || sprites[8];
+    if (!sprite || !sprite.frameCount || !player) return sprite;
+
+    // The generated sheet follows the jump arc: crouch, takeoff, peak, descent.
+    // Mapping from velocity keeps the pose synced to the actual physics instead
+    // of playing a separate animation that could drift away from a landing.
+    const velocity = player.vy;
+    const frameIndex = velocity > 560 ? 1 : velocity > 100 ? 2 : velocity > -180 ? 3 : 0;
+    return {
+      ...sprite,
+      sx: sprite.sx + sprite.sw * frameIndex,
+    };
+  }
+
   function drawSprite(index, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
     const sprite = sprites[index];
     if (!sprite) return false;
@@ -519,7 +534,7 @@
       ctx.save();
       ctx.translate(player.x, screenY);
       ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
-      const heroSprite = art.hero || sprites[8];
+      const heroSprite = currentHeroSprite();
       if (heroSprite) {
         ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
           -player.width / 2, -player.height / 2, player.width, player.height);
@@ -721,7 +736,14 @@
   ]).then(([atlas, hero, background]) => {
     art.background = background;
     art.hero = hero
-      ? { image: hero, sx: 0, sy: 0, sw: hero.naturalWidth, sh: hero.naturalHeight }
+      ? {
+        image: hero,
+        sx: 0,
+        sy: 0,
+        sw: hero.naturalWidth / 4,
+        sh: hero.naturalHeight,
+        frameCount: 4,
+      }
       : null;
     cropSprites(atlas);
     artReady = true;
