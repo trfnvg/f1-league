@@ -2093,6 +2093,32 @@ body.apex-night-theme .profile-avatar {
   box-shadow: none;
 }
 
+/* Keep profile photos framed and cropped consistently across standings,
+   the home-page top three, and avatars shown on event/duel pages. */
+body.apex-night-theme .mini-avatar,
+body.apex-night-theme .table-avatar,
+body.apex-night-theme .western-avatar,
+body.apex-night-theme .duel-avatar,
+body.apex-night-theme .round-winner-avatar {
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+body.apex-night-theme .mini-avatar img,
+body.apex-night-theme .table-avatar img,
+body.apex-night-theme .western-avatar img,
+body.apex-night-theme .duel-avatar img,
+body.apex-night-theme .round-winner-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: 50% 50%;
+  border-radius: inherit;
+}
+
 body.apex-night-theme .achievement-count {
   color: #241903;
   border-color: var(--apex-amber);
