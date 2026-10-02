@@ -207,8 +207,6 @@ def arcade(request):
         board_data = _minesweeper_leaderboard_data(request.user)
         return render(request, "arcade_minesweeper.html", {
             "minesweeper_attempts": board_data["attempts"],
-            "minesweeper_wins": board_data["wins"],
-            "minesweeper_best_time_ms": board_data["best_time_ms"],
             "minesweeper_records": board_data["records"],
             "minesweeper_total_attempts": board_data["total_attempts"],
             "minesweeper_week_start": board_data["week_start"],

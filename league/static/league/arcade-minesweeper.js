@@ -12,7 +12,6 @@
   const clockNode = document.getElementById("minesweeper-clock");
   const minesLeftNode = document.getElementById("minesweeper-mines-left");
   const attemptsNode = document.getElementById("minesweeper-attempts");
-  const bestNode = document.getElementById("minesweeper-best");
   const flagModeButton = document.getElementById("minesweeper-flag-mode");
   const fullScreenButton = document.getElementById("minesweeper-fullscreen");
   const leaderboardNode = document.getElementById("minesweeper-leaderboard-list");
@@ -31,15 +30,13 @@
   let flagMode = false;
   let revealedSafeCount = 0;
   let flagCount = 0;
-  let bestTimeMs = Number(screen.dataset.bestTime) || null;
   let attempts = Number(screen.dataset.attempts) || 0;
 
   const formatTime = (milliseconds) => {
-    const centiseconds = Math.floor(Math.max(0, milliseconds) / 10);
-    const minutes = Math.floor(centiseconds / 6000);
-    const seconds = Math.floor((centiseconds % 6000) / 100);
-    const hundredths = centiseconds % 100;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(hundredths).padStart(2, "0")}`;
+    const totalSeconds = Math.floor(Math.max(0, milliseconds) / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
   };
 
   const currentElapsed = () => startedAt === null ? 0 : performance.now() - startedAt;
@@ -58,7 +55,7 @@
     if (startedAt !== null) return;
     startedAt = performance.now();
     updateClock();
-    timerId = window.setInterval(updateClock, 80);
+    timerId = window.setInterval(updateClock, 1000);
   }
 
   function shuffle(list) {
@@ -200,13 +197,6 @@
       attemptsNode.textContent = String(attempts).padStart(2, "0");
     }
     if (Number.isFinite(data.total_attempts)) totalAttemptsNode.textContent = String(data.total_attempts);
-    if (Number.isFinite(data.best_time_ms)) {
-      bestTimeMs = data.best_time_ms;
-      bestNode.textContent = formatTime(bestTimeMs);
-    } else if (data.best_time_ms === null) {
-      bestTimeMs = null;
-      bestNode.textContent = "—";
-    }
     if (Array.isArray(data.records)) renderLeaderboard(data.records);
   }
 
@@ -363,7 +353,7 @@
       startedAt = null;
       if (timerId) window.clearInterval(timerId);
       timerId = null;
-      clockNode.textContent = "00:00.00";
+      clockNode.textContent = "00:00";
       statusNode.textContent = "Новая карта готова. Открой первую клетку.";
       overlay.hidden = true;
       setFlagMode(false);
@@ -423,7 +413,6 @@
   buildBoard();
   paint();
   attemptsNode.textContent = String(attempts).padStart(2, "0");
-  bestNode.textContent = bestTimeMs ? formatTime(bestTimeMs) : "—";
   document.querySelectorAll(".minesweeper-record-time[data-time-ms]").forEach((node) => {
     const time = Number(node.dataset.timeMs);
     node.textContent = Number.isFinite(time) ? formatTime(time) : "—";
