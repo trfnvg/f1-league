@@ -49,6 +49,7 @@
   let trailTimer = 0;
   let touchDirection = null;
   let nativeFullscreenRequested = false;
+  let facing = 1;
 
   bestNode.textContent = String(best);
   startButton.disabled = true;
@@ -143,18 +144,60 @@
     backgroundTileHeight = pixelHeight / dpr;
   }
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function drawCloud(worldY, x, scale = 1, alpha = 1) {
+    const screenY = height - (worldY - cameraY);
+    if (screenY < -90 || screenY > height + 90) return;
+    const drift = Math.sin(elapsed * .18 + worldY * .002) * 12;
+    const cloudWidth = Math.max(86, width * .2) * scale;
+    const cloudHeight = Math.max(22, height * .045) * scale;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#eff8ff";
+    ctx.beginPath();
+    ctx.ellipse(x + drift - cloudWidth * .24, screenY + cloudHeight * .12, cloudWidth * .25, cloudHeight * .32, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + drift, screenY - cloudHeight * .12, cloudWidth * .34, cloudHeight * .48, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + drift + cloudWidth * .26, screenY + cloudHeight * .08, cloudWidth * .28, cloudHeight * .36, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(x + drift - cloudWidth * .42, screenY + cloudHeight * .02, cloudWidth * .84, cloudHeight * .34);
+    ctx.restore();
+  }
+
   function drawBackdrop() {
-    if (backgroundCache) {
-      const offset = (cameraY * .16) % backgroundTileHeight;
-      for (let y = -offset; y < height; y += backgroundTileHeight) {
-        ctx.drawImage(backgroundCache, 0, y, width, backgroundTileHeight);
-      }
-      ctx.fillStyle = "rgba(8, 14, 25, .1)";
-      ctx.fillRect(0, 0, width, height);
-    } else {
-      ctx.fillStyle = "#111a2c";
-      ctx.fillRect(0, 0, width, height);
+    // The world climbs through a single background journey instead of looping
+    // the city texture: pit lane at the start, then clouds, then open sky.
+    const skyProgress = clamp(cameraY / 1650, 0, 1);
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    const topRed = Math.round(22 + (137 - 22) * skyProgress);
+    const topGreen = Math.round(53 + (204 - 53) * skyProgress);
+    const topBlue = Math.round(91 + (247 - 91) * skyProgress);
+    const bottomRed = Math.round(72 + (220 - 72) * skyProgress);
+    const bottomGreen = Math.round(139 + (241 - 139) * skyProgress);
+    const bottomBlue = Math.round(190 + (255 - 190) * skyProgress);
+    sky.addColorStop(0, `rgb(${topRed}, ${topGreen}, ${topBlue})`);
+    sky.addColorStop(1, `rgb(${bottomRed}, ${bottomGreen}, ${bottomBlue})`);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, width, height);
+
+    if (backgroundCache && backgroundTileHeight) {
+      const cityY = height + cameraY * .86 - backgroundTileHeight;
+      const cityFade = clamp(1 - Math.max(0, cameraY - 180) / 760, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = cityFade;
+      ctx.drawImage(backgroundCache, 0, cityY, width, backgroundTileHeight);
+      ctx.restore();
     }
+
+    // Clouds are anchored to world heights, so they naturally enter the
+    // viewport as the player climbs rather than sliding in a repeating loop.
+    drawCloud(760, width * .2, .9, .82);
+    drawCloud(930, width * .76, 1.15, .9);
+    drawCloud(1160, width * .42, .72, .72);
+    drawCloud(1410, width * .82, 1.35, .86);
+    drawCloud(1690, width * .16, 1.05, .92);
 
     ctx.globalAlpha = 1;
   }
@@ -278,6 +321,7 @@
     trailTimer = 0;
     held.left = false;
     held.right = false;
+    facing = 1;
 
     let previousPlatform = addPlatform(firstY, width * .5, "normal");
     let nextY = firstY;
@@ -550,6 +594,7 @@
       ctx.save();
       ctx.translate(player.x, screenY);
       ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
+      ctx.scale(facing, 1);
       const heroSprite = currentHeroSprite();
       if (heroSprite) {
         ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
@@ -634,6 +679,7 @@
 
   function setDirection(direction, value) {
     held[direction] = value;
+    if (value) facing = direction === "left" ? -1 : 1;
   }
 
   function clearDirections() {
@@ -708,15 +754,15 @@
       toggleFullscreen();
       return;
     }
-    if (["arrowleft", "arrowright", " "].includes(key)) event.preventDefault();
-    if (key === "arrowleft" || key === "a") setDirection("left", true);
-    if (key === "arrowright" || key === "d") setDirection("right", true);
+    if (["arrowleft", "arrowright", " ", "a", "d", "ф", "в"].includes(key)) event.preventDefault();
+    if (key === "arrowleft" || key === "a" || key === "ф") setDirection("left", true);
+    if (key === "arrowright" || key === "d" || key === "в") setDirection("right", true);
     if (key === " " && mode !== "running") startGame();
   });
   document.addEventListener("keyup", (event) => {
     const key = event.key.toLowerCase();
-    if (key === "arrowleft" || key === "a") setDirection("left", false);
-    if (key === "arrowright" || key === "d") setDirection("right", false);
+    if (key === "arrowleft" || key === "a" || key === "ф") setDirection("left", false);
+    if (key === "arrowright" || key === "d" || key === "в") setDirection("right", false);
   });
   window.addEventListener("blur", clearDirections);
   startButton.addEventListener("click", startGame);
