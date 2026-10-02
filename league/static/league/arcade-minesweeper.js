@@ -20,6 +20,12 @@
   const rows = 16;
   const columns = 30;
   const mineTotal = 99;
+  const mineHazards = ["oil", "wheel", "carbon"];
+  const mineHazardLabels = {
+    oil: "масляное пятно",
+    wheel: "оторвавшееся колесо",
+    carbon: "обломки карбона",
+  };
   const cellTotal = rows * columns;
   const cells = [];
   let field = null;
@@ -87,8 +93,11 @@
     const safe = new Set([firstIndex, ...neighborIndexes(firstIndex)]);
     const possibleMines = shuffle(Array.from({ length: cellTotal }, (_, index) => index).filter((index) => !safe.has(index)));
     const mineIndexes = new Set(possibleMines.slice(0, mineTotal));
+    const shuffledHazards = shuffle(Array.from({ length: mineTotal }, (_, index) => mineHazards[index % mineHazards.length]));
+    const hazardByIndex = new Map(Array.from(mineIndexes, (index, mineIndex) => [index, shuffledHazards[mineIndex]]));
     field = Array.from({ length: cellTotal }, (_, index) => ({
       mine: mineIndexes.has(index),
+      hazard: hazardByIndex.get(index) || "",
       opened: false,
       flagged: false,
       count: 0,
@@ -103,19 +112,20 @@
     const column = index % columns + 1;
     if (!cell) {
       button.setAttribute("aria-label", `Закрытая клетка, ряд ${row}, столбец ${column}`);
+    } else if (revealMines && cell.mine) {
+      button.setAttribute("aria-label", `Мина — ${mineHazardLabels[cell.hazard]}, ряд ${row}, столбец ${column}`);
     } else if (cell.flagged) {
       button.setAttribute("aria-label", `Флаг, ряд ${row}, столбец ${column}`);
     } else if (cell.opened) {
       if (cell.mine) button.setAttribute("aria-label", `Мина, ряд ${row}, столбец ${column}`);
       else button.setAttribute("aria-label", cell.count ? `${cell.count} рядом, ряд ${row}, столбец ${column}` : `Пусто, ряд ${row}, столбец ${column}`);
-    } else if (revealMines && cell.mine) {
-      button.setAttribute("aria-label", `Мина, ряд ${row}, столбец ${column}`);
     } else {
       button.setAttribute("aria-label", `Закрытая клетка, ряд ${row}, столбец ${column}`);
     }
   }
 
   function paint() {
+    boardNode.classList.toggle("is-active", mode === "playing");
     cells.forEach((button, index) => {
       button.className = "minesweeper-cell";
       button.textContent = "";
@@ -132,16 +142,17 @@
         button.classList.add("is-open");
         if (cell.mine) {
           button.classList.add(mode === "lost" && index === lastExplodedIndex ? "is-exploded" : "is-mine-revealed");
+          button.classList.add(`hazard-${cell.hazard}`);
         } else if (cell.count > 0) {
           button.textContent = String(cell.count);
           button.classList.add(`number-${cell.count}`);
           button.dataset.number = String(cell.count);
         }
+      } else if (showLostMine) {
+        button.classList.add("is-open", "is-mine-revealed", `hazard-${cell.hazard}`);
       } else if (cell.flagged) {
         button.classList.add("is-flagged");
         if (mode === "lost" && !cell.mine) button.classList.add("is-wrong-flag");
-      } else if (showLostMine) {
-        button.classList.add("is-open", "is-mine-revealed");
       }
       setCellAccessibleName(button, cell, index, mode === "lost");
     });
@@ -269,7 +280,7 @@
     paint();
     statusNode.textContent = "Мина! Попытка завершена — поле откроется заново.";
     overlayTitle.textContent = "Жёлтые флаги!";
-    overlayCopy.textContent = "Эта попытка не попадёт в рейтинг. Поле сброшено — запускай новую и улучшай свой круг.";
+    overlayCopy.textContent = "Попытка завершена. На поле раскрыты типы мин: масло, колесо и обломки карбона. Запускай новый заезд.";
     startButton.innerHTML = "Ещё попытка <span aria-hidden=\"true\">↻</span>";
     overlay.hidden = false;
     finishAttempt(false);
