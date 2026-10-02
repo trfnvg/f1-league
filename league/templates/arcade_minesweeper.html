@@ -53,18 +53,31 @@
       <div class="minesweeper-board-wrap">
         <div class="minesweeper-board" id="minesweeper-board" role="grid" aria-label="Игровое поле, 30 столбцов на 16 строк"></div>
       </div>
-      <aside class="minesweeper-hazard-panel" aria-label="Опасности, отмечаемые флагом">
+      <aside class="minesweeper-hazard-panel" aria-label="На поле случайно размещены три типа мин. При подрыве их тип раскрывается; в числовых подсказках все мины считаются одинаково.">
         <strong>ОПАСНОСТИ<br>НА ТРАССЕ:</strong>
-        <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-oil" aria-hidden="true"></span><small>МАСЛЯНОЕ<br>ПЯТНО</small></div>
-        <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-wheel" aria-hidden="true"></span><small>ОТОРВАВШЕЕСЯ<br>КОЛЕСО</small></div>
-        <div class="minesweeper-hazard-item"><span class="mines-hazard-icon is-carbon" aria-hidden="true"></span><small>ОБЛОМКИ<br>КАРБОНА</small></div>
+        <div class="minesweeper-hazard-item"><small>МАСЛЯНОЕ<br>ПЯТНО</small></div>
+        <div class="minesweeper-hazard-item"><small>ОТОРВАВШЕЕСЯ<br>КОЛЕСО</small></div>
+        <div class="minesweeper-hazard-item"><small>ОБЛОМКИ<br>КАРБОНА</small></div>
       </aside>
+
+      <div class="minesweeper-coffee" aria-hidden="true">
+        <span class="minesweeper-steam steam-one"></span>
+        <span class="minesweeper-steam steam-two"></span>
+        <svg viewBox="0 0 32 32" shape-rendering="crispEdges">
+          <path fill="#07101d" d="M5 8h22v4h3v10h-3v4H8v-2H5z"/>
+          <path fill="#e8dfc8" d="M7 10h18v3h2v7h-2v4H9v-2H7z"/>
+          <path fill="#4e2c20" d="M8 9h17v3H8z"/>
+          <path fill="#b93436" d="M9 15h15v5H9z"/>
+          <path fill="#f6e8c9" d="M24 13h3v2h2v5h-2v2h-3v-3h2v-3h-2zM10 24h12v2H10z"/>
+          <path fill="#fff4d8" d="M9 12h2v2H9zM11 21h8v2h-8z"/>
+        </svg>
+      </div>
 
       <div class="minesweeper-overlay" id="minesweeper-overlay">
         <div class="minesweeper-overlay-card">
           <span class="minesweeper-overlay-kicker" id="minesweeper-overlay-kicker">{% if arcade_admin_preview %}ЗАКРЫТЫЙ ТЕСТ · ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
           <h2 id="minesweeper-overlay-title">На старт, сапёр!</h2>
-          <p id="minesweeper-overlay-copy">Открывай клетки, используй числа как подсказки и не попади на мину. Поле — 30 × 16 клеток и 99 опасностей. На компьютере — левая и правая кнопки мыши, на телефоне включи режим флага.</p>
+          <p id="minesweeper-overlay-copy">Открывай клетки по подсказкам и не попади на одну из 99 мин. На поле три вида опасностей — масло, колесо и обломки; числа считают их одинаково. На компьютере — ЛКМ/ПКМ, на телефоне включи режим флага.</p>
           {% if user.is_authenticated %}
             <button class="minesweeper-start" id="minesweeper-start" type="button">Начать попытку <span aria-hidden="true">→</span></button>
           {% else %}
