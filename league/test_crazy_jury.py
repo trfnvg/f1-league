@@ -72,6 +72,7 @@ class CrazyJuryTests(TestCase):
         self.assertTrue(event_page.context["crazy_vote_open"])
         self.assertNotContains(event_page, "Test crazy idea Alpha")
         self.assertNotContains(event_page, "Test crazy idea Bravo")
+        self.assertNotContains(event_page, "Голоса за Crazy Prediction")
 
         profile = self.client.get(reverse("league:player_profile", args=(self.owner_a.id,)))
         self.assertContains(profile, "Скрыто до завершения анонимного голосования")
@@ -129,6 +130,12 @@ class CrazyJuryTests(TestCase):
         home = self.client.get(reverse("league:home"))
         self.assertContains(home, f"Crazy Prediction игрока {self.owner_a.username} исключён")
         self.assertContains(home, "Paddock Jury")
+
+        event_page = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
+        self.assertContains(event_page, "Голоса за Crazy Prediction")
+        self.assertContains(event_page, "Снят Paddock Jury")
+        self.assertContains(event_page, self.owner_a.username)
+        self.assertContains(event_page, self.voter.username)
 
         audit = self.client.get(reverse("league:paddock_jury_admin"), {"event": self.event.id})
         self.assertContains(audit, "Завершено")
