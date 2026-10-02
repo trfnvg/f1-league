@@ -40,6 +40,7 @@
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
+  let startY = 86;
   let peakY = 0;
   let frags = 0;
   let bananaCount = 0;
@@ -228,13 +229,14 @@
     const heroSprite = art.hero || sprites[8];
     const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
     const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
-    const firstY = 86;
+    const firstY = Math.max(86, Math.min(118, height * .14));
     platforms = [];
     enemies = [];
     hazards = [];
     bananas = [];
     effects = [];
     cameraY = 0;
+    startY = firstY;
     worldTop = firstY;
     peakY = firstY + heroHeight / 2;
     frags = 0;
@@ -307,7 +309,7 @@
   }
 
   function updateHud() {
-    const heightPoints = Math.max(0, Math.floor((peakY - 86) / 11));
+    const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30 + bananaCount * 12;
     scoreNode.textContent = String(mode === "over" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
@@ -347,7 +349,7 @@
   function endGame() {
     if (mode !== "running") return;
     mode = "over";
-    const heightPoints = Math.max(0, Math.floor((peakY - 86) / 11));
+    const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30 + bananaCount * 12;
     lastWasRecord = finalScore > best;
     if (finalScore > best) {
@@ -422,6 +424,10 @@
 
     if (player.vy < 0) {
       for (const platform of platforms) {
+        // A platform that has already slipped below the visible playfield must
+        // not catch the player off-screen. This prevents invisible landings at
+        // the bottom edge after the camera has moved upward.
+        if (platform.y < cameraY + 4) continue;
         if (platform.broken || previousFeet < platform.y || currentFeet > platform.y) continue;
         if (Math.abs(player.x - platform.x) > platform.width * .48 + player.width * .32) continue;
         if (platform.kind === "break") platform.broken = true;
@@ -462,14 +468,16 @@
       trailTimer = elapsed;
     }
 
-    if (player.y > cameraY + height * .27) cameraY = player.y - height * .27;
+    // Keep the racer in the lower-middle band: enough space remains above for
+    // incoming platforms, while the player never hugs the bottom edge.
+    if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
     extendWorld();
     platforms = platforms.filter((platform) => platform.y > cameraY - 160);
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
     hazards = hazards.filter((hazard) => hazard.y > cameraY - 180);
     bananas = bananas.filter((banana) => banana.y > cameraY - 120 && !banana.taken);
 
-    if (player.y < cameraY - player.height) {
+    if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
       return;
     }
