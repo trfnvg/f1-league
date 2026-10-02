@@ -100,19 +100,37 @@
 }
 
 .doodle-scoreboard {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
   display: grid;
-  min-height: 72px;
+  box-sizing: border-box;
+  min-height: 78px;
   grid-template-columns: minmax(64px, 1fr) 1.3fr minmax(64px, 1fr) auto;
   align-items: center;
   gap: .8rem;
   padding: .7rem 1.1rem;
-  border-bottom: 2px solid #344f78;
-  background: #101d39;
+  border-bottom: 2px solid rgba(142, 234, 255, .38);
+  background: linear-gradient(180deg, rgba(8, 18, 38, .96), rgba(12, 29, 53, .72));
+  box-shadow: 0 5px 18px rgba(3, 12, 28, .22);
+  pointer-events: none;
 }
 
 .doodle-scoreboard > div { display: grid; gap: .17rem; }
 .doodle-scoreboard small { color: var(--doodle-muted); font-size: .57rem; font-weight: 900; letter-spacing: .07em; }
 .doodle-scoreboard strong { color: var(--doodle-cream); font-size: 1.45rem; font-weight: 900; line-height: 1; text-shadow: 2px 2px 0 rgba(0, 0, 0, .5); font-variant-numeric: tabular-nums; }
+.doodle-scoreboard > div:first-child {
+  min-width: 92px;
+  padding: .34rem .55rem .4rem;
+  border: 1px solid rgba(255, 189, 74, .72);
+  background: rgba(17, 33, 58, .78);
+  box-shadow: 3px 3px 0 rgba(6, 12, 25, .55);
+}
+.doodle-scoreboard > div:first-child small { color: var(--doodle-yellow); }
+.doodle-scoreboard > div:first-child strong { color: #fff8dc; font-size: clamp(1.8rem, 4vw, 2.4rem); text-shadow: 3px 3px 0 #8e3f45, 0 0 14px rgba(255, 189, 74, .24); }
+.doodle-scoreboard .doodle-best strong { font-size: clamp(1.25rem, 3vw, 1.7rem); }
 .doodle-live { display: flex; align-items: center; justify-content: center; gap: .48rem; color: var(--doodle-cyan); font-size: .6rem; font-weight: 900; letter-spacing: .08em; }
 .doodle-live > i { width: .4rem; height: .4rem; background: var(--doodle-red); box-shadow: 2px 2px 0 #783444; }
 .doodle-best { justify-items: end; padding-right: .3rem; }
@@ -128,6 +146,7 @@
   color: var(--doodle-cream);
   background: #152849;
   margin-left: .2rem;
+  pointer-events: auto;
   cursor: pointer;
   transition: color 140ms ease, border-color 140ms ease, background 140ms ease, transform 140ms ease;
 }
@@ -357,9 +376,8 @@ body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
 .doodle-machine.is-fullscreen .doodle-scoreboard,
 .doodle-machine:fullscreen .doodle-scoreboard,
 .doodle-machine:-webkit-full-screen .doodle-scoreboard {
-  flex: 0 0 auto;
-  width: min(100%, 1040px);
-  align-self: center;
+  width: 100%;
+  align-self: stretch;
 }
 
 .doodle-machine.is-fullscreen .doodle-game-stage,
