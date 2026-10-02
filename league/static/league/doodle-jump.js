@@ -178,6 +178,44 @@
     });
   }
 
+  function platformGap() {
+    // Keep the vertical rhythm inside one jump arc, with enough breathing room
+    // that the next platform is never hidden directly behind the previous one.
+    return 108 + Math.random() * 38;
+  }
+
+  function choosePlatformX(previousX, gap) {
+    const minX = width * .14;
+    const maxX = width * .86;
+    const jumpSpeed = 720;
+    const gravity = 1240;
+    const discriminant = Math.max(0, jumpSpeed * jumpSpeed - 2 * gravity * gap);
+    const landingTime = (jumpSpeed + Math.sqrt(discriminant)) / gravity;
+    const horizontalSpeed = Math.min(440, width * .62);
+    const maxOffset = Math.max(52, Math.min(width * .35, horizontalSpeed * landingTime * .72));
+    const minOffset = Math.min(maxOffset * .58, Math.max(28, width * .08));
+    const candidates = [];
+
+    for (let attempt = 0; attempt < 18; attempt += 1) {
+      const direction = Math.random() < .5 ? -1 : 1;
+      const offset = minOffset + Math.random() * Math.max(0, maxOffset - minOffset);
+      const candidate = previousX + direction * offset;
+      if (candidate >= minX && candidate <= maxX) candidates.push(candidate);
+    }
+
+    if (candidates.length) return candidates[Math.floor(Math.random() * candidates.length)];
+
+    // Near an edge, keep the move reachable while still changing lanes.
+    let direction = previousX > (minX + maxX) / 2 ? -1 : 1;
+    let available = direction < 0 ? previousX - minX : maxX - previousX;
+    if (available < minOffset) {
+      direction *= -1;
+      available = direction < 0 ? previousX - minX : maxX - previousX;
+    }
+    const offset = Math.min(maxOffset, Math.max(0, available));
+    return Math.max(minX, Math.min(maxX, previousX + direction * offset));
+  }
+
   function selectPlatformKind() {
     const roll = Math.random();
     if (roll < .12) return "break";
@@ -211,9 +249,9 @@
     let nextY = firstY;
     let lastX = width * .5;
     while (nextY < height + 320) {
-      nextY += 82 + Math.random() * 39;
-      const delta = (Math.random() * 2 - 1) * Math.min(width * .34, 250);
-      lastX = Math.max(width * .12, Math.min(width * .88, lastX + delta));
+      const gap = platformGap();
+      nextY += gap;
+      lastX = choosePlatformX(lastX, gap);
       addPlatform(nextY, lastX, selectPlatformKind());
       worldTop = nextY;
     }
@@ -235,11 +273,11 @@
 
   function extendWorld() {
     while (worldTop < cameraY + height + 280) {
-      const y = worldTop + 82 + Math.random() * 40;
+      const gap = platformGap();
+      const y = worldTop + gap;
       const prior = platforms[platforms.length - 1];
-      const lastX = prior ? prior.originX : width / 2;
-      const nextX = Math.max(width * .12, Math.min(width * .88,
-        lastX + (Math.random() * 2 - 1) * Math.min(width * .34, 250)));
+      const lastX = prior ? prior.x : width / 2;
+      const nextX = choosePlatformX(lastX, gap);
       addPlatform(y, nextX, selectPlatformKind());
       worldTop = y;
     }
@@ -424,7 +462,7 @@
       trailTimer = elapsed;
     }
 
-    if (player.y > cameraY + height * .54) cameraY = player.y - height * .54;
+    if (player.y > cameraY + height * .27) cameraY = player.y - height * .27;
     extendWorld();
     platforms = platforms.filter((platform) => platform.y > cameraY - 160);
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);

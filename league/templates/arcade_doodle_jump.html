@@ -13,38 +13,37 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Банана Леклер прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
+      <p class="doodle-lede">Зелёный гонщик прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
   </header>
 
   <section class="doodle-machine" aria-label="Doodle GP — прыжковая аркада">
-    <div class="doodle-scoreboard" aria-live="polite">
-      <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
-      <span class="doodle-live"><i></i> DOODLE GP</span>
-      <div class="doodle-best"><small>РЕКОРД</small><strong id="doodle-best">0</strong></div>
-      <button class="doodle-fullscreen-toggle" id="doodle-fullscreen-toggle" type="button"
-        aria-label="На весь экран" aria-pressed="false" title="На весь экран">
-        <svg class="doodle-fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" />
-        </svg>
-        <svg class="doodle-fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-          <path d="M8 3v5H3M16 8h5V3M21 16h-5v5M8 21v-5H3" />
-        </svg>
-      </button>
-    </div>
-
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
+        <div class="doodle-scoreboard" aria-live="polite">
+          <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
+          <span class="doodle-live"><i></i> DOODLE GP</span>
+          <div class="doodle-best"><small>РЕКОРД</small><strong id="doodle-best">0</strong></div>
+          <button class="doodle-fullscreen-toggle" id="doodle-fullscreen-toggle" type="button"
+            aria-label="На весь экран" aria-pressed="false" title="На весь экран">
+            <svg class="doodle-fullscreen-enter" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" />
+            </svg>
+            <svg class="doodle-fullscreen-exit" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M8 3v5H3M16 8h5V3M21 16h-5v5M8 21v-5H3" />
+            </svg>
+          </button>
+        </div>
         <canvas
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
-          data-hero-src="{% static 'league/images/doodle-jump/f1-doodle-racer-v1.png' %}"
-          data-background-src="{% static 'league/images/doodle-jump/race-night-v4.png' %}"
+          data-hero-src="{% static 'league/images/doodle-jump/f1-green-doodle-racer-v3.png' %}"
+          data-background-src="{% static 'league/images/doodle-jump/race-day-v1.png' %}"
           tabindex="0"
           role="application"
-          aria-label="Банана Леклер подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
+          aria-label="Зелёный гонщик подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки или A и D."
         ></canvas>
         <div class="doodle-overlay" id="doodle-overlay">
           <div class="doodle-overlay-card">
