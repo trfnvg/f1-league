@@ -102,18 +102,16 @@
   }
 
   function currentHeroSprite() {
-    const sprite = art.hero || sprites[8];
-    if (!sprite || !sprite.frameCount || !player) return sprite;
+    const frames = art.heroFrames;
+    const fallback = (frames && frames[1]) || sprites[8];
+    if (!frames || frames.length < 4 || !player) return fallback;
 
     // The generated sheet follows the jump arc: crouch, takeoff, peak, descent.
     // Mapping from velocity keeps the pose synced to the actual physics instead
     // of playing a separate animation that could drift away from a landing.
     const velocity = player.vy;
     const frameIndex = velocity > 560 ? 1 : velocity > 100 ? 2 : velocity > -180 ? 3 : 0;
-    return {
-      ...sprite,
-      sx: sprite.sx + sprite.sw * frameIndex,
-    };
+    return frames[frameIndex] || fallback;
   }
 
   function drawSprite(index, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
@@ -180,7 +178,7 @@
   function addPlatform(y, x, kind = "normal") {
     const spriteIndex = kind === "moving" ? 1 : kind === "break" ? 2 : kind === "spring" ? 3 : 0;
     const platformWidth = Math.max(88, Math.min(116, width * .23)) * visualScale();
-    platforms.push({
+    const platform = {
       x,
       originX: x,
       y,
@@ -191,6 +189,25 @@
       phase: Math.random() * Math.PI * 2,
       range: Math.min(42, width * .1),
       broken: false,
+    };
+    platforms.push(platform);
+    return platform;
+  }
+
+  function addBananaBetween(lower, upper) {
+    if (!lower || !upper) return;
+
+    // Keep collectibles in the middle of the jump corridor. The gap is always
+    // larger than the banana hitbox, so it can never be rendered inside either
+    // platform (even while it bobs up and down).
+    const gap = upper.y - lower.y;
+    const laneCenter = lower.x + (upper.x - lower.x) * .5;
+    const drift = (Math.random() - .5) * Math.min(34, width * .07);
+    bananas.push({
+      x: Math.max(width * .16, Math.min(width * .84, laneCenter + drift)),
+      y: lower.y + gap * (.46 + Math.random() * .08),
+      taken: false,
+      phase: Math.random() * Math.PI * 2,
     });
   }
 
@@ -241,7 +258,7 @@
   }
 
   function buildGame() {
-    const heroSprite = art.hero || sprites[8];
+    const heroSprite = (art.heroFrames && art.heroFrames[1]) || sprites[8];
     const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
     const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
     const firstY = Math.max(86, Math.min(118, height * .14));
@@ -262,14 +279,16 @@
     held.left = false;
     held.right = false;
 
-    addPlatform(firstY, width * .5, "normal");
+    let previousPlatform = addPlatform(firstY, width * .5, "normal");
     let nextY = firstY;
     let lastX = width * .5;
     while (nextY < height + 320) {
       const gap = platformGap();
       nextY += gap;
       lastX = choosePlatformX(lastX, gap);
-      addPlatform(nextY, lastX, selectPlatformKind());
+      const nextPlatform = addPlatform(nextY, lastX, selectPlatformKind());
+      addBananaBetween(previousPlatform, nextPlatform);
+      previousPlatform = nextPlatform;
       worldTop = nextY;
     }
     player = {
@@ -282,7 +301,6 @@
     };
 
     enemies.push({ x: width * .73, baseX: width * .73, y: 440, phase: Math.random() * 6, dead: false });
-    bananas.push({ x: width * .37, y: 320, taken: false, phase: Math.random() * 6 });
     extendWorld();
     updateHud();
     draw();
@@ -295,7 +313,8 @@
       const prior = platforms[platforms.length - 1];
       const lastX = prior ? prior.x : width / 2;
       const nextX = choosePlatformX(lastX, gap);
-      addPlatform(y, nextX, selectPlatformKind());
+      const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
+      addBananaBetween(prior, nextPlatform);
       worldTop = y;
     }
 
@@ -317,9 +336,6 @@
         spriteIndex: Math.random() < .68 ? 5 : 6,
         size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
       });
-    }
-    if (!bananas.length || worldTop - bananas[bananas.length - 1].y > 385) {
-      bananas.push({ x: width * (.15 + Math.random() * .7), y: worldTop - 45, taken: false, phase: Math.random() * Math.PI * 2 });
     }
   }
 
@@ -731,19 +747,22 @@
 
   Promise.all([
     image(canvas.dataset.atlasSrc),
-    image(canvas.dataset.heroSrc),
+    image(canvas.dataset.heroFrame1Src),
+    image(canvas.dataset.heroFrame2Src),
+    image(canvas.dataset.heroFrame3Src),
+    image(canvas.dataset.heroFrame4Src),
     image(canvas.dataset.backgroundSrc),
-  ]).then(([atlas, hero, background]) => {
+  ]).then(([atlas, frame1, frame2, frame3, frame4, background]) => {
     art.background = background;
-    art.hero = hero
-      ? {
-        image: hero,
+    const heroFrames = [frame1, frame2, frame3, frame4];
+    art.heroFrames = heroFrames.every(Boolean)
+      ? heroFrames.map((imageAsset) => ({
+        image: imageAsset,
         sx: 0,
         sy: 0,
-        sw: hero.naturalWidth / 4,
-        sh: hero.naturalHeight,
-        frameCount: 4,
-      }
+        sw: imageAsset.naturalWidth,
+        sh: imageAsset.naturalHeight,
+      }))
       : null;
     cropSprites(atlas);
     artReady = true;
