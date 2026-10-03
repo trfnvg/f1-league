@@ -40,7 +40,7 @@ WHEEL_SECTORS = (
         "key": ArcadeWheelSpin.Prize.PODIUM_EDIT,
         "label": "АПДЕЙТ\nПОДИУМА",
         "title": "Апдейт подиума",
-        "description": "После квалификации и до старта гонки замени одного пилота в P1, P2 или P3. Нельзя повторить пилота из другого слота.",
+        "description": "Сразу после прокрутки и до старта гонки замени одного пилота в P1, P2 или P3. Нельзя повторить пилота из другого слота.",
         "weight": 20,
         "color": "#4389e8",
     },
@@ -263,12 +263,9 @@ def wheel_window_is_open(event, now=None):
 
 
 def podium_edit_is_open(event, now=None):
-    now = now or timezone.now()
-    return bool(
-        wheel_window_is_open(event, now)
-        and event.qualifying_datetime
-        and now >= event.qualifying_datetime
-    )
+    # The winner can prepare the podium update as soon as the wheel opens.
+    # Qualification is no longer a gate: the only hard boundary is race start.
+    return wheel_window_is_open(event, now)
 
 
 def _draw_prize():
@@ -396,7 +393,7 @@ def activate_event_wheel_prize(event, user, payload, now=None):
 
     if spin.prize == ArcadeWheelSpin.Prize.PODIUM_EDIT:
         if not podium_edit_is_open(locked_event, now):
-            raise ArcadeWheelError("Апдейт подиума можно применить после квалификации и до старта гонки.")
+            raise ArcadeWheelError("Апдейт подиума можно применить после дедлайна и до старта гонки.")
         prediction = Prediction.objects.select_for_update().filter(
             event=locked_event,
             user=user,
