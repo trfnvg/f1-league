@@ -12,13 +12,27 @@
   const startButton = document.getElementById("doodle-start");
   const scoreNode = document.getElementById("doodle-score");
   const bestNode = document.getElementById("doodle-best");
+  const levelNode = document.getElementById("doodle-level");
+  const levelNameNode = document.getElementById("doodle-level-name");
   const fullscreenButton = document.getElementById("doodle-fullscreen-toggle");
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const art = {};
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
-  const backgroundZoneHeight = 520;
+  const backgroundZoneHeight = 6500;
+  const levels = [
+    "Ворота комплекса",
+    "Служебный холл",
+    "Моторный цех",
+    "Тоннель аэродинамики",
+    "Цех карбона",
+    "Сборочный атриум",
+    "Лаборатория роботов",
+    "Крыша испытаний",
+    "Симулятор прототипа",
+    "Хранилище трофея",
+  ];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -45,6 +59,7 @@
   let frags = 0;
   let bananaCount = 0;
   let finalScore = 0;
+  let levelIndex = 0;
   let lastWasRecord = false;
   let trailTimer = 0;
   let touchDirection = null;
@@ -359,6 +374,7 @@
     frags = 0;
     bananaCount = 0;
     finalScore = 0;
+    levelIndex = 0;
     elapsed = 0;
     trailTimer = 0;
     held.left = false;
@@ -415,11 +431,14 @@
       });
     }
     if (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430) {
+      const spriteIndex = Math.random() < .68 ? 5 : 6;
       hazards.push({
         x: width * (.13 + Math.random() * .74),
         y: worldTop + 90,
         speed: 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
-        spriteIndex: Math.random() < .68 ? 5 : 6,
+        spriteIndex,
+        bouncy: spriteIndex === 5,
+        dead: false,
         size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
       });
     }
@@ -428,8 +447,12 @@
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30 + bananaCount * 12;
+    levelIndex = Math.min(levels.length - 1, Math.floor(Math.max(0, cameraY) / backgroundZoneHeight));
     scoreNode.textContent = String(mode === "over" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
+    levelNode.textContent = `${String(levelIndex + 1).padStart(2, "0")} / ${String(levels.length).padStart(2, "0")}`;
+    levelNameNode.textContent = levels[levelIndex];
+    levelNameNode.title = levels[levelIndex];
   }
 
   function setOverlay(state) {
@@ -441,7 +464,7 @@
     if (state === "ready") {
       kicker.textContent = "СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА";
       title.textContent = "На старт, прыгун!";
-      copy.textContent = "Лови платформы и набирай высоту. Приземляйся на шинных гремлинов сверху, чтобы получить фраг. Одно столкновение — и заезд окончен.";
+      copy.textContent = "Проберись через десять секторов завода и доберись до секретного прототипа. Приземляйся на платформы и падающие колёса, чтобы продолжать подъём.";
       startButton.innerHTML = 'Начать прыжок <span aria-hidden="true">↗</span>';
     } else {
       kicker.textContent = "ФИНИШНЫЙ ФЛАГ";
@@ -570,7 +593,19 @@
     }
 
     for (const hazard of hazards) {
+      if (hazard.dead) continue;
       hazard.y -= hazard.speed * dt;
+      const hazardHeight = spriteSize(sprites[hazard.spriteIndex], hazard.size) || hazard.size;
+      const hazardTop = hazard.y + hazardHeight / 2;
+      const closeX = Math.abs(player.x - hazard.x) < (player.width * .58 + hazard.size * .36);
+      const crossedTop = previousFeet >= hazardTop && currentFeet <= hazardTop;
+      if (hazard.bouncy && player.vy < 0 && closeX && crossedTop) {
+        hazard.dead = true;
+        player.y = hazardTop + player.height / 2;
+        player.vy = 880;
+        effects.push({ index: 10, x: hazard.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
+        continue;
+      }
       if (overlapRect(player.x, player.y, player.width * .57, player.height * .66,
         hazard.x, hazard.y, hazard.size * .72, hazard.size * .72)) {
         endGame();
@@ -591,7 +626,7 @@
     extendWorld();
     platforms = platforms.filter((platform) => platform.y > cameraY - 160);
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
-    hazards = hazards.filter((hazard) => hazard.y > cameraY - 180);
+    hazards = hazards.filter((hazard) => hazard.y > cameraY - 180 && !hazard.dead);
     bananas = bananas.filter((banana) => banana.y > cameraY - 120 && !banana.taken);
 
     if (player.y + player.height / 2 < cameraY - 6) {
@@ -622,7 +657,9 @@
       drawSprite(4, enemy.x, bobY, enemyWidth());
     }
 
-    for (const hazard of hazards) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
+    for (const hazard of hazards) {
+      if (!hazard.dead) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
+    }
 
     for (const effect of effects) {
       ctx.save();

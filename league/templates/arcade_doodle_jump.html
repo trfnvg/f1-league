@@ -13,7 +13,7 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Пиксельный пилот прыгает всё выше по пит-лейну. Лови платформы, топчи шинных гремлинов и уворачивайся от падающих колёс.</p>
+      <p class="doodle-lede">Проберись через десять зон гоночного завода, чтобы добраться до секретного прототипа. Лови платформы, отталкивайся от колёс и держи высоту.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -25,6 +25,7 @@
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
           <span class="doodle-live"><i></i> DOODLE GP</span>
+          <div class="doodle-level"><small>СЕКТОР</small><strong id="doodle-level">01 / 10</strong><span id="doodle-level-name">Ворота</span></div>
           <div class="doodle-best"><small>РЕКОРД</small><strong id="doodle-best">0</strong></div>
           <button class="doodle-fullscreen-toggle" id="doodle-fullscreen-toggle" type="button"
             aria-label="На весь экран" aria-pressed="false" title="На весь экран">
@@ -41,16 +42,16 @@
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
           data-background-src="{% static 'league/images/doodle-jump/race-day-v1.png' %}"
-          data-background-zone-1-src="{% static 'league/images/doodle-jump/doodle-background-zone-01.png' %}"
-          data-background-zone-2-src="{% static 'league/images/doodle-jump/doodle-background-zone-02.png' %}"
-          data-background-zone-3-src="{% static 'league/images/doodle-jump/doodle-background-zone-03.png' %}"
-          data-background-zone-4-src="{% static 'league/images/doodle-jump/doodle-background-zone-04.png' %}"
-          data-background-zone-5-src="{% static 'league/images/doodle-jump/doodle-background-zone-05.png' %}"
-          data-background-zone-6-src="{% static 'league/images/doodle-jump/doodle-background-zone-06.png' %}"
-          data-background-zone-7-src="{% static 'league/images/doodle-jump/doodle-background-zone-07.png' %}"
-          data-background-zone-8-src="{% static 'league/images/doodle-jump/doodle-background-zone-08.png' %}"
-          data-background-zone-9-src="{% static 'league/images/doodle-jump/doodle-background-zone-09.png' %}"
-          data-background-zone-10-src="{% static 'league/images/doodle-jump/doodle-background-zone-10.png' %}"
+          data-background-zone-1-src="{% static 'league/images/doodle-jump/f1-factory-zone-01.png' %}"
+          data-background-zone-2-src="{% static 'league/images/doodle-jump/f1-factory-zone-02.png' %}"
+          data-background-zone-3-src="{% static 'league/images/doodle-jump/f1-factory-zone-03.png' %}"
+          data-background-zone-4-src="{% static 'league/images/doodle-jump/f1-factory-zone-04.png' %}"
+          data-background-zone-5-src="{% static 'league/images/doodle-jump/f1-factory-zone-05.png' %}"
+          data-background-zone-6-src="{% static 'league/images/doodle-jump/f1-factory-zone-06.png' %}"
+          data-background-zone-7-src="{% static 'league/images/doodle-jump/f1-factory-zone-07.png' %}"
+          data-background-zone-8-src="{% static 'league/images/doodle-jump/f1-factory-zone-08.png' %}"
+          data-background-zone-9-src="{% static 'league/images/doodle-jump/f1-factory-zone-09.png' %}"
+          data-background-zone-10-src="{% static 'league/images/doodle-jump/f1-factory-zone-10.png' %}"
           tabindex="0"
           role="application"
           aria-label="Пиксельный пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
@@ -59,7 +60,7 @@
           <div class="doodle-overlay-card">
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
             <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-            <p id="doodle-overlay-copy">Лови платформы и набирай высоту. На телефоне касайся или удерживай левую и правую половины поля, чтобы двигаться. Одно столкновение — и заезд окончен.</p>
+            <p id="doodle-overlay-copy">Преодолей десять секторов завода и доберись до секретного прототипа. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
             <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
           </div>
         </div>
@@ -77,7 +78,7 @@
   <section class="doodle-howto" aria-label="Игровые объекты">
     <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-frag" aria-hidden="true">+1</span><div><strong>Шинный гремлин</strong><small>Приземлись сверху — получишь фраг и бонус к счёту.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Падающие помехи</strong><small>Уклоняйся от шин и конусов, летящих сверху.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Колёса и конусы</strong><small>На колесо можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-banana" aria-hidden="true">✦</span><div><strong>Золотой банан</strong><small>Подбери его, чтобы добавить очки.</small></div></article>
   </section>
 
