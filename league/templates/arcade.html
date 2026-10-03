@@ -200,10 +200,7 @@
               <span class="arcade-wheel-prize-kicker">ТВОЙ ПРИЗ</span>
               <h3>{{ wheel_prize.title }}</h3>
               <p>{{ wheel_prize.description }}</p>
-              {% if wheel_spin.prize == "podium_edit" and not podium_edit_open %}
-                <p class="arcade-wheel-wait">Апдейт станет доступен после квалификации{% if wheel_event.qualifying_datetime %}: {{ wheel_event.qualifying_datetime|date:"d.m H:i" }}{% endif %}.</p>
-              {% else %}
-                <form class="arcade-wheel-activation" id="arcade-wheel-activation" method="post">
+              <form class="arcade-wheel-activation" id="arcade-wheel-activation" method="post">
                   {% csrf_token %}
                   <input type="hidden" name="event_id" value="{{ wheel_event.id }}">
                   {% if wheel_spin.prize == "podium_edit" %}
@@ -242,8 +239,7 @@
                     </label>
                   {% endif %}
                   <button class="arcade-wheel-action" type="submit">Активировать на этом этапе</button>
-                </form>
-              {% endif %}
+              </form>
               <p class="arcade-wheel-feedback" id="arcade-wheel-feedback" role="status"></p>
             </div>
           {% elif wheel_spin and wheel_spin.activated_at %}

@@ -297,7 +297,7 @@ class ArcadeWheelTests(TestCase):
         with self.assertRaises(ArcadeWheelError):
             spin_event_wheel(self.event, self.winner, now=self.event.deadline - timedelta(seconds=1))
 
-        self.assertFalse(podium_edit_is_open(self.event, self.event.qualifying_datetime - timedelta(seconds=1)))
+        self.assertFalse(podium_edit_is_open(self.event, self.event.deadline - timedelta(seconds=1)))
         self.assertTrue(podium_edit_is_open(self.event, self.now))
 
         self.event.race_datetime = self.now - timedelta(seconds=1)
@@ -321,7 +321,7 @@ class ArcadeWheelTests(TestCase):
         self.assertEqual(activated.activation_data, {"field": "p1"})
         self.assertIsNotNone(activated.activated_at)
 
-    def test_podium_edit_requires_qualifying_time_and_changes_only_one_slot(self):
+    def test_podium_edit_is_available_before_qualifying_and_changes_only_one_slot(self):
         self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=10))
         spin = ArcadeWheelSpin.objects.create(
             event=self.event,
@@ -330,16 +330,6 @@ class ArcadeWheelTests(TestCase):
             prize=ArcadeWheelSpin.Prize.PODIUM_EDIT,
         )
         self.event.qualifying_datetime = None
-        self.event.save(update_fields=("qualifying_datetime",))
-        with self.assertRaises(ArcadeWheelError):
-            activate_event_wheel_prize(
-                self.event,
-                self.winner,
-                {"slot": "p1", "driver": "norris"},
-                now=self.now,
-            )
-
-        self.event.qualifying_datetime = self.now - timedelta(minutes=1)
         self.event.save(update_fields=("qualifying_datetime",))
         activate_event_wheel_prize(
             self.event,
