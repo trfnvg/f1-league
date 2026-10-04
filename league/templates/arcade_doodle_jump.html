@@ -4,7 +4,7 @@
 {% block title %}Doodle GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=infinite-v1">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=powerups-v2">
 {% endblock %}
 
 {% block content %}
@@ -13,7 +13,7 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Джордж Рассел отправляется в бесконечный маршрут по заводу Mercedes. Поднимайся всё выше, собирай фраги и бей рекорд — дистанция не заканчивается.</p>
+      <p class="doodle-lede">Джордж Рассел отправляется в бесконечный маршрут по заводу Mercedes. Поднимайся всё выше, собирай фраги, уворачивайся от паддок-босса и бей рекорд — дистанция не заканчивается.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -42,6 +42,10 @@
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
           data-background-src="{% static 'league/images/doodle-jump/doodle-loop-infinite-f1.jpg' %}"
+          data-powerups-src="{% static 'league/images/doodle-jump/f1-powerups-v2.png' %}?v=1"
+          data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v1.png' %}?v=1"
+          data-villain-sheet-src="{% static 'league/images/doodle-jump/f1-paddock-villain-sheet-v1.png' %}?v=1"
+          data-dirty-wheel-src="{% static 'league/images/doodle-jump/f1-dirty-steering-wheel-v1.png' %}?v=1"
           data-start-url="{{ doodle_attempt_start_url }}"
           data-finish-url="{{ doodle_attempt_finish_url }}"
           data-leaderboard-url="{{ doodle_leaderboard_url }}"
@@ -71,9 +75,10 @@
   <section class="doodle-howto" aria-label="Игровые объекты">
     <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-frag" aria-hidden="true">+1</span><div><strong>Шинный гремлин</strong><small>Приземлись сверху — получишь фраг и бонус к счёту.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Колёса и конусы</strong><small>На колесо можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Soft · Medium · Hard</strong><small>На колёса можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-rocket" aria-hidden="true">↟</span><div><strong>Ракета</strong><small>Одноразовый импульс резко подбросит тебя вверх.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-jetpack" aria-hidden="true">✦</span><div><strong>Реактивный ранец</strong><small>Короткая неуязвимость: колёса и конусы больше не страшны.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-jetpack" aria-hidden="true">✦</span><div><strong>Реактивный ранец</strong><small>Ровно 5 секунд полёта и неуязвимости от колёс и конусов.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-villain" aria-hidden="true">☠</span><div><strong>Паддок-босс</strong><small>Редко появляется сверху и сбрасывает грязные рули. Уворачивайся.</small></div></article>
   </section>
 
   <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
@@ -106,5 +111,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=infinite-v1" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=powerups-v2" defer></script>
 {% endblock %}

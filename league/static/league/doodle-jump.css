@@ -306,7 +306,7 @@
 
 .doodle-mobile-instructions { display: none; }
 
-.doodle-howto { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
+.doodle-howto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
 .doodle-howto article { display: flex; align-items: center; gap: .7rem; min-height: 76px; padding: .7rem .8rem; border: 1px solid var(--doodle-line); border-radius: 0; background: var(--doodle-navy); box-shadow: 3px 3px 0 rgba(4, 8, 18, .45); }
 .doodle-howto-mark { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 2px solid var(--doodle-line); border-radius: 0; color: var(--doodle-cream); background: #152849; font-size: .72rem; font-weight: 900; }
 .doodle-mark-platform { width: 32px; height: 11px; border: 2px solid var(--doodle-cream); background: repeating-linear-gradient(90deg, var(--doodle-red) 0 7px, var(--doodle-cream) 7px 14px); box-shadow: 0 5px 0 -3px var(--doodle-cyan); }
@@ -315,6 +315,7 @@
 .doodle-mark-goal { border-color: #dca43e; color: var(--doodle-cream); background: #172849; font-size: 1.05rem; }
 .doodle-mark-rocket { border-color: #ff5267; color: #fff4d3; background: linear-gradient(180deg, #e94b58, #7e2945); font-size: 1.1rem; }
 .doodle-mark-jetpack { border-color: #8eeaff; color: #8eeaff; background: #173957; font-size: 1rem; }
+.doodle-mark-villain { border-color: #bd5570; color: #ffd9a2; background: #281c35; font-size: .95rem; }
 .doodle-howto article div { display: grid; gap: .18rem; }
 .doodle-howto strong { color: var(--doodle-cream); font-size: .68rem; }
 .doodle-howto small { color: var(--doodle-muted); font-size: .57rem; line-height: 1.45; }
