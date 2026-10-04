@@ -20,7 +20,12 @@
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
+  // Each story scene lasts roughly thirty seconds.  The camera height is also
+  // part of the progress signal, so a particularly strong run can never leave
+  // the player visually behind the world they are climbing through.
+  const backgroundSceneDuration = 30;
   const backgroundZoneHeight = 6500;
+  const backgroundOverscan = 1.2;
   const levels = [
     "Ворота комплекса",
     "Служебный холл",
@@ -220,16 +225,16 @@
     const pixelHeight = Math.max(1, Math.round(height * dpr));
     backgroundCaches = sources.map((source) => {
       const cache = document.createElement("canvas");
-      cache.width = pixelWidth;
-      cache.height = pixelHeight;
+      cache.width = Math.ceil(pixelWidth * backgroundOverscan);
+      cache.height = Math.ceil(pixelHeight * backgroundOverscan);
       const cacheCtx = cache.getContext("2d", { alpha: false });
       cacheCtx.imageSmoothingEnabled = false;
-      const scale = Math.max(pixelWidth / source.naturalWidth, pixelHeight / source.naturalHeight);
+      const scale = Math.max(cache.width / source.naturalWidth, cache.height / source.naturalHeight);
       const drawWidth = source.naturalWidth * scale;
       const drawHeight = source.naturalHeight * scale;
-      cacheCtx.drawImage(source, (pixelWidth - drawWidth) / 2, (pixelHeight - drawHeight) / 2,
+      cacheCtx.drawImage(source, (cache.width - drawWidth) / 2, (cache.height - drawHeight) / 2,
         drawWidth, drawHeight);
-      return cache;
+      return { canvas: cache, width: cache.width / dpr, height: cache.height / dpr };
     });
   }
 
@@ -237,19 +242,35 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function storyProgress() {
+    const heightProgress = Math.max(0, cameraY / backgroundZoneHeight);
+    const timeProgress = mode === "ready" ? 0 : Math.max(0, elapsed / backgroundSceneDuration);
+    return clamp(Math.max(heightProgress, timeProgress), 0, Math.max(0, backgroundCaches.length - 1));
+  }
+
+  function drawBackgroundScene(scene, sceneIndex, localProgress, alpha = 1) {
+    if (!scene) return;
+    // Overscan gives every scene room to drift while the camera rises.  The
+    // slow horizontal sway makes the background feel alive without moving the
+    // platforms or the playable center lane.
+    const swayX = Math.sin(elapsed * .28 + sceneIndex * .7) * width * .018;
+    const cameraPan = Math.min(height * .04, Math.max(0, cameraY) * .006);
+    const panY = -(localProgress * height * .12 + cameraPan);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(scene.canvas, swayX, panY, scene.width, scene.height);
+    ctx.restore();
+  }
+
   function drawBackdrop() {
     if (backgroundCaches.length) {
-      const progress = clamp(cameraY / backgroundZoneHeight, 0, backgroundCaches.length - 1);
+      const progress = storyProgress();
       const index = Math.floor(progress);
       const blend = progress - index;
       const smoothBlend = blend * blend * (3 - 2 * blend);
-      ctx.drawImage(backgroundCaches[index], 0, 0, width, height);
-      if (index < backgroundCaches.length - 1 && smoothBlend > 0) {
-        ctx.save();
-        ctx.globalAlpha = smoothBlend;
-        ctx.drawImage(backgroundCaches[index + 1], 0, 0, width, height);
-        ctx.restore();
-      }
+      drawBackgroundScene(backgroundCaches[index], index, blend);
+      if (index < backgroundCaches.length - 1 && smoothBlend > 0)
+        drawBackgroundScene(backgroundCaches[index + 1], index + 1, 0, smoothBlend);
       ctx.fillStyle = "rgba(5, 12, 28, .08)";
       ctx.fillRect(0, 0, width, height);
     } else {
@@ -447,7 +468,7 @@
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30 + bananaCount * 12;
-    levelIndex = Math.min(levels.length - 1, Math.floor(Math.max(0, cameraY) / backgroundZoneHeight));
+    levelIndex = Math.min(levels.length - 1, Math.floor(storyProgress()));
     scoreNode.textContent = String(mode === "over" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
     levelNode.textContent = `${String(levelIndex + 1).padStart(2, "0")} / ${String(levels.length).padStart(2, "0")}`;
