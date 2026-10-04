@@ -542,7 +542,7 @@
         y: worldTop + 180,
         phase: Math.random() * Math.PI * 2,
         frame: 0,
-        shotTimer: 1.3 + Math.random() * .8,
+        shotTimer: 2.2 + Math.random() * .9,
         dead: false,
       });
     }
@@ -793,7 +793,7 @@
   }
 
   function villainWidth() {
-    return Math.max(58, Math.min(84, width * .19)) * visualScale();
+    return Math.max(54, Math.min(78, width * .17)) * visualScale();
   }
 
   function drawVillainShot(shot) {
@@ -833,7 +833,7 @@
   function drawVillain(villain) {
     const frame = art.villainFrames && art.villainFrames[villain.frame];
     if (!frame) return;
-    drawFrame(frame, villain.x, villain.y + Math.sin(elapsed * 3 + villain.phase) * 5, villainWidth());
+    drawFrame(frame, villain.x, villain.y + Math.sin(elapsed * .85 + villain.phase) * 3, villainWidth());
   }
 
   function drawHazard(hazard) {
@@ -905,7 +905,7 @@
 
     for (const villain of villains) {
       villain.x = Math.max(48, Math.min(width - 48,
-        villain.baseX + Math.sin(elapsed * 1.15 + villain.phase) * Math.min(64, width * .18)));
+        villain.baseX + Math.sin(elapsed * .55 + villain.phase) * Math.min(48, width * .12)));
       villain.frame = Math.floor(elapsed * 5 + villain.phase) % 4;
       villain.shotTimer -= dt;
       if (villain.shotTimer <= 0 && Math.abs(villain.y - cameraY) < height * 1.35) {
@@ -914,12 +914,12 @@
           x: villain.x,
           y: villain.y - villainWidth() * .34,
           vx: (player.x - villain.x) * .16,
-          vy: -360,
+          vy: -270,
           size: shotSize,
           spin: 0,
           dead: false,
         });
-        villain.shotTimer = 1.35 + Math.random() * .7;
+        villain.shotTimer = 2.15 + Math.random() * .95;
       }
     }
 
