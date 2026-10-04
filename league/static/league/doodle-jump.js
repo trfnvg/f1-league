@@ -76,6 +76,8 @@
   let invulnerableTimer = 0;
   let rocketTimer = 0;
   let jetpackTimer = 0;
+  let lastPowerupSpawnY = -Infinity;
+  let lastPowerupType = null;
   let nextVillainSpawnY = 0;
   let attemptId = null;
   let scoreSubmitted = false;
@@ -367,14 +369,21 @@
   }
 
   function addPowerupBetween(lower, upper) {
-    if (!lower || !upper || Math.random() > .085) return;
-    const type = Math.random() < .55 ? "rocket" : "jetpack";
+    if (!lower || !upper) return;
     const gap = upper.y - lower.y;
+    const powerupY = lower.y + gap * (.42 + Math.random() * .16);
+    // Power-ups are deliberately rare and separated in world space so that a
+    // lucky run can never chain several rockets back-to-back.
+    if (powerupY - lastPowerupSpawnY < 2200 || Math.random() > .025) return;
+    let type = Math.random() < .55 ? "rocket" : "jetpack";
+    if (lastPowerupType) type = lastPowerupType === "rocket" ? "jetpack" : "rocket";
+    lastPowerupSpawnY = powerupY;
+    lastPowerupType = type;
     const laneX = lower.x + (upper.x - lower.x) * (.35 + Math.random() * .3);
     powerups.push({
       type,
       x: clamp(laneX, width * .12, width * .88),
-      y: lower.y + gap * (.42 + Math.random() * .16),
+      y: powerupY,
       size: Math.max(25, Math.min(34, width * .075)) * visualScale(),
       phase: Math.random() * Math.PI * 2,
       collected: false,
@@ -449,6 +458,8 @@
     invulnerableTimer = 0;
     rocketTimer = 0;
     jetpackTimer = 0;
+    lastPowerupSpawnY = -Infinity;
+    lastPowerupType = null;
     nextVillainSpawnY = firstY + 6500 + Math.random() * 1400;
     attemptId = null;
     scoreSubmitted = false;
@@ -756,7 +767,7 @@
     ctx.restore();
   }
 
-  function drawMountedPowerup(type) {
+  function drawMountedPowerup(type, emitFlame = true) {
     const frame = art.powerupFrames && art.powerupFrames[type];
     if (!player || !frame) return;
     const targetWidth = type === "rocket" ? player.width * 1.08 : player.width * .82;
@@ -766,7 +777,9 @@
     drawFrame(frame, player.x, mountY, targetWidth);
     ctx.restore();
     // Add a second, phase-shifted flame layer so the generated sprite reads as
-    // animated even though the sheet is a compact single-pose power-up.
+    // animated even though the sheet is a compact single-pose power-up. The
+    // jetpack is a shield pickup now, not a thrust pickup, so it stays still.
+    if (!emitFlame) return;
     ctx.save();
     ctx.translate(Math.round(player.x), Math.round(worldToScreen(mountY - targetWidth * .46)));
     ctx.fillStyle = type === "rocket" ? "#fff29a" : "#8eeaff";
@@ -908,7 +921,6 @@
     const previousFeet = player.y - player.height / 2;
     player.vy -= 1240 * dt;
     if (rocketTimer > 0) player.vy = 1240;
-    else if (jetpackTimer > 0) player.vy = Math.max(player.vy, 860);
     player.y += player.vy * dt;
     const currentFeet = player.y - player.height / 2;
     peakY = Math.max(peakY, player.y);
@@ -977,13 +989,12 @@
       powerup.collected = true;
       if (powerup.type === "rocket") {
         rocketTimer = 1.8;
-        invulnerableTimer = Math.max(invulnerableTimer, rocketTimer);
+        invulnerableTimer = Math.max(invulnerableTimer, rocketTimer + 2);
         player.vy = 1240;
         effects.push({ index: 11, x: player.x, y: player.y - player.height * .42, age: 0, duration: .55, size: 66 * visualScale() });
       } else {
         jetpackTimer = 5;
         invulnerableTimer = Math.max(invulnerableTimer, 5);
-        player.vy = Math.max(player.vy, 860);
         effects.push({ index: 10, x: player.x, y: player.y, age: 0, duration: .65, size: 70 * visualScale() });
       }
     }
@@ -1087,7 +1098,7 @@
 
     if (player) {
       if (rocketTimer > 0) drawMountedPowerup("rocket");
-      else if (jetpackTimer > 0) drawMountedPowerup("jetpack");
+      else if (jetpackTimer > 0) drawMountedPowerup("jetpack", false);
       const screenY = worldToScreen(player.y);
       ctx.save();
       ctx.translate(player.x, screenY);
