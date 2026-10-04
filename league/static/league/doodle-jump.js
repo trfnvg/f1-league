@@ -76,6 +76,7 @@
   let invulnerableTimer = 0;
   let rocketTimer = 0;
   let jetpackTimer = 0;
+  let nextVillainSpawnY = 0;
   let attemptId = null;
   let scoreSubmitted = false;
   let pendingFinish = false;
@@ -448,6 +449,7 @@
     invulnerableTimer = 0;
     rocketTimer = 0;
     jetpackTimer = 0;
+    nextVillainSpawnY = firstY + 6500 + Math.random() * 1400;
     attemptId = null;
     scoreSubmitted = false;
     pendingFinish = false;
@@ -533,8 +535,7 @@
       });
     }
 
-    const lastVillain = villains[villains.length - 1];
-    if ((!lastVillain || worldTop - lastVillain.y > 2500) && Math.random() < .4) {
+    if (worldTop >= nextVillainSpawnY) {
       const villainX = width * (.22 + Math.random() * .56);
       villains.push({
         x: villainX,
@@ -545,6 +546,9 @@
         shotTimer: 2.2 + Math.random() * .9,
         dead: false,
       });
+      // At the current vertical climb speed this 6.5–7.9k world-unit gap is
+      // approximately one minute between rare paddock-boss encounters.
+      nextVillainSpawnY = worldTop + 6500 + Math.random() * 1400;
     }
   }
 
@@ -1160,6 +1164,7 @@
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
       villains.forEach((villain) => { villain.x *= scaleX; villain.baseX *= scaleX; villain.y *= scaleY; });
       villainShots.forEach((shot) => { shot.x *= scaleX; shot.y *= scaleY; shot.vx *= scaleX; shot.vy *= scaleY; shot.size *= scaleX; });
+      nextVillainSpawnY *= scaleY;
       draw();
     } else {
       buildGame();
