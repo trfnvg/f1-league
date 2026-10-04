@@ -38,6 +38,8 @@ from .models import (
     Event,
     HomeResultImage,
     MinesweeperAttempt,
+    DoodleAttempt,
+    DoodleRecord,
     PlayerWildcard,
     Prediction,
     Score,
@@ -218,9 +220,15 @@ def arcade(request):
         })
 
     if arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP:
+        doodle_board = _doodle_leaderboard_data(request.user)
         return render(request, "arcade_doodle_jump.html", {
             "arcade_admin_preview": not arcade_settings.public_enabled,
             "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+            "doodle_records": doodle_board["records"],
+            "doodle_total_attempts": doodle_board["total_attempts"],
+            "doodle_attempt_start_url": reverse("league:doodle_attempt_start"),
+            "doodle_attempt_finish_url": reverse("league:doodle_attempt_finish"),
+            "doodle_leaderboard_url": reverse("league:doodle_leaderboard"),
         })
 
     season = get_selected_season(request)
@@ -324,13 +332,102 @@ def arcade_doodle_jump(request):
         and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
     ):
         return HttpResponseForbidden("Эта страница доступна только администраторам.")
+    doodle_board = _doodle_leaderboard_data(request.user)
     return render(request, "arcade_doodle_jump.html", {
         "arcade_admin_preview": not (
             arcade_settings.public_enabled
             and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
         ),
         "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+        "doodle_records": doodle_board["records"],
+        "doodle_total_attempts": doodle_board["total_attempts"],
+        "doodle_attempt_start_url": reverse("league:doodle_attempt_start"),
+        "doodle_attempt_finish_url": reverse("league:doodle_attempt_finish"),
+        "doodle_leaderboard_url": reverse("league:doodle_leaderboard"),
     })
+
+
+def _doodle_leaderboard_data(user):
+    records = list(
+        DoodleRecord.objects.select_related("user")
+        .filter(best_score__gt=0)
+        .order_by("-best_score", "updated_at", "user__username")[:10]
+    )
+    rows = [{
+        "username": row.user.get_full_name().strip() or row.user.username,
+        "score": row.best_score,
+        "attempts": row.total_attempts,
+        "rank": rank,
+        "is_current_user": bool(user.is_authenticated and row.user_id == user.id),
+    } for rank, row in enumerate(records, start=1)]
+    own_record = DoodleRecord.objects.filter(user=user).first() if user.is_authenticated else None
+    return {
+        "records": rows,
+        "record": own_record.best_score if own_record else 0,
+        "attempts": own_record.total_attempts if own_record else 0,
+        "total_attempts": DoodleRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0,
+        "rank": next((row["rank"] for row in rows if row["is_current_user"]), None),
+    }
+
+
+def doodle_leaderboard(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
+    return JsonResponse(_doodle_leaderboard_data(request.user))
+
+
+@login_required
+def doodle_attempt_start(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    with transaction.atomic():
+        DoodleAttempt.objects.filter(
+            user=request.user,
+            started_at__lt=timezone.now() - timedelta(days=30),
+        ).delete()
+        attempt = DoodleAttempt.objects.create(user=request.user)
+        record, _ = DoodleRecord.objects.select_for_update().get_or_create(user=request.user)
+        DoodleRecord.objects.filter(pk=record.pk).update(total_attempts=F("total_attempts") + 1)
+    return JsonResponse({"attempt_id": attempt.pk, **_doodle_leaderboard_data(request.user)})
+
+
+@login_required
+def doodle_attempt_finish(request):
+    if request.method != "POST":
+        return HttpResponseNotAllowed(["POST"])
+    arcade_settings = _get_arcade_settings()
+    if not _arcade_is_visible_to_user(request, arcade_settings):
+        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    try:
+        payload = json.loads(request.body or b"{}")
+        attempt_id = int(payload.get("attempt_id"))
+        score = int(payload.get("score"))
+        if isinstance(payload.get("score"), bool) or score < 0 or score > 1000000:
+            raise ValueError
+    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "Некорректный результат забега."}, status=400)
+
+    with transaction.atomic():
+        attempt = DoodleAttempt.objects.select_for_update().filter(
+            pk=attempt_id, user=request.user,
+        ).first()
+        if not attempt or attempt.finished_at:
+            return JsonResponse({"error": "Этот забег уже сохранён или не найден."}, status=409)
+        now = timezone.now()
+        attempt.finished_at = now
+        attempt.score = score
+        attempt.save(update_fields=("finished_at", "score"))
+        record, _ = DoodleRecord.objects.select_for_update().get_or_create(user=request.user)
+        if score > record.best_score:
+            record.best_score = score
+            record.save(update_fields=("best_score", "updated_at"))
+    return JsonResponse(_doodle_leaderboard_data(request.user))
 
 
 @login_required
@@ -383,6 +480,8 @@ def arcade_leaderboard(request):
         return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
     if arcade_settings.active_game == ArcadeSettings.Game.MINESWEEPER:
         return JsonResponse(_minesweeper_leaderboard_data(request.user))
+    if arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP:
+        return JsonResponse(_doodle_leaderboard_data(request.user))
     if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
         return JsonResponse({"records": [], "attempts": 0, "wins": 0, "best_time_ms": None})
     season = get_selected_season(request)

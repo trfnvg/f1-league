@@ -15,15 +15,16 @@
   const levelNode = document.getElementById("doodle-level");
   const levelNameNode = document.getElementById("doodle-level-name");
   const fullscreenButton = document.getElementById("doodle-fullscreen-toggle");
+  const leaderboardNode = document.getElementById("doodle-leaderboard-list");
+  const totalAttemptsNode = document.getElementById("doodle-total-attempts");
+  const csrfToken = document.querySelector("#doodle-csrf-form [name=csrfmiddlewaretoken]")?.value || "";
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const art = {};
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
-  // One tile is repeated while the player climbs through a level.  With the
-  // current jump rhythm a 2,400-unit level takes roughly twenty seconds, so the
-  // ten-scene route is a finite three-minute arcade run instead of an endless
-  // scroll.
+  // The same portrait tile is repeated forever. Sector names change for flavour,
+  // while the score and route never have a final platform.
   const levelWorldHeight = 2400;
   const backgroundOverscan = 1.08;
   const backgroundParallax = .34;
@@ -56,11 +57,10 @@
   let platforms = [];
   let enemies = [];
   let hazards = [];
+  let powerups = [];
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
-  let worldFinishY = 0;
-  let finishPlatform = null;
   let startY = 86;
   let peakY = 0;
   let frags = 0;
@@ -71,6 +71,10 @@
   let touchDirection = null;
   let nativeFullscreenRequested = false;
   let facing = 1;
+  let invulnerableTimer = 0;
+  let attemptId = null;
+  let scoreSubmitted = false;
+  let pendingFinish = false;
 
   bestNode.textContent = String(best);
   startButton.disabled = true;
@@ -245,7 +249,7 @@
   }
 
   function storyProgress() {
-    return clamp(Math.max(0, cameraY) / levelWorldHeight, 0, Math.max(0, backgroundCaches.length - 1));
+    return Math.max(0, cameraY) / levelWorldHeight;
   }
 
   function drawBackgroundTile(tile, sceneIndex) {
@@ -272,14 +276,7 @@
 
   function drawBackdrop() {
     if (backgroundCaches.length) {
-      const progress = storyProgress();
-      const index = Math.floor(progress);
-      const localProgress = progress - index;
-      const transition = clamp((localProgress - .72) / .28, 0, 1);
-      const smoothBlend = transition * transition * (3 - 2 * transition);
-      drawBackgroundScene(backgroundCaches[index], index);
-      if (index < backgroundCaches.length - 1 && smoothBlend > 0)
-        drawBackgroundScene(backgroundCaches[index + 1], index + 1, smoothBlend);
+      drawBackgroundScene(backgroundCaches[0], 0);
       ctx.fillStyle = "rgba(5, 12, 28, .16)";
       ctx.fillRect(0, 0, width, height);
     } else {
@@ -318,6 +315,21 @@
     };
     platforms.push(platform);
     return platform;
+  }
+
+  function addPowerupBetween(lower, upper) {
+    if (!lower || !upper || Math.random() > .085) return;
+    const type = Math.random() < .55 ? "rocket" : "jetpack";
+    const gap = upper.y - lower.y;
+    const laneX = lower.x + (upper.x - lower.x) * (.35 + Math.random() * .3);
+    powerups.push({
+      type,
+      x: clamp(laneX, width * .12, width * .88),
+      y: lower.y + gap * (.42 + Math.random() * .16),
+      size: Math.max(25, Math.min(34, width * .075)) * visualScale(),
+      phase: Math.random() * Math.PI * 2,
+      collected: false,
+    });
   }
 
   function platformGap() {
@@ -374,16 +386,19 @@
     platforms = [];
     enemies = [];
     hazards = [];
+    powerups = [];
     effects = [];
     cameraY = 0;
     startY = firstY;
     worldTop = firstY;
-    worldFinishY = firstY + levelWorldHeight * levels.length - 220;
-    finishPlatform = null;
     peakY = firstY + heroHeight / 2;
     frags = 0;
     finalScore = 0;
     levelIndex = 0;
+    invulnerableTimer = 0;
+    attemptId = null;
+    scoreSubmitted = false;
+    pendingFinish = false;
     elapsed = 0;
     trailTimer = 0;
     held.left = false;
@@ -393,11 +408,14 @@
     addPlatform(firstY, width * .5, "normal");
     let nextY = firstY;
     let lastX = width * .5;
+    let previousPlatform = platforms[0];
     while (nextY < height + 320) {
       const gap = platformGap();
       nextY += gap;
       lastX = choosePlatformX(lastX, gap);
-      addPlatform(nextY, lastX, selectPlatformKind());
+      const nextPlatform = addPlatform(nextY, lastX, selectPlatformKind());
+      addPowerupBetween(previousPlatform, nextPlatform);
+      previousPlatform = nextPlatform;
       worldTop = nextY;
     }
     player = {
@@ -416,28 +434,19 @@
   }
 
   function extendWorld() {
-    const targetWorldTop = Math.min(worldFinishY, cameraY + height + 280);
-    while (worldTop < targetWorldTop && !finishPlatform) {
+    const targetWorldTop = cameraY + height + 420;
+    while (worldTop < targetWorldTop) {
       const lastPlatform = platforms[platforms.length - 1];
       const lastX = lastPlatform ? lastPlatform.x : width / 2;
-      const remaining = worldFinishY - worldTop;
-      if (remaining <= 170) {
-        const nextX = choosePlatformX(lastX, Math.max(1, remaining));
-        finishPlatform = addPlatform(worldFinishY, nextX, "normal");
-        finishPlatform.finish = true;
-        finishPlatform.width *= 1.28;
-        finishPlatform.height *= 1.1;
-        worldTop = worldFinishY;
-        break;
-      }
-      const gap = Math.min(platformGap(), remaining - 30);
+      const gap = platformGap();
       const y = worldTop + gap;
       const nextX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
+      addPowerupBetween(lastPlatform, nextPlatform);
       worldTop = y;
     }
 
-    if (worldTop < worldFinishY - 120 && (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490)) {
+    if (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
         x: enemyX,
@@ -447,7 +456,7 @@
         dead: false,
       });
     }
-    if (worldTop < worldFinishY - 160 && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
+    if (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       hazards.push({
         x: width * (.13 + Math.random() * .74),
@@ -470,10 +479,10 @@
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30;
-    levelIndex = Math.min(levels.length - 1, Math.floor(storyProgress()));
-    scoreNode.textContent = String(mode === "over" || mode === "won" ? finalScore : score);
+    levelIndex = Math.floor(storyProgress()) % levels.length;
+    scoreNode.textContent = String(mode === "over" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
-    levelNode.textContent = `${String(levelIndex + 1).padStart(2, "0")} / ${String(levels.length).padStart(2, "0")}`;
+    levelNode.textContent = String(Math.floor(storyProgress()) + 1).padStart(2, "0");
     levelNameNode.textContent = levels[levelIndex];
     levelNameNode.title = levels[levelIndex];
   }
@@ -487,19 +496,89 @@
     if (state === "ready") {
       kicker.textContent = "СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА";
       title.textContent = "На старт, прыгун!";
-      copy.textContent = "Джордж Рассел пробирается через десять уровней завода Mercedes в поисках пропавшего руля. Доберись до хранилища и приземлись на финальную платформу.";
+      copy.textContent = "Маршрут бесконечный: поднимайся выше, отталкивайся от платформ, собирай фраги и используй редкие бонусы. На телефоне касайся левой или правой половины поля.";
       startButton.innerHTML = 'Начать прыжок <span aria-hidden="true">↗</span>';
-    } else if (state === "won") {
-      kicker.textContent = "РУЛЬ НАЙДЕН";
-      title.textContent = "Завод пройден";
-      copy.textContent = `Ты добрался до хранилища за ${Math.round(elapsed)} сек. Счёт — ${finalScore}, фрагов — ${frags}. ${lastWasRecord ? "Новый личный рекорд!" : "Маршрут можно пройти ещё быстрее."}`;
-      startButton.innerHTML = 'Пройти маршрут ещё раз <span aria-hidden="true">↗</span>';
     } else {
-      kicker.textContent = "ФИНИШНЫЙ ФЛАГ";
+      kicker.textContent = "ЗАБЕГ ЗАВЕРШЁН";
       title.textContent = "Прыжок окончен";
       copy.textContent = `Счёт — ${finalScore}, фрагов — ${frags}. ${lastWasRecord ? "Новый личный рекорд!" : "Попробуй забраться выше."}`;
       startButton.innerHTML = 'Ещё один прыжок <span aria-hidden="true">↗</span>';
     }
+  }
+
+  function postJSON(url, payload = {}) {
+    return fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken,
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify(payload),
+    }).then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Не удалось сохранить результат.");
+      return data;
+    });
+  }
+
+  function renderLeaderboard(records) {
+    if (!leaderboardNode) return;
+    leaderboardNode.replaceChildren();
+    if (!records || !records.length) {
+      const empty = document.createElement("li");
+      empty.className = "doodle-board-empty";
+      empty.textContent = "Рейтинг пока пуст — первый рекорд можно поставить прямо сейчас.";
+      leaderboardNode.appendChild(empty);
+      return;
+    }
+    records.forEach((record) => {
+      const row = document.createElement("li");
+      if (record.is_current_user) row.classList.add("is-current-user");
+      const rank = document.createElement("span");
+      rank.className = "doodle-rank";
+      rank.textContent = String(record.rank).padStart(2, "0");
+      const name = document.createElement("strong");
+      name.textContent = record.username;
+      const score = document.createElement("span");
+      score.className = "doodle-record-score";
+      score.textContent = String(record.score);
+      const attempts = document.createElement("small");
+      attempts.textContent = `${record.attempts} попыток`;
+      row.append(rank, name, score, attempts);
+      leaderboardNode.appendChild(row);
+    });
+  }
+
+  function applyLeaderboard(data) {
+    if (!data) return;
+    if (Array.isArray(data.records)) renderLeaderboard(data.records);
+    if (totalAttemptsNode && Number.isFinite(data.total_attempts)) totalAttemptsNode.textContent = String(data.total_attempts);
+  }
+
+  function registerAttempt() {
+    if (!canvas.dataset.startUrl || !csrfToken) return;
+    postJSON(canvas.dataset.startUrl).then((data) => {
+      attemptId = data.attempt_id || null;
+      applyLeaderboard(data);
+      if (pendingFinish) submitScore();
+    }).catch(() => {
+      // Guests can still play locally; only authenticated runs are ranked.
+    });
+  }
+
+  function submitScore() {
+    if (scoreSubmitted || !canvas.dataset.finishUrl) return;
+    if (!attemptId) {
+      pendingFinish = true;
+      return;
+    }
+    pendingFinish = false;
+    scoreSubmitted = true;
+    postJSON(canvas.dataset.finishUrl, { attempt_id: attemptId, score: finalScore })
+      .then(applyLeaderboard)
+      .catch(() => { scoreSubmitted = false; });
   }
 
   function startGame() {
@@ -508,6 +587,7 @@
     buildGame();
     mode = "running";
     player.vy = 720;
+    registerAttempt();
     setOverlay("running");
     previousTime = performance.now();
     frame = requestAnimationFrame(loop);
@@ -526,22 +606,7 @@
     }
     updateHud();
     setOverlay("over");
-    draw();
-  }
-
-  function winGame() {
-    if (mode !== "running") return;
-    mode = "won";
-    cameraY = Math.max(cameraY, worldFinishY - height * .62);
-    const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    finalScore = heightPoints + frags * 30 + 250;
-    lastWasRecord = finalScore > best;
-    if (finalScore > best) {
-      best = finalScore;
-      try { localStorage.setItem(bestStorageKey, String(best)); } catch (error) { /* Keep the run playable without storage. */ }
-    }
-    updateHud();
-    setOverlay("won");
+    submitScore();
     draw();
   }
 
@@ -556,6 +621,69 @@
     const height = visualHeight * shape.height;
     const y = hazard.y + visualHeight * shape.offsetY;
     return { x: hazard.x, y, width, height, top: y + height / 2 };
+  }
+
+  function powerupHitbox(powerup) {
+    const size = powerup.size;
+    return { x: powerup.x, y: powerup.y, width: size * .72, height: size * 1.2 };
+  }
+
+  function drawPowerup(powerup) {
+    const screenY = worldToScreen(powerup.y + Math.sin(elapsed * 3 + powerup.phase) * 4);
+    const size = powerup.size;
+    ctx.save();
+    ctx.translate(Math.round(powerup.x), Math.round(screenY));
+    ctx.imageSmoothingEnabled = false;
+    ctx.shadowColor = powerup.type === "rocket" ? "rgba(255, 82, 103, .75)" : "rgba(142, 234, 255, .72)";
+    ctx.shadowBlur = 12;
+    if (powerup.type === "rocket") {
+      ctx.fillStyle = "#e84e5e";
+      ctx.beginPath();
+      ctx.moveTo(0, -size * .62);
+      ctx.lineTo(size * .38, size * .25);
+      ctx.lineTo(size * .2, size * .5);
+      ctx.lineTo(-size * .2, size * .5);
+      ctx.lineTo(-size * .38, size * .25);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#f7f0d2";
+      ctx.fillRect(-size * .28, -size * .18, size * .56, size * .25);
+      ctx.fillStyle = "#75e6ef";
+      ctx.fillRect(-size * .14, -size * .12, size * .28, size * .12);
+      ctx.fillStyle = "#ffbd4a";
+      ctx.fillRect(-size * .15, size * .48, size * .3, size * .23);
+      ctx.fillStyle = "#ffef9a";
+      ctx.fillRect(-size * .08, size * .55, size * .16, size * .16);
+    } else {
+      ctx.fillStyle = "#263451";
+      ctx.fillRect(-size * .35, -size * .42, size * .7, size * .84);
+      ctx.fillStyle = "#8eeaff";
+      ctx.fillRect(-size * .24, -size * .25, size * .48, size * .18);
+      ctx.fillStyle = "#536985";
+      ctx.fillRect(-size * .52, -size * .34, size * .14, size * .68);
+      ctx.fillRect(size * .38, -size * .34, size * .14, size * .68);
+      ctx.fillStyle = "#ffbd4a";
+      ctx.fillRect(-size * .28, size * .42, size * .18, size * .25);
+      ctx.fillRect(size * .1, size * .42, size * .18, size * .25);
+      ctx.fillStyle = "#ff5267";
+      ctx.fillRect(-size * .2, size * .64, size * .12, size * .14);
+      ctx.fillRect(size * .08, size * .64, size * .12, size * .14);
+    }
+    ctx.restore();
+  }
+
+  function drawInvulnerabilityShield() {
+    if (!player || invulnerableTimer <= 0) return;
+    const screenY = worldToScreen(player.y);
+    ctx.save();
+    ctx.translate(player.x, screenY);
+    ctx.strokeStyle = `rgba(142, 234, 255, ${.5 + Math.sin(elapsed * 8) * .18})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(player.width, player.height) * .62, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
   }
 
   function collideWithEnemy(previousFeet, currentFeet) {
@@ -584,40 +712,9 @@
     return false;
   }
 
-  function drawFinishGoal(platform) {
-    if (!platform) return;
-    const screenY = worldToScreen(platform.y);
-    const centerY = screenY - 34;
-    ctx.save();
-    ctx.translate(platform.x, centerY);
-    ctx.strokeStyle = "#f1c76b";
-    ctx.fillStyle = "rgba(12, 24, 43, .88)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, 0, 22, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.strokeStyle = "#73d8df";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, 0, 13, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let index = 0; index < 3; index += 1) {
-      const angle = -Math.PI / 2 + index * (Math.PI * 2 / 3);
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5);
-      ctx.lineTo(Math.cos(angle) * 18, Math.sin(angle) * 18);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "#f1c76b";
-    ctx.font = "900 9px 'Courier New', monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("РУЛЬ", 0, 36);
-    ctx.restore();
-  }
-
   function update(dt) {
     elapsed += dt;
+    invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     const direction = Number(held.right) - Number(held.left);
     const targetVx = direction * Math.min(440, width * .62);
     player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
@@ -644,7 +741,7 @@
         enemy.baseX + Math.sin(elapsed * 1.25 + enemy.phase) * Math.min(54, width * .14)));
     }
 
-    collideWithEnemy(previousFeet, currentFeet);
+    if (invulnerableTimer <= 0) collideWithEnemy(previousFeet, currentFeet);
     if (mode !== "running") return;
 
     if (player.vy < 0) {
@@ -659,10 +756,6 @@
         // Snap the sprite's feet to the exact contact plane; otherwise one frame of
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
-        if (platform.finish) {
-          winGame();
-          break;
-        }
         player.vy = platform.kind === "spring" ? 930 : 720;
         if (platform.kind === "spring") {
           effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 * visualScale() });
@@ -671,6 +764,22 @@
       }
     }
     if (mode !== "running") return;
+
+    for (const powerup of powerups) {
+      if (powerup.collected) continue;
+      const hitbox = powerupHitbox(powerup);
+      if (!overlapRect(player.x, player.y, player.width * .66, player.height * .78,
+        hitbox.x, hitbox.y, hitbox.width, hitbox.height)) continue;
+      powerup.collected = true;
+      if (powerup.type === "rocket") {
+        player.vy = Math.max(player.vy, 1260);
+        effects.push({ index: 11, x: player.x, y: player.y - player.height * .42, age: 0, duration: .55, size: 66 * visualScale() });
+      } else {
+        invulnerableTimer = Math.max(invulnerableTimer, 4.5);
+        player.vy = Math.max(player.vy, 980);
+        effects.push({ index: 10, x: player.x, y: player.y, age: 0, duration: .65, size: 70 * visualScale() });
+      }
+    }
 
     for (const hazard of hazards) {
       if (hazard.dead) continue;
@@ -685,6 +794,7 @@
         effects.push({ index: 10, x: hazard.x, y: hitbox.top, age: 0, duration: .34, size: 48 * visualScale() });
         continue;
       }
+      if (invulnerableTimer > 0) continue;
       if (overlapRect(player.x, player.y, player.width * .57, player.height * .66,
         hitbox.x, hitbox.y, hitbox.width, hitbox.height)) {
         endGame();
@@ -706,6 +816,7 @@
     platforms = platforms.filter((platform) => platform.y > cameraY - 160);
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
     hazards = hazards.filter((hazard) => hazard.y > cameraY - 180 && !hazard.dead);
+    powerups = powerups.filter((powerup) => powerup.y > cameraY - 180 && !powerup.collected);
 
     if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
@@ -722,8 +833,6 @@
       if (platform.broken) continue;
       drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform", platform.height);
     }
-    drawFinishGoal(finishPlatform);
-
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const bobY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
@@ -732,6 +841,10 @@
 
     for (const hazard of hazards) {
       if (!hazard.dead) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
+    }
+
+    for (const powerup of powerups) {
+      if (!powerup.collected) drawPowerup(powerup);
     }
 
     for (const effect of effects) {
@@ -758,6 +871,7 @@
         ctx.fill();
       }
       ctx.restore();
+      drawInvulnerabilityShield();
     }
 
     if (mode === "running") {
@@ -822,6 +936,7 @@
       });
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
+      powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
       draw();
     } else {
       buildGame();
@@ -942,17 +1057,13 @@
     canvas.addEventListener(type, () => { touchDirection = null; clearDirections(); });
   });
 
-  const backgroundZoneSources = Array.from({ length: 10 }, (_, index) => (
-    canvas.getAttribute(`data-background-zone-${index + 1}-src`)
-  ));
   Promise.all([
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
     image(canvas.dataset.backgroundSrc),
-    ...backgroundZoneSources.map((source) => image(source)),
-  ]).then(([atlas, heroSheet, background, ...backgroundZones]) => {
+  ]).then(([atlas, heroSheet, background]) => {
     art.background = background;
-    art.backgroundZones = backgroundZones.every(Boolean) ? backgroundZones : [];
+    art.backgroundZones = background ? [background] : [];
     art.heroFrames = splitHeroSheet(heroSheet);
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";

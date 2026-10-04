@@ -306,17 +306,40 @@
 
 .doodle-mobile-instructions { display: none; }
 
-.doodle-howto { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
+.doodle-howto { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
 .doodle-howto article { display: flex; align-items: center; gap: .7rem; min-height: 76px; padding: .7rem .8rem; border: 1px solid var(--doodle-line); border-radius: 0; background: var(--doodle-navy); box-shadow: 3px 3px 0 rgba(4, 8, 18, .45); }
 .doodle-howto-mark { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 2px solid var(--doodle-line); border-radius: 0; color: var(--doodle-cream); background: #152849; font-size: .72rem; font-weight: 900; }
 .doodle-mark-platform { width: 32px; height: 11px; border: 2px solid var(--doodle-cream); background: repeating-linear-gradient(90deg, var(--doodle-red) 0 7px, var(--doodle-cream) 7px 14px); box-shadow: 0 5px 0 -3px var(--doodle-cyan); }
 .doodle-mark-frag { border-color: #dca43e; color: #17203a; background: var(--doodle-yellow); }
 .doodle-mark-hazard { border-color: #a83b4c; color: #fff; background: var(--doodle-red); }
 .doodle-mark-goal { border-color: #dca43e; color: var(--doodle-cream); background: #172849; font-size: 1.05rem; }
+.doodle-mark-rocket { border-color: #ff5267; color: #fff4d3; background: linear-gradient(180deg, #e94b58, #7e2945); font-size: 1.1rem; }
+.doodle-mark-jetpack { border-color: #8eeaff; color: #8eeaff; background: #173957; font-size: 1rem; }
 .doodle-howto article div { display: grid; gap: .18rem; }
 .doodle-howto strong { color: var(--doodle-cream); font-size: .68rem; }
 .doodle-howto small { color: var(--doodle-muted); font-size: .57rem; line-height: 1.45; }
 .doodle-footnote { margin: .85rem 0 0; color: #8094b1; font-size: .59rem; line-height: 1.5; }
+
+.doodle-leaderboard {
+  margin-top: 1.1rem;
+  padding: clamp(1rem, 3vw, 1.35rem);
+  border: 2px solid var(--doodle-line);
+  background: linear-gradient(135deg, rgba(16, 29, 57, .96), rgba(9, 19, 38, .98));
+  box-shadow: 4px 4px 0 rgba(4, 8, 18, .65);
+}
+.doodle-leaderboard-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+.doodle-leaderboard-heading h2 { margin: .35rem 0 0; color: var(--doodle-cream); font-size: clamp(1.1rem, 3vw, 1.6rem); letter-spacing: -.04em; }
+.doodle-leaderboard-total { color: var(--doodle-muted); font-size: .62rem; white-space: nowrap; }
+.doodle-leaderboard-total strong { color: var(--doodle-cyan); font-size: .86rem; }
+.doodle-leaderboard-list { display: grid; gap: .38rem; padding: 0; margin: 0; list-style: none; }
+.doodle-leaderboard-list li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) auto auto; align-items: center; gap: .75rem; min-height: 42px; padding: .45rem .65rem; border: 1px solid rgba(52, 79, 120, .72); background: rgba(12, 20, 40, .8); }
+.doodle-leaderboard-list li.is-current-user { border-color: rgba(255, 189, 74, .8); background: rgba(74, 53, 31, .35); }
+.doodle-rank { color: var(--doodle-yellow); font-size: .68rem; font-weight: 900; }
+.doodle-leaderboard-list strong { overflow: hidden; color: #f5f7fa; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.doodle-record-score { color: var(--doodle-cyan); font-size: .95rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.doodle-leaderboard-list small { color: var(--doodle-muted); font-size: .58rem; }
+.doodle-board-empty { grid-template-columns: 1fr !important; color: var(--doodle-muted); font-size: .65rem; }
+.doodle-leaderboard-note { margin: .75rem 0 0; color: var(--doodle-muted); font-size: .62rem; }
 
 @media (max-width: 760px) {
   .doodle-heading { align-items: start; flex-direction: column; gap: .8rem; }
@@ -342,6 +365,10 @@
   .doodle-howto-mark { width: 28px; height: 28px; }
   .doodle-howto strong { font-size: .63rem; }
   .doodle-howto small { font-size: .53rem; }
+  .doodle-leaderboard-heading { align-items: start; flex-direction: column; gap: .35rem; }
+  .doodle-leaderboard-total { white-space: normal; }
+  .doodle-leaderboard-list li { grid-template-columns: 1.8rem minmax(0, 1fr) auto; gap: .5rem; }
+  .doodle-leaderboard-list small { grid-column: 2 / -1; }
 }
 
 @media (max-width: 390px) {

@@ -4,7 +4,7 @@
 {% block title %}Doodle GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=hitbox-v1">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=infinite-v1">
 {% endblock %}
 
 {% block content %}
@@ -13,7 +13,7 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Джордж Рассел пробирается через десять уровней завода Mercedes в поисках пропавшего руля. Поднимайся по платформам, отталкивайся от колёс и доберись до финального хранилища.</p>
+      <p class="doodle-lede">Джордж Рассел отправляется в бесконечный маршрут по заводу Mercedes. Поднимайся всё выше, собирай фраги и бей рекорд — дистанция не заканчивается.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -25,7 +25,7 @@
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
           <span class="doodle-live"><i></i> DOODLE GP</span>
-          <div class="doodle-level"><small>СЕКТОР</small><strong id="doodle-level">01 / 10</strong><span id="doodle-level-name">Ворота</span></div>
+          <div class="doodle-level"><small>СЕКТОР</small><strong id="doodle-level">01</strong><span id="doodle-level-name">Ворота завода</span></div>
           <div class="doodle-best"><small>РЕКОРД</small><strong id="doodle-best">0</strong></div>
           <button class="doodle-fullscreen-toggle" id="doodle-fullscreen-toggle" type="button"
             aria-label="На весь экран" aria-pressed="false" title="На весь экран">
@@ -41,17 +41,10 @@
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
-          data-background-src="{% static 'league/images/doodle-jump/doodle-loop-zone-01.jpg' %}"
-          data-background-zone-1-src="{% static 'league/images/doodle-jump/doodle-loop-zone-01.jpg' %}"
-          data-background-zone-2-src="{% static 'league/images/doodle-jump/doodle-loop-zone-02.jpg' %}"
-          data-background-zone-3-src="{% static 'league/images/doodle-jump/doodle-loop-zone-03.jpg' %}"
-          data-background-zone-4-src="{% static 'league/images/doodle-jump/doodle-loop-zone-04.jpg' %}"
-          data-background-zone-5-src="{% static 'league/images/doodle-jump/doodle-loop-zone-05.jpg' %}"
-          data-background-zone-6-src="{% static 'league/images/doodle-jump/doodle-loop-zone-06.jpg' %}"
-          data-background-zone-7-src="{% static 'league/images/doodle-jump/doodle-loop-zone-07.jpg' %}"
-          data-background-zone-8-src="{% static 'league/images/doodle-jump/doodle-loop-zone-08.jpg' %}"
-          data-background-zone-9-src="{% static 'league/images/doodle-jump/doodle-loop-zone-09.jpg' %}"
-          data-background-zone-10-src="{% static 'league/images/doodle-jump/doodle-loop-zone-10.jpg' %}"
+          data-background-src="{% static 'league/images/doodle-jump/doodle-loop-infinite-f1.jpg' %}"
+          data-start-url="{{ doodle_attempt_start_url }}"
+          data-finish-url="{{ doodle_attempt_finish_url }}"
+          data-leaderboard-url="{{ doodle_leaderboard_url }}"
           tabindex="0"
           role="application"
           aria-label="Пиксельный пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
@@ -60,7 +53,7 @@
           <div class="doodle-overlay-card">
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
             <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-            <p id="doodle-overlay-copy">Пройди десять уровней завода Mercedes и найди пропавший руль. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
+            <p id="doodle-overlay-copy">Маршрут бесконечный: поднимайся выше, отталкивайся от платформ и собирай максимум очков. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
             <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
           </div>
         </div>
@@ -71,7 +64,7 @@
       <span class="doodle-desktop-instructions"><kbd>←</kbd> <kbd>→</kbd> · <kbd>A</kbd> <kbd>D</kbd> или <kbd>Ф</kbd> <kbd>В</kbd> — движение</span>
       <span class="doodle-mobile-instructions">Касайся или удерживай левую / правую половину поля, чтобы двигаться</span>
       <span><kbd>ПРОБЕЛ</kbd> — начать / сыграть ещё раз</span>
-      <span>Рекорд сохраняется только в этом браузере</span>
+      <span>Рейтинг синхронизируется после каждого завершённого забега</span>
     </footer>
   </section>
 
@@ -79,13 +72,39 @@
     <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-frag" aria-hidden="true">+1</span><div><strong>Шинный гремлин</strong><small>Приземлись сверху — получишь фраг и бонус к счёту.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Колёса и конусы</strong><small>На колесо можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-goal" aria-hidden="true">◎</span><div><strong>Финальный руль</strong><small>На десятом уровне приземлись на платформу и закончи маршрут.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-rocket" aria-hidden="true">↟</span><div><strong>Ракета</strong><small>Одноразовый импульс резко подбросит тебя вверх.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-jetpack" aria-hidden="true">✦</span><div><strong>Реактивный ранец</strong><small>Короткая неуязвимость: колёса и конусы больше не страшны.</small></div></article>
   </section>
+
+  <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
+    <div class="doodle-leaderboard-heading">
+      <div>
+        <p class="doodle-kicker"><span></span> DOODLE GP · ALL-TIME</p>
+        <h2 id="doodle-leaderboard-title">Рейтинг высоты</h2>
+      </div>
+      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> завершённых забегов</span>
+    </div>
+    <ol class="doodle-leaderboard-list" id="doodle-leaderboard-list">
+      {% for record in doodle_records %}
+        <li{% if record.is_current_user %} class="is-current-user"{% endif %}>
+          <span class="doodle-rank">{{ record.rank|stringformat:"02d" }}</span>
+          <strong>{{ record.username }}</strong>
+          <span class="doodle-record-score">{{ record.score }}</span>
+          <small>{{ record.attempts }} попыток</small>
+        </li>
+      {% empty %}
+        <li class="doodle-board-empty">Рейтинг пока пуст — первый рекорд можно поставить прямо сейчас.</li>
+      {% endfor %}
+    </ol>
+    {% if not user.is_authenticated %}<p class="doodle-leaderboard-note">Войдите в аккаунт, чтобы ваши рекорды попали в общий рейтинг.</p>{% endif %}
+  </section>
+
+  <form hidden id="doodle-csrf-form">{% csrf_token %}</form>
 
   {% if arcade_admin_preview %}<p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>{% endif %}
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=hitbox-v1" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=infinite-v1" defer></script>
 {% endblock %}
