@@ -21,8 +21,8 @@
   const sprites = [];
   let backgroundCaches = [];
   // One tile is repeated while the player climbs through a level.  With the
-  // current jump rhythm a 2,400-unit level takes roughly half a minute, so the
-  // ten-scene route feels like a real, finite arcade run instead of an endless
+  // current jump rhythm a 2,400-unit level takes roughly twenty seconds, so the
+  // ten-scene route is a finite three-minute arcade run instead of an endless
   // scroll.
   const levelWorldHeight = 2400;
   const backgroundOverscan = 1.08;
@@ -56,7 +56,6 @@
   let platforms = [];
   let enemies = [];
   let hazards = [];
-  let bananas = [];
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
@@ -65,7 +64,6 @@
   let startY = 86;
   let peakY = 0;
   let frags = 0;
-  let bananaCount = 0;
   let finalScore = 0;
   let levelIndex = 0;
   let lastWasRecord = false;
@@ -299,10 +297,6 @@
     return width <= 520 ? .68 : 1;
   }
 
-  function bananaScale() {
-    return width <= 520 ? .82 : 1;
-  }
-
   function enemyWidth() {
     return Math.max(47, Math.min(61, width * .15)) * visualScale();
   }
@@ -324,23 +318,6 @@
     };
     platforms.push(platform);
     return platform;
-  }
-
-  function addBananaBetween(lower, upper) {
-    if (!lower || !upper) return;
-
-    // Keep collectibles in the middle of the jump corridor. The gap is always
-    // larger than the banana hitbox, so it can never be rendered inside either
-    // platform (even while it bobs up and down).
-    const gap = upper.y - lower.y;
-    const laneCenter = lower.x + (upper.x - lower.x) * .5;
-    const drift = (Math.random() - .5) * Math.min(34, width * .07);
-    bananas.push({
-      x: Math.max(width * .16, Math.min(width * .84, laneCenter + drift)),
-      y: lower.y + gap * (.46 + Math.random() * .08),
-      taken: false,
-      phase: Math.random() * Math.PI * 2,
-    });
   }
 
   function platformGap() {
@@ -397,7 +374,6 @@
     platforms = [];
     enemies = [];
     hazards = [];
-    bananas = [];
     effects = [];
     cameraY = 0;
     startY = firstY;
@@ -406,7 +382,6 @@
     finishPlatform = null;
     peakY = firstY + heroHeight / 2;
     frags = 0;
-    bananaCount = 0;
     finalScore = 0;
     levelIndex = 0;
     elapsed = 0;
@@ -415,16 +390,14 @@
     held.right = false;
     facing = 1;
 
-    let previousPlatform = addPlatform(firstY, width * .5, "normal");
+    addPlatform(firstY, width * .5, "normal");
     let nextY = firstY;
     let lastX = width * .5;
     while (nextY < height + 320) {
       const gap = platformGap();
       nextY += gap;
       lastX = choosePlatformX(lastX, gap);
-      const nextPlatform = addPlatform(nextY, lastX, selectPlatformKind());
-      addBananaBetween(previousPlatform, nextPlatform);
-      previousPlatform = nextPlatform;
+      addPlatform(nextY, lastX, selectPlatformKind());
       worldTop = nextY;
     }
     player = {
@@ -445,8 +418,8 @@
   function extendWorld() {
     const targetWorldTop = Math.min(worldFinishY, cameraY + height + 280);
     while (worldTop < targetWorldTop && !finishPlatform) {
-      const prior = platforms[platforms.length - 1];
-      const lastX = prior ? prior.x : width / 2;
+      const lastPlatform = platforms[platforms.length - 1];
+      const lastX = lastPlatform ? lastPlatform.x : width / 2;
       const remaining = worldFinishY - worldTop;
       if (remaining <= 170) {
         const nextX = choosePlatformX(lastX, Math.max(1, remaining));
@@ -461,7 +434,6 @@
       const y = worldTop + gap;
       const nextX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
-      addBananaBetween(prior, nextPlatform);
       worldTop = y;
     }
 
@@ -483,6 +455,12 @@
         speed: 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
         spriteIndex,
         bouncy: spriteIndex === 5,
+        // The atlas cells contain transparent padding and different silhouettes.
+        // Keep a per-object hitbox instead of treating every falling object as
+        // the same square.
+        hitbox: spriteIndex === 5
+          ? { width: .68, height: .58, offsetY: -.02 }
+          : { width: .56, height: .72, offsetY: .06 },
         dead: false,
         size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
       });
@@ -491,7 +469,7 @@
 
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    const score = heightPoints + frags * 30 + bananaCount * 12;
+    const score = heightPoints + frags * 30;
     levelIndex = Math.min(levels.length - 1, Math.floor(storyProgress()));
     scoreNode.textContent = String(mode === "over" || mode === "won" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
@@ -540,7 +518,7 @@
     if (mode !== "running") return;
     mode = "over";
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    finalScore = heightPoints + frags * 30 + bananaCount * 12;
+    finalScore = heightPoints + frags * 30;
     lastWasRecord = finalScore > best;
     if (finalScore > best) {
       best = finalScore;
@@ -556,7 +534,7 @@
     mode = "won";
     cameraY = Math.max(cameraY, worldFinishY - height * .62);
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    finalScore = heightPoints + frags * 30 + bananaCount * 12 + 250;
+    finalScore = heightPoints + frags * 30 + 250;
     lastWasRecord = finalScore > best;
     if (finalScore > best) {
       best = finalScore;
@@ -569,6 +547,15 @@
 
   function overlapRect(ax, ay, aw, ah, bx, by, bw, bh) {
     return Math.abs(ax - bx) < (aw + bw) / 2 && Math.abs(ay - by) < (ah + bh) / 2;
+  }
+
+  function hazardHitbox(hazard) {
+    const shape = hazard.hitbox || { width: .6, height: .68, offsetY: 0 };
+    const width = hazard.size * shape.width;
+    const visualHeight = spriteSize(sprites[hazard.spriteIndex], hazard.size) || hazard.size;
+    const height = visualHeight * shape.height;
+    const y = hazard.y + visualHeight * shape.offsetY;
+    return { x: hazard.x, y, width, height, top: y + height / 2 };
   }
 
   function collideWithEnemy(previousFeet, currentFeet) {
@@ -685,32 +672,21 @@
     }
     if (mode !== "running") return;
 
-    for (const banana of bananas) {
-      if (banana.taken) continue;
-      const bobY = banana.y + Math.sin(elapsed * 3 + banana.phase) * 7;
-      if (overlapRect(player.x, player.y, player.width * .7, player.height * .72, banana.x, bobY,
-        28 * bananaScale(), 30 * bananaScale())) {
-        banana.taken = true;
-        bananaCount += 1;
-      }
-    }
-
     for (const hazard of hazards) {
       if (hazard.dead) continue;
       hazard.y -= hazard.speed * dt;
-      const hazardHeight = spriteSize(sprites[hazard.spriteIndex], hazard.size) || hazard.size;
-      const hazardTop = hazard.y + hazardHeight / 2;
-      const closeX = Math.abs(player.x - hazard.x) < (player.width * .58 + hazard.size * .36);
-      const crossedTop = previousFeet >= hazardTop && currentFeet <= hazardTop;
+      const hitbox = hazardHitbox(hazard);
+      const closeX = Math.abs(player.x - hitbox.x) < (player.width * .58 + hitbox.width / 2);
+      const crossedTop = previousFeet >= hitbox.top && currentFeet <= hitbox.top;
       if (hazard.bouncy && player.vy < 0 && closeX && crossedTop) {
         hazard.dead = true;
-        player.y = hazardTop + player.height / 2;
+        player.y = hitbox.top + player.height / 2;
         player.vy = 880;
-        effects.push({ index: 10, x: hazard.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
+        effects.push({ index: 10, x: hazard.x, y: hitbox.top, age: 0, duration: .34, size: 48 * visualScale() });
         continue;
       }
       if (overlapRect(player.x, player.y, player.width * .57, player.height * .66,
-        hazard.x, hazard.y, hazard.size * .72, hazard.size * .72)) {
+        hitbox.x, hitbox.y, hitbox.width, hitbox.height)) {
         endGame();
         return;
       }
@@ -730,7 +706,6 @@
     platforms = platforms.filter((platform) => platform.y > cameraY - 160);
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
     hazards = hazards.filter((hazard) => hazard.y > cameraY - 180 && !hazard.dead);
-    bananas = bananas.filter((banana) => banana.y > cameraY - 120 && !banana.taken);
 
     if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
@@ -742,12 +717,6 @@
   function draw() {
     if (!ctx) return;
     drawBackdrop();
-
-    for (const banana of bananas) {
-      if (banana.taken) continue;
-      const bob = Math.sin(elapsed * 3 + banana.phase) * 7;
-      drawSprite(7, banana.x, banana.y + bob, Math.max(29, width * .055) * bananaScale());
-    }
 
     for (const platform of platforms) {
       if (platform.broken) continue;
@@ -853,7 +822,6 @@
       });
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
-      bananas.forEach((banana) => { banana.x *= scaleX; banana.y *= scaleY; });
       draw();
     } else {
       buildGame();

@@ -312,7 +312,7 @@
 .doodle-mark-platform { width: 32px; height: 11px; border: 2px solid var(--doodle-cream); background: repeating-linear-gradient(90deg, var(--doodle-red) 0 7px, var(--doodle-cream) 7px 14px); box-shadow: 0 5px 0 -3px var(--doodle-cyan); }
 .doodle-mark-frag { border-color: #dca43e; color: #17203a; background: var(--doodle-yellow); }
 .doodle-mark-hazard { border-color: #a83b4c; color: #fff; background: var(--doodle-red); }
-.doodle-mark-banana { border-color: #dca43e; color: #17203a; background: var(--doodle-yellow); }
+.doodle-mark-goal { border-color: #dca43e; color: var(--doodle-cream); background: #172849; font-size: 1.05rem; }
 .doodle-howto article div { display: grid; gap: .18rem; }
 .doodle-howto strong { color: var(--doodle-cream); font-size: .68rem; }
 .doodle-howto small { color: var(--doodle-muted); font-size: .57rem; line-height: 1.45; }

@@ -4,7 +4,7 @@
 {% block title %}Doodle GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=hitbox-v1">
 {% endblock %}
 
 {% block content %}
@@ -79,7 +79,7 @@
     <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-frag" aria-hidden="true">+1</span><div><strong>Шинный гремлин</strong><small>Приземлись сверху — получишь фраг и бонус к счёту.</small></div></article>
     <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Колёса и конусы</strong><small>На колесо можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-banana" aria-hidden="true">✦</span><div><strong>Золотой банан</strong><small>Подбери его, чтобы добавить очки.</small></div></article>
+    <article><span class="doodle-howto-mark doodle-mark-goal" aria-hidden="true">◎</span><div><strong>Финальный руль</strong><small>На десятом уровне приземлись на платформу и закончи маршрут.</small></div></article>
   </section>
 
   {% if arcade_admin_preview %}<p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>{% endif %}
@@ -87,5 +87,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=finite-loop-v1" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=hitbox-v1" defer></script>
 {% endblock %}
