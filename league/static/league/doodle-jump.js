@@ -58,6 +58,8 @@
   let enemies = [];
   let hazards = [];
   let powerups = [];
+  let villains = [];
+  let villainShots = [];
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
@@ -72,6 +74,8 @@
   let nativeFullscreenRequested = false;
   let facing = 1;
   let invulnerableTimer = 0;
+  let rocketTimer = 0;
+  let jetpackTimer = 0;
   let attemptId = null;
   let scoreSubmitted = false;
   let pendingFinish = false;
@@ -192,6 +196,40 @@
     return frames;
   }
 
+  function splitSpriteSheet(sheet, columns) {
+    if (!sheet || !columns) return [];
+    const frameWidth = Math.ceil(sheet.naturalWidth / columns);
+    const frameHeight = sheet.naturalHeight;
+    const frames = [];
+    for (let frameIndex = 0; frameIndex < columns; frameIndex += 1) {
+      const tile = document.createElement("canvas");
+      tile.width = frameWidth;
+      tile.height = frameHeight;
+      const tileCtx = tile.getContext("2d", { willReadFrequently: true });
+      tileCtx.imageSmoothingEnabled = false;
+      tileCtx.drawImage(sheet, frameIndex * sheet.naturalWidth / columns, 0,
+        sheet.naturalWidth / columns, frameHeight, 0, 0, frameWidth, frameHeight);
+      const pixels = tileCtx.getImageData(0, 0, frameWidth, frameHeight).data;
+      let minX = frameWidth;
+      let minY = frameHeight;
+      let maxX = -1;
+      let maxY = -1;
+      for (let y = 0; y < frameHeight; y += 1) {
+        for (let x = 0; x < frameWidth; x += 1) {
+          if (pixels[(y * frameWidth + x) * 4 + 3] <= 18) continue;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+      frames.push(maxX >= minX && maxY >= minY
+        ? { image: tile, sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+        : null);
+    }
+    return frames;
+  }
+
   function spriteSize(sprite, targetWidth) {
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
@@ -215,6 +253,16 @@
     const screenY = height - (worldY - cameraY);
     const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
     ctx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
+      x - targetWidth / 2, drawY, targetWidth, drawHeight);
+    return true;
+  }
+
+  function drawFrame(frame, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
+    if (!frame) return false;
+    const drawHeight = targetHeight || spriteSize(frame, targetWidth);
+    const screenY = height - (worldY - cameraY);
+    const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
+    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
       x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
   }
@@ -387,6 +435,8 @@
     enemies = [];
     hazards = [];
     powerups = [];
+    villains = [];
+    villainShots = [];
     effects = [];
     cameraY = 0;
     startY = firstY;
@@ -396,6 +446,8 @@
     finalScore = 0;
     levelIndex = 0;
     invulnerableTimer = 0;
+    rocketTimer = 0;
+    jetpackTimer = 0;
     attemptId = null;
     scoreSubmitted = false;
     pendingFinish = false;
@@ -458,6 +510,10 @@
     }
     if (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
+      const compoundRoll = Math.random();
+      const compound = spriteIndex === 5
+        ? (compoundRoll < .34 ? "soft" : compoundRoll < .67 ? "medium" : "hard")
+        : null;
       hazards.push({
         x: width * (.13 + Math.random() * .74),
         y: worldTop + 90,
@@ -470,8 +526,24 @@
         hitbox: spriteIndex === 5
           ? { width: .68, height: .58, offsetY: -.02 }
           : { width: .56, height: .72, offsetY: .06 },
+        compound,
+        wheelFrame: compound && art.wheelFrames ? art.wheelFrames[compound] : null,
         dead: false,
         size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
+      });
+    }
+
+    const lastVillain = villains[villains.length - 1];
+    if ((!lastVillain || worldTop - lastVillain.y > 2500) && Math.random() < .4) {
+      const villainX = width * (.22 + Math.random() * .56);
+      villains.push({
+        x: villainX,
+        baseX: villainX,
+        y: worldTop + 180,
+        phase: Math.random() * Math.PI * 2,
+        frame: 0,
+        shotTimer: 1.3 + Math.random() * .8,
+        dead: false,
       });
     }
   }
@@ -617,7 +689,7 @@
   function hazardHitbox(hazard) {
     const shape = hazard.hitbox || { width: .6, height: .68, offsetY: 0 };
     const width = hazard.size * shape.width;
-    const visualHeight = spriteSize(sprites[hazard.spriteIndex], hazard.size) || hazard.size;
+    const visualHeight = spriteSize(hazard.wheelFrame || sprites[hazard.spriteIndex], hazard.size) || hazard.size;
     const height = visualHeight * shape.height;
     const y = hazard.y + visualHeight * shape.offsetY;
     return { x: hazard.x, y, width, height, top: y + height / 2 };
@@ -631,6 +703,14 @@
   function drawPowerup(powerup) {
     const screenY = worldToScreen(powerup.y + Math.sin(elapsed * 3 + powerup.phase) * 4);
     const size = powerup.size;
+    const frame = art.powerupFrames && art.powerupFrames[powerup.type];
+    if (frame) {
+      ctx.save();
+      ctx.globalAlpha = .95 + Math.sin(elapsed * 5 + powerup.phase) * .05;
+      drawFrame(frame, powerup.x, powerup.y + Math.sin(elapsed * 3 + powerup.phase) * 4, size * 1.55);
+      ctx.restore();
+      return;
+    }
     ctx.save();
     ctx.translate(Math.round(powerup.x), Math.round(screenY));
     ctx.imageSmoothingEnabled = false;
@@ -672,6 +752,32 @@
     ctx.restore();
   }
 
+  function drawMountedPowerup(type) {
+    const frame = art.powerupFrames && art.powerupFrames[type];
+    if (!player || !frame) return;
+    const targetWidth = type === "rocket" ? player.width * 1.08 : player.width * .82;
+    const mountY = player.y - player.height * .52;
+    ctx.save();
+    ctx.globalAlpha = .98;
+    drawFrame(frame, player.x, mountY, targetWidth);
+    ctx.restore();
+    // Add a second, phase-shifted flame layer so the generated sprite reads as
+    // animated even though the sheet is a compact single-pose power-up.
+    ctx.save();
+    ctx.translate(Math.round(player.x), Math.round(worldToScreen(mountY - targetWidth * .46)));
+    ctx.fillStyle = type === "rocket" ? "#fff29a" : "#8eeaff";
+    const flicker = 2 + Math.round(Math.sin(elapsed * 22) * 2);
+    if (type === "rocket") {
+      ctx.fillRect(-3, 0, 6, 8 + flicker);
+      ctx.fillStyle = "#ff7b3e";
+      ctx.fillRect(-5, 6, 10, 4 + flicker);
+    } else {
+      ctx.fillRect(-targetWidth * .22, 0, 4, 8 + flicker);
+      ctx.fillRect(targetWidth * .22 - 4, 0, 4, 8 + flicker);
+    }
+    ctx.restore();
+  }
+
   function drawInvulnerabilityShield() {
     if (!player || invulnerableTimer <= 0) return;
     const screenY = worldToScreen(player.y);
@@ -684,6 +790,58 @@
     ctx.arc(0, 0, Math.max(player.width, player.height) * .62, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
+  }
+
+  function villainWidth() {
+    return Math.max(58, Math.min(84, width * .19)) * visualScale();
+  }
+
+  function drawVillainShot(shot) {
+    const screenY = worldToScreen(shot.y);
+    const size = shot.size;
+    const dirtyWheel = art.dirtyWheelFrame;
+    if (dirtyWheel) {
+      ctx.save();
+      ctx.translate(Math.round(shot.x), Math.round(screenY));
+      ctx.rotate(shot.spin);
+      const dirtyHeight = spriteSize(dirtyWheel, size * 1.22);
+      ctx.drawImage(dirtyWheel.image, dirtyWheel.sx, dirtyWheel.sy, dirtyWheel.sw, dirtyWheel.sh,
+        -size * .61, -dirtyHeight / 2, size * 1.22, dirtyHeight);
+      ctx.restore();
+      return;
+    }
+    const wheelFrame = art.wheelFrames && art.wheelFrames.medium;
+    ctx.save();
+    ctx.translate(Math.round(shot.x), Math.round(screenY));
+    ctx.rotate(shot.spin);
+    if (wheelFrame) {
+      const wheelHeight = spriteSize(wheelFrame, size);
+      ctx.drawImage(wheelFrame.image, wheelFrame.sx, wheelFrame.sy, wheelFrame.sw, wheelFrame.sh,
+        -size / 2, -wheelHeight / 2, size, wheelHeight);
+    } else {
+      ctx.restore();
+      drawSprite(5, shot.x, shot.y, size);
+      return;
+    }
+    ctx.fillStyle = "#7f4a31";
+    ctx.fillRect(-size * .22, size * .18, size * .44, size * .2);
+    ctx.fillStyle = "#b66a3d";
+    ctx.fillRect(-size * .12, size * .34, size * .24, size * .14);
+    ctx.restore();
+  }
+
+  function drawVillain(villain) {
+    const frame = art.villainFrames && art.villainFrames[villain.frame];
+    if (!frame) return;
+    drawFrame(frame, villain.x, villain.y + Math.sin(elapsed * 3 + villain.phase) * 5, villainWidth());
+  }
+
+  function drawHazard(hazard) {
+    if (hazard.compound && hazard.wheelFrame) {
+      drawFrame(hazard.wheelFrame, hazard.x, hazard.y, hazard.size);
+      return;
+    }
+    drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
   }
 
   function collideWithEnemy(previousFeet, currentFeet) {
@@ -715,6 +873,8 @@
   function update(dt) {
     elapsed += dt;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
+    rocketTimer = Math.max(0, rocketTimer - dt);
+    jetpackTimer = Math.max(0, jetpackTimer - dt);
     const direction = Number(held.right) - Number(held.left);
     const targetVx = direction * Math.min(440, width * .62);
     player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
@@ -725,6 +885,8 @@
 
     const previousFeet = player.y - player.height / 2;
     player.vy -= 1240 * dt;
+    if (rocketTimer > 0) player.vy = 1240;
+    else if (jetpackTimer > 0) player.vy = Math.max(player.vy, 860);
     player.y += player.vy * dt;
     const currentFeet = player.y - player.height / 2;
     peakY = Math.max(peakY, player.y);
@@ -739,6 +901,26 @@
     for (const enemy of enemies) {
       enemy.x = Math.max(34, Math.min(width - 34,
         enemy.baseX + Math.sin(elapsed * 1.25 + enemy.phase) * Math.min(54, width * .14)));
+    }
+
+    for (const villain of villains) {
+      villain.x = Math.max(48, Math.min(width - 48,
+        villain.baseX + Math.sin(elapsed * 1.15 + villain.phase) * Math.min(64, width * .18)));
+      villain.frame = Math.floor(elapsed * 5 + villain.phase) % 4;
+      villain.shotTimer -= dt;
+      if (villain.shotTimer <= 0 && Math.abs(villain.y - cameraY) < height * 1.35) {
+        const shotSize = Math.max(25, Math.min(34, width * .075)) * visualScale();
+        villainShots.push({
+          x: villain.x,
+          y: villain.y - villainWidth() * .34,
+          vx: (player.x - villain.x) * .16,
+          vy: -360,
+          size: shotSize,
+          spin: 0,
+          dead: false,
+        });
+        villain.shotTimer = 1.35 + Math.random() * .7;
+      }
     }
 
     if (invulnerableTimer <= 0) collideWithEnemy(previousFeet, currentFeet);
@@ -772,12 +954,30 @@
         hitbox.x, hitbox.y, hitbox.width, hitbox.height)) continue;
       powerup.collected = true;
       if (powerup.type === "rocket") {
-        player.vy = Math.max(player.vy, 1260);
+        rocketTimer = 1.8;
+        invulnerableTimer = Math.max(invulnerableTimer, rocketTimer);
+        player.vy = 1240;
         effects.push({ index: 11, x: player.x, y: player.y - player.height * .42, age: 0, duration: .55, size: 66 * visualScale() });
       } else {
-        invulnerableTimer = Math.max(invulnerableTimer, 4.5);
-        player.vy = Math.max(player.vy, 980);
+        jetpackTimer = 5;
+        invulnerableTimer = Math.max(invulnerableTimer, 5);
+        player.vy = Math.max(player.vy, 860);
         effects.push({ index: 10, x: player.x, y: player.y, age: 0, duration: .65, size: 70 * visualScale() });
+      }
+    }
+
+    for (const shot of villainShots) {
+      if (shot.dead) continue;
+      shot.x += shot.vx * dt;
+      shot.y += shot.vy * dt;
+      shot.vy -= 75 * dt;
+      shot.spin += dt * 8;
+      if (invulnerableTimer <= 0 && overlapRect(
+        player.x, player.y, player.width * .54, player.height * .68,
+        shot.x, shot.y, shot.size * .7, shot.size * .7,
+      )) {
+        endGame();
+        return;
       }
     }
 
@@ -817,6 +1017,8 @@
     enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
     hazards = hazards.filter((hazard) => hazard.y > cameraY - 180 && !hazard.dead);
     powerups = powerups.filter((powerup) => powerup.y > cameraY - 180 && !powerup.collected);
+    villains = villains.filter((villain) => villain.y > cameraY - 300 && !villain.dead);
+    villainShots = villainShots.filter((shot) => shot.y > cameraY - 260 && !shot.dead);
 
     if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
@@ -840,7 +1042,14 @@
     }
 
     for (const hazard of hazards) {
-      if (!hazard.dead) drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
+      if (!hazard.dead) drawHazard(hazard);
+    }
+
+    for (const villain of villains) {
+      if (!villain.dead) drawVillain(villain);
+    }
+    for (const shot of villainShots) {
+      if (!shot.dead) drawVillainShot(shot);
     }
 
     for (const powerup of powerups) {
@@ -855,6 +1064,8 @@
     }
 
     if (player) {
+      if (rocketTimer > 0) drawMountedPowerup("rocket");
+      else if (jetpackTimer > 0) drawMountedPowerup("jetpack");
       const screenY = worldToScreen(player.y);
       ctx.save();
       ctx.translate(player.x, screenY);
@@ -881,6 +1092,16 @@
       ctx.font = "800 11px system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(`${progress} м`, width - 14, 22);
+      if (rocketTimer > 0 || jetpackTimer > 0) {
+        const activeType = rocketTimer > 0 ? "РАКЕТА" : "РЕАКТИВНЫЙ РАНЕЦ";
+        const activeTime = rocketTimer > 0 ? rocketTimer : jetpackTimer;
+        ctx.textAlign = "left";
+        ctx.fillStyle = "rgba(8, 18, 38, .86)";
+        ctx.fillRect(12, 88, Math.min(width * .45, 170), 22);
+        ctx.fillStyle = rocketTimer > 0 ? "#ffbd4a" : "#8eeaff";
+        ctx.font = "900 10px 'Courier New', monospace";
+        ctx.fillText(`${activeType}  ${activeTime.toFixed(1)}с`, 20, 103);
+      }
       ctx.restore();
     }
   }
@@ -937,6 +1158,8 @@
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
+      villains.forEach((villain) => { villain.x *= scaleX; villain.baseX *= scaleX; villain.y *= scaleY; });
+      villainShots.forEach((shot) => { shot.x *= scaleX; shot.y *= scaleY; shot.vx *= scaleX; shot.vy *= scaleY; shot.size *= scaleX; });
       draw();
     } else {
       buildGame();
@@ -1061,10 +1284,28 @@
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
     image(canvas.dataset.backgroundSrc),
-  ]).then(([atlas, heroSheet, background]) => {
+    image(canvas.dataset.powerupsSrc),
+    image(canvas.dataset.wheelCompoundsSrc),
+    image(canvas.dataset.villainSheetSrc),
+    image(canvas.dataset.dirtyWheelSrc),
+  ]).then(([atlas, heroSheet, background, powerupSheet, wheelSheet, villainSheet, dirtyWheel]) => {
     art.background = background;
     art.backgroundZones = background ? [background] : [];
     art.heroFrames = splitHeroSheet(heroSheet);
+    const powerupFrames = splitSpriteSheet(powerupSheet, 2);
+    const wheelFrames = splitSpriteSheet(wheelSheet, 3);
+    const villainFrames = splitSpriteSheet(villainSheet, 4);
+    art.powerupFrames = {
+      rocket: powerupFrames[0] || null,
+      jetpack: powerupFrames[1] || null,
+    };
+    art.wheelFrames = {
+      soft: wheelFrames[0] || null,
+      medium: wheelFrames[1] || null,
+      hard: wheelFrames[2] || null,
+    };
+    art.villainFrames = villainFrames;
+    art.dirtyWheelFrame = splitSpriteSheet(dirtyWheel, 1)[0] || null;
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
       startButton.disabled = true;
