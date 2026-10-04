@@ -835,9 +835,27 @@
   }
 
   function drawVillain(villain) {
-    const frame = art.villainFrames && art.villainFrames[villain.frame];
+    const frames = art.villainFrames || [];
+    const frame = frames.length ? frames[villain.frame % frames.length] : null;
     if (!frame) return;
-    drawFrame(frame, villain.x, villain.y + Math.sin(elapsed * .85 + villain.phase) * 3, villainWidth());
+    const targetWidth = villainWidth();
+    const targetHeight = spriteSize(frame, targetWidth);
+    const screenY = worldToScreen(villain.y + Math.sin(elapsed * .85 + villain.phase) * 3);
+    const attacking = villain.frame === 2;
+    ctx.save();
+    ctx.translate(Math.round(villain.x), Math.round(screenY));
+    ctx.rotate(attacking ? .035 : Math.sin(elapsed * .55 + villain.phase) * .018);
+    const pulse = attacking ? 1.045 + Math.sin(elapsed * 12) * .018 : 1;
+    ctx.scale(pulse, pulse);
+    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
+      -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
+    if (attacking) {
+      ctx.fillStyle = "rgba(255, 65, 82, .78)";
+      ctx.fillRect(-targetWidth * .58, -2, targetWidth * .12, 3);
+      ctx.fillStyle = "rgba(93, 232, 246, .72)";
+      ctx.fillRect(targetWidth * .46, targetHeight * .2, targetWidth * .1, 2);
+    }
+    ctx.restore();
   }
 
   function drawHazard(hazard) {
@@ -1299,7 +1317,9 @@
     art.heroFrames = splitHeroSheet(heroSheet);
     const powerupFrames = splitSpriteSheet(powerupSheet, 2);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
-    const villainFrames = splitSpriteSheet(villainSheet, 4);
+    // The villain uses one identity-preserving portrait rather than a four-panel
+    // character sheet, so the face remains recognizable throughout the flight.
+    const villainFrames = splitSpriteSheet(villainSheet, 1);
     art.powerupFrames = {
       rocket: powerupFrames[0] || null,
       jetpack: powerupFrames[1] || null,
