@@ -20,23 +20,24 @@
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
-  // Each story scene lasts roughly thirty seconds.  The camera height is also
-  // part of the progress signal, so a particularly strong run can never leave
-  // the player visually behind the world they are climbing through.
-  const backgroundSceneDuration = 30;
-  const backgroundZoneHeight = 6500;
-  const backgroundOverscan = 1.2;
+  // One tile is repeated while the player climbs through a level.  With the
+  // current jump rhythm a 2,400-unit level takes roughly half a minute, so the
+  // ten-scene route feels like a real, finite arcade run instead of an endless
+  // scroll.
+  const levelWorldHeight = 2400;
+  const backgroundOverscan = 1.08;
+  const backgroundParallax = .34;
   const levels = [
-    "Ворота комплекса",
+    "Ворота завода",
     "Служебный холл",
     "Моторный цех",
-    "Тоннель аэродинамики",
+    "Аэродинамический тоннель",
     "Цех карбона",
-    "Сборочный атриум",
-    "Лаборатория роботов",
-    "Крыша испытаний",
-    "Симулятор прототипа",
-    "Хранилище трофея",
+    "Сборочная линия",
+    "Робототехника",
+    "Крыша комплекса",
+    "Симулятор",
+    "Хранилище руля",
   ];
 
   let storedBest = "0";
@@ -59,6 +60,8 @@
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
+  let worldFinishY = 0;
+  let finishPlatform = null;
   let startY = 86;
   let peakY = 0;
   let frags = 0;
@@ -222,18 +225,19 @@
     if (!sources.length || !width || !height) return;
 
     const pixelWidth = Math.max(1, Math.round(width * dpr));
-    const pixelHeight = Math.max(1, Math.round(height * dpr));
     backgroundCaches = sources.map((source) => {
       const cache = document.createElement("canvas");
       cache.width = Math.ceil(pixelWidth * backgroundOverscan);
-      cache.height = Math.ceil(pixelHeight * backgroundOverscan);
+      const scale = Math.max(
+        cache.width / source.naturalWidth,
+        (height * dpr * 1.08) / source.naturalHeight,
+      );
+      cache.height = Math.ceil(source.naturalHeight * scale);
       const cacheCtx = cache.getContext("2d", { alpha: false });
       cacheCtx.imageSmoothingEnabled = false;
-      const scale = Math.max(cache.width / source.naturalWidth, cache.height / source.naturalHeight);
       const drawWidth = source.naturalWidth * scale;
       const drawHeight = source.naturalHeight * scale;
-      cacheCtx.drawImage(source, (cache.width - drawWidth) / 2, (cache.height - drawHeight) / 2,
-        drawWidth, drawHeight);
+      cacheCtx.drawImage(source, (cache.width - drawWidth) / 2, 0, drawWidth, drawHeight);
       return { canvas: cache, width: cache.width / dpr, height: cache.height / dpr };
     });
   }
@@ -243,22 +247,28 @@
   }
 
   function storyProgress() {
-    const heightProgress = Math.max(0, cameraY / backgroundZoneHeight);
-    const timeProgress = mode === "ready" ? 0 : Math.max(0, elapsed / backgroundSceneDuration);
-    return clamp(Math.max(heightProgress, timeProgress), 0, Math.max(0, backgroundCaches.length - 1));
+    return clamp(Math.max(0, cameraY) / levelWorldHeight, 0, Math.max(0, backgroundCaches.length - 1));
   }
 
-  function drawBackgroundScene(scene, sceneIndex, localProgress, alpha = 1) {
+  function drawBackgroundTile(tile, sceneIndex) {
+    if (!tile || !tile.height) return;
+    const swayX = Math.sin(elapsed * .2 + sceneIndex * .7) * width * .01;
+    const scroll = (Math.max(0, cameraY) * backgroundParallax) % tile.height;
+    let y = -scroll;
+
+    // Draw a tile above and below the viewport so the architecture keeps
+    // scrolling continuously while the camera follows the jumper upward.
+    while (y < height + tile.height) {
+      ctx.drawImage(tile.canvas, swayX, y, tile.width, tile.height);
+      y += tile.height;
+    }
+  }
+
+  function drawBackgroundScene(scene, sceneIndex, alpha = 1) {
     if (!scene) return;
-    // Overscan gives every scene room to drift while the camera rises.  The
-    // slow horizontal sway makes the background feel alive without moving the
-    // platforms or the playable center lane.
-    const swayX = Math.sin(elapsed * .28 + sceneIndex * .7) * width * .018;
-    const cameraPan = Math.min(height * .04, Math.max(0, cameraY) * .006);
-    const panY = -(localProgress * height * .12 + cameraPan);
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(scene.canvas, swayX, panY, scene.width, scene.height);
+    drawBackgroundTile(scene, sceneIndex);
     ctx.restore();
   }
 
@@ -266,12 +276,13 @@
     if (backgroundCaches.length) {
       const progress = storyProgress();
       const index = Math.floor(progress);
-      const blend = progress - index;
-      const smoothBlend = blend * blend * (3 - 2 * blend);
-      drawBackgroundScene(backgroundCaches[index], index, blend);
+      const localProgress = progress - index;
+      const transition = clamp((localProgress - .72) / .28, 0, 1);
+      const smoothBlend = transition * transition * (3 - 2 * transition);
+      drawBackgroundScene(backgroundCaches[index], index);
       if (index < backgroundCaches.length - 1 && smoothBlend > 0)
-        drawBackgroundScene(backgroundCaches[index + 1], index + 1, 0, smoothBlend);
-      ctx.fillStyle = "rgba(5, 12, 28, .08)";
+        drawBackgroundScene(backgroundCaches[index + 1], index + 1, smoothBlend);
+      ctx.fillStyle = "rgba(5, 12, 28, .16)";
       ctx.fillRect(0, 0, width, height);
     } else {
       ctx.fillStyle = "#78c8f5";
@@ -391,6 +402,8 @@
     cameraY = 0;
     startY = firstY;
     worldTop = firstY;
+    worldFinishY = firstY + levelWorldHeight * levels.length - 220;
+    finishPlatform = null;
     peakY = firstY + heroHeight / 2;
     frags = 0;
     bananaCount = 0;
@@ -430,18 +443,29 @@
   }
 
   function extendWorld() {
-    while (worldTop < cameraY + height + 280) {
-      const gap = platformGap();
-      const y = worldTop + gap;
+    const targetWorldTop = Math.min(worldFinishY, cameraY + height + 280);
+    while (worldTop < targetWorldTop && !finishPlatform) {
       const prior = platforms[platforms.length - 1];
       const lastX = prior ? prior.x : width / 2;
+      const remaining = worldFinishY - worldTop;
+      if (remaining <= 170) {
+        const nextX = choosePlatformX(lastX, Math.max(1, remaining));
+        finishPlatform = addPlatform(worldFinishY, nextX, "normal");
+        finishPlatform.finish = true;
+        finishPlatform.width *= 1.28;
+        finishPlatform.height *= 1.1;
+        worldTop = worldFinishY;
+        break;
+      }
+      const gap = Math.min(platformGap(), remaining - 30);
+      const y = worldTop + gap;
       const nextX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
       addBananaBetween(prior, nextPlatform);
       worldTop = y;
     }
 
-    if (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490) {
+    if (worldTop < worldFinishY - 120 && (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490)) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
         x: enemyX,
@@ -451,7 +475,7 @@
         dead: false,
       });
     }
-    if (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430) {
+    if (worldTop < worldFinishY - 160 && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       hazards.push({
         x: width * (.13 + Math.random() * .74),
@@ -469,7 +493,7 @@
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30 + bananaCount * 12;
     levelIndex = Math.min(levels.length - 1, Math.floor(storyProgress()));
-    scoreNode.textContent = String(mode === "over" ? finalScore : score);
+    scoreNode.textContent = String(mode === "over" || mode === "won" ? finalScore : score);
     bestNode.textContent = String(Math.max(best, score));
     levelNode.textContent = `${String(levelIndex + 1).padStart(2, "0")} / ${String(levels.length).padStart(2, "0")}`;
     levelNameNode.textContent = levels[levelIndex];
@@ -485,8 +509,13 @@
     if (state === "ready") {
       kicker.textContent = "СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА";
       title.textContent = "На старт, прыгун!";
-      copy.textContent = "Проберись через десять секторов завода и доберись до секретного прототипа. Приземляйся на платформы и падающие колёса, чтобы продолжать подъём.";
+      copy.textContent = "Джордж Рассел пробирается через десять уровней завода Mercedes в поисках пропавшего руля. Доберись до хранилища и приземлись на финальную платформу.";
       startButton.innerHTML = 'Начать прыжок <span aria-hidden="true">↗</span>';
+    } else if (state === "won") {
+      kicker.textContent = "РУЛЬ НАЙДЕН";
+      title.textContent = "Завод пройден";
+      copy.textContent = `Ты добрался до хранилища за ${Math.round(elapsed)} сек. Счёт — ${finalScore}, фрагов — ${frags}. ${lastWasRecord ? "Новый личный рекорд!" : "Маршрут можно пройти ещё быстрее."}`;
+      startButton.innerHTML = 'Пройти маршрут ещё раз <span aria-hidden="true">↗</span>';
     } else {
       kicker.textContent = "ФИНИШНЫЙ ФЛАГ";
       title.textContent = "Прыжок окончен";
@@ -522,6 +551,22 @@
     draw();
   }
 
+  function winGame() {
+    if (mode !== "running") return;
+    mode = "won";
+    cameraY = Math.max(cameraY, worldFinishY - height * .62);
+    const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
+    finalScore = heightPoints + frags * 30 + bananaCount * 12 + 250;
+    lastWasRecord = finalScore > best;
+    if (finalScore > best) {
+      best = finalScore;
+      try { localStorage.setItem(bestStorageKey, String(best)); } catch (error) { /* Keep the run playable without storage. */ }
+    }
+    updateHud();
+    setOverlay("won");
+    draw();
+  }
+
   function overlapRect(ax, ay, aw, ah, bx, by, bw, bh) {
     return Math.abs(ax - bx) < (aw + bw) / 2 && Math.abs(ay - by) < (ah + bh) / 2;
   }
@@ -550,6 +595,38 @@
       }
     }
     return false;
+  }
+
+  function drawFinishGoal(platform) {
+    if (!platform) return;
+    const screenY = worldToScreen(platform.y);
+    const centerY = screenY - 34;
+    ctx.save();
+    ctx.translate(platform.x, centerY);
+    ctx.strokeStyle = "#f1c76b";
+    ctx.fillStyle = "rgba(12, 24, 43, .88)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.strokeStyle = "#73d8df";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 13, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let index = 0; index < 3; index += 1) {
+      const angle = -Math.PI / 2 + index * (Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(angle) * 5, Math.sin(angle) * 5);
+      ctx.lineTo(Math.cos(angle) * 18, Math.sin(angle) * 18);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#f1c76b";
+    ctx.font = "900 9px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("РУЛЬ", 0, 36);
+    ctx.restore();
   }
 
   function update(dt) {
@@ -595,6 +672,10 @@
         // Snap the sprite's feet to the exact contact plane; otherwise one frame of
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
+        if (platform.finish) {
+          winGame();
+          break;
+        }
         player.vy = platform.kind === "spring" ? 930 : 720;
         if (platform.kind === "spring") {
           effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 * visualScale() });
@@ -602,6 +683,7 @@
         break;
       }
     }
+    if (mode !== "running") return;
 
     for (const banana of bananas) {
       if (banana.taken) continue;
@@ -671,6 +753,7 @@
       if (platform.broken) continue;
       drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform", platform.height);
     }
+    drawFinishGoal(finishPlatform);
 
     for (const enemy of enemies) {
       if (enemy.dead) continue;

@@ -13,7 +13,7 @@
     <div>
       <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Проберись через десять зон гоночного завода, чтобы добраться до секретного прототипа. Лови платформы, отталкивайся от колёс и держи высоту.</p>
+      <p class="doodle-lede">Джордж Рассел пробирается через десять уровней завода Mercedes в поисках пропавшего руля. Поднимайся по платформам, отталкивайся от колёс и доберись до финального хранилища.</p>
       {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -41,17 +41,17 @@
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
-          data-background-src="{% static 'league/images/doodle-jump/doodle-story-zone-01.jpg' %}"
-          data-background-zone-1-src="{% static 'league/images/doodle-jump/doodle-story-zone-01.jpg' %}"
-          data-background-zone-2-src="{% static 'league/images/doodle-jump/doodle-story-zone-02.jpg' %}"
-          data-background-zone-3-src="{% static 'league/images/doodle-jump/doodle-story-zone-03.jpg' %}"
-          data-background-zone-4-src="{% static 'league/images/doodle-jump/doodle-story-zone-04.jpg' %}"
-          data-background-zone-5-src="{% static 'league/images/doodle-jump/doodle-story-zone-05.jpg' %}"
-          data-background-zone-6-src="{% static 'league/images/doodle-jump/doodle-story-zone-06.jpg' %}"
-          data-background-zone-7-src="{% static 'league/images/doodle-jump/doodle-story-zone-07.jpg' %}"
-          data-background-zone-8-src="{% static 'league/images/doodle-jump/doodle-story-zone-08.jpg' %}"
-          data-background-zone-9-src="{% static 'league/images/doodle-jump/doodle-story-zone-09.jpg' %}"
-          data-background-zone-10-src="{% static 'league/images/doodle-jump/doodle-story-zone-10.jpg' %}"
+          data-background-src="{% static 'league/images/doodle-jump/doodle-loop-zone-01.jpg' %}"
+          data-background-zone-1-src="{% static 'league/images/doodle-jump/doodle-loop-zone-01.jpg' %}"
+          data-background-zone-2-src="{% static 'league/images/doodle-jump/doodle-loop-zone-02.jpg' %}"
+          data-background-zone-3-src="{% static 'league/images/doodle-jump/doodle-loop-zone-03.jpg' %}"
+          data-background-zone-4-src="{% static 'league/images/doodle-jump/doodle-loop-zone-04.jpg' %}"
+          data-background-zone-5-src="{% static 'league/images/doodle-jump/doodle-loop-zone-05.jpg' %}"
+          data-background-zone-6-src="{% static 'league/images/doodle-jump/doodle-loop-zone-06.jpg' %}"
+          data-background-zone-7-src="{% static 'league/images/doodle-jump/doodle-loop-zone-07.jpg' %}"
+          data-background-zone-8-src="{% static 'league/images/doodle-jump/doodle-loop-zone-08.jpg' %}"
+          data-background-zone-9-src="{% static 'league/images/doodle-jump/doodle-loop-zone-09.jpg' %}"
+          data-background-zone-10-src="{% static 'league/images/doodle-jump/doodle-loop-zone-10.jpg' %}"
           tabindex="0"
           role="application"
           aria-label="Пиксельный пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
@@ -60,7 +60,7 @@
           <div class="doodle-overlay-card">
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
             <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-            <p id="doodle-overlay-copy">Преодолей десять секторов завода и доберись до секретного прототипа. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
+            <p id="doodle-overlay-copy">Пройди десять уровней завода Mercedes и найди пропавший руль. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
             <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
           </div>
         </div>
@@ -87,5 +87,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=story-scroll-v1" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=finite-loop-v1" defer></script>
 {% endblock %}
