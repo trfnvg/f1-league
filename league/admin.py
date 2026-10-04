@@ -34,6 +34,8 @@ from .models import (
     WildcardCardTemplate,
     WildcardSettings,
     MinesweeperAttempt,
+    DoodleAttempt,
+    DoodleRecord,
 )
 from .scoring import (
     calculate_season_scores,
@@ -859,6 +861,37 @@ class MinesweeperAttemptAdmin(admin.ModelAdmin):
     list_select_related = ("user",)
     readonly_fields = tuple(field.name for field in MinesweeperAttempt._meta.fields)
     ordering = ("-week_start", "elapsed_ms")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(DoodleAttempt)
+class DoodleAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "score", "started_at", "finished_at")
+    list_filter = ("started_at", "finished_at")
+    search_fields = ("user__username",)
+    list_select_related = ("user",)
+    readonly_fields = tuple(field.name for field in DoodleAttempt._meta.fields)
+    ordering = ("-started_at",)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(DoodleRecord)
+class DoodleRecordAdmin(admin.ModelAdmin):
+    list_display = ("user", "best_score", "total_attempts", "updated_at")
+    search_fields = ("user__username",)
+    list_select_related = ("user",)
+    readonly_fields = tuple(field.name for field in DoodleRecord._meta.fields)
+    ordering = ("-best_score", "updated_at")
 
     def has_add_permission(self, request):
         return False
