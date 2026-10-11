@@ -7,6 +7,7 @@
 <style>
   .leaderboard-luxe {
     --leaderboard-rank-width: 52px;
+    --leaderboard-player-width: 220px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow:
       0 24px 54px rgba(0, 0, 0, 0.38),
@@ -40,14 +41,19 @@
   }
 
   .col-player {
+    width: var(--leaderboard-player-width);
     min-width: 220px;
+    max-width: var(--leaderboard-player-width);
+    overflow: hidden;
   }
 
   .player-cell {
     display: inline-flex;
     align-items: center;
     gap: 0.56rem;
+    width: 100%;
     min-width: 0;
+    overflow: hidden;
   }
 
   .table-avatar {
@@ -74,6 +80,10 @@
   }
 
   .player-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     line-height: 1.1;
     font-size: 0.95rem;
     letter-spacing: 0.01em;
@@ -83,7 +93,9 @@
     display: inline-flex;
     align-items: center;
     gap: 0.38rem;
+    flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
   }
 
   .race-points {
@@ -105,7 +117,8 @@
   .leaderboard-table .sticky-col-2 {
     z-index: 7;
     background: rgba(24, 31, 42, 0.98);
-    box-shadow: 8px 0 14px rgba(0, 0, 0, 0.24);
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+    background-clip: padding-box;
   }
 
   .leaderboard-table .sticky-col-2 {
@@ -133,11 +146,21 @@
   }
 
   @media (max-width: 992px) {
-    .leaderboard-luxe { --leaderboard-rank-width: 48px; }
+    .leaderboard-luxe {
+      --leaderboard-rank-width: 48px;
+      --leaderboard-player-width: 220px;
+    }
   }
 
   @media (max-width: 576px) {
-    .leaderboard-luxe { --leaderboard-rank-width: 46px; }
+    .leaderboard-luxe {
+      --leaderboard-rank-width: 46px;
+      --leaderboard-player-width: 190px;
+    }
+
+    .col-player {
+      min-width: var(--leaderboard-player-width);
+    }
   }
 </style>
 
