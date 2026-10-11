@@ -6,6 +6,7 @@
 {% block content %}
 <style>
   .leaderboard-luxe {
+    --leaderboard-rank-width: 52px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow:
       0 24px 54px rgba(0, 0, 0, 0.38),
@@ -100,10 +101,43 @@
     color: rgba(255, 255, 255, 0.94);
   }
 
-  .leaderboard-table .sticky-col {
+  .leaderboard-table .sticky-col,
+  .leaderboard-table .sticky-col-2 {
     z-index: 7;
     background: rgba(24, 31, 42, 0.98);
     box-shadow: 8px 0 14px rgba(0, 0, 0, 0.24);
+  }
+
+  .leaderboard-table .sticky-col-2 {
+    left: var(--leaderboard-rank-width);
+  }
+
+  .leaderboard-table thead .sticky-col,
+  .leaderboard-table thead .sticky-col-2 {
+    z-index: 9;
+  }
+
+  .leaderboard-table tbody tr.is-round-winner > .sticky-col,
+  .leaderboard-table tbody tr.is-round-winner > .sticky-col-2 {
+    background: rgba(67, 57, 35, 0.98);
+  }
+
+  .leaderboard-table tbody tr:hover > .sticky-col,
+  .leaderboard-table tbody tr:hover > .sticky-col-2 {
+    background: rgba(31, 40, 53, 0.99);
+  }
+
+  .leaderboard-table tbody tr.is-round-winner:hover > .sticky-col,
+  .leaderboard-table tbody tr.is-round-winner:hover > .sticky-col-2 {
+    background: rgba(78, 65, 39, 0.99);
+  }
+
+  @media (max-width: 992px) {
+    .leaderboard-luxe { --leaderboard-rank-width: 48px; }
+  }
+
+  @media (max-width: 576px) {
+    .leaderboard-luxe { --leaderboard-rank-width: 46px; }
   }
 </style>
 
@@ -149,7 +183,7 @@
       <thead>
         <tr>
           <th class="sticky-col col-rank">#</th>
-          <th class="col-player">Игрок</th>
+          <th class="sticky-col-2 col-player">Игрок</th>
           <th class="col-total text-center">Итого</th>
           {% for e in events %}
             <th class="text-center"><abbr class="round-heading" title="{{ e.name }}">R{{ e.round_number }}</abbr></th>
@@ -163,7 +197,7 @@
               <span class="rank-chip">{{ r.rank }}</span>
               {% if r.movement > 0 %}<span class="movement movement-up d-block mt-1">▲ {{ r.movement }}</span>{% elif r.movement < 0 %}<span class="movement movement-down d-block mt-1">▼ {{ r.movement|stringformat:"d"|slice:"1:" }}</span>{% else %}<span class="movement movement-flat d-block mt-1">—</span>{% endif %}
             </td>
-            <td class="col-player fw-semibold">
+            <td class="sticky-col-2 col-player fw-semibold">
               <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link player-cell">
                 <span class="table-avatar">
                   {% if r.avatar_url %}
