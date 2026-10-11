@@ -22,6 +22,7 @@
     max-height: none;
     overflow-x: auto;
     overflow-y: hidden;
+    isolation: isolate;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
   }
@@ -115,10 +116,15 @@
 
   .leaderboard-table .sticky-col,
   .leaderboard-table .sticky-col-2 {
-    z-index: 7;
+    position: sticky;
+    z-index: 20;
     background: rgba(24, 31, 42, 0.98);
     border-right: 1px solid rgba(255, 255, 255, 0.12);
     background-clip: padding-box;
+  }
+
+  .leaderboard-table .sticky-col {
+    left: 0;
   }
 
   .leaderboard-table .sticky-col-2 {
@@ -127,7 +133,7 @@
 
   .leaderboard-table thead .sticky-col,
   .leaderboard-table thead .sticky-col-2 {
-    z-index: 9;
+    z-index: 30;
   }
 
   .leaderboard-table tbody tr.is-round-winner > .sticky-col,
@@ -143,6 +149,31 @@
   .leaderboard-table tbody tr.is-round-winner:hover > .sticky-col,
   .leaderboard-table tbody tr.is-round-winner:hover > .sticky-col-2 {
     background: rgba(78, 65, 39, 0.99);
+  }
+
+  /* The apex theme has older sticky-column rules with wide shadows and
+     !important row backgrounds. Keep the frozen pane opaque and self-contained
+     so it can never paint over the total or race-point columns. */
+  body.apex-night-theme .leaderboard-table tbody > tr > .sticky-col,
+  body.apex-night-theme .leaderboard-table tbody > tr > .sticky-col-2 {
+    z-index: 20 !important;
+    background-color: #0b1016 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner > .sticky-col,
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner > .sticky-col-2 {
+    background-color: #1b1c1b !important;
+    box-shadow: inset 3px 0 0 var(--apex-amber) !important;
+  }
+
+  body.apex-night-theme .leaderboard-table thead > tr > .sticky-col,
+  body.apex-night-theme .leaderboard-table thead > tr > .sticky-col-2 {
+    z-index: 30 !important;
+    background-color: #090d12 !important;
+    background-image: none !important;
+    box-shadow: none !important;
   }
 
   @media (max-width: 992px) {
