@@ -25,6 +25,29 @@ def active_duels_for(event):
     return DuelChallenge.objects.filter(event=event, status__in=ACTIVE_DUEL_STATUSES)
 
 
+def previous_event_for(event):
+    """Return the immediately preceding event in the same season."""
+    return (
+        Event.objects.filter(
+            season_year=event.season_year,
+            round_number__lt=event.round_number,
+        )
+        .order_by("-round_number")
+        .first()
+    )
+
+
+def previous_event_duel_targets(event, user):
+    """Return opponents this user challenged on the immediately prior event."""
+    previous_event = previous_event_for(event)
+    if previous_event is None:
+        return DuelChallenge.objects.none()
+    return DuelChallenge.objects.filter(
+        event=previous_event,
+        challenger=user,
+    ).values("opponent_id")
+
+
 def get_user_event_duel(event, user):
     if not getattr(user, "is_authenticated", False):
         return None
@@ -47,12 +70,16 @@ def available_opponents(event, user):
     occupied_ids = set()
     for challenger_id, opponent_id in active_duels_for(event).values_list("challenger_id", "opponent_id"):
         occupied_ids.update((challenger_id, opponent_id))
-    return (
+    queryset = (
         User.objects.filter(is_active=True, is_staff=False)
         .exclude(id=user.id)
         .exclude(id__in=occupied_ids)
-        .order_by("username")
     )
+    # A player may not target the same opponent on two consecutive events.
+    # Keep the option out of the form as well as enforcing it in the service
+    # below, so the rule is visible before a challenge is submitted.
+    queryset = queryset.exclude(id__in=previous_event_duel_targets(event, user))
+    return queryset.order_by("username")
 
 
 @transaction.atomic
@@ -66,6 +93,8 @@ def create_duel_challenge(event, challenger, opponent, stake):
         raise DuelActionError("Этого участника нельзя вызвать на дуэль.")
     if not 1 <= int(stake) <= 10:
         raise DuelActionError("Ставка должна быть от 1 до 10 очков.")
+    if previous_event_duel_targets(event, challenger).filter(opponent_id=opponent.id).exists():
+        raise DuelActionError("Нельзя выбирать одного и того же соперника два этапа подряд.")
 
     locked_duels = active_duels_for(event).select_for_update()
     if locked_duels.filter(Q(challenger=challenger) | Q(opponent=challenger)).exists():
