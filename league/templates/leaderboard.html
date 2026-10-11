@@ -8,6 +8,8 @@
   .leaderboard-luxe {
     --leaderboard-rank-width: 52px;
     --leaderboard-player-width: 220px;
+    --leaderboard-total-width: 82px;
+    --leaderboard-event-width: 78px;
     border: 1px solid rgba(255, 255, 255, 0.16);
     box-shadow:
       0 24px 54px rgba(0, 0, 0, 0.38),
@@ -25,6 +27,12 @@
     isolation: isolate;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .leaderboard-table {
+    table-layout: fixed;
+    width: max-content;
+    min-width: 100%;
   }
 
   .rank-chip {
@@ -46,6 +54,24 @@
     min-width: 220px;
     max-width: var(--leaderboard-player-width);
     overflow: hidden;
+  }
+
+  .col-rank {
+    width: var(--leaderboard-rank-width);
+    min-width: var(--leaderboard-rank-width);
+    max-width: var(--leaderboard-rank-width);
+  }
+
+  .col-total {
+    width: var(--leaderboard-total-width);
+    min-width: var(--leaderboard-total-width);
+    max-width: var(--leaderboard-total-width);
+  }
+
+  .col-event {
+    width: var(--leaderboard-event-width);
+    min-width: var(--leaderboard-event-width);
+    max-width: var(--leaderboard-event-width);
   }
 
   .player-cell {
@@ -180,6 +206,7 @@
     .leaderboard-luxe {
       --leaderboard-rank-width: 48px;
       --leaderboard-player-width: 220px;
+      --leaderboard-event-width: 76px;
     }
   }
 
@@ -187,6 +214,7 @@
     .leaderboard-luxe {
       --leaderboard-rank-width: 46px;
       --leaderboard-player-width: 190px;
+      --leaderboard-event-width: 70px;
     }
 
     .col-player {
@@ -234,13 +262,19 @@
   <div class="table-scroll-hint" id="standings-scroll-hint"><span>Очки по этапам</span><span>Листайте влево и вправо ↔</span></div>
   <div class="table-responsive leaderboard-scroll-x" tabindex="0" role="region" aria-label="Турнирная таблица" aria-describedby="standings-scroll-hint">
     <table class="table table-sm align-middle leaderboard-table">
+      <colgroup>
+        <col class="col-rank">
+        <col class="col-player">
+        <col class="col-total">
+        {% for e in events %}<col class="col-event">{% endfor %}
+      </colgroup>
       <thead>
         <tr>
           <th class="sticky-col col-rank">#</th>
           <th class="sticky-col-2 col-player">Игрок</th>
           <th class="col-total text-center">Итого</th>
           {% for e in events %}
-            <th class="text-center"><abbr class="round-heading" title="{{ e.name }}">R{{ e.round_number }}</abbr></th>
+            <th class="col-event text-center"><abbr class="round-heading" title="{{ e.name }}">R{{ e.round_number }}</abbr></th>
           {% endfor %}
         </tr>
       </thead>
@@ -270,7 +304,7 @@
             </td>
             <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>
             {% for e in events %}
-              <td class="text-center">
+              <td class="col-event text-center">
                 {% score_for scores_map r.user.id e.id as s %}
                 {% if s %}
                   <span class="race-points">{{ s.points }}</span>
