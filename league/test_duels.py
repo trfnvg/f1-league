@@ -6,7 +6,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from .duels import DuelActionError, create_duel_challenge, respond_to_duel
+from .duels import DuelActionError, available_opponents, create_duel_challenge, respond_to_duel
 from .models import DuelChallenge, DuelSettings, Event, Prediction, Result, Score
 from .scoring import publish_event_scores
 from .services import build_leaderboard
@@ -146,6 +146,43 @@ class DuelChallengeTests(TestCase):
             create_duel_challenge(self.event, self.third, self.opponent, 6)
         with self.assertRaisesMessage(DuelActionError, "от 1 до 10"):
             create_duel_challenge(self.event, self.third, self.challenger, 11)
+
+    def test_same_opponent_cannot_be_targeted_on_consecutive_events(self):
+        next_event = Event.objects.create(
+            season_year=2026,
+            name="Coastal Grand Prix",
+            round_number=2,
+            deadline=timezone.now() + timedelta(days=4),
+            race_datetime=timezone.now() + timedelta(days=5),
+        )
+        create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+
+        with self.assertRaisesMessage(DuelActionError, "нельзя выбирать одного и того же соперника"):
+            create_duel_challenge(next_event, self.challenger, self.opponent, 5)
+
+        opponent_ids = set(available_opponents(next_event, self.challenger).values_list("id", flat=True))
+        self.assertNotIn(self.opponent.id, opponent_ids)
+        self.assertIn(self.third.id, opponent_ids)
+
+    def test_same_opponent_is_available_again_after_an_event_without_that_target(self):
+        next_event = Event.objects.create(
+            season_year=2026,
+            name="Coastal Grand Prix",
+            round_number=2,
+            deadline=timezone.now() + timedelta(days=4),
+            race_datetime=timezone.now() + timedelta(days=5),
+        )
+        final_event = Event.objects.create(
+            season_year=2026,
+            name="Night Grand Prix",
+            round_number=3,
+            deadline=timezone.now() + timedelta(days=6),
+            race_datetime=timezone.now() + timedelta(days=7),
+        )
+        create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        create_duel_challenge(next_event, self.challenger, self.third, 5)
+
+        create_duel_challenge(final_event, self.challenger, self.opponent, 5)
 
     def test_challenges_close_at_prediction_deadline(self):
         self.event.deadline = timezone.now() - timedelta(minutes=1)
