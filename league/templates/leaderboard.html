@@ -177,6 +177,36 @@
     background: rgba(78, 65, 39, 0.99);
   }
 
+  .mobile-player-rank {
+    display: none;
+  }
+
+  .leaderboard-table .sticky-total {
+    position: sticky;
+    left: calc(var(--leaderboard-rank-width) + var(--leaderboard-player-width));
+    z-index: 18;
+    background: #111821;
+    background-clip: padding-box;
+    border-right: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  .leaderboard-table thead .sticky-total {
+    z-index: 28;
+    background: #090d12;
+  }
+
+  .leaderboard-table tbody tr.is-round-winner > .sticky-total {
+    background: #1b1c1b;
+  }
+
+  .leaderboard-table tbody tr:hover > .sticky-total {
+    background: #17212b;
+  }
+
+  .leaderboard-table tbody tr.is-round-winner:hover > .sticky-total {
+    background: #24231f;
+  }
+
   /* The apex theme has older sticky-column rules with wide shadows and
      !important row backgrounds. Keep the frozen pane opaque and self-contained
      so it can never paint over the total or race-point columns. */
@@ -212,13 +242,109 @@
 
   @media (max-width: 576px) {
     .leaderboard-luxe {
-      --leaderboard-rank-width: 46px;
-      --leaderboard-player-width: 190px;
-      --leaderboard-event-width: 70px;
+      --leaderboard-rank-width: 0px;
+      --leaderboard-player-width: 154px;
+      --leaderboard-total-width: 74px;
+      --leaderboard-event-width: 64px;
+    }
+
+    .leaderboard-table .col-rank {
+      display: none;
     }
 
     .col-player {
       min-width: var(--leaderboard-player-width);
+    }
+
+    .leaderboard-table .sticky-col-2 {
+      left: 0;
+    }
+
+    .leaderboard-table .sticky-total {
+      left: var(--leaderboard-player-width);
+    }
+
+    .mobile-player-rank {
+      width: 24px;
+      display: flex;
+      flex: 0 0 24px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+    }
+
+    .mobile-player-rank .rank-chip {
+      min-width: 23px;
+      min-height: 23px;
+      font-size: .68rem;
+    }
+
+    .mobile-player-rank .movement {
+      margin: 0 !important;
+      font-size: .56rem;
+      line-height: 1;
+    }
+
+    .leaderboard-table .player-cell {
+      gap: .38rem;
+    }
+
+    .leaderboard-table .table-avatar {
+      width: 34px;
+      height: 34px;
+      font-size: .78rem;
+    }
+
+    .leaderboard-table .player-name {
+      font-size: .78rem;
+    }
+
+    .leaderboard-table .wpc-badge {
+      padding: .12rem .3rem;
+      font-size: .58rem;
+    }
+
+    .leaderboard-table .race-points {
+      min-width: 28px;
+      min-height: 26px;
+      padding-inline: .3rem;
+      font-size: .73rem;
+    }
+
+    body.apex-night-theme .leaderboard-table tbody > tr > .sticky-total {
+      z-index: 18 !important;
+      background-color: #111821 !important;
+      background-image: none !important;
+      box-shadow: none !important;
+    }
+
+    body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner > .sticky-total {
+      background-color: #1b1c1b !important;
+    }
+
+    body.apex-night-theme .leaderboard-table tbody > tr:hover > .sticky-total {
+      background-color: #17212b !important;
+    }
+
+    body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner:hover > .sticky-total {
+      background-color: #24231f !important;
+    }
+
+    body.apex-night-theme .leaderboard-table thead > tr > .sticky-total {
+      z-index: 28 !important;
+      background-color: #090d12 !important;
+      background-image: none !important;
+      box-shadow: none !important;
+    }
+
+    .table-scroll-hint {
+      gap: .6rem;
+    }
+
+    .table-scroll-hint span:last-child {
+      color: #c0cad5;
+      font-weight: 700;
     }
   }
 </style>
@@ -259,7 +385,7 @@
 {% endif %}
 
 <section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
-  <div class="table-scroll-hint" id="standings-scroll-hint"><span>Очки по этапам</span><span>Листайте влево и вправо ↔</span></div>
+  <div class="table-scroll-hint" id="standings-scroll-hint"><span>Очки по этапам</span><span>Свайпните, чтобы смотреть этапы ↔</span></div>
   <div class="table-responsive leaderboard-scroll-x" tabindex="0" role="region" aria-label="Турнирная таблица" aria-describedby="standings-scroll-hint">
     <table class="table table-sm align-middle leaderboard-table">
       <colgroup>
@@ -272,7 +398,7 @@
         <tr>
           <th class="sticky-col col-rank">#</th>
           <th class="sticky-col-2 col-player">Игрок</th>
-          <th class="col-total text-center">Итого</th>
+          <th class="col-total sticky-total text-center">Итого</th>
           {% for e in events %}
             <th class="col-event text-center"><abbr class="round-heading" title="{{ e.name }}">R{{ e.round_number }}</abbr></th>
           {% endfor %}
@@ -287,6 +413,10 @@
             </td>
             <td class="sticky-col-2 col-player fw-semibold">
               <a href="{% url 'league:player_profile' user_id=r.user.id %}" class="player-link player-cell">
+                <span class="mobile-player-rank" aria-label="Место {{ r.rank }}">
+                  <span class="rank-chip">{{ r.rank }}</span>
+                  {% if r.movement > 0 %}<span class="movement movement-up">▲ {{ r.movement }}</span>{% elif r.movement < 0 %}<span class="movement movement-down">▼ {{ r.movement|stringformat:"d"|slice:"1:" }}</span>{% else %}<span class="movement movement-flat">—</span>{% endif %}
+                </span>
                 <span class="table-avatar">
                   {% if r.avatar_url %}
                     <img src="{{ r.avatar_url }}" alt="Аватар {{ r.user.username }}">
@@ -302,7 +432,7 @@
                 </span>
               </a>
             </td>
-            <td class="col-total text-center"><span class="total-chip">{{ r.total }}</span></td>
+            <td class="col-total sticky-total text-center"><span class="total-chip">{{ r.total }}</span></td>
             {% for e in events %}
               <td class="col-event text-center">
                 {% score_for scores_map r.user.id e.id as s %}
