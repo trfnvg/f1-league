@@ -23,23 +23,26 @@
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
-  // The same portrait tile is repeated forever. Sector names change for flavour,
-  // while the score and route never have a final platform.
+  // Each scene covers three climbing sectors. Keep its background scrolling
+  // continuously, then blend into the next chapter instead of reusing one tile.
   const levelWorldHeight = 2400;
+  const sceneWorldHeight = levelWorldHeight * 3;
+  const sceneFadeLength = levelWorldHeight * .7;
   const backgroundOverscan = 1.08;
   const backgroundParallax = .34;
   const levels = [
-    "Пыльный паддок",
-    "Город скоростных призраков",
+    "Паддок Рассела",
+    "Пит-лейн Дикого Запада",
+    "Город у каньона",
     "Каньон красных поребриков",
-    "Станция шерифа",
-    "Заброшенный овал",
-    "Долина шинных бурь",
+    "Тропа шерифа",
+    "Высокие скалы",
+    "Над облаками",
+    "Облачное родео",
     "Плато финишных флагов",
-    "Облачный родео-маршрут",
-    "Звёздный автодром",
-    "Легендарный руль",
+    "Небесный автодром",
   ];
+  const backgroundZoneNames = ["паддок", "каньон", "облака"];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -52,6 +55,7 @@
   let artReady = false;
   let frame = 0;
   let previousTime = 0;
+  let updateAccumulator = 0;
   let elapsed = 0;
   let player;
   let platforms = [];
@@ -124,10 +128,36 @@
         }
       }
 
+      const sw = maxX - minX + 1;
+      const sh = maxY - minY + 1;
       sprites[index] = maxX >= minX && maxY >= minY
-        ? { image: atlas, sx: sx + minX, sy: sy + minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+        ? {
+          image: atlas,
+          sx: sx + minX,
+          sy: sy + minY,
+          sw,
+          sh,
+          mask: alphaMask(pixels, tile.width, minX, minY, sw, sh),
+        }
         : null;
     }
+  }
+
+  // Read sprite alpha once at load and retain a compact silhouette. Runtime
+  // collision checks touch only these 18x18 bits after a cheap bounds check.
+  function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 18, rows = 18) {
+    const bits = new Uint8Array(columns * rows);
+    const xEnd = x + spriteWidth;
+    const yEnd = y + spriteHeight;
+    for (let py = y; py < yEnd; py += 1) {
+      for (let px = x; px < xEnd; px += 1) {
+        if (pixels[(py * stride + px) * 4 + 3] <= 18) continue;
+        const column = Math.min(columns - 1, Math.floor((px - x) * columns / spriteWidth));
+        const row = Math.min(rows - 1, Math.floor((py - y) * rows / spriteHeight));
+        bits[row * columns + column] = 1;
+      }
+    }
+    return { bits, columns, rows };
   }
 
   function splitHeroSheet(sheet) {
@@ -226,8 +256,10 @@
           maxY = Math.max(maxY, y);
         }
       }
+      const sw = maxX - minX + 1;
+      const sh = maxY - minY + 1;
       frames.push(maxX >= minX && maxY >= minY
-        ? { image: tile, sx: minX, sy: minY, sw: maxX - minX + 1, sh: maxY - minY + 1 }
+        ? { image: tile, sx: minX, sy: minY, sw, sh, mask: alphaMask(pixels, frameWidth, minX, minY, sw, sh) }
         : null);
     }
     return frames;
@@ -271,9 +303,7 @@
 
   function cacheBackground() {
     backgroundCaches = [];
-    const sources = art.backgroundZones && art.backgroundZones.length
-      ? art.backgroundZones
-      : (art.background ? [art.background] : []);
+    const sources = art.backgroundZones || [];
     if (!sources.length || !width || !height) return;
 
     const pixelWidth = Math.max(1, Math.round(width * dpr));
@@ -304,15 +334,24 @@
 
   function drawBackgroundTile(tile, sceneIndex) {
     if (!tile || !tile.height) return;
-    const swayX = Math.sin(elapsed * .2 + sceneIndex * .7) * width * .01;
+    const swayX = Math.sin(elapsed * .2 + sceneIndex * .7) * width * .004;
     const scroll = (Math.max(0, cameraY) * backgroundParallax) % tile.height;
     let y = -scroll;
-
-    // Draw a tile above and below the viewport so the architecture keeps
-    // scrolling continuously while the camera follows the jumper upward.
-    while (y < height + tile.height) {
+    let tileIndex = Math.floor(Math.max(0, cameraY) * backgroundParallax / tile.height);
+    while (y > 0) { y -= tile.height; tileIndex -= 1; }
+    // Draw only the tiles intersecting the viewport (normally two).
+    while (y < height) {
+      ctx.save();
+      if (tileIndex % 2) {
+        // Alternating vertical mirroring makes the generated scenes tile
+        // seamlessly even when their top and bottom edges are not identical.
+        ctx.translate(0, 2 * y + tile.height);
+        ctx.scale(1, -1);
+      }
       ctx.drawImage(tile.canvas, swayX, y, tile.width, tile.height);
+      ctx.restore();
       y += tile.height;
+      tileIndex += 1;
     }
   }
 
@@ -326,9 +365,15 @@
 
   function drawBackdrop() {
     if (backgroundCaches.length) {
-      drawBackgroundScene(backgroundCaches[0], 0);
-      ctx.fillStyle = "rgba(5, 12, 28, .16)";
-      ctx.fillRect(0, 0, width, height);
+      const progress = Math.max(0, cameraY) / sceneWorldHeight;
+      const sceneIndex = Math.min(backgroundCaches.length - 1, Math.floor(progress));
+      const sceneProgress = progress - sceneIndex;
+      const fadeStart = 1 - sceneFadeLength / sceneWorldHeight;
+      const fade = sceneIndex < backgroundCaches.length - 1
+        ? clamp((sceneProgress - fadeStart) / (1 - fadeStart), 0, 1)
+        : 0;
+      drawBackgroundScene(backgroundCaches[sceneIndex], sceneIndex);
+      if (fade > 0) drawBackgroundScene(backgroundCaches[sceneIndex + 1], sceneIndex + 1, fade);
     } else {
       ctx.fillStyle = "#78c8f5";
       ctx.fillRect(0, 0, width, height);
@@ -351,12 +396,20 @@
   function addPlatform(y, x, kind = "normal") {
     const spriteIndex = kind === "moving" ? 1 : kind === "break" ? 2 : kind === "spring" ? 3 : 0;
     const platformWidth = Math.max(88, Math.min(116, width * .23)) * visualScale();
+    const spriteWidth = kind === "spring"
+      ? Math.min(72 * visualScale(), platformWidth * .82)
+      : platformWidth;
+    const spriteHeight = kind === "spring"
+      ? spriteSize(sprites[3], spriteWidth)
+      : Math.max(18, platformWidth * .32);
     const platform = {
       x,
       originX: x,
       y,
       width: platformWidth,
-      height: Math.max(18, platformWidth * .32),
+      hitboxWidth: kind === "spring" ? spriteWidth * .72 : platformWidth,
+      spriteWidth,
+      height: spriteHeight,
       kind,
       spriteIndex,
       phase: Math.random() * Math.PI * 2,
@@ -532,12 +585,7 @@
         speed: 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
         spriteIndex,
         bouncy: spriteIndex === 5,
-        // The atlas cells contain transparent padding and different silhouettes.
-        // Keep a per-object hitbox instead of treating every falling object as
-        // the same square.
-        hitbox: spriteIndex === 5
-          ? { width: .68, height: .58, offsetY: -.02 }
-          : { width: .56, height: .72, offsetY: .06 },
+        // Sprite alpha masks are used for collision, not a generic bounding box.
         compound,
         wheelFrame: compound && art.wheelFrames ? art.wheelFrames[compound] : null,
         dead: false,
@@ -565,12 +613,29 @@
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30;
-    levelIndex = Math.floor(storyProgress()) % levels.length;
-    scoreNode.textContent = String(mode === "over" ? finalScore : score);
-    bestNode.textContent = String(Math.max(best, score));
-    levelNode.textContent = String(Math.floor(storyProgress()) + 1).padStart(2, "0");
-    levelNameNode.textContent = levels[levelIndex];
-    levelNameNode.title = levels[levelIndex];
+    const levelNumber = Math.floor(storyProgress());
+    levelIndex = levelNumber % levels.length;
+    const displayScore = mode === "over" ? finalScore : score;
+    if (scoreNode.dataset.value !== String(displayScore)) {
+      scoreNode.dataset.value = String(displayScore);
+      scoreNode.textContent = String(displayScore);
+    }
+    const displayBest = String(Math.max(best, score));
+    if (bestNode.dataset.value !== displayBest) {
+      bestNode.dataset.value = displayBest;
+      bestNode.textContent = displayBest;
+    }
+    const displayLevel = String(levelNumber + 1).padStart(2, "0");
+    if (levelNode.dataset.value !== displayLevel) {
+      levelNode.dataset.value = displayLevel;
+      levelNode.textContent = displayLevel;
+    }
+    const displayName = `${levels[levelIndex]} · ${backgroundZoneNames[Math.min(2, Math.floor(levelNumber / 3))]}`;
+    if (levelNameNode.dataset.value !== displayName) {
+      levelNameNode.dataset.value = displayName;
+      levelNameNode.textContent = displayName;
+      levelNameNode.title = displayName;
+    }
   }
 
   function setOverlay(state) {
@@ -673,6 +738,7 @@
     buildGame();
     mode = "running";
     player.vy = 720;
+    updateAccumulator = 0;
     registerAttempt();
     setOverlay("running");
     previousTime = performance.now();
@@ -696,22 +762,61 @@
     draw();
   }
 
-  function overlapRect(ax, ay, aw, ah, bx, by, bw, bh) {
-    return Math.abs(ax - bx) < (aw + bw) / 2 && Math.abs(ay - by) < (ah + bh) / 2;
+  function spriteOverlapsEllipse(sprite, x, y, objectWidth, objectHeight, targetX, targetY, targetRadiusX, targetRadiusY) {
+    const objectRadiusX = objectWidth / 2;
+    const objectRadiusY = objectHeight / 2;
+    if (Math.abs(targetX - x) > objectRadiusX + targetRadiusX
+      || Math.abs(targetY - y) > objectRadiusY + targetRadiusY) return false;
+    const mask = sprite && sprite.mask;
+    if (!mask || !objectWidth || !objectHeight) {
+      const dx = (targetX - x) / Math.max(1, objectRadiusX + targetRadiusX);
+      const dy = (targetY - y) / Math.max(1, objectRadiusY + targetRadiusY);
+      return dx * dx + dy * dy < 1;
+    }
+    const cellWidth = objectWidth / mask.columns;
+    const cellHeight = objectHeight / mask.rows;
+    const left = x - objectRadiusX;
+    const top = y + objectRadiusY;
+    for (let row = 0; row < mask.rows; row += 1) {
+      for (let column = 0; column < mask.columns; column += 1) {
+        if (!mask.bits[row * mask.columns + column]) continue;
+        const cellX = left + (column + .5) * cellWidth;
+        const cellY = top - (row + .5) * cellHeight;
+        const dx = Math.max(0, Math.abs(cellX - targetX) - cellWidth * .5) / Math.max(1, targetRadiusX);
+        const dy = Math.max(0, Math.abs(cellY - targetY) - cellHeight * .5) / Math.max(1, targetRadiusY);
+        if (dx * dx + dy * dy <= 1) return true;
+      }
+    }
+    return false;
+  }
+
+  function spriteTopAtX(sprite, x, y, objectWidth, objectHeight, targetX) {
+    const mask = sprite && sprite.mask;
+    if (!mask || !objectWidth || !objectHeight) return y + objectHeight / 2;
+    const left = x - objectWidth / 2;
+    const halfPlayerWidth = player ? player.width * .22 : 0;
+    const firstColumn = clamp(Math.floor((targetX - halfPlayerWidth - left) / objectWidth * mask.columns), 0, mask.columns - 1);
+    const lastColumn = clamp(Math.floor((targetX + halfPlayerWidth - left) / objectWidth * mask.columns), 0, mask.columns - 1);
+    let topRow = mask.rows;
+    for (let column = firstColumn; column <= lastColumn; column += 1) {
+      for (let row = 0; row < topRow; row += 1) {
+        if (mask.bits[row * mask.columns + column]) { topRow = row; break; }
+      }
+    }
+    return y + objectHeight / 2 - topRow / mask.rows * objectHeight;
   }
 
   function hazardHitbox(hazard) {
-    const shape = hazard.hitbox || { width: .6, height: .68, offsetY: 0 };
-    const width = hazard.size * shape.width;
-    const visualHeight = spriteSize(hazard.wheelFrame || sprites[hazard.spriteIndex], hazard.size) || hazard.size;
-    const height = visualHeight * shape.height;
-    const y = hazard.y + visualHeight * shape.offsetY;
-    return { x: hazard.x, y, width, height, top: y + height / 2 };
+    const sprite = hazard.wheelFrame || sprites[hazard.spriteIndex];
+    const width = hazard.size;
+    const height = spriteSize(sprite, width) || width;
+    return { sprite, x: hazard.x, y: hazard.y, width, height };
   }
 
   function powerupHitbox(powerup) {
-    const size = powerup.size;
-    return { x: powerup.x, y: powerup.y, width: size * .72, height: size * 1.2 };
+    const sprite = sprites[powerup.type === "rocket" ? 8 : 9];
+    const width = powerup.size * 1.55;
+    return { sprite, x: powerup.x, y: powerup.y, width, height: spriteSize(sprite, width) };
   }
 
   function drawPowerup(powerup) {
@@ -884,10 +989,13 @@
       const targetEnemyWidth = enemyWidth();
       const enemyHeight = spriteSize(sprites[4], targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      const enemyTop = enemyY + enemyHeight / 2;
-      const closeX = Math.abs(player.x - enemy.x) < (player.width * .64 + 23 * visualScale());
+      const enemyTop = spriteTopAtX(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
       const crossedTop = previousFeet >= enemyTop && currentFeet <= enemyTop;
-      if (player.vy < 0 && closeX && crossedTop) {
+      const targetRx = player.width * .31;
+      const targetRy = player.height * .37;
+      const overlaps = spriteOverlapsEllipse(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight,
+        player.x, player.y, targetRx, targetRy);
+      if (player.vy < 0 && overlaps && crossedTop) {
         enemy.dead = true;
         frags += 1;
         player.y = enemyTop + player.height / 2;
@@ -897,7 +1005,7 @@
         effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 * visualScale() });
         return true;
       }
-      if (overlapRect(player.x, player.y, player.width * .62, player.height * .72, enemy.x, enemyY, targetEnemyWidth * .82, enemyHeight * .72)) {
+      if (overlaps) {
         endGame();
         return true;
       }
@@ -967,7 +1075,7 @@
         // the bottom edge after the camera has moved upward.
         if (platform.y < cameraY + 4) continue;
         if (platform.broken || previousFeet < platform.y || currentFeet > platform.y) continue;
-        if (Math.abs(player.x - platform.x) > platform.width * .48 + player.width * .32) continue;
+        if (Math.abs(player.x - platform.x) > platform.hitboxWidth * .5 + player.width * .3) continue;
         if (platform.kind === "break") platform.broken = true;
         // Snap the sprite's feet to the exact contact plane; otherwise one frame of
         // downward travel makes the character visibly sink into the platform.
@@ -984,8 +1092,8 @@
     for (const powerup of powerups) {
       if (powerup.collected) continue;
       const hitbox = powerupHitbox(powerup);
-      if (!overlapRect(player.x, player.y, player.width * .66, player.height * .78,
-        hitbox.x, hitbox.y, hitbox.width, hitbox.height)) continue;
+      if (!spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
+        player.x, player.y, player.width * .32, player.height * .36)) continue;
       powerup.collected = true;
       if (powerup.type === "rocket") {
         rocketTimer = 1.8;
@@ -1005,10 +1113,12 @@
       shot.y += shot.vy * dt;
       shot.vy -= 75 * dt;
       shot.spin += dt * 8;
-      if (invulnerableTimer <= 0 && overlapRect(
-        player.x, player.y, player.width * .54, player.height * .68,
-        shot.x, shot.y, shot.size * .7, shot.size * .7,
-      )) {
+      const shotSprite = art.dirtyWheelFrame || (art.wheelFrames && art.wheelFrames.medium);
+      const shotWidth = shot.size * 1.22;
+      const shotHeight = spriteSize(shotSprite, shotWidth);
+      const shotRadius = shot.size * .3;
+      if (invulnerableTimer <= 0 && spriteOverlapsEllipse(shotSprite, shot.x, shot.y, shotWidth, shotHeight,
+        player.x, player.y, Math.max(player.width * .25, shotRadius), Math.max(player.height * .28, shotRadius))) {
         endGame();
         return;
       }
@@ -1016,20 +1126,23 @@
 
     for (const hazard of hazards) {
       if (hazard.dead) continue;
+      const previousHazardY = hazard.y;
       hazard.y -= hazard.speed * dt;
       const hitbox = hazardHitbox(hazard);
-      const closeX = Math.abs(player.x - hitbox.x) < (player.width * .58 + hitbox.width / 2);
-      const crossedTop = previousFeet >= hitbox.top && currentFeet <= hitbox.top;
-      if (hazard.bouncy && player.vy < 0 && closeX && crossedTop) {
+      const hazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height, player.x);
+      const previousHazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, previousHazardY, hitbox.width, hitbox.height, player.x);
+      const crossedTop = previousFeet >= previousHazardTop && currentFeet <= hazardTop;
+      const overlaps = spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
+        player.x, player.y, player.width * .29, player.height * .34);
+      if (hazard.bouncy && player.vy < 0 && overlaps && crossedTop) {
         hazard.dead = true;
-        player.y = hitbox.top + player.height / 2;
+        player.y = hazardTop + player.height / 2;
         player.vy = 880;
-        effects.push({ index: 10, x: hazard.x, y: hitbox.top, age: 0, duration: .34, size: 48 * visualScale() });
+        effects.push({ index: 10, x: player.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
         continue;
       }
       if (invulnerableTimer > 0) continue;
-      if (overlapRect(player.x, player.y, player.width * .57, player.height * .66,
-        hitbox.x, hitbox.y, hitbox.width, hitbox.height)) {
+      if (overlaps) {
         endGame();
         return;
       }
@@ -1066,7 +1179,7 @@
 
     for (const platform of platforms) {
       if (platform.broken) continue;
-      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.width, "platform", platform.height);
+      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.spriteWidth, "platform", platform.height);
     }
     for (const enemy of enemies) {
       if (enemy.dead) continue;
@@ -1141,9 +1254,14 @@
 
   function loop(now) {
     if (mode !== "running") return;
-    const dt = Math.min(.034, Math.max(.001, (now - previousTime) / 1000));
+    const dt = Math.min(.05, Math.max(.001, (now - previousTime) / 1000));
     previousTime = now;
-    update(dt);
+    updateAccumulator = Math.min(.1, updateAccumulator + dt);
+    const fixedStep = 1 / 60;
+    while (updateAccumulator >= fixedStep && mode === "running") {
+      update(fixedStep);
+      updateAccumulator -= fixedStep;
+    }
     draw();
     if (mode === "running") frame = requestAnimationFrame(loop);
   }
@@ -1155,7 +1273,8 @@
     const previousHeight = height;
     width = bounds.width;
     height = bounds.height;
-    dpr = Math.min(1.5, window.devicePixelRatio || 1);
+    // Preserve crisp pixels while reducing fill-rate cost on high-DPI phones.
+    dpr = Math.min(1.25, window.devicePixelRatio || 1);
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1185,6 +1304,8 @@
         platform.originX *= scaleX;
         platform.y *= scaleY;
         platform.width *= scaleX;
+        platform.hitboxWidth *= scaleX;
+        platform.spriteWidth *= scaleX;
         platform.height *= scaleY;
         platform.range *= scaleX;
       });
@@ -1317,12 +1438,13 @@
   Promise.all([
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
-    image(canvas.dataset.backgroundSrc),
+    image(canvas.dataset.backgroundPaddockSrc),
+    image(canvas.dataset.backgroundCanyonSrc),
+    image(canvas.dataset.backgroundCloudsSrc),
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.dirtyWheelSrc),
-  ]).then(([atlas, heroSheet, background, wheelSheet, dirtyWheel]) => {
-    art.background = background;
-    art.backgroundZones = background ? [background] : [];
+  ]).then(([atlas, heroSheet, paddockBackground, canyonBackground, cloudsBackground, wheelSheet, dirtyWheel]) => {
+    art.backgroundZones = [paddockBackground, canyonBackground, cloudsBackground].filter(Boolean);
     art.heroFrames = splitHeroSheet(heroSheet);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
     art.wheelFrames = {
