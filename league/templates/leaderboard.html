@@ -350,11 +350,6 @@
       font-size: .78rem;
     }
 
-    .leaderboard-table .wpc-badge {
-      padding: .12rem .3rem;
-      font-size: .58rem;
-    }
-
     .leaderboard-table .race-points {
       min-width: 28px;
       min-height: 26px;
@@ -488,9 +483,6 @@
                 </span>
                 <span class="player-name-wrap">
                   <span class="player-name">{{ r.user.username }}</span>
-                  {% if r.is_wpc %}
-                    <span class="wpc-badge">WPC</span>
-                  {% endif %}
                 </span>
               </a>
             </td>
