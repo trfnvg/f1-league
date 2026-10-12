@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Doodle GP · аркада{% endblock %}
+{% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=powerups-v3">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=western-field-v1">
+  <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
 {% block content %}
 <section class="doodle-page" aria-labelledby="doodle-title">
   <header class="doodle-heading">
     <div>
-      <p class="doodle-kicker"><span></span> 16-BIT DOODLE ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
-      <h1 id="doodle-title">DOODLE <em>GP</em></h1>
-      <p class="doodle-lede">Джордж Рассел отправляется в бесконечный маршрут по заводу Mercedes. Поднимайся всё выше, собирай фраги, уворачивайся от паддок-босса и бей рекорд — дистанция не заканчивается.</p>
-      {% if perms.league.change_arcadesettings %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
+      <p class="doodle-kicker"><span></span> WESTERN PIXEL ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
+      <h1 id="doodle-title">COWBOY <em>GP</em></h1>
+      <p class="doodle-lede">Джордж Рассел в ковбойском образе отправляется через гоночный Дикий Запад на поиски легендарного руля. Прыгай по платформам, сбивай шинных гремлинов и продержись как можно дольше.</p>
+      {% if user.is_staff %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
   </header>
@@ -24,8 +25,8 @@
       <div class="doodle-board-wrap" id="doodle-board-wrap">
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
-          <span class="doodle-live"><i></i> DOODLE GP</span>
-          <div class="doodle-level"><small>СЕКТОР</small><strong id="doodle-level">01</strong><span id="doodle-level-name">Ворота завода</span></div>
+          <span class="doodle-live"><i></i> WILD GP</span>
+          <div class="doodle-level"><small>СЕКТОР</small><strong id="doodle-level">01</strong><span id="doodle-level-name">Пыльный паддок</span></div>
           <div class="doodle-best"><small>РЕКОРД</small><strong id="doodle-best">0</strong></div>
           <button class="doodle-fullscreen-toggle" id="doodle-fullscreen-toggle" type="button"
             aria-label="На весь экран" aria-pressed="false" title="На весь экран">
@@ -39,25 +40,23 @@
         </div>
         <canvas
           id="doodle-canvas"
-          data-atlas-src="{% static 'league/images/doodle-jump/f1-doodle-atlas-v3.png' %}"
-          data-hero-sheet-src="{% static 'league/images/doodle-jump/f1-reference-racer-jump-sheet-v1.png' %}?v=7bfa5cf"
-          data-background-src="{% static 'league/images/doodle-jump/doodle-loop-infinite-f1.jpg' %}"
-          data-powerups-src="{% static 'league/images/doodle-jump/f1-powerups-v2.png' %}?v=1"
+          data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
+          data-hero-sheet-src="{% static 'league/images/doodle-jump/western-cowboy-hero-sheet-v1.png' %}?v=1"
+          data-background-src="{% static 'league/images/doodle-jump/western-loop-background-v1.png' %}?v=1"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
-          data-villain-sheet-src="{% static 'league/images/doodle-jump/f1-paddock-villain-portrait-v5.png' %}?v=5"
           data-dirty-wheel-src="{% static 'league/images/doodle-jump/f1-dirty-steering-wheel-v2.png' %}?v=2"
           data-start-url="{{ doodle_attempt_start_url }}"
           data-finish-url="{{ doodle_attempt_finish_url }}"
           data-leaderboard-url="{{ doodle_leaderboard_url }}"
           tabindex="0"
           role="application"
-          aria-label="Пиксельный пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
+          aria-label="Пиксельный ковбой-пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
         ></canvas>
         <div class="doodle-overlay" id="doodle-overlay">
           <div class="doodle-overlay-card">
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
-            <h2 id="doodle-overlay-title">На старт, прыгун!</h2>
-            <p id="doodle-overlay-copy">Маршрут бесконечный: поднимайся выше, отталкивайся от платформ и собирай максимум очков. На телефоне касайся левой или правой половины поля, чтобы двигаться.</p>
+            <h2 id="doodle-overlay-title">Седлай платформу!</h2>
+            <p id="doodle-overlay-copy">Прыгай всё выше через пыльный паддок и каньоны Дикого Запада. На телефоне касайся левой или правой половины широкого поля, чтобы вести героя.</p>
             <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
           </div>
         </div>
@@ -84,10 +83,10 @@
   <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
     <div class="doodle-leaderboard-heading">
       <div>
-        <p class="doodle-kicker"><span></span> DOODLE GP · ALL-TIME</p>
+        <p class="doodle-kicker"><span></span> WILD GP · ALL-TIME</p>
         <h2 id="doodle-leaderboard-title">Рейтинг высоты</h2>
       </div>
-      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> завершённых забегов</span>
+      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> завершённых заездов</span>
     </div>
     <ol class="doodle-leaderboard-list" id="doodle-leaderboard-list">
       {% for record in doodle_records %}
