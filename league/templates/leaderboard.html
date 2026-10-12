@@ -27,6 +27,27 @@
     isolation: isolate;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+    scrollbar-color: #586679 #111821;
+    scrollbar-width: thin;
+  }
+
+  .leaderboard-scroll-x::-webkit-scrollbar {
+    height: 10px;
+  }
+
+  .leaderboard-scroll-x::-webkit-scrollbar-track {
+    border-top: 1px solid rgba(255, 255, 255, .06);
+    background: #111821;
+  }
+
+  .leaderboard-scroll-x::-webkit-scrollbar-thumb {
+    border: 2px solid #111821;
+    border-radius: 999px;
+    background: #586679;
+  }
+
+  .leaderboard-scroll-x::-webkit-scrollbar-thumb:hover {
+    background: #8998aa;
   }
 
   .leaderboard-table {
@@ -224,12 +245,41 @@
     box-shadow: inset 3px 0 0 var(--apex-amber) !important;
   }
 
+  body.apex-night-theme .leaderboard-table tbody > tr > .sticky-total {
+    z-index: 18 !important;
+    background-color: #111821 !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner > .sticky-total {
+    background-color: #1b1c1b !important;
+  }
+
+  body.apex-night-theme .leaderboard-table tbody > tr:hover > .sticky-col,
+  body.apex-night-theme .leaderboard-table tbody > tr:hover > .sticky-col-2,
+  body.apex-night-theme .leaderboard-table tbody > tr:hover > .sticky-total {
+    background-color: #17212b !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner:hover > .sticky-col,
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner:hover > .sticky-col-2,
+  body.apex-night-theme .leaderboard-table tbody > tr.is-round-winner:hover > .sticky-total {
+    background-color: #24231f !important;
+  }
+
   body.apex-night-theme .leaderboard-table thead > tr > .sticky-col,
   body.apex-night-theme .leaderboard-table thead > tr > .sticky-col-2 {
     z-index: 30 !important;
     background-color: #090d12 !important;
     background-image: none !important;
     box-shadow: none !important;
+  }
+
+  .standings-hint-mobile {
+    display: none;
   }
 
   @media (max-width: 992px) {
@@ -342,6 +392,14 @@
       gap: .6rem;
     }
 
+    .standings-hint-desktop {
+      display: none;
+    }
+
+    .standings-hint-mobile {
+      display: inline;
+    }
+
     .table-scroll-hint span:last-child {
       color: #c0cad5;
       font-weight: 700;
@@ -385,7 +443,11 @@
 {% endif %}
 
 <section class="table-shell leaderboard-luxe" style="animation: card-enter 360ms ease-out both;">
-  <div class="table-scroll-hint" id="standings-scroll-hint"><span>Очки по этапам</span><span>Свайпните, чтобы смотреть этапы ↔</span></div>
+  <div class="table-scroll-hint" id="standings-scroll-hint">
+    <span>Очки по этапам</span>
+    <span class="standings-hint-desktop">Прокрутите этапы: Shift + колесо или полоса снизу ↔</span>
+    <span class="standings-hint-mobile">Свайпните, чтобы смотреть этапы ↔</span>
+  </div>
   <div class="table-responsive leaderboard-scroll-x" tabindex="0" role="region" aria-label="Турнирная таблица" aria-describedby="standings-scroll-hint">
     <table class="table table-sm align-middle leaderboard-table">
       <colgroup>
