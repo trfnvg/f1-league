@@ -512,13 +512,13 @@ class ArcadeDoodleJumpAccessTests(TestCase):
 
         admin = User.objects.create_user(username="runner-admin", password="test", is_staff=True)
         self.client.force_login(admin)
-        response = self.client.get(url)
+        response = self.client.get(url, follow=True)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Doodle GP")
+        self.assertContains(response, "Cowboy GP")
         self.assertContains(response, "Только для администраторов")
-        self.assertContains(response, "f1-doodle-atlas-v3.png")
-        self.assertContains(response, "race-night-v4.png")
+        self.assertContains(response, "western-game-sprite-atlas-v1.png")
+        self.assertContains(response, "western-loop-background-v1.png")
         self.assertContains(response, "Касайся или удерживай левую / правую половину поля")
         self.assertNotContains(response, "data-doodle-action")
         self.assertContains(response, reverse("league:arcade_doodle_jump"))

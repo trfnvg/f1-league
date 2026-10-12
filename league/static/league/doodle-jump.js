@@ -29,16 +29,16 @@
   const backgroundOverscan = 1.08;
   const backgroundParallax = .34;
   const levels = [
-    "Ворота завода",
-    "Служебный холл",
-    "Моторный цех",
-    "Аэродинамический тоннель",
-    "Цех карбона",
-    "Сборочная линия",
-    "Робототехника",
-    "Крыша комплекса",
-    "Симулятор",
-    "Хранилище руля",
+    "Пыльный паддок",
+    "Город скоростных призраков",
+    "Каньон красных поребриков",
+    "Станция шерифа",
+    "Заброшенный овал",
+    "Долина шинных бурь",
+    "Плато финишных флагов",
+    "Облачный родео-маршрут",
+    "Звёздный автодром",
+    "Легендарный руль",
   ];
 
   let storedBest = "0";
@@ -241,11 +241,10 @@
     const frames = art.heroFrames;
     if (!frames || frames.length < 4 || !player) return frames && frames[1] ? frames[1] : null;
 
-    // The generated sheet follows the jump arc: crouch, takeoff, peak, descent.
-    // Mapping from velocity keeps the pose synced to the actual physics instead
-    // of playing a separate animation that could drift away from a landing.
+    // The western sheet follows the jump arc: compact, takeoff, arms-wide peak,
+    // and descent. Mapping from velocity keeps poses aligned with landings.
     const velocity = player.vy;
-    const frameIndex = velocity > 560 ? 1 : velocity > 100 ? 2 : velocity > -180 ? 3 : 0;
+    const frameIndex = velocity < -180 ? 1 : velocity < 100 ? 2 : velocity < 520 ? 3 : 0;
     return frames[frameIndex] || frames[1];
   }
 
@@ -582,8 +581,8 @@
     overlay.classList.remove("is-hidden");
     if (state === "ready") {
       kicker.textContent = "СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА";
-      title.textContent = "На старт, прыгун!";
-      copy.textContent = "Маршрут бесконечный: поднимайся выше, отталкивайся от платформ, собирай фраги и используй редкие бонусы. На телефоне касайся левой или правой половины поля.";
+      title.textContent = "Седлай платформу!";
+      copy.textContent = "Дикий Запад не заканчивается: прыгай всё выше, сбивай шинных гремлинов и бей рекорд. На телефоне касайся левой или правой половины поля.";
       startButton.innerHTML = 'Начать прыжок <span aria-hidden="true">↗</span>';
     } else {
       kicker.textContent = "ЗАБЕГ ЗАВЕРШЁН";
@@ -893,7 +892,8 @@
         frags += 1;
         player.y = enemyTop + player.height / 2;
         player.vy = 810;
-        effects.push({ index: 9, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 * visualScale() });
+        effects.push({ index: 7, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 42 * visualScale() });
+        effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 * visualScale() });
         effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 * visualScale() });
         return true;
       }
@@ -1318,29 +1318,18 @@
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
     image(canvas.dataset.backgroundSrc),
-    image(canvas.dataset.powerupsSrc),
     image(canvas.dataset.wheelCompoundsSrc),
-    image(canvas.dataset.villainSheetSrc),
     image(canvas.dataset.dirtyWheelSrc),
-  ]).then(([atlas, heroSheet, background, powerupSheet, wheelSheet, villainSheet, dirtyWheel]) => {
+  ]).then(([atlas, heroSheet, background, wheelSheet, dirtyWheel]) => {
     art.background = background;
     art.backgroundZones = background ? [background] : [];
     art.heroFrames = splitHeroSheet(heroSheet);
-    const powerupFrames = splitSpriteSheet(powerupSheet, 2);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
-    // The villain uses one identity-preserving portrait rather than a four-panel
-    // character sheet, so the face remains recognizable throughout the flight.
-    const villainFrames = splitSpriteSheet(villainSheet, 1);
-    art.powerupFrames = {
-      rocket: powerupFrames[0] || null,
-      jetpack: powerupFrames[1] || null,
-    };
     art.wheelFrames = {
       soft: wheelFrames[0] || null,
       medium: wheelFrames[1] || null,
       hard: wheelFrames[2] || null,
     };
-    art.villainFrames = villainFrames;
     art.dirtyWheelFrame = splitSpriteSheet(dirtyWheel, 1)[0] || null;
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
@@ -1348,6 +1337,8 @@
       return;
     }
     cropSprites(atlas);
+    art.powerupFrames = { rocket: sprites[8] || null, jetpack: sprites[9] || null };
+    art.villainFrames = sprites[4] ? [sprites[4]] : [];
     artReady = true;
     startButton.disabled = false;
     resize();
