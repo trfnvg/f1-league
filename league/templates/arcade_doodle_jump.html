@@ -20,7 +20,7 @@
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
   </header>
 
-  {% if arcade_scoring_open %}<section class="doodle-machine" aria-label="Cowboy GP — прыжковая аркада">
+  <section class="doodle-machine" aria-label="Cowboy GP — прыжковая аркада">
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
         <div class="doodle-scoreboard" aria-live="polite">
@@ -72,7 +72,6 @@
       <span>Рейтинг синхронизируется после каждого завершённого забега</span>
     </footer>
   </section>
-  {% else %}<section class="doodle-machine doodle-leaderboard-note" role="status"><h2>Зачёт игры закрыт</h2><p>{% if wheel_event and wheel_event.deadline <= now %}Результаты этапа зафиксированы. Победитель и колесо бонусов — ниже на этой странице.{% else %}Зачёт начнётся, когда администратор откроет игру для выбранного этапа.{% endif %}</p></section>{% endif %}
 
   <section class="doodle-howto" aria-label="Игровые объекты">
     <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
@@ -105,8 +104,6 @@
     </ol>
     {% if not user.is_authenticated %}<p class="doodle-leaderboard-note">Войдите в аккаунт, чтобы ваши рекорды попали в общий рейтинг.</p>{% endif %}
   </section>
-
-  {% if not arcade_test_mode %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 
   <form hidden id="doodle-csrf-form">{% csrf_token %}</form>
 
