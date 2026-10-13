@@ -215,19 +215,21 @@
     return frames;
   }
 
-  function splitSpriteSheet(sheet, columns) {
+  function splitSpriteSheet(sheet, columns, boundaries = null) {
     if (!sheet || !columns) return [];
-    const frameWidth = Math.ceil(sheet.naturalWidth / columns);
     const frameHeight = sheet.naturalHeight;
     const frames = [];
     for (let frameIndex = 0; frameIndex < columns; frameIndex += 1) {
+      const startX = (boundaries ? boundaries[frameIndex] : frameIndex / columns) * sheet.naturalWidth;
+      const endX = (boundaries ? boundaries[frameIndex + 1] : (frameIndex + 1) / columns) * sheet.naturalWidth;
+      const frameWidth = Math.ceil(endX - startX);
       const tile = document.createElement("canvas");
       tile.width = frameWidth;
       tile.height = frameHeight;
       const tileCtx = tile.getContext("2d", { willReadFrequently: true });
       tileCtx.imageSmoothingEnabled = false;
-      tileCtx.drawImage(sheet, frameIndex * sheet.naturalWidth / columns, 0,
-        sheet.naturalWidth / columns, frameHeight, 0, 0, frameWidth, frameHeight);
+      tileCtx.drawImage(sheet, startX, 0,
+        endX - startX, frameHeight, 0, 0, frameWidth, frameHeight);
       const pixels = tileCtx.getImageData(0, 0, frameWidth, frameHeight).data;
       let minX = frameWidth;
       let minY = frameHeight;
@@ -370,9 +372,7 @@
     const spriteWidth = kind === "spring"
       ? Math.min(72 * visualScale(), platformWidth * .82)
       : platformWidth;
-    const spriteHeight = kind === "spring"
-      ? spriteSize(sprites[3], spriteWidth)
-      : Math.max(18, platformWidth * .32);
+    const spriteHeight = spriteSize(sprites[spriteIndex], spriteWidth);
     const platform = {
       x,
       originX: x,
@@ -953,19 +953,29 @@
     drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
   }
 
-  function collideWithEnemy(previousFeet, currentFeet) {
+  function crossedLandingSurface(previousFeet, currentFeet, previousTop, currentTop, feetX, targetX, targetWidth, feetWidth) {
+    const before = previousFeet - previousTop;
+    const after = currentFeet - currentTop;
+    return before >= 0 && after <= 0 && after < before
+      && Math.abs(feetX - targetX) <= (targetWidth + feetWidth) / 2;
+  }
+
+  function collideWithEnemy(previousFeet, currentFeet, dt) {
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const targetEnemyWidth = enemyWidth();
       const enemyHeight = spriteSize(sprites[4], targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
       const enemyTop = spriteTopAtX(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
-      const crossedTop = previousFeet >= enemyTop && currentFeet <= enemyTop;
+      const previousEnemyY = enemy.y + Math.sin((elapsed - dt) * 4 + enemy.phase) * 4;
+      const previousTop = spriteTopAtX(sprites[4], enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
+      const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousTop, enemyTop,
+        player.x, enemy.x, targetEnemyWidth, player.width * .44);
       const targetRx = player.width * .31;
       const targetRy = player.height * .37;
       const overlaps = spriteOverlapsEllipse(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight,
         player.x, player.y, targetRx, targetRy);
-      if (player.vy < 0 && overlaps && crossedTop) {
+      if (player.vy < 0 && crossedTop) {
         enemy.dead = true;
         frags += 1;
         player.y = enemyTop + player.height / 2;
@@ -975,7 +985,7 @@
         effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 * visualScale() });
         return true;
       }
-      if (overlaps) {
+      if (overlaps && invulnerableTimer <= 0) {
         endGame();
         return true;
       }
@@ -1035,7 +1045,7 @@
       }
     }
 
-    if (invulnerableTimer <= 0) collideWithEnemy(previousFeet, currentFeet);
+    collideWithEnemy(previousFeet, currentFeet, dt);
     if (mode !== "running") return;
 
     if (player.vy < 0) {
@@ -1101,10 +1111,13 @@
       const hitbox = hazardHitbox(hazard);
       const hazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height, player.x);
       const previousHazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, previousHazardY, hitbox.width, hitbox.height, player.x);
-      const crossedTop = previousFeet >= previousHazardTop && currentFeet <= hazardTop;
+      const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousHazardTop, hazardTop,
+        player.x, hitbox.x, hitbox.width, player.width * .44);
       const overlaps = spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
         player.x, player.y, player.width * .29, player.height * .34);
-      if (hazard.bouncy && player.vy < 0 && overlaps && crossedTop) {
+      // Feet crossing the surface is sufficient: requiring torso overlap as
+      // well misses shallow landings and lets a fast descent tunnel through.
+      if (hazard.bouncy && player.vy < 0 && crossedTop) {
         hazard.dead = true;
         player.y = hazardTop + player.height / 2;
         player.vy = 880;
@@ -1412,7 +1425,8 @@
     image(canvas.dataset.backgroundCloudSrc),
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.dirtyWheelSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, wheelSheet, dirtyWheel]) => {
+    image(canvas.dataset.platformSheetSrc),
+  ]).then(([atlas, heroSheet, journey, cloud, wheelSheet, dirtyWheel, platformSheet]) => {
     art.journey = journey;
     art.cloud = cloud;
     art.heroFrames = splitHeroSheet(heroSheet);
@@ -1429,6 +1443,9 @@
       return;
     }
     cropSprites(atlas);
+    // Cut in the transparent gutters, not through the generated artwork.
+    const platformFrames = splitSpriteSheet(platformSheet, 4, [0, .26, .536, .806, 1]);
+    platformFrames.forEach((sprite, index) => { if (sprite) sprites[index] = sprite; });
     art.powerupFrames = { rocket: sprites[8] || null, jetpack: sprites[9] || null };
     art.villainFrames = sprites[4] ? [sprites[4]] : [];
     artReady = true;
