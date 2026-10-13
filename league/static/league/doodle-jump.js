@@ -216,14 +216,15 @@
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
 
-  function bakeSprite(sprite) {
+  function bakeSprite(sprite, maxDimension = 192, smooth = false) {
     if (!sprite) return null;
-    const scale = Math.min(1, 192 / Math.max(sprite.sw, sprite.sh));
+    const scale = Math.min(1, maxDimension / Math.max(sprite.sw, sprite.sh));
     const texture = document.createElement("canvas");
     texture.width = Math.max(1, Math.round(sprite.sw * scale));
     texture.height = Math.max(1, Math.round(sprite.sh * scale));
     const textureCtx = texture.getContext("2d");
-    textureCtx.imageSmoothingEnabled = false;
+    textureCtx.imageSmoothingEnabled = smooth;
+    if (smooth) textureCtx.imageSmoothingQuality = "high";
     textureCtx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
       0, 0, texture.width, texture.height);
     return { ...sprite, image: texture, sx: 0, sy: 0, sw: texture.width, sh: texture.height };
@@ -1480,7 +1481,9 @@
     const platformFrames = splitSpriteSheet(platformSheet, 4, [0, .26, .536, .806, 1]);
     platformFrames.forEach((sprite, index) => { if (sprite) sprites[index] = sprite; });
     for (let index = 0; index < sprites.length; index += 1) sprites[index] = bakeSprite(sprites[index]);
-    art.heroFrames = art.heroFrames.map(bakeSprite);
+    // Keep more source detail for the hero; the other game sprites stay small
+    // to keep the per-frame draw workload light on mobile.
+    art.heroFrames = art.heroFrames.map((frame) => bakeSprite(frame, 384, true));
     for (const compound of ["soft", "medium", "hard"]) {
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }

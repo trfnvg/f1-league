@@ -301,37 +301,6 @@
 .doodle-start:disabled { opacity: .62; box-shadow: none; cursor: wait; }
 .doodle-start:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: 3px; }
 
-.doodle-controls {
-  display: flex;
-  min-height: 50px;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: .55rem 1rem;
-  padding: .65rem 1rem;
-  border-top: 2px solid #344f78;
-  color: var(--doodle-muted);
-  background: #0c1428;
-  font-size: .62rem;
-}
-
-.doodle-controls kbd { padding: .16rem .33rem; border: 1px solid var(--doodle-cyan); border-radius: 0; color: var(--doodle-cream); background: #152849; font: inherit; font-size: .58rem; font-weight: 900; }
-
-.doodle-mobile-instructions { display: none; }
-
-.doodle-howto { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; margin-top: 1rem; }
-.doodle-howto article { display: flex; align-items: center; gap: .7rem; min-height: 76px; padding: .7rem .8rem; border: 1px solid var(--doodle-line); border-radius: 0; background: var(--doodle-navy); box-shadow: 3px 3px 0 rgba(4, 8, 18, .45); }
-.doodle-howto-mark { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 2px solid var(--doodle-line); border-radius: 0; color: var(--doodle-cream); background: #152849; font-size: .72rem; font-weight: 900; }
-.doodle-mark-platform { width: 32px; height: 11px; border: 2px solid var(--doodle-cream); background: repeating-linear-gradient(90deg, var(--doodle-red) 0 7px, var(--doodle-cream) 7px 14px); box-shadow: 0 5px 0 -3px var(--doodle-cyan); }
-.doodle-mark-frag { border-color: #dca43e; color: #17203a; background: var(--doodle-yellow); }
-.doodle-mark-hazard { border-color: #a83b4c; color: #fff; background: var(--doodle-red); }
-.doodle-mark-goal { border-color: #dca43e; color: var(--doodle-cream); background: #172849; font-size: 1.05rem; }
-.doodle-mark-rocket { border-color: #ff5267; color: #fff4d3; background: linear-gradient(180deg, #e94b58, #7e2945); font-size: 1.1rem; }
-.doodle-mark-jetpack { border-color: #8eeaff; color: #8eeaff; background: #173957; font-size: 1rem; }
-.doodle-mark-villain { border-color: #bd5570; color: #ffd9a2; background: #281c35; font-size: .95rem; }
-.doodle-howto article div { display: grid; gap: .18rem; }
-.doodle-howto strong { color: var(--doodle-cream); font-size: .68rem; }
-.doodle-howto small { color: var(--doodle-muted); font-size: .57rem; line-height: 1.45; }
 .doodle-footnote { margin: .85rem 0 0; color: #8094b1; font-size: .59rem; line-height: 1.5; }
 
 .doodle-leaderboard {
@@ -371,14 +340,6 @@
   .doodle-game-stage::before,
   .doodle-game-stage::after { display: none; }
   .doodle-board-wrap { width: 100%; height: clamp(560px, 76svh, 760px); }
-  .doodle-controls { display: grid; grid-template-columns: 1fr 1fr; justify-content: center; text-align: center; }
-  .doodle-desktop-instructions { display: none; }
-  .doodle-mobile-instructions { display: block; grid-column: 1 / -1; }
-  .doodle-howto { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
-  .doodle-howto article { min-height: 70px; gap: .55rem; padding: .6rem; }
-  .doodle-howto-mark { width: 28px; height: 28px; }
-  .doodle-howto strong { font-size: .63rem; }
-  .doodle-howto small { font-size: .53rem; }
   .doodle-leaderboard-heading { align-items: start; flex-direction: column; gap: .35rem; }
   .doodle-leaderboard-total { white-space: normal; }
   .doodle-leaderboard-list li { grid-template-columns: 1.8rem minmax(0, 1fr) auto; gap: .5rem; }
@@ -388,7 +349,6 @@
 @media (max-width: 390px) {
   .doodle-live { display: none; }
   .doodle-scoreboard { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
-  .doodle-howto { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -447,38 +407,7 @@ body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
   align-self: center;
 }
 
-.doodle-machine.is-fullscreen .doodle-controls,
-.doodle-machine:fullscreen .doodle-controls,
-.doodle-machine:-webkit-full-screen .doodle-controls {
-  width: min(100%, 1040px);
-  flex: 0 0 auto;
-  align-self: center;
-}
-
-@media (max-width: 760px) {
-  .doodle-machine.is-fullscreen .doodle-scoreboard,
-  .doodle-machine:fullscreen .doodle-scoreboard,
-  .doodle-machine:-webkit-full-screen .doodle-scoreboard,
-  .doodle-machine.is-fullscreen .doodle-game-stage,
-  .doodle-machine:fullscreen .doodle-game-stage,
-  .doodle-machine:-webkit-full-screen .doodle-game-stage,
-  .doodle-machine.is-fullscreen .doodle-board-wrap,
-  .doodle-machine:fullscreen .doodle-board-wrap,
-  .doodle-machine:-webkit-full-screen .doodle-board-wrap,
-  .doodle-machine.is-fullscreen .doodle-controls,
-  .doodle-machine:fullscreen .doodle-controls,
-  .doodle-machine:-webkit-full-screen .doodle-controls {
-    width: 100%;
-  }
-}
-
 @media (max-height: 560px) and (orientation: landscape) {
-  .doodle-machine.is-fullscreen .doodle-controls,
-  .doodle-machine:fullscreen .doodle-controls,
-  .doodle-machine:-webkit-full-screen .doodle-controls {
-    display: none;
-  }
-
   .doodle-machine.is-fullscreen .doodle-scoreboard,
   .doodle-machine:fullscreen .doodle-scoreboard,
   .doodle-machine:-webkit-full-screen .doodle-scoreboard {
