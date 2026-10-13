@@ -42,9 +42,9 @@
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/western-cowboy-hero-sheet-v1.png' %}?v=1"
-          data-background-paddock-src="{% static 'league/images/doodle-jump/western-zone-paddock-v1.webp' %}?v=1"
-          data-background-canyon-src="{% static 'league/images/doodle-jump/western-zone-canyon-v1.webp' %}?v=1"
-          data-background-clouds-src="{% static 'league/images/doodle-jump/western-zone-clouds-v1.webp' %}?v=1"
+          data-background-paddock-src="{% static 'league/images/doodle-jump/western-zone-paddock-v2.webp' %}?v=2"
+          data-background-canyon-src="{% static 'league/images/doodle-jump/western-zone-canyon-v2.webp' %}?v=2"
+          data-background-clouds-src="{% static 'league/images/doodle-jump/western-zone-clouds-v2.webp' %}?v=2"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
           data-dirty-wheel-src="{% static 'league/images/doodle-jump/f1-dirty-steering-wheel-v2.png' %}?v=2"
           data-start-url="{{ doodle_attempt_start_url }}"
@@ -112,6 +112,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=western-game-v2" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=western-game-v3" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
