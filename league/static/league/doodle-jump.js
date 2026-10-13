@@ -23,13 +23,14 @@
   const held = { left: false, right: false };
   const sprites = [];
   let backgroundCaches = [];
-  // Each scene covers three climbing sectors. Keep its background scrolling
-  // continuously, then blend into the next chapter instead of reusing one tile.
+  // The story opens briefly in the paddock, climbs through the canyon, then
+  // breaks into open sky. Background transitions are tied to climb distance,
+  // not arbitrary sector changes, and use long eased crossfades.
   const levelWorldHeight = 2400;
-  const sceneWorldHeight = levelWorldHeight * 3;
-  const sceneFadeLength = levelWorldHeight * .7;
   const backgroundOverscan = 1.08;
-  const backgroundParallax = .34;
+  const backgroundParallax = .1;
+  const paddockFade = { start: 520, end: 1450 };
+  const skyFade = { start: 4600, end: 6200 };
   const levels = [
     "Паддок Рассела",
     "Пит-лейн Дикого Запада",
@@ -42,7 +43,7 @@
     "Плато финишных флагов",
     "Небесный автодром",
   ];
-  const backgroundZoneNames = ["паддок", "каньон", "облака"];
+  const backgroundZoneNames = ["паддок", "каньон", "небо"];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -304,10 +305,11 @@
   function cacheBackground() {
     backgroundCaches = [];
     const sources = art.backgroundZones || [];
-    if (!sources.length || !width || !height) return;
+    if (!sources.some(Boolean) || !width || !height) return;
 
     const pixelWidth = Math.max(1, Math.round(width * dpr));
     backgroundCaches = sources.map((source) => {
+      if (!source) return null;
       const cache = document.createElement("canvas");
       cache.width = Math.ceil(pixelWidth * backgroundOverscan);
       const scale = Math.max(
@@ -335,23 +337,22 @@
   function drawBackgroundTile(tile, sceneIndex) {
     if (!tile || !tile.height) return;
     const swayX = Math.sin(elapsed * .2 + sceneIndex * .7) * width * .004;
-    const scroll = (Math.max(0, cameraY) * backgroundParallax) % tile.height;
+    const compactScreen = width <= 520;
+    const zoneParallax = compactScreen
+      ? (sceneIndex === 2 ? backgroundParallax * .02 : backgroundParallax * .08)
+      : (sceneIndex === 2 ? backgroundParallax * .25 : backgroundParallax);
+    const startOffset = sceneIndex === 0
+      ? Math.min(tile.height * .28, Math.max(0, tile.height - height))
+      : 0;
+    const scroll = (Math.max(0, cameraY) * zoneParallax + startOffset) % tile.height;
     let y = -scroll;
-    let tileIndex = Math.floor(Math.max(0, cameraY) * backgroundParallax / tile.height);
-    while (y > 0) { y -= tile.height; tileIndex -= 1; }
-    // Draw only the tiles intersecting the viewport (normally two).
+    while (y > 0) y -= tile.height;
+    // These new backgrounds are composed for a straight vertical loop. Do not
+    // mirror alternate copies: mirrored cliffs/garages made the old scroll
+    // visibly reverse direction at every tile seam.
     while (y < height) {
-      ctx.save();
-      if (tileIndex % 2) {
-        // Alternating vertical mirroring makes the generated scenes tile
-        // seamlessly even when their top and bottom edges are not identical.
-        ctx.translate(0, 2 * y + tile.height);
-        ctx.scale(1, -1);
-      }
       ctx.drawImage(tile.canvas, swayX, y, tile.width, tile.height);
-      ctx.restore();
       y += tile.height;
-      tileIndex += 1;
     }
   }
 
@@ -364,16 +365,24 @@
   }
 
   function drawBackdrop() {
-    if (backgroundCaches.length) {
-      const progress = Math.max(0, cameraY) / sceneWorldHeight;
-      const sceneIndex = Math.min(backgroundCaches.length - 1, Math.floor(progress));
-      const sceneProgress = progress - sceneIndex;
-      const fadeStart = 1 - sceneFadeLength / sceneWorldHeight;
-      const fade = sceneIndex < backgroundCaches.length - 1
-        ? clamp((sceneProgress - fadeStart) / (1 - fadeStart), 0, 1)
-        : 0;
-      drawBackgroundScene(backgroundCaches[sceneIndex], sceneIndex);
-      if (fade > 0) drawBackgroundScene(backgroundCaches[sceneIndex + 1], sceneIndex + 1, fade);
+    if (backgroundCaches.some(Boolean)) {
+      const climb = Math.max(0, cameraY);
+      const ease = (range) => {
+        const value = clamp((climb - range.start) / (range.end - range.start), 0, 1);
+        return value * value * (3 - 2 * value);
+      };
+      const intoCanyon = ease(paddockFade);
+      const intoSky = ease(skyFade);
+      const firstAvailable = backgroundCaches.find(Boolean);
+      const paddock = backgroundCaches[0] || firstAvailable;
+      const canyon = backgroundCaches[1] || paddock;
+      const clouds = backgroundCaches[2] || canyon;
+
+      ctx.fillStyle = "#87b9d5";
+      ctx.fillRect(0, 0, width, height);
+      drawBackgroundScene(paddock, 0);
+      if (intoCanyon > 0) drawBackgroundScene(canyon, 1, intoCanyon);
+      if (intoSky > 0) drawBackgroundScene(clouds, 2, intoSky);
     } else {
       ctx.fillStyle = "#78c8f5";
       ctx.fillRect(0, 0, width, height);
@@ -630,7 +639,8 @@
       levelNode.dataset.value = displayLevel;
       levelNode.textContent = displayLevel;
     }
-    const displayName = `${levels[levelIndex]} · ${backgroundZoneNames[Math.min(2, Math.floor(levelNumber / 3))]}`;
+    const zoneIndex = cameraY < paddockFade.end ? 0 : cameraY < skyFade.end ? 1 : 2;
+    const displayName = `${levels[levelIndex]} · ${backgroundZoneNames[zoneIndex]}`;
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -1444,7 +1454,7 @@
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.dirtyWheelSrc),
   ]).then(([atlas, heroSheet, paddockBackground, canyonBackground, cloudsBackground, wheelSheet, dirtyWheel]) => {
-    art.backgroundZones = [paddockBackground, canyonBackground, cloudsBackground].filter(Boolean);
+    art.backgroundZones = [paddockBackground, canyonBackground, cloudsBackground];
     art.heroFrames = splitHeroSheet(heroSheet);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
     art.wheelFrames = {
