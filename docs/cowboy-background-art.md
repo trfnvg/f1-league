@@ -1,5 +1,12 @@
 # Cowboy GP background art, v3
 
+## Russell toy hero, v2
+
+Asset: `league/static/league/images/doodle-jump/western-russell-toy-hero-v2.webp`.
+Generated with the built-in GPT image tool using the user's attached Russell/Woody reference. Runtime cuts use transparent gutters and align all four poses at the boots; collision dimensions remain independent of artwork width.
+
+Prompt: Use the attached side-by-side picture as the explicit character design reference. Create a pixel art jumping-game animation sprite sheet of George Russell as a Woody-style cowboy toy doll: combine the smiling facial likeness and cream Formula 1 racing suit of the man on the LEFT with the articulated toy proportions, expressive face and cowboy character design on the RIGHT. Cream cowboy hat, cream racing overalls with restrained teal accents, brown cowboy boots, small sheriff badge and belt. Friendly recognizable smile, brown hair, toy-like head and limbs. Four full-body frames in ONE horizontal row of FOUR EQUAL cells on transparent background. Exact centers at 12.5%,37.5%,62.5%,87.5% width, generous empty gutters, nothing crosses cells. Frame 1 compact crouch/takeoff; frame 2 upward jump; frame 3 apex arms slightly open; frame 4 descending feet down ready to land. Same character, head size, outfit and scale in all frames, faces three-quarter RIGHT throughout. High quality crisp 16-bit pixel art matching a western canyon arcade, readable at small size. No labels, background, ground shadows, panels or UI. Full hat and boots visible in every frame.
+
 Generated with the built-in GPT image generation tool, then encoded as WebP.
 
 Assets: `league/static/league/images/doodle-jump/western-ascent-v3.webp`

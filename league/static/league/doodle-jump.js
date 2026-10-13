@@ -154,68 +154,21 @@
 
   function splitHeroSheet(sheet) {
     if (!sheet) return [];
-    const frameWidth = Math.ceil(sheet.naturalWidth / 4);
-    const frameHeight = sheet.naturalHeight;
+    // The generated poses have unequal widths. Cut at verified transparent
+    // gutters, then place them in identical cells with a common boot baseline.
+    const poses = splitSpriteSheet(sheet, 4, [0, .251, .486, .787, 1]);
+    if (poses.some((pose) => !pose)) return [];
+    const frameWidth = Math.max(...poses.map((pose) => pose.sw));
+    const frameHeight = Math.max(...poses.map((pose) => pose.sh));
     const frames = [];
-
-    for (let frameIndex = 0; frameIndex < 4; frameIndex += 1) {
+    for (const pose of poses) {
       const tile = document.createElement("canvas");
       tile.width = frameWidth;
       tile.height = frameHeight;
-      const tileCtx = tile.getContext("2d", { willReadFrequently: true });
+      const tileCtx = tile.getContext("2d");
       tileCtx.imageSmoothingEnabled = false;
-      tileCtx.drawImage(sheet, frameIndex * sheet.naturalWidth / 4, 0,
-        sheet.naturalWidth / 4, frameHeight, 0, 0, frameWidth, frameHeight);
-
-      // Keep only the largest connected alpha component in each panel. The
-      // generated sheet has transparent gaps between poses, but this guard
-      // prevents a stray edge pixel from the neighboring pose becoming a
-      // black artifact in the game.
-      const imageData = tileCtx.getImageData(0, 0, frameWidth, frameHeight);
-      const pixels = imageData.data;
-      const seen = new Uint8Array(frameWidth * frameHeight);
-      let largestComponent = null;
-      for (let y = 0; y < frameHeight; y += 1) {
-        for (let x = 0; x < frameWidth; x += 1) {
-          const start = y * frameWidth + x;
-          if (seen[start] || pixels[start * 4 + 3] <= 18) continue;
-          const stack = [start];
-          const component = [];
-          seen[start] = 1;
-          while (stack.length) {
-            const position = stack.pop();
-            const pointX = position % frameWidth;
-            const pointY = Math.floor(position / frameWidth);
-            component.push(position);
-            for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
-              for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
-                if (!offsetX && !offsetY) continue;
-                const nextX = pointX + offsetX;
-                const nextY = pointY + offsetY;
-                if (nextX < 0 || nextX >= frameWidth || nextY < 0 || nextY >= frameHeight) continue;
-                const next = nextY * frameWidth + nextX;
-                if (seen[next] || pixels[next * 4 + 3] <= 18) continue;
-                seen[next] = 1;
-                stack.push(next);
-              }
-            }
-          }
-          if (!largestComponent || component.length > largestComponent.length) largestComponent = component;
-        }
-      }
-
-      if (largestComponent) {
-        const cleaned = tileCtx.createImageData(frameWidth, frameHeight);
-        for (const position of largestComponent) {
-          const sourceOffset = position * 4;
-          cleaned.data[sourceOffset] = pixels[sourceOffset];
-          cleaned.data[sourceOffset + 1] = pixels[sourceOffset + 1];
-          cleaned.data[sourceOffset + 2] = pixels[sourceOffset + 2];
-          cleaned.data[sourceOffset + 3] = pixels[sourceOffset + 3];
-        }
-        tileCtx.clearRect(0, 0, frameWidth, frameHeight);
-        tileCtx.putImageData(cleaned, 0, 0);
-      }
+      tileCtx.drawImage(pose.image, pose.sx, pose.sy, pose.sw, pose.sh,
+        Math.round((frameWidth - pose.sw) / 2), frameHeight - pose.sh, pose.sw, pose.sh);
       frames.push({ image: tile, sx: 0, sy: 0, sw: frameWidth, sh: frameHeight });
     }
     return frames;
@@ -283,7 +236,7 @@
     // The western sheet follows the jump arc: compact, takeoff, arms-wide peak,
     // and descent. Mapping from velocity keeps poses aligned with landings.
     const velocity = player.vy;
-    const frameIndex = velocity < -180 ? 1 : velocity < 100 ? 2 : velocity < 520 ? 3 : 0;
+    const frameIndex = velocity < -100 ? 3 : velocity < 100 ? 2 : velocity < 600 ? 1 : 0;
     return frames[frameIndex] || frames[1];
   }
 
@@ -490,9 +443,9 @@
   }
 
   function buildGame() {
-    const heroSprite = art.heroFrames && art.heroFrames[1];
     const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
-    const heroWidth = heroHeight * (heroSprite ? heroSprite.sw / heroSprite.sh : .67);
+    // Preserve the previous gameplay hitbox independently of the new hat/arms.
+    const heroWidth = heroHeight * .75;
     const firstY = Math.max(86, Math.min(118, height * .14));
     platforms = [];
     enemies = [];
@@ -1237,8 +1190,9 @@
       ctx.scale(facing, 1);
       const heroSprite = currentHeroSprite();
       if (heroSprite) {
+        const heroDrawWidth = player.height * heroSprite.sw / heroSprite.sh;
         ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
-          -player.width / 2, -player.height / 2, player.width, player.height);
+          -heroDrawWidth / 2, -player.height / 2, heroDrawWidth, player.height);
       } else {
         ctx.fillStyle = "#f4d43e";
         ctx.beginPath();
