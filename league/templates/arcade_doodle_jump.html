@@ -41,6 +41,7 @@
         <canvas
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
+          data-platform-sheet-src="{% static 'league/images/doodle-jump/western-platforms-v3.webp' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/western-cowboy-hero-sheet-v1.png' %}?v=1"
           data-background-journey-src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}"
           data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-v3.webp' %}"
@@ -111,6 +112,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=western-ascent-v4" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=western-platforms-v5" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
