@@ -22,28 +22,14 @@
   const art = {};
   const held = { left: false, right: false };
   const sprites = [];
-  let backgroundCaches = [];
-  // The story opens briefly in the paddock, climbs through the canyon, then
-  // breaks into open sky. Background transitions are tied to climb distance,
-  // not arbitrary sector changes, and use long eased crossfades.
+  let skyGradient = null;
+  let cloudCache = null;
+  // One continuous painting climbs from paddock to canyon to sky; only the
+  // upper atmosphere fades into an infinite layer of individual cloud sprites.
   const levelWorldHeight = 2400;
-  const backgroundOverscan = 1.08;
-  const backgroundParallax = .1;
-  const paddockFade = { start: 520, end: 1450 };
+  const paddockEnd = 1450;
   const skyFade = { start: 4600, end: 6200 };
-  const levels = [
-    "Паддок Рассела",
-    "Пит-лейн Дикого Запада",
-    "Город у каньона",
-    "Каньон красных поребриков",
-    "Тропа шерифа",
-    "Высокие скалы",
-    "Над облаками",
-    "Облачное родео",
-    "Плато финишных флагов",
-    "Небесный автодром",
-  ];
-  const backgroundZoneNames = ["паддок", "каньон", "небо"];
+  const backgroundZoneNames = ["Паддок Рассела", "Подъём по каньону", "Над облаками"];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -72,7 +58,6 @@
   let peakY = 0;
   let frags = 0;
   let finalScore = 0;
-  let levelIndex = 0;
   let lastWasRecord = false;
   let trailTimer = 0;
   let touchDirection = null;
@@ -303,27 +288,17 @@
   }
 
   function cacheBackground() {
-    backgroundCaches = [];
-    const sources = art.backgroundZones || [];
-    if (!sources.some(Boolean) || !width || !height) return;
-
-    const pixelWidth = Math.max(1, Math.round(width * dpr));
-    backgroundCaches = sources.map((source) => {
-      if (!source) return null;
-      const cache = document.createElement("canvas");
-      cache.width = Math.ceil(pixelWidth * backgroundOverscan);
-      const scale = Math.max(
-        cache.width / source.naturalWidth,
-        (height * dpr * 1.08) / source.naturalHeight,
-      );
-      cache.height = Math.ceil(source.naturalHeight * scale);
-      const cacheCtx = cache.getContext("2d", { alpha: false });
-      cacheCtx.imageSmoothingEnabled = false;
-      const drawWidth = source.naturalWidth * scale;
-      const drawHeight = source.naturalHeight * scale;
-      cacheCtx.drawImage(source, (cache.width - drawWidth) / 2, 0, drawWidth, drawHeight);
-      return { canvas: cache, width: cache.width / dpr, height: cache.height / dpr };
-    });
+    skyGradient = ctx.createLinearGradient(0, 0, 0, height);
+    skyGradient.addColorStop(0, "#498bc9");
+    skyGradient.addColorStop(1, "#89bddc");
+    // Cache the small transparent cloud once, independent of device DPR.
+    // The panorama is sampled directly: no multi-megapixel canvas per scene.
+    if (art.cloud && !cloudCache) {
+      cloudCache = document.createElement("canvas");
+      cloudCache.width = 512;
+      cloudCache.height = Math.round(512 * art.cloud.naturalHeight / art.cloud.naturalWidth);
+      cloudCache.getContext("2d").drawImage(art.cloud, 0, 0, cloudCache.width, cloudCache.height);
+    }
   }
 
   function clamp(value, min, max) {
@@ -334,58 +309,45 @@
     return Math.max(0, cameraY) / levelWorldHeight;
   }
 
-  function drawBackgroundTile(tile, sceneIndex) {
-    if (!tile || !tile.height) return;
-    const swayX = Math.sin(elapsed * .2 + sceneIndex * .7) * width * .004;
-    const compactScreen = width <= 520;
-    const zoneParallax = compactScreen
-      ? (sceneIndex === 2 ? backgroundParallax * .02 : backgroundParallax * .08)
-      : (sceneIndex === 2 ? backgroundParallax * .25 : backgroundParallax);
-    const startOffset = sceneIndex === 0
-      ? Math.min(tile.height * .28, Math.max(0, tile.height - height))
-      : 0;
-    const scroll = (Math.max(0, cameraY) * zoneParallax + startOffset) % tile.height;
-    let y = -scroll;
-    while (y > 0) y -= tile.height;
-    // These new backgrounds are composed for a straight vertical loop. Do not
-    // mirror alternate copies: mirrored cliffs/garages made the old scroll
-    // visibly reverse direction at every tile seam.
-    while (y < height) {
-      ctx.drawImage(tile.canvas, swayX, y, tile.width, tile.height);
-      y += tile.height;
-    }
+  function backgroundView(climb, sourceWidth, sourceHeight, viewportWidth, viewportHeight) {
+    const viewHeight = Math.min(sourceHeight, sourceWidth * viewportHeight / viewportWidth);
+    const progress = clamp(climb / skyFade.end, 0, 1);
+    const ascent = progress * (2 - progress);
+    // Decreasing source Y moves every landmark DOWN as the camera climbs UP.
+    // This is a single finite painting: never repeat or mirror the paddock.
+    return { y: (sourceHeight - viewHeight) * (1 - ascent), height: viewHeight };
   }
 
-  function drawBackgroundScene(scene, sceneIndex, alpha = 1) {
-    if (!scene) return;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    drawBackgroundTile(scene, sceneIndex);
-    ctx.restore();
+  function backgroundFade(climb, start, end) {
+    const value = clamp((climb - start) / (end - start), 0, 1);
+    return value * value * (3 - 2 * value);
   }
 
   function drawBackdrop() {
-    if (backgroundCaches.some(Boolean)) {
-      const climb = Math.max(0, cameraY);
-      const ease = (range) => {
-        const value = clamp((climb - range.start) / (range.end - range.start), 0, 1);
-        return value * value * (3 - 2 * value);
-      };
-      const intoCanyon = ease(paddockFade);
-      const intoSky = ease(skyFade);
-      const firstAvailable = backgroundCaches.find(Boolean);
-      const paddock = backgroundCaches[0] || firstAvailable;
-      const canyon = backgroundCaches[1] || paddock;
-      const clouds = backgroundCaches[2] || canyon;
-
-      ctx.fillStyle = "#87b9d5";
-      ctx.fillRect(0, 0, width, height);
-      drawBackgroundScene(paddock, 0);
-      if (intoCanyon > 0) drawBackgroundScene(canyon, 1, intoCanyon);
-      if (intoSky > 0) drawBackgroundScene(clouds, 2, intoSky);
-    } else {
-      ctx.fillStyle = "#78c8f5";
-      ctx.fillRect(0, 0, width, height);
+    const climb = Math.max(0, cameraY);
+    const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
+    ctx.fillStyle = skyGradient || "#6ba5d3";
+    ctx.fillRect(0, 0, width, height);
+    if (art.journey && intoSky < 1) {
+      const source = art.journey;
+      const view = backgroundView(climb, source.naturalWidth, source.naturalHeight, width, height);
+      ctx.globalAlpha = 1 - intoSky;
+      ctx.drawImage(source, 0, view.y, source.naturalWidth, view.height, 0, 0, width, height);
+    }
+    // Separate cloud sprites cross the screen downward. Their wrap happens
+    // entirely outside the viewport, so infinite sky has no image seam.
+    const cloudsAlpha = backgroundFade(climb, 2800, skyFade.end);
+    if (cloudCache && cloudsAlpha > 0) {
+      for (let i = 0; i < 6; i += 1) {
+        const cloudWidth = width * (.38 + (i % 3) * .12);
+        const cloudHeight = cloudWidth * cloudCache.height / cloudCache.width;
+        const cycle = height + 2 * cloudHeight + 40;
+        const y = ((i / 6 * cycle + climb * (.09 + (i % 3) * .025)) % cycle) - cloudHeight - 20;
+        const x = (i % 2 ? width - cloudWidth * .72 : -cloudWidth * .28)
+          + Math.sin(elapsed * .12 + i) * width * .015;
+        ctx.globalAlpha = cloudsAlpha * (.3 + (i % 3) * .12);
+        ctx.drawImage(cloudCache, x, y, cloudWidth, cloudHeight);
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -515,7 +477,6 @@
     peakY = firstY + heroHeight / 2;
     frags = 0;
     finalScore = 0;
-    levelIndex = 0;
     invulnerableTimer = 0;
     rocketTimer = 0;
     jetpackTimer = 0;
@@ -623,7 +584,6 @@
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     const score = heightPoints + frags * 30;
     const levelNumber = Math.floor(storyProgress());
-    levelIndex = levelNumber % levels.length;
     const displayScore = mode === "over" ? finalScore : score;
     if (scoreNode.dataset.value !== String(displayScore)) {
       scoreNode.dataset.value = String(displayScore);
@@ -639,8 +599,8 @@
       levelNode.dataset.value = displayLevel;
       levelNode.textContent = displayLevel;
     }
-    const zoneIndex = cameraY < paddockFade.end ? 0 : cameraY < skyFade.end ? 1 : 2;
-    const displayName = `${levels[levelIndex]} · ${backgroundZoneNames[zoneIndex]}`;
+    const zoneIndex = cameraY < paddockEnd ? 0 : cameraY < skyFade.end ? 1 : 2;
+    const displayName = backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -1448,13 +1408,13 @@
   Promise.all([
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
-    image(canvas.dataset.backgroundPaddockSrc),
-    image(canvas.dataset.backgroundCanyonSrc),
-    image(canvas.dataset.backgroundCloudsSrc),
+    image(canvas.dataset.backgroundJourneySrc),
+    image(canvas.dataset.backgroundCloudSrc),
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.dirtyWheelSrc),
-  ]).then(([atlas, heroSheet, paddockBackground, canyonBackground, cloudsBackground, wheelSheet, dirtyWheel]) => {
-    art.backgroundZones = [paddockBackground, canyonBackground, cloudsBackground];
+  ]).then(([atlas, heroSheet, journey, cloud, wheelSheet, dirtyWheel]) => {
+    art.journey = journey;
+    art.cloud = cloud;
     art.heroFrames = splitHeroSheet(heroSheet);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
     art.wheelFrames = {
