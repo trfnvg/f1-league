@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=western-touch-v7">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=western-touch-v8">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -42,7 +42,7 @@
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
           data-platform-sheet-src="{% static 'league/images/doodle-jump/western-platforms-v3.webp' %}"
-          data-hero-sheet-src="{% static 'league/images/doodle-jump/western-russell-toy-hero-v3.png' %}"
+          data-hero-sheet-src="{% static 'league/images/doodle-jump/western-russell-toy-hero-v3.webp' %}"
           data-background-journey-src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}"
           data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-v3.webp' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
@@ -97,6 +97,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=russell-toy-v8" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=russell-toy-v9" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

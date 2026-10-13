@@ -139,6 +139,8 @@
   // collision checks touch only these 18x18 bits after a cheap bounds check.
   function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 18, rows = 18) {
     const bits = new Uint8Array(columns * rows);
+    const topRows = new Uint8Array(columns);
+    topRows.fill(rows);
     const xEnd = x + spriteWidth;
     const yEnd = y + spriteHeight;
     for (let py = y; py < yEnd; py += 1) {
@@ -147,9 +149,10 @@
         const column = Math.min(columns - 1, Math.floor((px - x) * columns / spriteWidth));
         const row = Math.min(rows - 1, Math.floor((py - y) * rows / spriteHeight));
         bits[row * columns + column] = 1;
+        if (row < topRows[column]) topRows[column] = row;
       }
     }
-    return { bits, columns, rows };
+    return { bits, columns, rows, topRows };
   }
 
   function splitHeroSheet(sheet) {
@@ -755,11 +758,20 @@
     const lastColumn = clamp(Math.floor((targetX + halfPlayerWidth - left) / objectWidth * mask.columns), 0, mask.columns - 1);
     let topRow = mask.rows;
     for (let column = firstColumn; column <= lastColumn; column += 1) {
-      for (let row = 0; row < topRow; row += 1) {
-        if (mask.bits[row * mask.columns + column]) { topRow = row; break; }
-      }
+      const columnTop = mask.topRows ? mask.topRows[column] : mask.rows;
+      if (columnTop < topRow) topRow = columnTop;
     }
     return y + objectHeight / 2 - topRow / mask.rows * objectHeight;
+  }
+
+  function pruneWorldObjects(items, cameraMargin, inactiveFlag = null) {
+    const lowestY = cameraY - cameraMargin;
+    let kept = 0;
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
+      if (item.y > lowestY && (!inactiveFlag || !item[inactiveFlag])) items[kept++] = item;
+    }
+    items.length = kept;
   }
 
   function hazardHitbox(hazard) {
@@ -952,11 +964,19 @@
       const targetEnemyWidth = enemyWidth();
       const enemyHeight = spriteSize(sprites[4], targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      const enemyTop = spriteTopAtX(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
-      const previousEnemyY = enemy.y + Math.sin((elapsed - dt) * 4 + enemy.phase) * 4;
-      const previousTop = spriteTopAtX(sprites[4], enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
-      const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousTop, enemyTop,
-        player.x, enemy.x, targetEnemyWidth, player.width * .44);
+      const horizontalReach = targetEnemyWidth / 2 + player.width * .31;
+      const verticalReach = enemyHeight / 2 + player.height / 2 + Math.abs(player.vy) * dt + 4;
+      if (Math.abs(player.x - enemy.x) > horizontalReach || Math.abs(player.y - enemyY) > verticalReach) continue;
+
+      let enemyTop = enemyY + enemyHeight / 2;
+      let crossedTop = false;
+      if (player.vy < 0) {
+        enemyTop = spriteTopAtX(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
+        const previousEnemyY = enemy.y + Math.sin((elapsed - dt) * 4 + enemy.phase) * 4;
+        const previousTop = spriteTopAtX(sprites[4], enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
+        crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousTop, enemyTop,
+          player.x, enemy.x, targetEnemyWidth, player.width * .44);
+      }
       const targetRx = player.width * .31;
       const targetRy = player.height * .37;
       const overlaps = spriteOverlapsEllipse(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight,
@@ -1095,30 +1115,45 @@
       const previousHazardY = hazard.y;
       hazard.y -= hazard.speed * dt;
       const hitbox = hazardHitbox(hazard);
-      const hazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height, player.x);
-      const previousHazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, previousHazardY, hitbox.width, hitbox.height, player.x);
-      const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousHazardTop, hazardTop,
-        player.x, hitbox.x, hitbox.width, player.width * .44);
-      const overlaps = spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
-        player.x, player.y, player.width * .29, player.height * .34);
+      const horizontalReach = Math.max(
+        (hitbox.width + player.width * .44) / 2,
+        hitbox.width / 2 + player.width * .29,
+      );
+      const verticalReach = hitbox.height / 2 + player.height / 2
+        + (Math.abs(player.vy) + hazard.speed) * dt + 4;
+      if (Math.abs(player.x - hitbox.x) > horizontalReach || Math.abs(player.y - hitbox.y) > verticalReach) continue;
+
       // Feet crossing the surface is sufficient: requiring torso overlap as
       // well misses shallow landings and lets a fast descent tunnel through.
-      if (hazard.bouncy && player.vy < 0 && crossedTop) {
-        hazard.dead = true;
-        player.y = hazardTop + player.height / 2;
-        player.vy = 880;
-        effects.push({ index: 10, x: player.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
-        continue;
+      if (hazard.bouncy && player.vy < 0) {
+        const hazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height, player.x);
+        const previousHazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, previousHazardY, hitbox.width, hitbox.height, player.x);
+        const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousHazardTop, hazardTop,
+          player.x, hitbox.x, hitbox.width, player.width * .44);
+        if (crossedTop) {
+          hazard.dead = true;
+          player.y = hazardTop + player.height / 2;
+          player.vy = 880;
+          effects.push({ index: 10, x: player.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
+          continue;
+        }
       }
       if (invulnerableTimer > 0) continue;
+      const overlaps = spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
+        player.x, player.y, player.width * .29, player.height * .34);
       if (overlaps) {
         endGame();
         return;
       }
     }
 
-    effects.forEach((effect) => { effect.age += dt; });
-    effects = effects.filter((effect) => effect.age < effect.duration && effect.y > cameraY - 140);
+    let activeEffects = 0;
+    for (let index = 0; index < effects.length; index += 1) {
+      const effect = effects[index];
+      effect.age += dt;
+      if (effect.age < effect.duration && effect.y > cameraY - 140) effects[activeEffects++] = effect;
+    }
+    effects.length = activeEffects;
     if (player.vy > 260 && elapsed - trailTimer > .13) {
       effects.push({ index: 11, x: player.x, y: player.y - player.height * .38, age: 0, duration: .2, size: 46 * visualScale() });
       trailTimer = elapsed;
@@ -1128,12 +1163,12 @@
     // incoming platforms, while the player never hugs the bottom edge.
     if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
     extendWorld();
-    platforms = platforms.filter((platform) => platform.y > cameraY - 160);
-    enemies = enemies.filter((enemy) => enemy.y > cameraY - 130 && !enemy.dead);
-    hazards = hazards.filter((hazard) => hazard.y > cameraY - 180 && !hazard.dead);
-    powerups = powerups.filter((powerup) => powerup.y > cameraY - 180 && !powerup.collected);
-    villains = villains.filter((villain) => villain.y > cameraY - 300 && !villain.dead);
-    villainShots = villainShots.filter((shot) => shot.y > cameraY - 260 && !shot.dead);
+    pruneWorldObjects(platforms, 160, "broken");
+    pruneWorldObjects(enemies, 130, "dead");
+    pruneWorldObjects(hazards, 180, "dead");
+    pruneWorldObjects(powerups, 180, "collected");
+    pruneWorldObjects(villains, 300, "dead");
+    pruneWorldObjects(villainShots, 260, "dead");
 
     if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
@@ -1258,8 +1293,10 @@
     const previousHeight = height;
     width = bounds.width;
     height = bounds.height;
-    // Preserve crisp pixels while reducing fill-rate cost on high-DPI phones.
-    dpr = 1;
+    // Render above CSS resolution on high-density screens while keeping fill
+    // rate bounded: mobile gets extra sprite detail, desktop stays economical.
+    const maxDpr = window.matchMedia("(max-width: 760px)").matches ? 1.5 : 1;
+    dpr = Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
