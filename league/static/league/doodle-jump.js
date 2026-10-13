@@ -24,6 +24,12 @@
   const sprites = [];
   let skyGradient = null;
   let cloudCache = null;
+  let journeyCache = null;
+  let lastRenderTime = 0;
+  let nextHudUpdate = 0;
+  let initializedViewport = false;
+  const touchPointers = new Map();
+  let touchBounds = null;
   // One continuous painting climbs from paddock to canyon to sky; only the
   // upper atmosphere fades into an infinite layer of individual cloud sprites.
   const levelWorldHeight = 2400;
@@ -257,6 +263,19 @@
     return sprite ? targetWidth * sprite.sh / sprite.sw : targetWidth;
   }
 
+  function bakeSprite(sprite) {
+    if (!sprite) return null;
+    const scale = Math.min(1, 192 / Math.max(sprite.sw, sprite.sh));
+    const texture = document.createElement("canvas");
+    texture.width = Math.max(1, Math.round(sprite.sw * scale));
+    texture.height = Math.max(1, Math.round(sprite.sh * scale));
+    const textureCtx = texture.getContext("2d");
+    textureCtx.imageSmoothingEnabled = false;
+    textureCtx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
+      0, 0, texture.width, texture.height);
+    return { ...sprite, image: texture, sx: 0, sy: 0, sw: texture.width, sh: texture.height };
+  }
+
   function currentHeroSprite() {
     const frames = art.heroFrames;
     if (!frames || frames.length < 4 || !player) return frames && frames[1] ? frames[1] : null;
@@ -274,6 +293,7 @@
     const drawHeight = targetHeight || spriteSize(sprite, targetWidth);
     const screenY = height - (worldY - cameraY);
     const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
+    if (drawY > height || drawY + drawHeight < 0) return false;
     ctx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
       x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
@@ -284,6 +304,7 @@
     const drawHeight = targetHeight || spriteSize(frame, targetWidth);
     const screenY = height - (worldY - cameraY);
     const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
+    if (drawY > height || drawY + drawHeight < 0) return false;
     ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
       x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
@@ -293,8 +314,17 @@
     skyGradient = ctx.createLinearGradient(0, 0, 0, height);
     skyGradient.addColorStop(0, "#498bc9");
     skyGradient.addColorStop(1, "#89bddc");
-    // Cache the small transparent cloud once, independent of device DPR.
-    // The panorama is sampled directly: no multi-megapixel canvas per scene.
+    // Bound source texture sizes once instead of resampling the full artwork
+    // for every frame, especially on high-DPI mobile devices.
+    const journeyWidth = Math.min(640, Math.ceil(width));
+    if (art.journey && (!journeyCache || journeyCache.width !== journeyWidth)) {
+      journeyCache = document.createElement("canvas");
+      journeyCache.width = journeyWidth;
+      journeyCache.height = Math.round(journeyWidth * art.journey.naturalHeight / art.journey.naturalWidth);
+      const backgroundCtx = journeyCache.getContext("2d", { alpha: false });
+      backgroundCtx.imageSmoothingEnabled = false;
+      backgroundCtx.drawImage(art.journey, 0, 0, journeyCache.width, journeyCache.height);
+    }
     if (art.cloud && !cloudCache) {
       cloudCache = document.createElement("canvas");
       cloudCache.width = 512;
@@ -330,11 +360,11 @@
     const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
     ctx.fillStyle = skyGradient || "#6ba5d3";
     ctx.fillRect(0, 0, width, height);
-    if (art.journey && intoSky < 1) {
-      const source = art.journey;
-      const view = backgroundView(climb, source.naturalWidth, source.naturalHeight, width, height);
+    if (journeyCache && intoSky < 1) {
+      const source = journeyCache;
+      const view = backgroundView(climb, source.width, source.height, width, height);
       ctx.globalAlpha = 1 - intoSky;
-      ctx.drawImage(source, 0, view.y, source.naturalWidth, view.height, 0, 0, width, height);
+      ctx.drawImage(source, 0, view.y, source.width, view.height, 0, 0, width, height);
     }
     // Separate cloud sprites cross the screen downward. Their wrap happens
     // entirely outside the viewport, so infinite sky has no image seam.
@@ -709,9 +739,11 @@
     mode = "running";
     player.vy = 720;
     updateAccumulator = 0;
+    nextHudUpdate = 0;
     registerAttempt();
     setOverlay("running");
     previousTime = performance.now();
+    lastRenderTime = previousTime;
     frame = requestAnimationFrame(loop);
     canvas.focus({ preventScroll: true });
   }
@@ -1153,7 +1185,10 @@
       endGame();
       return;
     }
-    updateHud();
+    if (elapsed >= nextHudUpdate) {
+      updateHud();
+      nextHudUpdate = elapsed + .1;
+    }
   }
 
   function draw() {
@@ -1237,6 +1272,12 @@
 
   function loop(now) {
     if (mode !== "running") return;
+    if (document.hidden) {
+      previousTime = now;
+      updateAccumulator = 0;
+      frame = requestAnimationFrame(loop);
+      return;
+    }
     const dt = Math.min(.05, Math.max(.001, (now - previousTime) / 1000));
     previousTime = now;
     updateAccumulator = Math.min(.1, updateAccumulator + dt);
@@ -1245,19 +1286,25 @@
       update(fixedStep);
       updateAccumulator -= fixedStep;
     }
-    draw();
+    const renderInterval = 1000 / 60;
+    if (now - lastRenderTime >= renderInterval - .5 || mode !== "running") {
+      draw();
+      lastRenderTime += renderInterval * Math.max(1,
+        Math.floor((now - lastRenderTime + .5) / renderInterval));
+    }
     if (mode === "running") frame = requestAnimationFrame(loop);
   }
 
   function resize() {
     const bounds = wrap.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
+    if (initializedViewport && width === bounds.width && height === bounds.height) return;
     const previousWidth = width;
     const previousHeight = height;
     width = bounds.width;
     height = bounds.height;
     // Preserve crisp pixels while reducing fill-rate cost on high-DPI phones.
-    dpr = Math.min(1.25, window.devicePixelRatio || 1);
+    dpr = 1;
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1266,6 +1313,8 @@
       drawBackdrop();
       return;
     }
+    initializedViewport = true;
+    touchBounds = null;
     cacheBackground();
     if (player && previousWidth > 1 && previousHeight > 1) {
       const scaleX = width / previousWidth;
@@ -1391,31 +1440,61 @@
     if (key === "arrowleft" || key === "a" || key === "ф") setDirection("left", false);
     if (key === "arrowright" || key === "d" || key === "в") setDirection("right", false);
   });
-  window.addEventListener("blur", clearDirections);
+  function releaseTouchControls() {
+    touchPointers.clear();
+    touchDirection = null;
+    clearDirections();
+  }
+  window.addEventListener("blur", releaseTouchControls);
+  document.addEventListener("visibilitychange", () => {
+    releaseTouchControls();
+    previousTime = performance.now();
+    lastRenderTime = previousTime;
+    updateAccumulator = 0;
+  });
   startButton.addEventListener("click", startGame);
   fullscreenButton.addEventListener("click", toggleFullscreen);
   document.addEventListener("fullscreenchange", handleFullscreenChange);
   document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
 
+  function syncTouchControls() {
+    let direction = null;
+    for (const value of touchPointers.values()) direction = value;
+    clearDirections();
+    touchDirection = direction;
+    if (direction) setDirection(direction, true);
+  }
+
+  // Restrict Safari's copy/callout suppression to the game, leaving the rest
+  // of the page and normal buttons accessible.
+  wrap.addEventListener("contextmenu", (event) => event.preventDefault());
+  wrap.addEventListener("selectstart", (event) => event.preventDefault());
+  canvas.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
+  canvas.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
   canvas.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse") return;
     event.preventDefault();
-    const bounds = canvas.getBoundingClientRect();
+    const bounds = touchBounds = canvas.getBoundingClientRect();
     touchDirection = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
-    setDirection(touchDirection, true);
+    touchPointers.set(event.pointerId, touchDirection);
+    syncTouchControls();
     canvas.setPointerCapture?.(event.pointerId);
   });
   canvas.addEventListener("pointermove", (event) => {
-    if (touchDirection === null || event.pointerType === "mouse") return;
-    const bounds = canvas.getBoundingClientRect();
+    if (!touchPointers.has(event.pointerId) || event.pointerType === "mouse") return;
+    event.preventDefault();
+    const bounds = touchBounds || (touchBounds = canvas.getBoundingClientRect());
     const direction = event.clientX < bounds.left + bounds.width / 2 ? "left" : "right";
-    if (direction === touchDirection) return;
-    setDirection(touchDirection, false);
-    touchDirection = direction;
-    setDirection(touchDirection, true);
+    if (direction === touchPointers.get(event.pointerId)) return;
+    touchPointers.set(event.pointerId, direction);
+    syncTouchControls();
   });
   ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-    canvas.addEventListener(type, () => { touchDirection = null; clearDirections(); });
+    canvas.addEventListener(type, (event) => {
+      if (!touchPointers.has(event.pointerId)) return;
+      touchPointers.delete(event.pointerId);
+      syncTouchControls();
+    });
   });
 
   Promise.all([
@@ -1446,6 +1525,12 @@
     // Cut in the transparent gutters, not through the generated artwork.
     const platformFrames = splitSpriteSheet(platformSheet, 4, [0, .26, .536, .806, 1]);
     platformFrames.forEach((sprite, index) => { if (sprite) sprites[index] = sprite; });
+    for (let index = 0; index < sprites.length; index += 1) sprites[index] = bakeSprite(sprites[index]);
+    art.heroFrames = art.heroFrames.map(bakeSprite);
+    for (const compound of ["soft", "medium", "hard"]) {
+      art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
+    }
+    art.dirtyWheelFrame = bakeSprite(art.dirtyWheelFrame);
     art.powerupFrames = { rocket: sprites[8] || null, jetpack: sprites[9] || null };
     art.villainFrames = sprites[4] ? [sprites[4]] : [];
     artReady = true;

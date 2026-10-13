@@ -202,6 +202,10 @@
 .doodle-game-stage::after { right: calc(50% - 486px); }
 
 .doodle-board-wrap {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
   position: relative;
   z-index: 1;
   width: min(100%, 960px);
@@ -223,6 +227,9 @@
 }
 
 #doodle-canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   display: block;
   width: 100%;
   height: 100%;
@@ -232,6 +239,12 @@
 }
 
 #doodle-canvas:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: -4px; }
+
+.doodle-board-wrap * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 .doodle-overlay {
   position: absolute;
