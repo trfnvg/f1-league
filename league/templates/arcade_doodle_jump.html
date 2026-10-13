@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=western-touch-v6">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=western-touch-v7">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -42,7 +42,7 @@
           id="doodle-canvas"
           data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
           data-platform-sheet-src="{% static 'league/images/doodle-jump/western-platforms-v3.webp' %}"
-          data-hero-sheet-src="{% static 'league/images/doodle-jump/western-russell-toy-hero-v2.webp' %}"
+          data-hero-sheet-src="{% static 'league/images/doodle-jump/western-russell-toy-hero-v3.png' %}"
           data-background-journey-src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}"
           data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-v3.webp' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
@@ -65,21 +65,6 @@
       </div>
     </div>
 
-    <footer class="doodle-controls">
-      <span class="doodle-desktop-instructions"><kbd>←</kbd> <kbd>→</kbd> · <kbd>A</kbd> <kbd>D</kbd> или <kbd>Ф</kbd> <kbd>В</kbd> — движение</span>
-      <span class="doodle-mobile-instructions">Касайся или удерживай левую / правую половину поля, чтобы двигаться</span>
-      <span><kbd>ПРОБЕЛ</kbd> — начать / сыграть ещё раз</span>
-      <span>Рейтинг синхронизируется после каждого завершённого забега</span>
-    </footer>
-  </section>
-
-  <section class="doodle-howto" aria-label="Игровые объекты">
-    <article><span class="doodle-howto-mark doodle-mark-platform" aria-hidden="true"></span><div><strong>Прыгучие платформы</strong><small>Некоторые двигаются, пружина подбросит выше.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-frag" aria-hidden="true">+1</span><div><strong>Шинный гремлин</strong><small>Приземлись сверху — получишь фраг и бонус к счёту.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-hazard" aria-hidden="true">!</span><div><strong>Soft · Medium · Hard</strong><small>На колёса можно приземлиться и прыгнуть выше. Конусы по-прежнему опасны.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-rocket" aria-hidden="true">↟</span><div><strong>Ракета</strong><small>1,8 секунды везёт вверх и оставляет щит ещё на 2 секунды.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-jetpack" aria-hidden="true">✦</span><div><strong>Реактивный ранец</strong><small>Даёт ровно 5 секунд неуязвимости без дополнительного прыжка.</small></div></article>
-    <article><span class="doodle-howto-mark doodle-mark-villain" aria-hidden="true">☠</span><div><strong>Паддок-босс</strong><small>Редко появляется сверху и сбрасывает грязные рули. Уворачивайся.</small></div></article>
   </section>
 
   <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
@@ -112,6 +97,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=russell-toy-v7" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=russell-toy-v8" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
