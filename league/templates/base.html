@@ -1046,7 +1046,8 @@
     {% if user.is_staff or arcade_public_enabled %}<a class="menu-item {% if request.resolver_match.url_name == 'arcade' %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркада</a>{% endif %}
     {% if user.is_staff %}
       <a class="menu-item {% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury · голоса</a>
-      <a class="menu-item d-none d-md-block {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{% url 'league:arcade_control' %}">Аркада · управление</a>
+      {% url 'league:arcade_control' as arcade_control_url %}
+      {% if arcade_control_url %}<a class="menu-item d-none d-md-block {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ arcade_control_url }}">Аркада · управление</a>{% endif %}
     {% endif %}
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
     {% if user.is_staff %}
