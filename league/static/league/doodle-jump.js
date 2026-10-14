@@ -87,6 +87,10 @@
   let facing = 1;
   let invulnerableTimer = 0;
   let rocketTimer = 0;
+  let babyKimi = null;
+  let kimiWait = 15;
+  let kimiBoost = 0;
+  let lastEnemyVariant = -1;
   let lastPowerupSpawnY = -Infinity;
   let attemptId = null;
   let scoreSubmitted = false;
@@ -704,6 +708,10 @@
   }
 
   function buildGame() {
+    babyKimi = null;
+    kimiWait = 12 + Math.random() * 8;
+    kimiBoost = 0;
+    lastEnemyVariant = -1;
     forgottenPaddock = false;
     portalTransition = null;
     arrivalUntil = 0;
@@ -763,7 +771,7 @@
       height: heroHeight,
     };
 
-    enemies.push({ x: width * .73, baseX: width * .73, y: 440, phase: Math.random() * 6, dead: false });
+    enemies.push({ x: width * .73, baseX: width * .73, y: 440, variant: nextEnemyVariant(), phase: Math.random() * 6, dead: false });
     extendWorld();
     updateHud();
     draw();
@@ -789,6 +797,7 @@
     if (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
+        variant: nextEnemyVariant(),
         x: enemyX,
         baseX: enemyX,
         y: worldTop - 100,
@@ -1227,11 +1236,85 @@
       && Math.abs(feetX - targetX) <= (targetWidth + feetWidth) / 2;
   }
 
+  function nextEnemyVariant() {
+    const count = art.enemyVariants ? art.enemyVariants.length : 1;
+    if (count < 2) return 0;
+    const choice = lastEnemyVariant < 0 ? Math.floor(Math.random() * count)
+      : (lastEnemyVariant + 1 + Math.floor(Math.random() * (count - 1))) % count;
+    lastEnemyVariant = choice;
+    return choice;
+  }
+
+  function enemyFrame(enemy) {
+    return (art.enemyVariants && art.enemyVariants[enemy.variant]) || sprites[4];
+  }
+
+  function updateBabyKimi(dt) {
+    kimiBoost = Math.max(0, kimiBoost - dt);
+    if (!forgottenPaddock || !art.babyKimi) return false;
+    if (!babyKimi) {
+      kimiWait -= dt;
+      if (kimiWait <= 0 && rocketTimer <= 0 && kimiBoost <= 0) {
+        babyKimi = { x: clamp(player.x, 70, width - 70), y: cameraY + height * .72,
+          age: 0, state: "waiting", hold: 0 };
+      }
+      return false;
+    }
+    const kimi = babyKimi;
+    kimi.age += dt;
+    if (kimi.state === "holding") {
+      kimi.hold += dt;
+      player.x = kimi.x + 22;
+      player.y = kimi.y + 12 + Math.sin(kimi.hold / .38 * Math.PI) * 9;
+      player.vx = 0;
+      player.vy = 0;
+      invulnerableTimer = Math.max(invulnerableTimer, 5);
+      if (kimi.hold >= .38) {
+        kimi.state = "launched";
+        kimi.leaveAt = kimi.age + .65;
+        kimiBoost = 2.3;
+        player.vy = 1400;
+        invulnerableTimer = 4.3;
+      }
+      return true;
+    }
+    if (kimi.state === "waiting" && rocketTimer <= 0 && kimiBoost <= 0
+      && Math.abs(player.x - kimi.x) < 48 && Math.abs(player.y - kimi.y) < 58) {
+      kimi.state = "holding";
+      invulnerableTimer = Math.max(invulnerableTimer, 5);
+      return true;
+    }
+    if (kimi.age > 12 || kimi.y < cameraY - 90 || (kimi.leaveAt && kimi.age >= kimi.leaveAt)) {
+      babyKimi = null;
+      kimiWait = 35 + Math.random() * 20;
+    }
+    return false;
+  }
+
+  function drawBabyKimi() {
+    if (!babyKimi || !art.babyKimi) return;
+    const kimi = babyKimi;
+    const bob = kimi.state === "waiting" ? Math.sin(elapsed * 2.5) * 4 : 0;
+    const size = kimi.state === "holding" ? 83 : kimi.state === "launched" ? 92 : 88;
+    drawFrame(art.babyKimi, kimi.x, kimi.y + bob,
+      size * art.babyKimi.sw / art.babyKimi.sh, "center", size);
+    const y = worldToScreen(kimi.y);
+    if (y > 0 && y < height) {
+      ctx.save();
+      ctx.font = "bold 10px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ffe4a0";
+      ctx.fillText(kimi.state === "holding" ? "ПОЙМАЛ!" : "BABY KIMI ↑", kimi.x, y - 52);
+      ctx.restore();
+    }
+  }
+
   function collideWithEnemy(previousFeet, currentFeet, dt) {
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const targetEnemyWidth = enemyWidth();
-      const enemyHeight = spriteSize(sprites[4], targetEnemyWidth);
+      const frame = enemyFrame(enemy);
+      const enemyHeight = spriteSize(frame, targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
       const horizontalReach = targetEnemyWidth / 2 + player.width * .31;
       const verticalReach = enemyHeight / 2 + player.height / 2 + Math.abs(player.vy) * dt + 4;
@@ -1240,15 +1323,15 @@
       let enemyTop = enemyY + enemyHeight / 2;
       let crossedTop = false;
       if (player.vy < 0) {
-        enemyTop = spriteTopAtX(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
+        enemyTop = spriteTopAtX(frame, enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
         const previousEnemyY = enemy.y + Math.sin((elapsed - dt) * 4 + enemy.phase) * 4;
-        const previousTop = spriteTopAtX(sprites[4], enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
+        const previousTop = spriteTopAtX(frame, enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
         crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousTop, enemyTop,
           player.x, enemy.x, targetEnemyWidth, player.width * .44);
       }
       const targetRx = player.width * .31;
       const targetRy = player.height * .37;
-      const overlaps = spriteOverlapsEllipse(sprites[4], enemy.x, enemyY, targetEnemyWidth, enemyHeight,
+      const overlaps = spriteOverlapsEllipse(frame, enemy.x, enemyY, targetEnemyWidth, enemyHeight,
         player.x, player.y, targetRx, targetRy);
       if (player.vy < 0 && crossedTop) {
         enemy.dead = true;
@@ -1274,6 +1357,7 @@
     if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
+    if (updateBabyKimi(dt)) return;
     const direction = Number(held.right) - Number(held.left);
     const targetVx = direction * Math.min(440, width * .62);
     player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
@@ -1289,6 +1373,7 @@
       if (player.vy <= 0) player.vy = 720;
     }
     if (rocketTimer > 0) player.vy = 1240;
+    if (kimiBoost > 0) player.vy = 1400;
     player.y += player.vy * dt;
     const currentFeet = player.y - player.height / 2;
     peakY = Math.max(peakY, player.y);
@@ -1330,7 +1415,7 @@
     if (mode !== "running") return;
 
     for (const powerup of powerups) {
-      if (powerup.collected) continue;
+      if (powerup.collected || kimiBoost > 0) continue;
       const hitbox = powerupHitbox(powerup);
       if (!spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
         player.x, player.y, player.width * .32, player.height * .36)) continue;
@@ -1430,13 +1515,14 @@
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       const bobY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      drawSprite(4, enemy.x, bobY, enemyWidth());
+      drawFrame(enemyFrame(enemy), enemy.x, bobY, enemyWidth());
     }
 
     for (const hazard of hazards) {
       if (!hazard.dead) drawHazard(hazard);
     }
     drawSpaceBoss();
+    drawBabyKimi();
     if (art.marshal) {
       for (const marshal of marshals) {
         const h = 58;
@@ -1493,6 +1579,14 @@
     }
 
     if (mode === "running") {
+      if (kimiBoost > 0) {
+        ctx.save();
+        ctx.fillStyle = "#ffe4a0";
+        ctx.font = "bold 13px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("KIMI LAUNCH ↑", width / 2, height * .27);
+        ctx.restore();
+      }
       if (forgottenPaddock && elapsed < arrivalUntil) {
         ctx.save();
         ctx.fillStyle = "rgba(5, 14, 20, .85)";
@@ -1802,7 +1896,11 @@
     image(canvas.dataset.marshalSrc),
     image(canvas.dataset.garageSrc),
     image(canvas.dataset.garagePlatformsSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage, garagePlatformsImage]) => {
+    image(canvas.dataset.enemyVariantsSrc),
+    image(canvas.dataset.babyKimiSrc),
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage, garagePlatformsImage, enemyVariantsImage, babyKimiImage]) => {
+    art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
+    art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
     art.garage = garageImage;
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
