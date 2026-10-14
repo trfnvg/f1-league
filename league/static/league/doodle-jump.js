@@ -20,6 +20,9 @@
   const csrfToken = document.querySelector("#doodle-csrf-form [name=csrfmiddlewaretoken]")?.value || "";
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const art = {};
+  const adminSandbox = canvas.dataset.adminFlight === "1";
+  const flightButton = document.getElementById("doodle-flight-toggle");
+  let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 560;
   let rasterCache = new WeakMap();
   let viewportKey = "";
@@ -793,6 +796,7 @@
   }
 
   function registerAttempt() {
+    if (adminSandbox) return;
     if (!canvas.dataset.startUrl || !csrfToken) return;
     postJSON(canvas.dataset.startUrl).then((data) => {
       attemptId = data.attempt_id || null;
@@ -804,6 +808,7 @@
   }
 
   function submitScore() {
+    if (adminSandbox) return;
     if (scoreSubmitted || !canvas.dataset.finishUrl) return;
     if (!attemptId) {
       pendingFinish = true;
@@ -838,7 +843,7 @@
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30;
     lastWasRecord = finalScore > best;
-    if (finalScore > best) {
+    if (!adminSandbox && finalScore > best) {
       best = finalScore;
       try { localStorage.setItem(bestStorageKey, String(best)); } catch (error) { /* Keep the run playable without storage. */ }
     }
@@ -1126,6 +1131,10 @@
 
     const previousFeet = player.y - player.height / 2;
     player.vy -= 1240 * dt;
+    if (adminSandbox && freeFlight) {
+      invulnerableTimer = Math.max(invulnerableTimer, .1);
+      if (player.vy <= 0) player.vy = 720;
+    }
     if (rocketTimer > 0) player.vy = 1240;
     player.y += player.vy * dt;
     const currentFeet = player.y - player.height / 2;
@@ -1511,6 +1520,16 @@
     updateAccumulator = 0;
   });
   startButton.addEventListener("click", startGame);
+  if (adminSandbox && flightButton) {
+    flightButton.addEventListener("click", () => {
+      freeFlight = !freeFlight;
+      flightButton.setAttribute("aria-pressed", String(freeFlight));
+      flightButton.textContent = `Свободный полёт: ${freeFlight ? "вкл." : "выкл."}`;
+      if (freeFlight && mode !== "running") startGame();
+      if (freeFlight && player) player.vy = 720;
+      canvas.focus({ preventScroll: true });
+    });
+  }
   fullscreenButton.addEventListener("click", toggleFullscreen);
   document.addEventListener("fullscreenchange", handleFullscreenChange);
   document.addEventListener("webkitfullscreenchange", handleFullscreenChange);

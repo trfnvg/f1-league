@@ -226,6 +226,34 @@
   pointer-events: none;
 }
 
+.doodle-test-controls {
+  position: absolute;
+  z-index: 4;
+  top: max(88px, calc(env(safe-area-inset-top) + 72px));
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 20px);
+  padding: 6px 8px;
+  color: #ddd4bc;
+  background: rgba(15, 24, 33, .92);
+  border: 1px solid #68776c;
+  font: 12px/1.4 system-ui, sans-serif;
+}
+.doodle-test-controls a { color: #f3d395; }
+.doodle-test-controls button {
+  padding: 7px 10px;
+  border: 1px solid #829388;
+  background: #293b3d;
+  color: #fff3d4;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.doodle-test-controls button[aria-pressed="true"] { border-color: #f3d395; }
+
 #doodle-canvas {
   position: absolute;
   inset: 0;
