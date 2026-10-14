@@ -32,6 +32,10 @@
   let cloudCache = null;
   let journeyCache = null;
   let spacePatternCache = null;
+  let garageCache = null;
+  let forgottenPaddock = false;
+  let portalTransition = null;
+  let arrivalUntil = 0;
   let lastRenderTime = 0;
   let nextHudUpdate = 0;
   const touchPointers = new Map();
@@ -465,6 +469,10 @@
   }
 
   function drawBackdrop() {
+    if (forgottenPaddock) {
+      drawForgottenPaddock();
+      return;
+    }
     const climb = Math.max(0, cameraY);
     const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
     const intoSpace = backgroundFade(climb, spaceFade.start, spaceFade.end);
@@ -499,6 +507,102 @@
 
   function worldToScreen(worldY) {
     return height - (worldY - cameraY);
+  }
+
+  function runScore() {
+    return Math.max(0, Math.floor((peakY - startY) / 11)) + frags * 30 + marshalBonus;
+  }
+
+  function beginPortal() {
+    if (forgottenPaddock || portalTransition || !player) return;
+    portalTransition = { age: 0, x: player.x / width, y: worldToScreen(player.y) / height };
+    rocketTimer = 0;
+    invulnerableTimer = Math.max(invulnerableTimer, 6);
+    spaceBoss = null;
+    bossShots = [];
+  }
+
+  function updatePortal(dt) {
+    if (!portalTransition) return false;
+    portalTransition.age += dt;
+    if (portalTransition.age >= 3) {
+      portalTransition = null;
+      forgottenPaddock = true;
+      arrivalUntil = elapsed + 4;
+      hazards = [];
+      enemies = [];
+      invulnerableTimer = 3;
+      // Keep world positions, score and landing planes unchanged.
+      player.vx = 0;
+      player.vy = 720;
+      updateHud();
+    }
+    return true;
+  }
+
+  function drawForgottenPaddock() {
+    ctx.fillStyle = "#080f16";
+    ctx.fillRect(0, 0, width, height);
+    if (art.garage) {
+      const pixelWidth = Math.ceil(width * dpr);
+      if (!garageCache || garageCache.width !== pixelWidth) {
+        const tileHeight = Math.round(pixelWidth * art.garage.naturalHeight / art.garage.naturalWidth);
+        const overlap = Math.round(tileHeight * .12);
+        garageCache = document.createElement("canvas");
+        garageCache.width = pixelWidth;
+        garageCache.height = tileHeight - overlap;
+        const painter = garageCache.getContext("2d", { alpha: false });
+        painter.drawImage(art.garage, 0, 0, pixelWidth, tileHeight);
+        // Blend the tail into the head once, keeping garages upright when tiled.
+        for (let row = 0; row < overlap; row += 1) {
+          painter.globalAlpha = 1 - row / overlap;
+          const sourceY = (garageCache.height + row) / tileHeight * art.garage.naturalHeight;
+          painter.drawImage(art.garage, 0, sourceY, art.garage.naturalWidth,
+            art.garage.naturalHeight / tileHeight, 0, row, pixelWidth, 1);
+        }
+      }
+      const cycle = garageCache.height / dpr;
+      const offset = cameraY * .16 % cycle;
+      for (let y = offset - cycle; y < height; y += cycle) {
+        const top = Math.floor(y * dpr) / dpr;
+        const bottom = Math.ceil((y + cycle) * dpr) / dpr;
+        ctx.drawImage(garageCache, 0, top, width, bottom - top + 1 / dpr);
+      }
+    }
+    ctx.save();
+    ctx.globalAlpha = .65 + Math.sin(elapsed * 1.2) * .12;
+    ctx.fillStyle = "#b1ccc3";
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("WE ARE CHECKING…", width / 2, height * .18);
+    ctx.restore();
+  }
+
+  function drawPortal() {
+    if (!portalTransition) return;
+    const age = portalTransition.age;
+    const growth = Math.min(1, age / .7);
+    const radius = Math.min(width * .22, 110) * growth;
+    ctx.save();
+    ctx.fillStyle = `rgba(3, 5, 16, ${Math.min(.75, age * .3)})`;
+    ctx.fillRect(0, 0, width, height);
+    ctx.translate(width / 2, height * .26);
+    ctx.rotate(age * .8);
+    for (let ray = 0; ray < 12; ray += 1) {
+      ctx.rotate(Math.PI / 6);
+      ctx.strokeStyle = ray % 2 ? "#ac8be6" : "#f3eaff";
+      ctx.lineWidth = ray % 2 ? 2 : 4;
+      ctx.beginPath();
+      ctx.moveTo(radius * .8, 0);
+      ctx.lineTo(radius * (1.5 + .2 * Math.sin(age * 2 + ray)), 0);
+      ctx.stroke();
+    }
+    ctx.fillStyle = "#020207";
+    ctx.beginPath(); ctx.arc(0, 0, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "#c29cfa"; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = "#f0e4ff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(0, 0, radius * 1.3, radius * .45, -.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
   }
 
   function visualScale() {
@@ -600,6 +704,9 @@
   }
 
   function buildGame() {
+    forgottenPaddock = false;
+    portalTransition = null;
+    arrivalUntil = 0;
     const heroHeight = 70 * visualScale();
     // Preserve the previous gameplay hitbox independently of the new hat/arms.
     const heroWidth = heroHeight * .75;
@@ -733,7 +840,7 @@
     const zoneIndex = cameraY < paddockEnd ? 0
       : cameraY < skyFade.end ? 1
         : cameraY < spaceFade.start ? 2 : 3;
-    const displayName = backgroundZoneNames[zoneIndex];
+    const displayName = forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -1000,7 +1107,7 @@
   }
 
   function drawInvulnerabilityShield() {
-    if (!player || invulnerableTimer <= 0) return;
+    if (!player || invulnerableTimer <= 0 || portalTransition) return;
     const screenY = worldToScreen(player.y);
     ctx.save();
     ctx.translate(player.x, screenY);
@@ -1022,7 +1129,7 @@
   }
 
   function updateSpaceBoss(dt) {
-    if (cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
+    if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
       bossWait -= dt;
       if (bossWait <= 0) {
@@ -1163,6 +1270,8 @@
 
   function update(dt) {
     elapsed += dt;
+    if (!forgottenPaddock && !portalTransition && runScore() >= 8000) beginPortal();
+    if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
     const direction = Number(held.right) - Number(held.left);
@@ -1311,7 +1420,12 @@
 
     for (const platform of platforms) {
       if (platform.broken) continue;
-      drawSprite(platform.spriteIndex, platform.x, platform.y, platform.spriteWidth, "platform", platform.height);
+      const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
+      if (garagePlatform) {
+        drawFrame(garagePlatform, platform.x, platform.y, platform.spriteWidth, "platform");
+      } else {
+        drawSprite(platform.spriteIndex, platform.x, platform.y, platform.spriteWidth, "platform", platform.height);
+      }
     }
     for (const enemy of enemies) {
       if (enemy.dead) continue;
@@ -1342,13 +1456,24 @@
       ctx.restore();
     }
 
+    drawPortal();
     if (player) {
       if (rocketTimer > 0 && drawRocketRide()) {
         drawInvulnerabilityShield();
       } else {
         const screenY = worldToScreen(player.y);
         ctx.save();
-        ctx.translate(player.x, screenY);
+        if (portalTransition) {
+          const t = clamp(portalTransition.age / 2.7, 0, 1);
+          const ease = t * t * (3 - 2 * t);
+          ctx.translate(width * (portalTransition.x + (.5 - portalTransition.x) * ease),
+            height * (portalTransition.y + (.26 - portalTransition.y) * ease));
+          ctx.rotate(t * Math.PI * 4);
+          ctx.scale(1 - ease * .98, 1 - ease * .98);
+          ctx.globalAlpha = 1 - ease;
+        } else {
+          ctx.translate(player.x, screenY);
+        }
         ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
         ctx.scale(facing, 1);
         const heroSprite = currentHeroSprite();
@@ -1368,6 +1493,16 @@
     }
 
     if (mode === "running") {
+      if (forgottenPaddock && elapsed < arrivalUntil) {
+        ctx.save();
+        ctx.fillStyle = "rgba(5, 14, 20, .85)";
+        ctx.fillRect(0, height * .25, width, 64);
+        ctx.fillStyle = "#baf3df";
+        ctx.font = "bold 19px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("ЗАБЫТЫЙ ПАДДОК", width / 2, height * .25 + 39);
+        ctx.restore();
+      }
       if (elapsed < bonusNoticeUntil) {
         ctx.save();
         ctx.fillStyle = "#fff0b4";
@@ -1390,6 +1525,16 @@
         ctx.font = "900 10px 'Courier New', monospace";
         ctx.fillText(`РАКЕТА  ${rocketTimer.toFixed(1)}с`, 20, 103);
       }
+      ctx.restore();
+    }
+    const blackout = portalTransition
+      ? clamp((portalTransition.age - 2.65) / .35, 0, 1)
+      : forgottenPaddock ? clamp((arrivalUntil - elapsed - 3.4) / .6, 0, 1) : 0;
+    if (blackout > 0) {
+      ctx.save();
+      ctx.globalAlpha = blackout;
+      ctx.fillStyle = "#020207";
+      ctx.fillRect(0, 0, width, height);
       ctx.restore();
     }
   }
@@ -1590,6 +1735,14 @@
       canvas.focus({ preventScroll: true });
     });
   }
+  const portalTestButton = document.getElementById("doodle-portal-test");
+  if (adminSandbox && portalTestButton) {
+    portalTestButton.addEventListener("click", () => {
+      if (!artReady) return;
+      if (mode !== "running") startGame();
+      beginPortal();
+    });
+  }
   fullscreenButton.addEventListener("click", toggleFullscreen);
   document.addEventListener("fullscreenchange", handleFullscreenChange);
   document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
@@ -1647,7 +1800,11 @@
     image(canvas.dataset.spaceBossSrc),
     image(canvas.dataset.bossWheelSrc),
     image(canvas.dataset.marshalSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage]) => {
+    image(canvas.dataset.garageSrc),
+    image(canvas.dataset.garagePlatformsSrc),
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage, garagePlatformsImage]) => {
+    art.garage = garageImage;
+    art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
     art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;
     art.bossWheel = splitSpriteSheet(bossWheelImage, 1)[0] || null;
