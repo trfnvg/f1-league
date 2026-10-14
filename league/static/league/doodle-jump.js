@@ -63,6 +63,10 @@
   let hazards = [];
   let spaceBoss = null;
   let bossShots = [];
+  let marshals = [];
+  let nextMarshalY = 1800;
+  let marshalBonus = 0;
+  let bonusNoticeUntil = 0;
   let bossWait = 90 + Math.random() * 60;
   let powerups = [];
   let effects = [];
@@ -378,7 +382,11 @@
     const offset = Math.max(0, climb - spaceFade.start) * .045 % cycle;
     ctx.globalAlpha = alpha;
     for (let y = offset - cycle; y < height; y += cycle) {
-      ctx.drawImage(spacePatternCache, 0, y, width, cycle);
+      // Align to physical pixels and overlap one pixel: fractional canvas
+      // sampling must never expose the bright sky underneath adjacent tiles.
+      const top = Math.floor(y * dpr) / dpr;
+      const bottom = Math.ceil((y + cycle) * dpr) / dpr;
+      ctx.drawImage(spacePatternCache, 0, top, width, bottom - top + 1 / dpr);
     }
     ctx.globalAlpha = 1;
   }
@@ -601,6 +609,10 @@
     hazards = [];
     spaceBoss = null;
     bossShots = [];
+    marshals = [];
+    nextMarshalY = 1800;
+    marshalBonus = 0;
+    bonusNoticeUntil = 0;
     bossWait = 90 + Math.random() * 60;
     powerups = [];
     effects = [];
@@ -660,6 +672,10 @@
       const nextX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
       addPowerupBetween(lastPlatform, nextPlatform);
+      if (y >= nextMarshalY && nextPlatform.kind === "normal") {
+        marshals.push({ platform: nextPlatform, collected: false });
+        nextMarshalY = y + 1800 + Math.random() * 1000;
+      }
       worldTop = y;
     }
 
@@ -697,7 +713,7 @@
 
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    const score = heightPoints + frags * 30;
+    const score = heightPoints + frags * 30 + marshalBonus;
     const levelNumber = Math.floor(storyProgress());
     const displayScore = mode === "over" ? finalScore : score;
     if (scoreNode.dataset.value !== String(displayScore)) {
@@ -841,7 +857,7 @@
     if (mode !== "running") return;
     mode = "over";
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    finalScore = heightPoints + frags * 30;
+    finalScore = heightPoints + frags * 30 + marshalBonus;
     lastWasRecord = finalScore > best;
     if (!adminSandbox && finalScore > best) {
       best = finalScore;
@@ -1010,36 +1026,48 @@
     if (!spaceBoss) {
       bossWait -= dt;
       if (bossWait <= 0) {
-        spaceBoss = { age: 0, x: width / 2, screenY: 125, nextShot: 3, shots: 0 };
+        spaceBoss = { age: 0, x: width / 2, screenY: 145, nextShot: 3, shots: 0,
+          shotLimit: 7 + Math.floor(Math.random() * 3), targetX: width * (.15 + Math.random() * .7),
+          retargetAt: 0, leaveAt: Infinity };
       }
     }
     if (spaceBoss) {
       const boss = spaceBoss;
       boss.age += dt;
-      boss.x = width * (.5 + Math.sin(boss.age * .48) * .30);
-      boss.screenY = 125 + Math.sin(boss.age * 2) * 5;
-      if (boss.age >= boss.nextShot && boss.shots < 3) {
-        bossShots.push({ x: boss.x, y: cameraY + height - boss.screenY - 40 });
-        boss.shots += 1;
-        boss.nextShot += 2.8;
+      if (boss.age >= boss.retargetAt || Math.abs(boss.x - boss.targetX) < 8) {
+        boss.targetX = width * (.15 + Math.random() * .7);
+        boss.retargetAt = boss.age + 1.5 + Math.random() * 2;
       }
-      if (boss.age >= 11) {
+      boss.x += clamp(boss.targetX - boss.x, -48 * dt, 48 * dt);
+      boss.screenY = 145 + Math.sin(boss.age * 2) * 5;
+      if (boss.age >= boss.nextShot && boss.shots < boss.shotLimit) {
+        const screenY = boss.screenY + 40;
+        bossShots.push({ x: boss.x, screenY, y: cameraY + height - screenY,
+          vx: (Math.random() - .5) * 80, speed: 85 + Math.random() * 20 });
+        boss.shots += 1;
+        boss.nextShot = boss.age + 2.2 + Math.random() * 1.1;
+        if (boss.shots === boss.shotLimit) boss.leaveAt = boss.age + 1.5;
+      }
+      if (boss.age >= boss.leaveAt) {
         spaceBoss = null;
         bossWait = 120 + Math.random() * 60;
       }
     }
-    const shotWidth = 32;
+    const shotWidth = 48;
     const shotHeight = spriteSize(art.bossWheel, shotWidth);
     let kept = 0;
     for (const shot of bossShots) {
       const previousY = shot.y;
-      shot.y -= 185 * dt;
+      const previousX = shot.x;
+      shot.x += shot.vx * dt;
+      shot.screenY += shot.speed * dt;
+      shot.y = cameraY + height - shot.screenY;
       // Sweep relative motion so fast rocket travel cannot skip a collision.
-      const steps = Math.max(1, Math.ceil((Math.abs(player.vy) + 185) * dt / 10));
+      const steps = Math.max(1, Math.ceil((Math.abs(player.vy) * dt + Math.abs(shot.y - previousY)) / 10));
       let hit = false;
       for (let step = 0; step <= steps; step += 1) {
         const t = step / steps;
-        if (spriteOverlapsEllipse(art.bossWheel, shot.x, previousY + (shot.y - previousY) * t,
+        if (spriteOverlapsEllipse(art.bossWheel, previousX + (shot.x - previousX) * t, previousY + (shot.y - previousY) * t,
           shotWidth, shotHeight, player.x - player.vx * dt * (1 - t),
           player.y - player.vy * dt * (1 - t), player.width * .29, player.height * .34)) {
           hit = true;
@@ -1047,26 +1075,42 @@
         }
       }
       if (hit && invulnerableTimer <= 0) { endGame(); return; }
-      if (!hit && shot.y > cameraY - 100) bossShots[kept++] = shot;
+      if (!hit && shot.screenY < height + 60 && shot.x > -60 && shot.x < width + 60) bossShots[kept++] = shot;
     }
     bossShots.length = kept;
   }
 
   function drawSpaceBoss() {
-    for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 32);
+    for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 48);
     if (!spaceBoss || !art.spaceBoss) return;
     const boss = spaceBoss;
     const bossWidth = 90;
     const bossHeight = spriteSize(art.spaceBoss, bossWidth);
     ctx.save();
-    ctx.globalAlpha = Math.min(1, boss.age / .8, (11 - boss.age) / .8);
+    ctx.globalAlpha = Math.max(0, Math.min(1, boss.age / .8, (boss.leaveAt - boss.age) / .8));
     ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight),
       boss.x - bossWidth / 2, boss.screenY - bossHeight / 2, bossWidth, bossHeight);
-    if (boss.shots < 3 && boss.nextShot - boss.age < .7) {
+    if (boss.shots < boss.shotLimit && boss.nextShot - boss.age < .7) {
       ctx.fillStyle = Math.sin(boss.age * 25) > 0 ? "#ffc779" : "#b75f50";
       ctx.fillRect(boss.x - 3, boss.screenY + bossHeight / 2, 6, 18);
     }
     ctx.restore();
+  }
+
+  function updateMarshals() {
+    let kept = 0;
+    for (const marshal of marshals) {
+      const platform = marshal.platform;
+      if (platform.y < cameraY - 80) continue;
+      if (art.marshal && !marshal.collected && Math.abs(player.x - platform.x) < 45
+        && Math.abs(player.y - (platform.y + 26)) < 48) {
+        marshal.collected = true;
+        marshalBonus += 50;
+        bonusNoticeUntil = elapsed + 2;
+      }
+      if (!marshal.collected) marshals[kept++] = marshal;
+    }
+    marshals.length = kept;
   }
 
   function crossedLandingSurface(previousFeet, currentFeet, previousTop, currentTop, feetX, targetX, targetWidth, feetWidth) {
@@ -1244,6 +1288,7 @@
     if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
     updateSpaceBoss(dt);
     if (mode !== "running") return;
+    updateMarshals();
     extendWorld();
     pruneWorldObjects(platforms, 160, "broken");
     pruneWorldObjects(enemies, 130, "dead");
@@ -1278,6 +1323,13 @@
       if (!hazard.dead) drawHazard(hazard);
     }
     drawSpaceBoss();
+    if (art.marshal) {
+      for (const marshal of marshals) {
+        const h = 58;
+        drawFrame(art.marshal, marshal.platform.x, marshal.platform.y + h / 2,
+          h * art.marshal.sw / art.marshal.sh, "center", h);
+      }
+    }
 
     for (const powerup of powerups) {
       if (!powerup.collected) drawPowerup(powerup);
@@ -1316,6 +1368,14 @@
     }
 
     if (mode === "running") {
+      if (elapsed < bonusNoticeUntil) {
+        ctx.save();
+        ctx.fillStyle = "#fff0b4";
+        ctx.font = "bold 14px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("КЛЕТЧАТЫЙ ФЛАГ  +50", width / 2, height * .34);
+        ctx.restore();
+      }
       const progress = Math.max(0, Math.floor((peakY - 86) / 11));
       ctx.save();
       ctx.fillStyle = "rgba(249, 251, 255, .72)";
@@ -1586,7 +1646,9 @@
     image(canvas.dataset.platformSheetSrc),
     image(canvas.dataset.spaceBossSrc),
     image(canvas.dataset.bossWheelSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage]) => {
+    image(canvas.dataset.marshalSrc),
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage]) => {
+    art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
     art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;
     art.bossWheel = splitSpriteSheet(bossWheelImage, 1)[0] || null;
     art.journey = journey;
