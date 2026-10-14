@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=scale-hidpi-v14">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=admin-flight-v16">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -23,6 +23,17 @@
   <section class="doodle-machine" aria-label="Cowboy GP — прыжковая аркада">
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
+        {% if user.is_staff %}
+        <div class="doodle-test-controls">
+          {% if request.GET.flight == '1' %}
+          <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
+          <small>Тест · без рекордов и попыток</small>
+          <a href="?{{ request.GET.urlencode }}&amp;flight=0">Выйти из теста</a>
+          {% else %}
+          <a href="?{{ request.GET.urlencode }}&amp;flight=1">Тест: свободный полёт</a>
+          {% endif %}
+        </div>
+        {% endif %}
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
           <span class="doodle-live"><i></i> WILD GP</span>
@@ -51,8 +62,12 @@
           data-space-boss-src="{% static 'league/images/doodle-jump/space-toto-boss-v1.png' %}"
           data-boss-wheel-src="{% static 'league/images/doodle-jump/space-dirty-wheel-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
+          {% if user.is_staff and request.GET.flight == '1' %}
+          data-admin-flight="1"
+          {% else %}
           data-start-url="{{ doodle_attempt_start_url }}"
           data-finish-url="{{ doodle_attempt_finish_url }}"
+          {% endif %}
           data-leaderboard-url="{{ doodle_leaderboard_url }}"
           tabindex="0"
           role="application"
@@ -101,6 +116,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=space-boss-v15" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=admin-flight-v16" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
