@@ -919,7 +919,7 @@
   }
 
   function drawRocketRide() {
-    const frame = art.powerupFrames && art.powerupFrames.rocket;
+    const frame = art.rocketRide;
     if (!player || !frame) return false;
     const rocketHeight = player.height * 1.55;
     const rocketWidth = rocketHeight * frame.sw / frame.sh;
@@ -1248,10 +1248,10 @@
     if (!bounds.width || !bounds.height) return;
     const previousWidth = width;
     const previousHeight = height;
-    // Same world and visible area on every device, including fullscreen.
-    // Only the backing-store resolution changes, never physics or geometry.
+    // Keep horizontal world geometry stable; reveal more/less vertical scenery
+    // to fill the viewport with one uniform scale, never stretching sprites.
     width = 390;
-    height = 780;
+    height = width * bounds.height / bounds.width;
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
     const maxDpr = window.matchMedia("(max-width: 760px)").matches ? 1.5 : 1;
@@ -1451,9 +1451,10 @@
     image(canvas.dataset.backgroundCloudSrc),
     image(canvas.dataset.backgroundSpaceSrc),
     image(canvas.dataset.rocketSrc),
+    image(canvas.dataset.rocketEmptySrc),
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.platformSheetSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, wheelSheet, platformSheet]) => {
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet]) => {
     art.journey = journey;
     art.cloud = cloud;
     art.space = space;
@@ -1464,7 +1465,7 @@
       medium: wheelFrames[1] || null,
       hard: wheelFrames[2] || null,
     };
-    art.rocketRide = splitSpriteSheet(rocketRide, 1)[0] || null;
+    art.rocketRide = bakeSprite(splitSpriteSheet(rocketRide, 1)[0], 768);
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
       startButton.disabled = true;
@@ -1481,7 +1482,7 @@
     for (const compound of ["soft", "medium", "hard"]) {
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }
-    art.powerupFrames = { rocket: bakeSprite(art.rocketRide, 768) };
+    art.powerupFrames = { rocket: bakeSprite(splitSpriteSheet(rocketEmpty, 1)[0], 384) };
     artReady = true;
     startButton.disabled = false;
     resize();
