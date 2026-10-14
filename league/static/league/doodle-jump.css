@@ -268,7 +268,8 @@
   outline: 0;
 }
 
-#doodle-canvas:focus-visible { outline: 2px solid var(--doodle-cyan); outline-offset: -4px; }
+#doodle-canvas:focus,
+#doodle-canvas:focus-visible { outline: none; box-shadow: none; }
 
 .doodle-board-wrap * {
   -webkit-user-select: none;
