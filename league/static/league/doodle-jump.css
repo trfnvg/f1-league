@@ -208,7 +208,7 @@
   -webkit-tap-highlight-color: transparent;
   position: relative;
   z-index: 1;
-  width: min(100%, 640px);
+  width: min(100%, 800px);
   height: clamp(650px, 82vh, 900px);
   min-height: 0;
   margin: 0 auto;
@@ -236,7 +236,7 @@
   width: 100%;
   height: 100%;
   touch-action: none;
-  image-rendering: pixelated;
+  image-rendering: auto;
   outline: 0;
 }
 
@@ -409,8 +409,8 @@ body.doodle-fullscreen-active { overflow: hidden; overscroll-behavior: none; }
 .doodle-machine.is-fullscreen .doodle-board-wrap,
 .doodle-machine:fullscreen .doodle-board-wrap,
 .doodle-machine:-webkit-full-screen .doodle-board-wrap {
-  width: min(100%, 720px, 80vh);
-  width: min(100%, 720px, 80dvh);
+  width: min(100%, 900px, 100vh);
+  width: min(100%, 900px, 100dvh);
   height: 100%;
   min-height: 0;
   max-height: none;
