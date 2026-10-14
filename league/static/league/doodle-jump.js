@@ -23,7 +23,7 @@
   const adminSandbox = canvas.dataset.adminFlight === "1";
   const flightButton = document.getElementById("doodle-flight-toggle");
   let freeFlight = false;
-  const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 560;
+  const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   let rasterCache = new WeakMap();
   let viewportKey = "";
   const held = { left: false, right: false };
