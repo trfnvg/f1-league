@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=portrait-v12">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=fullscreen-v13">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -47,6 +47,7 @@
           data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-v3.webp' %}"
           data-background-space-src="{% static 'league/images/doodle-jump/western-space-v2.jpg' %}"
           data-rocket-src="{% static 'league/images/doodle-jump/western-rocket-pilot-v2.png' %}"
+          data-rocket-empty-src="{% static 'league/images/doodle-jump/western-rocket-empty-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
           data-start-url="{{ doodle_attempt_start_url }}"
           data-finish-url="{{ doodle_attempt_finish_url }}"
@@ -98,6 +99,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=portrait-space-v12" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=fullscreen-rocket-v13" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
