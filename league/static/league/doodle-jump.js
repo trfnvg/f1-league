@@ -20,6 +20,9 @@
   const csrfToken = document.querySelector("#doodle-csrf-form [name=csrfmiddlewaretoken]")?.value || "";
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const art = {};
+  const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 560;
+  let rasterCache = new WeakMap();
+  let viewportKey = "";
   const held = { left: false, right: false };
   const sprites = [];
   let skyGradient = null;
@@ -241,6 +244,29 @@
     return frames[frameIndex] || frames[1];
   }
 
+  // Rasterize each stable sprite size once at the display's resolution.
+  // Preserve source artwork; the frame loop only composites cached textures.
+  function rasterSprite(sprite, targetWidth, targetHeight) {
+    let sizes = rasterCache.get(sprite);
+    if (!sizes) { sizes = new Map(); rasterCache.set(sprite, sizes); }
+    const pixelWidth = Math.max(1, Math.round(targetWidth * dpr));
+    const pixelHeight = Math.max(1, Math.round(targetHeight * dpr));
+    const key = `${pixelWidth}:${pixelHeight}`;
+    if (sizes.has(key)) return sizes.get(key);
+    const texture = document.createElement("canvas");
+    texture.width = pixelWidth;
+    texture.height = pixelHeight;
+    const painter = texture.getContext("2d");
+    painter.imageSmoothingEnabled = true;
+    painter.imageSmoothingQuality = "high";
+    painter.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
+      0, 0, pixelWidth, pixelHeight);
+    // Bound caches for variable-size effects and pickups.
+    if (sizes.size >= 24) sizes.delete(sizes.keys().next().value);
+    sizes.set(key, texture);
+    return texture;
+  }
+
   function drawSprite(index, x, worldY, targetWidth, anchor = "center", targetHeight = null) {
     const sprite = sprites[index];
     if (!sprite) return false;
@@ -248,7 +274,7 @@
     const screenY = height - (worldY - cameraY);
     const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
     if (drawY > height || drawY + drawHeight < 0) return false;
-    ctx.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
+    ctx.drawImage(rasterSprite(sprite, targetWidth, drawHeight),
       x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
   }
@@ -259,7 +285,7 @@
     const screenY = height - (worldY - cameraY);
     const drawY = anchor === "platform" ? screenY : screenY - drawHeight / 2;
     if (drawY > height || drawY + drawHeight < 0) return false;
-    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
+    ctx.drawImage(rasterSprite(frame, targetWidth, drawHeight),
       x - targetWidth / 2, drawY, targetWidth, drawHeight);
     return true;
   }
@@ -345,7 +371,7 @@
     // The scenery drifts DOWN as the player climbs, at a slower parallax rate.
     const offset = Math.max(0, climb - spaceFade.start) * .045 % cycle;
     ctx.globalAlpha = alpha;
-    for (let y = offset - cycle; y < height + cycle; y += cycle) {
+    for (let y = offset - cycle; y < height; y += cycle) {
       ctx.drawImage(spacePatternCache, 0, y, width, cycle);
     }
     ctx.globalAlpha = 1;
@@ -462,16 +488,16 @@
   }
 
   function visualScale() {
-    return width <= 520 ? .68 : 1;
+    return .68;
   }
 
   function enemyWidth() {
-    return Math.max(47, Math.min(61, width * .15)) * visualScale();
+    return 58.5 * visualScale();
   }
 
   function addPlatform(y, x, kind = "normal") {
     const spriteIndex = kind === "moving" ? 1 : kind === "break" ? 2 : kind === "spring" ? 3 : 0;
-    const platformWidth = Math.max(88, Math.min(116, width * .23)) * visualScale();
+    const platformWidth = 89.7 * visualScale();
     const spriteWidth = kind === "spring"
       ? Math.min(72 * visualScale(), platformWidth * .82)
       : platformWidth;
@@ -507,7 +533,7 @@
       type: "rocket",
       x: clamp(laneX, width * .12, width * .88),
       y: powerupY,
-      size: Math.max(25, Math.min(34, width * .075)) * visualScale(),
+      size: 29.25 * visualScale(),
       phase: Math.random() * Math.PI * 2,
       collected: false,
     });
@@ -560,7 +586,7 @@
   }
 
   function buildGame() {
-    const heroHeight = Math.min(88, Math.max(70, width * .18)) * visualScale();
+    const heroHeight = 70 * visualScale();
     // Preserve the previous gameplay hitbox independently of the new hat/arms.
     const heroWidth = heroHeight * .75;
     const firstY = Math.max(86, Math.min(118, height * .14));
@@ -654,7 +680,7 @@
         compound,
         wheelFrame: compound && art.wheelFrames ? art.wheelFrames[compound] : null,
         dead: false,
-        size: Math.max(38, Math.min(52, width * .12)) * visualScale(),
+        size: 46.8 * visualScale(),
       });
     }
 
@@ -831,13 +857,21 @@
     const cellHeight = objectHeight / mask.rows;
     const left = x - objectRadiusX;
     const top = y + objectRadiusY;
-    for (let row = 0; row < mask.rows; row += 1) {
-      for (let column = 0; column < mask.columns; column += 1) {
+    // Inspect only mask cells near the player's ellipse, not the entire sprite.
+    // One-cell margins preserve contacts exactly on cell boundaries.
+    const minColumn = clamp(Math.floor((targetX - targetRadiusX - left) / cellWidth) - 1, 0, mask.columns - 1);
+    const maxColumn = clamp(Math.floor((targetX + targetRadiusX - left) / cellWidth) + 1, 0, mask.columns - 1);
+    const minRow = clamp(Math.floor((top - targetY - targetRadiusY) / cellHeight) - 1, 0, mask.rows - 1);
+    const maxRow = clamp(Math.floor((top - targetY + targetRadiusY) / cellHeight) + 1, 0, mask.rows - 1);
+    const radiusX = Math.max(1, targetRadiusX);
+    const radiusY = Math.max(1, targetRadiusY);
+    for (let row = minRow; row <= maxRow; row += 1) {
+      for (let column = minColumn; column <= maxColumn; column += 1) {
         if (!mask.bits[row * mask.columns + column]) continue;
         const cellX = left + (column + .5) * cellWidth;
         const cellY = top - (row + .5) * cellHeight;
-        const dx = Math.max(0, Math.abs(cellX - targetX) - cellWidth * .5) / Math.max(1, targetRadiusX);
-        const dy = Math.max(0, Math.abs(cellY - targetY) - cellHeight * .5) / Math.max(1, targetRadiusY);
+        const dx = Math.max(0, Math.abs(cellX - targetX) - cellWidth * .5) / radiusX;
+        const dy = Math.max(0, Math.abs(cellY - targetY) - cellHeight * .5) / radiusY;
         if (dx * dx + dy * dy <= 1) return true;
       }
     }
@@ -1186,7 +1220,7 @@
         const heroSprite = currentHeroSprite();
         if (heroSprite) {
           const heroDrawWidth = player.height * heroSprite.sw / heroSprite.sh;
-          ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
+          ctx.drawImage(rasterSprite(heroSprite, heroDrawWidth, player.height),
             -heroDrawWidth / 2, -player.height / 2, heroDrawWidth, player.height);
         } else {
           ctx.fillStyle = "#f4d43e";
@@ -1246,20 +1280,24 @@
   function resize() {
     const bounds = wrap.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
+    const nextViewportKey = `${bounds.width}:${bounds.height}:${window.devicePixelRatio}:${artReady}`;
+    if (nextViewportKey === viewportKey) return;
+    viewportKey = nextViewportKey;
     const previousWidth = width;
     const previousHeight = height;
     // Keep horizontal world geometry stable; reveal more/less vertical scenery
     // to fill the viewport with one uniform scale, never stretching sprites.
-    width = 390;
+    width = logicalViewportWidth;
     height = width * bounds.height / bounds.width;
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
-    const maxDpr = window.matchMedia("(max-width: 760px)").matches ? 1.5 : 1;
+    const maxDpr = logicalViewportWidth === 390 ? 3 : 2;
     dpr = bounds.width / width * Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
+    rasterCache = new WeakMap();
     if (!artReady) {
       drawBackdrop();
       return;
@@ -1478,7 +1516,8 @@
     for (let index = 0; index < sprites.length; index += 1) sprites[index] = bakeSprite(sprites[index]);
     // Keep more source detail for the hero; the other game sprites stay small
     // to keep the per-frame draw workload light on mobile.
-    art.heroFrames = art.heroFrames.map((frame) => bakeSprite(frame, 384, true));
+    // Retain full-resolution hero poses; rasterSprite prepares display-sized
+    // textures directly, avoiding the former intermediate 384px reduction.
     for (const compound of ["soft", "medium", "hard"]) {
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }
