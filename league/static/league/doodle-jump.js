@@ -28,7 +28,6 @@
   let spacePatternCache = null;
   let lastRenderTime = 0;
   let nextHudUpdate = 0;
-  let initializedViewport = false;
   const touchPointers = new Map();
   let touchBounds = null;
   // One continuous painting climbs from paddock to canyon to sky; only the
@@ -354,14 +353,14 @@
 
   function drawSpacePlanet(x, y, radius, variant, alpha) {
     const colors = variant % 3 === 0
-      ? { base: "#b46ae5", shade: "#643cbd", light: "#f4b5ff", ring: "#91dfff" }
+      ? { base: "#686580", shade: "#37374d", light: "#a4a1b5", ring: "#818a9c" }
       : variant % 3 === 1
-        ? { base: "#d788a8", shade: "#804b9e", light: "#ffc2d4", ring: "#8b8bff" }
-        : { base: "#7c8de2", shade: "#454f9c", light: "#b6e7ff", ring: "#ec9fff" };
+        ? { base: "#807580", shade: "#494251", light: "#b6a8b4", ring: "#848299" }
+        : { base: "#64758b", shade: "#333e55", light: "#9faebc", ring: "#9590a6" };
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.translate(x, y);
-    ctx.rotate(-.18 + (variant % 2) * .25);
+    ctx.rotate(-.18 + (variant % 2) * .25 + elapsed * .045);
     ctx.beginPath();
     ctx.ellipse(0, 2, radius * 1.15, radius * .3, 0, 0, Math.PI * 2);
     ctx.strokeStyle = colors.ring;
@@ -401,19 +400,16 @@
       drawSpacePlanet(x, y, planetRadius * (.72 + decorRandom(index, 7) * .35), index, alpha * .78);
     }
 
-    const cometScroll = ascent * .32;
-    const cometSpacing = 2600;
-    const cometBand = Math.max(0, Math.floor((cometScroll - height * 1.5) / cometSpacing));
-    for (let index = cometBand; index <= cometBand + 3; index += 1) {
-      const worldY = 440 + index * cometSpacing + decorRandom(index, 9) * cometSpacing * .4;
-      const y = height - (worldY - cometScroll);
-      if (y < -70 || y > height + 70) continue;
+    // One brief, decorative meteor every 19 seconds, never a collision object.
+    const cometPhase = elapsed % 19;
+    if (cometPhase < 2.4) {
+      const index = Math.floor(elapsed / 19);
       const tail = clamp(width * .105, 38, 96);
-      const travel = (elapsed * (15 + decorRandom(index, 10) * 10) + decorRandom(index, 11) * (width + tail * 2))
-        % (width + tail * 2);
-      const x = travel - tail;
+      const travel = cometPhase / 2.4;
+      const x = -tail + travel * (width + tail * 2);
+      const y = height * (.12 + decorRandom(index, 9) * .42) + travel * 90;
       ctx.save();
-      ctx.globalAlpha = alpha * .78;
+      ctx.globalAlpha = alpha * .65 * Math.sin(travel * Math.PI);
       ctx.strokeStyle = "rgba(171, 210, 255, .68)";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -422,7 +418,7 @@
       ctx.stroke();
       ctx.fillStyle = "#f5f1ff";
       ctx.fillRect(x - 3, y - 3, 6, 6);
-      ctx.fillStyle = "#b58aff";
+      ctx.fillStyle = "#9695ae";
       ctx.fillRect(x - tail * .45, y - tail * .25, 4, 4);
       ctx.restore();
     }
@@ -1250,15 +1246,16 @@
   function resize() {
     const bounds = wrap.getBoundingClientRect();
     if (!bounds.width || !bounds.height) return;
-    if (initializedViewport && width === bounds.width && height === bounds.height) return;
     const previousWidth = width;
     const previousHeight = height;
-    width = bounds.width;
-    height = bounds.height;
+    // Same world and visible area on every device, including fullscreen.
+    // Only the backing-store resolution changes, never physics or geometry.
+    width = 390;
+    height = 780;
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
     const maxDpr = window.matchMedia("(max-width: 760px)").matches ? 1.5 : 1;
-    dpr = Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
+    dpr = bounds.width / width * Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1267,7 +1264,6 @@
       drawBackdrop();
       return;
     }
-    initializedViewport = true;
     touchBounds = null;
     cacheBackground();
     if (player && previousWidth > 1 && previousHeight > 1) {
