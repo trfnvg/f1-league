@@ -288,6 +288,20 @@ body.apex-night-theme.editorial-theme .nav-chip-primary:hover {
   background: #ff4438 !important;
 }
 
+body.apex-night-theme .nav-chip-admin {
+  border-color: rgba(255, 194, 89, 0.42) !important;
+  color: #f5d087 !important;
+  background: rgba(255, 194, 89, 0.08) !important;
+  font-weight: 900;
+}
+
+body.apex-night-theme .nav-chip-admin:hover {
+  border-color: rgba(255, 194, 89, 0.72) !important;
+  color: #fff1ca !important;
+  background: rgba(255, 194, 89, 0.15) !important;
+  cursor: pointer;
+}
+
 body.apex-night-theme .f1-menu {
   color: var(--apex-ink);
   border-right: 1px solid var(--apex-line);

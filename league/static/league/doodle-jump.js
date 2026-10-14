@@ -25,6 +25,7 @@
   let skyGradient = null;
   let cloudCache = null;
   let journeyCache = null;
+  let spacePatternCache = null;
   let lastRenderTime = 0;
   let nextHudUpdate = 0;
   let initializedViewport = false;
@@ -35,7 +36,8 @@
   const levelWorldHeight = 2400;
   const paddockEnd = 1450;
   const skyFade = { start: 4600, end: 6200 };
-  const backgroundZoneNames = ["Паддок Рассела", "Подъём по каньону", "Над облаками"];
+  const spaceFade = { start: 10500, end: 12900 };
+  const backgroundZoneNames = ["Паддок Рассела", "Подъём по каньону", "Над облаками", "Космос"];
 
   let storedBest = "0";
   try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
@@ -55,8 +57,6 @@
   let enemies = [];
   let hazards = [];
   let powerups = [];
-  let villains = [];
-  let villainShots = [];
   let effects = [];
   let cameraY = 0;
   let worldTop = 0;
@@ -71,10 +71,7 @@
   let facing = 1;
   let invulnerableTimer = 0;
   let rocketTimer = 0;
-  let jetpackTimer = 0;
   let lastPowerupSpawnY = -Infinity;
-  let lastPowerupType = null;
-  let nextVillainSpawnY = 0;
   let attemptId = null;
   let scoreSubmitted = false;
   let pendingFinish = false;
@@ -95,6 +92,7 @@
     const cellHeight = atlas.naturalHeight / 3;
 
     for (let index = 0; index < 12; index += 1) {
+      if (index === 8 || index === 9) continue;
       const sx = (index % 4) * cellWidth;
       const sy = Math.floor(index / 4) * cellHeight;
       const tile = document.createElement("canvas");
@@ -288,6 +286,29 @@
       cloudCache.height = Math.round(512 * art.cloud.naturalHeight / art.cloud.naturalWidth);
       cloudCache.getContext("2d").drawImage(art.cloud, 0, 0, cloudCache.width, cloudCache.height);
     }
+    const spaceWidth = Math.min(1536, Math.ceil(width * dpr));
+    if (art.space && (!spacePatternCache || spacePatternCache.width !== spaceWidth)) {
+      const tile = document.createElement("canvas");
+      tile.width = spaceWidth;
+      tile.height = Math.round(spaceWidth * art.space.naturalHeight / art.space.naturalWidth);
+      const tileContext = tile.getContext("2d");
+      tileContext.imageSmoothingEnabled = false;
+      tileContext.drawImage(art.space, 0, 0, tile.width, tile.height);
+
+      // Pair a tile with its vertical mirror. Matching top/bottom edges make
+      // the repeated pattern seamless while the artwork remains varied.
+      spacePatternCache = document.createElement("canvas");
+      spacePatternCache.width = tile.width;
+      spacePatternCache.height = tile.height * 2;
+      const patternContext = spacePatternCache.getContext("2d");
+      patternContext.imageSmoothingEnabled = false;
+      patternContext.drawImage(tile, 0, 0);
+      patternContext.save();
+      patternContext.translate(0, spacePatternCache.height);
+      patternContext.scale(1, -1);
+      patternContext.drawImage(tile, 0, 0);
+      patternContext.restore();
+    }
   }
 
   function clamp(value, min, max) {
@@ -312,9 +333,105 @@
     return value * value * (3 - 2 * value);
   }
 
+  function decorRandom(index, salt) {
+    const value = Math.sin((index + 1) * 127.1 + (salt + 1) * 311.7) * 43758.5453;
+    return value - Math.floor(value);
+  }
+
+  function drawSpaceBackdrop(climb, alpha) {
+    if (!spacePatternCache || alpha <= 0) return;
+    const tileHeight = spacePatternCache.height / dpr;
+    if (!tileHeight) return;
+    const cycle = tileHeight;
+    // The scenery drifts DOWN as the player climbs, at a slower parallax rate.
+    const offset = Math.max(0, climb - spaceFade.start) * .045 % cycle;
+    ctx.globalAlpha = alpha;
+    for (let y = offset - cycle; y < height + cycle; y += cycle) {
+      ctx.drawImage(spacePatternCache, 0, y, width, cycle);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawSpacePlanet(x, y, radius, variant, alpha) {
+    const colors = variant % 3 === 0
+      ? { base: "#b46ae5", shade: "#643cbd", light: "#f4b5ff", ring: "#91dfff" }
+      : variant % 3 === 1
+        ? { base: "#d788a8", shade: "#804b9e", light: "#ffc2d4", ring: "#8b8bff" }
+        : { base: "#7c8de2", shade: "#454f9c", light: "#b6e7ff", ring: "#ec9fff" };
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.rotate(-.18 + (variant % 2) * .25);
+    ctx.beginPath();
+    ctx.ellipse(0, 2, radius * 1.15, radius * .3, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = colors.ring;
+    ctx.lineWidth = Math.max(2, radius * .07);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * .72, 0, Math.PI * 2);
+    const surface = ctx.createLinearGradient(-radius, -radius, radius, radius);
+    surface.addColorStop(0, colors.light);
+    surface.addColorStop(.48, colors.base);
+    surface.addColorStop(1, colors.shade);
+    ctx.fillStyle = surface;
+    ctx.fill();
+    // Small blocky craters keep the celestial props in the game's pixel-art language.
+    ctx.fillStyle = colors.shade;
+    ctx.globalAlpha = alpha * .7;
+    ctx.fillRect(-radius * .28, -radius * .16, radius * .17, radius * .1);
+    ctx.fillRect(radius * .18, radius * .2, radius * .13, radius * .09);
+    ctx.fillRect(-radius * .02, radius * .4, radius * .2, radius * .08);
+    ctx.restore();
+  }
+
+  function drawSpaceDecor(climb, alpha) {
+    if (alpha <= 0) return;
+    const ascent = Math.max(0, climb - spaceFade.start);
+    const planetScroll = ascent * .19;
+    const planetSpacing = 2200;
+    const planetRadius = clamp(width * .075, 27, 78);
+    const firstPlanet = Math.max(0, Math.floor((planetScroll - height * 1.4) / planetSpacing));
+    const lastPlanet = Math.floor((planetScroll + height * 1.4) / planetSpacing) + 1;
+    for (let index = firstPlanet; index <= lastPlanet; index += 1) {
+      const worldY = 680 + index * planetSpacing + decorRandom(index, 4) * planetSpacing * .42;
+      const y = height - (worldY - planetScroll);
+      if (y < -planetRadius * 2 || y > height + planetRadius * 2) continue;
+      const side = decorRandom(index, 5) < .5 ? 1 : -1;
+      const x = width * (.5 + side * (.22 + decorRandom(index, 6) * .24));
+      drawSpacePlanet(x, y, planetRadius * (.72 + decorRandom(index, 7) * .35), index, alpha * .78);
+    }
+
+    const cometScroll = ascent * .32;
+    const cometSpacing = 2600;
+    const cometBand = Math.max(0, Math.floor((cometScroll - height * 1.5) / cometSpacing));
+    for (let index = cometBand; index <= cometBand + 3; index += 1) {
+      const worldY = 440 + index * cometSpacing + decorRandom(index, 9) * cometSpacing * .4;
+      const y = height - (worldY - cometScroll);
+      if (y < -70 || y > height + 70) continue;
+      const tail = clamp(width * .105, 38, 96);
+      const travel = (elapsed * (15 + decorRandom(index, 10) * 10) + decorRandom(index, 11) * (width + tail * 2))
+        % (width + tail * 2);
+      const x = travel - tail;
+      ctx.save();
+      ctx.globalAlpha = alpha * .78;
+      ctx.strokeStyle = "rgba(171, 210, 255, .68)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - tail, y - tail * .48);
+      ctx.stroke();
+      ctx.fillStyle = "#f5f1ff";
+      ctx.fillRect(x - 3, y - 3, 6, 6);
+      ctx.fillStyle = "#b58aff";
+      ctx.fillRect(x - tail * .45, y - tail * .25, 4, 4);
+      ctx.restore();
+    }
+  }
+
   function drawBackdrop() {
     const climb = Math.max(0, cameraY);
     const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
+    const intoSpace = backgroundFade(climb, spaceFade.start, spaceFade.end);
     ctx.fillStyle = skyGradient || "#6ba5d3";
     ctx.fillRect(0, 0, width, height);
     if (journeyCache && intoSky < 1) {
@@ -323,9 +440,11 @@
       ctx.globalAlpha = 1 - intoSky;
       ctx.drawImage(source, 0, view.y, source.width, view.height, 0, 0, width, height);
     }
+    drawSpaceBackdrop(climb, intoSpace);
     // Separate cloud sprites cross the screen downward. Their wrap happens
-    // entirely outside the viewport, so infinite sky has no image seam.
-    const cloudsAlpha = backgroundFade(climb, 2800, skyFade.end);
+    // entirely outside the viewport, so infinite sky has no image seam. They
+    // gradually give way to space rather than ending at a hard level boundary.
+    const cloudsAlpha = backgroundFade(climb, 2800, skyFade.end) * (1 - intoSpace);
     if (cloudCache && cloudsAlpha > 0) {
       for (let i = 0; i < 6; i += 1) {
         const cloudWidth = width * (.38 + (i % 3) * .12);
@@ -338,6 +457,7 @@
         ctx.drawImage(cloudCache, x, y, cloudWidth, cloudHeight);
       }
     }
+    drawSpaceDecor(climb, intoSpace);
     ctx.globalAlpha = 1;
   }
 
@@ -385,13 +505,10 @@
     // Power-ups are deliberately rare and separated in world space so that a
     // lucky run can never chain several rockets back-to-back.
     if (powerupY - lastPowerupSpawnY < 2200 || Math.random() > .025) return;
-    let type = Math.random() < .55 ? "rocket" : "jetpack";
-    if (lastPowerupType) type = lastPowerupType === "rocket" ? "jetpack" : "rocket";
     lastPowerupSpawnY = powerupY;
-    lastPowerupType = type;
     const laneX = lower.x + (upper.x - lower.x) * (.35 + Math.random() * .3);
     powerups.push({
-      type,
+      type: "rocket",
       x: clamp(laneX, width * .12, width * .88),
       y: powerupY,
       size: Math.max(25, Math.min(34, width * .075)) * visualScale(),
@@ -455,8 +572,6 @@
     enemies = [];
     hazards = [];
     powerups = [];
-    villains = [];
-    villainShots = [];
     effects = [];
     cameraY = 0;
     startY = firstY;
@@ -466,10 +581,7 @@
     finalScore = 0;
     invulnerableTimer = 0;
     rocketTimer = 0;
-    jetpackTimer = 0;
     lastPowerupSpawnY = -Infinity;
-    lastPowerupType = null;
-    nextVillainSpawnY = firstY + 6500 + Math.random() * 1400;
     attemptId = null;
     scoreSubmitted = false;
     pendingFinish = false;
@@ -550,21 +662,6 @@
       });
     }
 
-    if (worldTop >= nextVillainSpawnY) {
-      const villainX = width * (.22 + Math.random() * .56);
-      villains.push({
-        x: villainX,
-        baseX: villainX,
-        y: worldTop + 180,
-        phase: Math.random() * Math.PI * 2,
-        frame: 0,
-        shotTimer: 2.2 + Math.random() * .9,
-        dead: false,
-      });
-      // At the current vertical climb speed this 6.5–7.9k world-unit gap is
-      // approximately one minute between rare paddock-boss encounters.
-      nextVillainSpawnY = worldTop + 6500 + Math.random() * 1400;
-    }
   }
 
   function updateHud() {
@@ -586,7 +683,9 @@
       levelNode.dataset.value = displayLevel;
       levelNode.textContent = displayLevel;
     }
-    const zoneIndex = cameraY < paddockEnd ? 0 : cameraY < skyFade.end ? 1 : 2;
+    const zoneIndex = cameraY < paddockEnd ? 0
+      : cameraY < skyFade.end ? 1
+        : cameraY < spaceFade.start ? 2 : 3;
     const displayName = backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
@@ -782,7 +881,7 @@
   }
 
   function powerupHitbox(powerup) {
-    const sprite = sprites[powerup.type === "rocket" ? 8 : 9];
+    const sprite = art.powerupFrames && art.powerupFrames.rocket;
     const width = powerup.size * 1.55;
     return { sprite, x: powerup.x, y: powerup.y, width, height: spriteSize(sprite, width) };
   }
@@ -790,7 +889,7 @@
   function drawPowerup(powerup) {
     const screenY = worldToScreen(powerup.y + Math.sin(elapsed * 3 + powerup.phase) * 4);
     const size = powerup.size;
-    const frame = art.powerupFrames && art.powerupFrames[powerup.type];
+    const frame = art.powerupFrames && art.powerupFrames.rocket;
     if (frame) {
       ctx.save();
       ctx.globalAlpha = .95 + Math.sin(elapsed * 5 + powerup.phase) * .05;
@@ -801,70 +900,46 @@
     ctx.save();
     ctx.translate(Math.round(powerup.x), Math.round(screenY));
     ctx.imageSmoothingEnabled = false;
-    ctx.shadowColor = powerup.type === "rocket" ? "rgba(255, 82, 103, .75)" : "rgba(142, 234, 255, .72)";
+    ctx.shadowColor = "rgba(255, 82, 103, .75)";
     ctx.shadowBlur = 12;
-    if (powerup.type === "rocket") {
-      ctx.fillStyle = "#e84e5e";
-      ctx.beginPath();
-      ctx.moveTo(0, -size * .62);
-      ctx.lineTo(size * .38, size * .25);
-      ctx.lineTo(size * .2, size * .5);
-      ctx.lineTo(-size * .2, size * .5);
-      ctx.lineTo(-size * .38, size * .25);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = "#f7f0d2";
-      ctx.fillRect(-size * .28, -size * .18, size * .56, size * .25);
-      ctx.fillStyle = "#75e6ef";
-      ctx.fillRect(-size * .14, -size * .12, size * .28, size * .12);
-      ctx.fillStyle = "#ffbd4a";
-      ctx.fillRect(-size * .15, size * .48, size * .3, size * .23);
-      ctx.fillStyle = "#ffef9a";
-      ctx.fillRect(-size * .08, size * .55, size * .16, size * .16);
-    } else {
-      ctx.fillStyle = "#263451";
-      ctx.fillRect(-size * .35, -size * .42, size * .7, size * .84);
-      ctx.fillStyle = "#8eeaff";
-      ctx.fillRect(-size * .24, -size * .25, size * .48, size * .18);
-      ctx.fillStyle = "#536985";
-      ctx.fillRect(-size * .52, -size * .34, size * .14, size * .68);
-      ctx.fillRect(size * .38, -size * .34, size * .14, size * .68);
-      ctx.fillStyle = "#ffbd4a";
-      ctx.fillRect(-size * .28, size * .42, size * .18, size * .25);
-      ctx.fillRect(size * .1, size * .42, size * .18, size * .25);
-      ctx.fillStyle = "#ff5267";
-      ctx.fillRect(-size * .2, size * .64, size * .12, size * .14);
-      ctx.fillRect(size * .08, size * .64, size * .12, size * .14);
-    }
+    ctx.fillStyle = "#e84e5e";
+    ctx.beginPath();
+    ctx.moveTo(0, -size * .62);
+    ctx.lineTo(size * .38, size * .25);
+    ctx.lineTo(size * .2, size * .5);
+    ctx.lineTo(-size * .2, size * .5);
+    ctx.lineTo(-size * .38, size * .25);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#f7f0d2";
+    ctx.fillRect(-size * .28, -size * .18, size * .56, size * .25);
+    ctx.fillStyle = "#75e6ef";
+    ctx.fillRect(-size * .14, -size * .12, size * .28, size * .12);
+    ctx.fillStyle = "#ffbd4a";
+    ctx.fillRect(-size * .15, size * .48, size * .3, size * .23);
+    ctx.fillStyle = "#ffef9a";
+    ctx.fillRect(-size * .08, size * .55, size * .16, size * .16);
     ctx.restore();
   }
 
-  function drawMountedPowerup(type, emitFlame = true) {
-    const frame = art.powerupFrames && art.powerupFrames[type];
-    if (!player || !frame) return;
-    const targetWidth = type === "rocket" ? player.width * 1.08 : player.width * .82;
-    const mountY = player.y - player.height * .52;
+  function drawRocketRide() {
+    const frame = art.powerupFrames && art.powerupFrames.rocket;
+    if (!player || !frame) return false;
+    const rocketHeight = player.height * 1.55;
+    const rocketWidth = rocketHeight * frame.sw / frame.sh;
+    const screenY = worldToScreen(player.y + Math.sin(elapsed * 8) * 1.5);
     ctx.save();
-    ctx.globalAlpha = .98;
-    drawFrame(frame, player.x, mountY, targetWidth);
+    ctx.translate(Math.round(player.x), Math.round(screenY));
+    ctx.rotate(Math.sin(elapsed * 5) * .025);
+    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
+      -rocketWidth / 2, -rocketHeight / 2, rocketWidth, rocketHeight);
+    // A small amber pulse brightens the exhaust so the ride reads as motion.
+    const flamePulse = .82 + Math.sin(elapsed * 24) * .18;
+    ctx.globalAlpha = flamePulse;
+    ctx.fillStyle = "#fff29a";
+    ctx.fillRect(-rocketWidth * .025, rocketHeight * .43, rocketWidth * .05, rocketHeight * .08);
     ctx.restore();
-    // Add a second, phase-shifted flame layer so the generated sprite reads as
-    // animated even though the sheet is a compact single-pose power-up. The
-    // jetpack is a shield pickup now, not a thrust pickup, so it stays still.
-    if (!emitFlame) return;
-    ctx.save();
-    ctx.translate(Math.round(player.x), Math.round(worldToScreen(mountY - targetWidth * .46)));
-    ctx.fillStyle = type === "rocket" ? "#fff29a" : "#8eeaff";
-    const flicker = 2 + Math.round(Math.sin(elapsed * 22) * 2);
-    if (type === "rocket") {
-      ctx.fillRect(-3, 0, 6, 8 + flicker);
-      ctx.fillStyle = "#ff7b3e";
-      ctx.fillRect(-5, 6, 10, 4 + flicker);
-    } else {
-      ctx.fillRect(-targetWidth * .22, 0, 4, 8 + flicker);
-      ctx.fillRect(targetWidth * .22 - 4, 0, 4, 8 + flicker);
-    }
-    ctx.restore();
+    return true;
   }
 
   function drawInvulnerabilityShield() {
@@ -878,68 +953,6 @@
     ctx.beginPath();
     ctx.arc(0, 0, Math.max(player.width, player.height) * .62, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.restore();
-  }
-
-  function villainWidth() {
-    return Math.max(54, Math.min(78, width * .17)) * visualScale();
-  }
-
-  function drawVillainShot(shot) {
-    const screenY = worldToScreen(shot.y);
-    const size = shot.size;
-    const dirtyWheel = art.dirtyWheelFrame;
-    if (dirtyWheel) {
-      ctx.save();
-      ctx.translate(Math.round(shot.x), Math.round(screenY));
-      ctx.rotate(shot.spin);
-      const dirtyHeight = spriteSize(dirtyWheel, size * 1.22);
-      ctx.drawImage(dirtyWheel.image, dirtyWheel.sx, dirtyWheel.sy, dirtyWheel.sw, dirtyWheel.sh,
-        -size * .61, -dirtyHeight / 2, size * 1.22, dirtyHeight);
-      ctx.restore();
-      return;
-    }
-    const wheelFrame = art.wheelFrames && art.wheelFrames.medium;
-    ctx.save();
-    ctx.translate(Math.round(shot.x), Math.round(screenY));
-    ctx.rotate(shot.spin);
-    if (wheelFrame) {
-      const wheelHeight = spriteSize(wheelFrame, size);
-      ctx.drawImage(wheelFrame.image, wheelFrame.sx, wheelFrame.sy, wheelFrame.sw, wheelFrame.sh,
-        -size / 2, -wheelHeight / 2, size, wheelHeight);
-    } else {
-      ctx.restore();
-      drawSprite(5, shot.x, shot.y, size);
-      return;
-    }
-    ctx.fillStyle = "#7f4a31";
-    ctx.fillRect(-size * .22, size * .18, size * .44, size * .2);
-    ctx.fillStyle = "#b66a3d";
-    ctx.fillRect(-size * .12, size * .34, size * .24, size * .14);
-    ctx.restore();
-  }
-
-  function drawVillain(villain) {
-    const frames = art.villainFrames || [];
-    const frame = frames.length ? frames[villain.frame % frames.length] : null;
-    if (!frame) return;
-    const targetWidth = villainWidth();
-    const targetHeight = spriteSize(frame, targetWidth);
-    const screenY = worldToScreen(villain.y + Math.sin(elapsed * .85 + villain.phase) * 3);
-    const attacking = villain.frame === 2;
-    ctx.save();
-    ctx.translate(Math.round(villain.x), Math.round(screenY));
-    ctx.rotate(attacking ? .035 : Math.sin(elapsed * .55 + villain.phase) * .018);
-    const pulse = attacking ? 1.045 + Math.sin(elapsed * 12) * .018 : 1;
-    ctx.scale(pulse, pulse);
-    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
-      -targetWidth / 2, -targetHeight / 2, targetWidth, targetHeight);
-    if (attacking) {
-      ctx.fillStyle = "rgba(255, 65, 82, .78)";
-      ctx.fillRect(-targetWidth * .58, -2, targetWidth * .12, 3);
-      ctx.fillStyle = "rgba(93, 232, 246, .72)";
-      ctx.fillRect(targetWidth * .46, targetHeight * .2, targetWidth * .1, 2);
-    }
     ctx.restore();
   }
 
@@ -1003,7 +1016,6 @@
     elapsed += dt;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
-    jetpackTimer = Math.max(0, jetpackTimer - dt);
     const direction = Number(held.right) - Number(held.left);
     const targetVx = direction * Math.min(440, width * .62);
     player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
@@ -1029,26 +1041,6 @@
     for (const enemy of enemies) {
       enemy.x = Math.max(34, Math.min(width - 34,
         enemy.baseX + Math.sin(elapsed * 1.25 + enemy.phase) * Math.min(54, width * .14)));
-    }
-
-    for (const villain of villains) {
-      villain.x = Math.max(48, Math.min(width - 48,
-        villain.baseX + Math.sin(elapsed * .55 + villain.phase) * Math.min(48, width * .12)));
-      villain.frame = Math.floor(elapsed * 5 + villain.phase) % 4;
-      villain.shotTimer -= dt;
-      if (villain.shotTimer <= 0 && Math.abs(villain.y - cameraY) < height * 1.35) {
-        const shotSize = Math.max(25, Math.min(34, width * .075)) * visualScale();
-        villainShots.push({
-          x: villain.x,
-          y: villain.y - villainWidth() * .34,
-          vx: (player.x - villain.x) * .16,
-          vy: -270,
-          size: shotSize,
-          spin: 0,
-          dead: false,
-        });
-        villain.shotTimer = 2.15 + Math.random() * .95;
-      }
     }
 
     collideWithEnemy(previousFeet, currentFeet, dt);
@@ -1086,27 +1078,6 @@
         invulnerableTimer = Math.max(invulnerableTimer, rocketTimer + 2);
         player.vy = 1240;
         effects.push({ index: 11, x: player.x, y: player.y - player.height * .42, age: 0, duration: .55, size: 66 * visualScale() });
-      } else {
-        jetpackTimer = 5;
-        invulnerableTimer = Math.max(invulnerableTimer, 5);
-        effects.push({ index: 10, x: player.x, y: player.y, age: 0, duration: .65, size: 70 * visualScale() });
-      }
-    }
-
-    for (const shot of villainShots) {
-      if (shot.dead) continue;
-      shot.x += shot.vx * dt;
-      shot.y += shot.vy * dt;
-      shot.vy -= 75 * dt;
-      shot.spin += dt * 8;
-      const shotSprite = art.dirtyWheelFrame || (art.wheelFrames && art.wheelFrames.medium);
-      const shotWidth = shot.size * 1.22;
-      const shotHeight = spriteSize(shotSprite, shotWidth);
-      const shotRadius = shot.size * .3;
-      if (invulnerableTimer <= 0 && spriteOverlapsEllipse(shotSprite, shot.x, shot.y, shotWidth, shotHeight,
-        player.x, player.y, Math.max(player.width * .25, shotRadius), Math.max(player.height * .28, shotRadius))) {
-        endGame();
-        return;
       }
     }
 
@@ -1167,8 +1138,6 @@
     pruneWorldObjects(enemies, 130, "dead");
     pruneWorldObjects(hazards, 180, "dead");
     pruneWorldObjects(powerups, 180, "collected");
-    pruneWorldObjects(villains, 300, "dead");
-    pruneWorldObjects(villainShots, 260, "dead");
 
     if (player.y + player.height / 2 < cameraY - 6) {
       endGame();
@@ -1198,13 +1167,6 @@
       if (!hazard.dead) drawHazard(hazard);
     }
 
-    for (const villain of villains) {
-      if (!villain.dead) drawVillain(villain);
-    }
-    for (const shot of villainShots) {
-      if (!shot.dead) drawVillainShot(shot);
-    }
-
     for (const powerup of powerups) {
       if (!powerup.collected) drawPowerup(powerup);
     }
@@ -1217,26 +1179,28 @@
     }
 
     if (player) {
-      if (rocketTimer > 0) drawMountedPowerup("rocket");
-      else if (jetpackTimer > 0) drawMountedPowerup("jetpack", false);
-      const screenY = worldToScreen(player.y);
-      ctx.save();
-      ctx.translate(player.x, screenY);
-      ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
-      ctx.scale(facing, 1);
-      const heroSprite = currentHeroSprite();
-      if (heroSprite) {
-        const heroDrawWidth = player.height * heroSprite.sw / heroSprite.sh;
-        ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
-          -heroDrawWidth / 2, -player.height / 2, heroDrawWidth, player.height);
+      if (rocketTimer > 0 && drawRocketRide()) {
+        drawInvulnerabilityShield();
       } else {
-        ctx.fillStyle = "#f4d43e";
-        ctx.beginPath();
-        ctx.ellipse(0, 0, player.width * .43, player.height * .47, 0, 0, Math.PI * 2);
-        ctx.fill();
+        const screenY = worldToScreen(player.y);
+        ctx.save();
+        ctx.translate(player.x, screenY);
+        ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
+        ctx.scale(facing, 1);
+        const heroSprite = currentHeroSprite();
+        if (heroSprite) {
+          const heroDrawWidth = player.height * heroSprite.sw / heroSprite.sh;
+          ctx.drawImage(heroSprite.image, heroSprite.sx, heroSprite.sy, heroSprite.sw, heroSprite.sh,
+            -heroDrawWidth / 2, -player.height / 2, heroDrawWidth, player.height);
+        } else {
+          ctx.fillStyle = "#f4d43e";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, player.width * .43, player.height * .47, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+        drawInvulnerabilityShield();
       }
-      ctx.restore();
-      drawInvulnerabilityShield();
     }
 
     if (mode === "running") {
@@ -1246,15 +1210,13 @@
       ctx.font = "800 11px system-ui, sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(`${progress} м`, width - 14, 22);
-      if (rocketTimer > 0 || jetpackTimer > 0) {
-        const activeType = rocketTimer > 0 ? "РАКЕТА" : "РЕАКТИВНЫЙ РАНЕЦ";
-        const activeTime = rocketTimer > 0 ? rocketTimer : jetpackTimer;
+      if (rocketTimer > 0) {
         ctx.textAlign = "left";
         ctx.fillStyle = "rgba(8, 18, 38, .86)";
         ctx.fillRect(12, 88, Math.min(width * .45, 170), 22);
-        ctx.fillStyle = rocketTimer > 0 ? "#ffbd4a" : "#8eeaff";
+        ctx.fillStyle = "#ffbd4a";
         ctx.font = "900 10px 'Courier New', monospace";
-        ctx.fillText(`${activeType}  ${activeTime.toFixed(1)}с`, 20, 103);
+        ctx.fillText(`РАКЕТА  ${rocketTimer.toFixed(1)}с`, 20, 103);
       }
       ctx.restore();
     }
@@ -1336,9 +1298,6 @@
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
-      villains.forEach((villain) => { villain.x *= scaleX; villain.baseX *= scaleX; villain.y *= scaleY; });
-      villainShots.forEach((shot) => { shot.x *= scaleX; shot.y *= scaleY; shot.vx *= scaleX; shot.vy *= scaleY; shot.size *= scaleX; });
-      nextVillainSpawnY *= scaleY;
       draw();
     } else {
       buildGame();
@@ -1494,12 +1453,14 @@
     image(canvas.dataset.heroSheetSrc),
     image(canvas.dataset.backgroundJourneySrc),
     image(canvas.dataset.backgroundCloudSrc),
+    image(canvas.dataset.backgroundSpaceSrc),
+    image(canvas.dataset.rocketSrc),
     image(canvas.dataset.wheelCompoundsSrc),
-    image(canvas.dataset.dirtyWheelSrc),
     image(canvas.dataset.platformSheetSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, wheelSheet, dirtyWheel, platformSheet]) => {
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, wheelSheet, platformSheet]) => {
     art.journey = journey;
     art.cloud = cloud;
+    art.space = space;
     art.heroFrames = splitHeroSheet(heroSheet);
     const wheelFrames = splitSpriteSheet(wheelSheet, 3);
     art.wheelFrames = {
@@ -1507,7 +1468,7 @@
       medium: wheelFrames[1] || null,
       hard: wheelFrames[2] || null,
     };
-    art.dirtyWheelFrame = splitSpriteSheet(dirtyWheel, 1)[0] || null;
+    art.rocketRide = splitSpriteSheet(rocketRide, 1)[0] || null;
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
       startButton.disabled = true;
@@ -1524,9 +1485,7 @@
     for (const compound of ["soft", "medium", "hard"]) {
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }
-    art.dirtyWheelFrame = bakeSprite(art.dirtyWheelFrame);
-    art.powerupFrames = { rocket: sprites[8] || null, jetpack: sprites[9] || null };
-    art.villainFrames = sprites[4] ? [sprites[4]] : [];
+    art.powerupFrames = { rocket: bakeSprite(art.rocketRide, 768) };
     artReady = true;
     startButton.disabled = false;
     resize();
