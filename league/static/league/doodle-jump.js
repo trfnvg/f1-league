@@ -58,6 +58,9 @@
   let platforms = [];
   let enemies = [];
   let hazards = [];
+  let spaceBoss = null;
+  let bossShots = [];
+  let bossWait = 90 + Math.random() * 60;
   let powerups = [];
   let effects = [];
   let cameraY = 0;
@@ -593,6 +596,9 @@
     platforms = [];
     enemies = [];
     hazards = [];
+    spaceBoss = null;
+    bossShots = [];
+    bossWait = 90 + Math.random() * 60;
     powerups = [];
     effects = [];
     cameraY = 0;
@@ -994,6 +1000,70 @@
     drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
   }
 
+  function updateSpaceBoss(dt) {
+    if (cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
+    if (!spaceBoss) {
+      bossWait -= dt;
+      if (bossWait <= 0) {
+        spaceBoss = { age: 0, x: width / 2, screenY: 125, nextShot: 3, shots: 0 };
+      }
+    }
+    if (spaceBoss) {
+      const boss = spaceBoss;
+      boss.age += dt;
+      boss.x = width * (.5 + Math.sin(boss.age * .48) * .30);
+      boss.screenY = 125 + Math.sin(boss.age * 2) * 5;
+      if (boss.age >= boss.nextShot && boss.shots < 3) {
+        bossShots.push({ x: boss.x, y: cameraY + height - boss.screenY - 40 });
+        boss.shots += 1;
+        boss.nextShot += 2.8;
+      }
+      if (boss.age >= 11) {
+        spaceBoss = null;
+        bossWait = 120 + Math.random() * 60;
+      }
+    }
+    const shotWidth = 32;
+    const shotHeight = spriteSize(art.bossWheel, shotWidth);
+    let kept = 0;
+    for (const shot of bossShots) {
+      const previousY = shot.y;
+      shot.y -= 185 * dt;
+      // Sweep relative motion so fast rocket travel cannot skip a collision.
+      const steps = Math.max(1, Math.ceil((Math.abs(player.vy) + 185) * dt / 10));
+      let hit = false;
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps;
+        if (spriteOverlapsEllipse(art.bossWheel, shot.x, previousY + (shot.y - previousY) * t,
+          shotWidth, shotHeight, player.x - player.vx * dt * (1 - t),
+          player.y - player.vy * dt * (1 - t), player.width * .29, player.height * .34)) {
+          hit = true;
+          break;
+        }
+      }
+      if (hit && invulnerableTimer <= 0) { endGame(); return; }
+      if (!hit && shot.y > cameraY - 100) bossShots[kept++] = shot;
+    }
+    bossShots.length = kept;
+  }
+
+  function drawSpaceBoss() {
+    for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 32);
+    if (!spaceBoss || !art.spaceBoss) return;
+    const boss = spaceBoss;
+    const bossWidth = 90;
+    const bossHeight = spriteSize(art.spaceBoss, bossWidth);
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, boss.age / .8, (11 - boss.age) / .8);
+    ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight),
+      boss.x - bossWidth / 2, boss.screenY - bossHeight / 2, bossWidth, bossHeight);
+    if (boss.shots < 3 && boss.nextShot - boss.age < .7) {
+      ctx.fillStyle = Math.sin(boss.age * 25) > 0 ? "#ffc779" : "#b75f50";
+      ctx.fillRect(boss.x - 3, boss.screenY + bossHeight / 2, 6, 18);
+    }
+    ctx.restore();
+  }
+
   function crossedLandingSurface(previousFeet, currentFeet, previousTop, currentTop, feetX, targetX, targetWidth, feetWidth) {
     const before = previousFeet - previousTop;
     const after = currentFeet - currentTop;
@@ -1163,6 +1233,8 @@
     // Keep the racer in the lower-middle band: enough space remains above for
     // incoming platforms, while the player never hugs the bottom edge.
     if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
+    updateSpaceBoss(dt);
+    if (mode !== "running") return;
     extendWorld();
     pruneWorldObjects(platforms, 160, "broken");
     pruneWorldObjects(enemies, 130, "dead");
@@ -1196,6 +1268,7 @@
     for (const hazard of hazards) {
       if (!hazard.dead) drawHazard(hazard);
     }
+    drawSpaceBoss();
 
     for (const powerup of powerups) {
       if (!powerup.collected) drawPowerup(powerup);
@@ -1492,7 +1565,11 @@
     image(canvas.dataset.rocketEmptySrc),
     image(canvas.dataset.wheelCompoundsSrc),
     image(canvas.dataset.platformSheetSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet]) => {
+    image(canvas.dataset.spaceBossSrc),
+    image(canvas.dataset.bossWheelSrc),
+  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage]) => {
+    art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;
+    art.bossWheel = splitSpriteSheet(bossWheelImage, 1)[0] || null;
     art.journey = journey;
     art.cloud = cloud;
     art.space = space;
