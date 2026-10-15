@@ -27,7 +27,7 @@
         <div class="doodle-test-controls">
           {% if request.GET.flight == '1' %}
           <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
-          <button id="doodle-portal-test" type="button">Проверить портал · 8000</button>
+          <button id="doodle-portal-test" type="button">Проверить портал · 5000</button>
           <small>Тест · без рекордов и попыток</small>
           <a href="?{{ request.GET.urlencode }}&amp;flight=0">Выйти из теста</a>
           {% else %}
@@ -66,6 +66,7 @@
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
+          data-hawk-sheet-src="{% static 'league/images/doodle-jump/western-hawk-flap-v1.png' %}"
           data-boss-wheel-src="{% static 'league/images/doodle-jump/space-dirty-wheel-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
           {% if user.is_staff and request.GET.flight == '1' %}
@@ -122,6 +123,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=western-newborn-v23" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=western-hawks-v24" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
