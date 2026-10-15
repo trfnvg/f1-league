@@ -5,7 +5,7 @@
 
 {% block extra_head %}
   <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" fetchpriority="high">
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=canvas-repaint-v28">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=mobile-backdrop-v32">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -32,10 +32,11 @@
         <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
         {% if user.is_staff %}
         <div class="doodle-test-controls">
+          <button id="doodle-boss-test" type="button" title="Запустить тестовый бой без сохранения результата">Вызвать бой с Тото</button>
+          <small id="doodle-boss-test-status" aria-live="polite">Тест не влияет на рекорды и число попыток</small>
           {% if request.GET.flight == '1' %}
           <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
           <button id="doodle-portal-test" type="button">Проверить портал · 5000</button>
-          <small>Тест · без рекордов и попыток</small>
           <a href="?{{ request.GET.urlencode }}&amp;flight=0">Выйти из теста</a>
           {% else %}
           <a href="?{{ request.GET.urlencode }}&amp;flight=1">Тест: свободный полёт</a>
@@ -137,6 +138,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=toto-boss-fight-v30" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=mobile-backdrop-v32" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

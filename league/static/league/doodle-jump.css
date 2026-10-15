@@ -334,6 +334,12 @@
   cursor: pointer;
   touch-action: manipulation;
 }
+.doodle-test-controls #doodle-boss-test {
+  border-color: #d7ad59;
+  background: #493b29;
+  color: #fff0c9;
+}
+.doodle-test-controls #doodle-boss-test-status { flex-basis: 100%; }
 .doodle-test-controls button[aria-pressed="true"] { border-color: #f3d395; }
 
 #doodle-canvas {
