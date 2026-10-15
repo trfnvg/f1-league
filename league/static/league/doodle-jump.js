@@ -34,6 +34,9 @@
   const art = {};
   const adminSandbox = canvas.dataset.adminFlight === "1";
   const flightButton = document.getElementById("doodle-flight-toggle");
+  const bossTestButton = document.getElementById("doodle-boss-test");
+  const bossTestStatus = document.getElementById("doodle-boss-test-status");
+  let adminBossTestMode = false;
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   let rasterCache = new WeakMap();
@@ -41,9 +44,6 @@
   const held = { left: false, right: false };
   const sprites = [];
   let skyGradient = null;
-  let cloudCache = null;
-  let journeyCache = null;
-  let spacePatternCache = null;
   let garageCache = null;
   let forgottenPaddock = false;
   let portalTransition = null;
@@ -71,6 +71,7 @@
   let intro = null;
   const introDuration = 5.3;
   let artReady = false;
+  let assetLoadFailed = false;
   let frame = 0;
   let previousTime = 0;
   let updateAccumulator = 0;
@@ -122,12 +123,38 @@
   startButton.disabled = true;
 
   const image = (src) => new Promise((resolve) => {
-    const img = new Image();
-    img.decoding = "async";
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = src;
+    if (!src) { resolve(null); return; }
+    const load = (attempt) => {
+      const img = new Image();
+      img.decoding = "async";
+      const failed = () => {
+        img.onload = img.onerror = null;
+        if (attempt < 2) setTimeout(() => load(attempt + 1), 350 * (attempt + 1));
+        else resolve(null);
+      };
+      img.onerror = failed;
+      img.onload = async () => {
+        try {
+          if (img.decode) await img.decode();
+          if (!img.naturalWidth || !img.naturalHeight) { failed(); return; }
+          img.onload = img.onerror = null;
+          resolve(img);
+        } catch (error) { failed(); }
+      };
+      img.src = attempt ? `${src}${src.includes("?") ? "&" : "?"}asset_retry=${attempt}` : src;
+    };
+    load(0);
   });
+
+  function showAssetError() {
+    assetLoadFailed = true;
+    artReady = false;
+    title.textContent = "Игра не загрузилась";
+    copy.textContent = "Не удалось загрузить графику. Проверьте соединение и повторите загрузку.";
+    startButton.textContent = "Повторить загрузку";
+    startButton.disabled = false;
+    overlay.classList.remove("is-hidden");
+  }
 
   function cropSprites(atlas) {
     if (!atlas) return;
@@ -337,46 +364,8 @@
     skyGradient = ctx.createLinearGradient(0, 0, 0, height);
     skyGradient.addColorStop(0, "#498bc9");
     skyGradient.addColorStop(1, "#89bddc");
-    // Bound source texture sizes once instead of resampling the full artwork
-    // for every frame, especially on high-DPI mobile devices.
-    const journeyWidth = Math.min(640, Math.ceil(width));
-    if (art.journey && (!journeyCache || journeyCache.width !== journeyWidth)) {
-      journeyCache = document.createElement("canvas");
-      journeyCache.width = journeyWidth;
-      journeyCache.height = Math.round(journeyWidth * art.journey.naturalHeight / art.journey.naturalWidth);
-      const backgroundCtx = journeyCache.getContext("2d", { alpha: false });
-      backgroundCtx.imageSmoothingEnabled = false;
-      backgroundCtx.drawImage(art.journey, 0, 0, journeyCache.width, journeyCache.height);
-    }
-    if (art.cloud && !cloudCache) {
-      cloudCache = document.createElement("canvas");
-      cloudCache.width = 512;
-      cloudCache.height = Math.round(512 * art.cloud.naturalHeight / art.cloud.naturalWidth);
-      cloudCache.getContext("2d").drawImage(art.cloud, 0, 0, cloudCache.width, cloudCache.height);
-    }
-    const spaceWidth = Math.min(1536, Math.ceil(width * dpr));
-    if (art.space && (!spacePatternCache || spacePatternCache.width !== spaceWidth)) {
-      const tile = document.createElement("canvas");
-      tile.width = spaceWidth;
-      tile.height = Math.round(spaceWidth * art.space.naturalHeight / art.space.naturalWidth);
-      const tileContext = tile.getContext("2d");
-      tileContext.imageSmoothingEnabled = false;
-      tileContext.drawImage(art.space, 0, 0, tile.width, tile.height);
-
-      // Pair a tile with its vertical mirror. Matching top/bottom edges make
-      // the repeated pattern seamless while the artwork remains varied.
-      spacePatternCache = document.createElement("canvas");
-      spacePatternCache.width = tile.width;
-      spacePatternCache.height = tile.height * 2;
-      const patternContext = spacePatternCache.getContext("2d");
-      patternContext.imageSmoothingEnabled = false;
-      patternContext.drawImage(tile, 0, 0);
-      patternContext.save();
-      patternContext.translate(0, spacePatternCache.height);
-      patternContext.scale(1, -1);
-      patternContext.drawImage(tile, 0, 0);
-      patternContext.restore();
-    }
+    // Keep scenery in decoded images. Large mirrored canvas copies consumed
+    // tens of MB on Retina screens and could lose their backing store on iOS.
   }
 
   function clamp(value, min, max) {
@@ -407,10 +396,10 @@
   }
 
   function drawSpaceBackdrop(climb, alpha) {
-    if (!spacePatternCache || alpha <= 0) return;
-    const tileHeight = spacePatternCache.height / dpr;
+    if (!art.space || alpha <= 0) return;
+    const tileHeight = width * art.space.naturalHeight / art.space.naturalWidth;
     if (!tileHeight) return;
-    const cycle = tileHeight;
+    const cycle = tileHeight * 2;
     // The scenery drifts DOWN as the player climbs, at a slower parallax rate.
     const offset = Math.max(0, climb - spaceFade.start) * .045 % cycle;
     ctx.globalAlpha = alpha;
@@ -418,8 +407,14 @@
       // Align to physical pixels and overlap one pixel: fractional canvas
       // sampling must never expose the bright sky underneath adjacent tiles.
       const top = Math.floor(y * dpr) / dpr;
+      const middle = Math.ceil((y + tileHeight) * dpr) / dpr;
       const bottom = Math.ceil((y + cycle) * dpr) / dpr;
-      ctx.drawImage(spacePatternCache, 0, top, width, bottom - top + 1 / dpr);
+      ctx.drawImage(art.space, 0, top, width, middle - top + 1 / dpr);
+      ctx.save();
+      ctx.translate(0, bottom);
+      ctx.scale(1, -1);
+      ctx.drawImage(art.space, 0, 0, width, bottom - middle + 1 / dpr);
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
@@ -509,27 +504,27 @@
     // Cached scenery must never be relied upon to erase the previous frame.
     ctx.fillStyle = skyGradient || "#6ba5d3";
     ctx.fillRect(0, 0, width, height);
-    if (journeyCache && intoSky < 1) {
-      const source = journeyCache;
-      const view = backgroundView(climb, source.width, source.height, width, height);
+    if (art.journey && intoSky < 1) {
+      const source = art.journey;
+      const view = backgroundView(climb, source.naturalWidth, source.naturalHeight, width, height);
       ctx.globalAlpha = 1 - intoSky;
-      ctx.drawImage(source, 0, view.y, source.width, view.height, 0, 0, width, height);
+      ctx.drawImage(source, 0, view.y, source.naturalWidth, view.height, 0, 0, width, height);
     }
     drawSpaceBackdrop(climb, intoSpace);
     // Separate cloud sprites cross the screen downward. Their wrap happens
     // entirely outside the viewport, so infinite sky has no image seam. They
     // gradually give way to space rather than ending at a hard level boundary.
     const cloudsAlpha = backgroundFade(climb, 2800, skyFade.end) * (1 - intoSpace);
-    if (cloudCache && cloudsAlpha > 0) {
+    if (art.cloud && cloudsAlpha > 0) {
       for (let i = 0; i < 6; i += 1) {
         const cloudWidth = width * (.38 + (i % 3) * .12);
-        const cloudHeight = cloudWidth * cloudCache.height / cloudCache.width;
+        const cloudHeight = cloudWidth * art.cloud.naturalHeight / art.cloud.naturalWidth;
         const cycle = height + 2 * cloudHeight + 40;
         const y = ((i / 6 * cycle + climb * (.09 + (i % 3) * .025)) % cycle) - cloudHeight - 20;
         const x = (i % 2 ? width - cloudWidth * .72 : -cloudWidth * .28)
           + Math.sin(elapsed * .12 + i) * width * .015;
         ctx.globalAlpha = cloudsAlpha * (.3 + (i % 3) * .12);
-        ctx.drawImage(cloudCache, x, y, cloudWidth, cloudHeight);
+        ctx.drawImage(art.cloud, x, y, cloudWidth, cloudHeight);
       }
     }
     drawSpaceDecor(climb, intoSpace);
@@ -965,7 +960,7 @@
   }
 
   function registerAttempt() {
-    if (adminSandbox) return;
+    if (adminSandbox || adminBossTestMode) return;
     if (!canvas.dataset.startUrl || !csrfToken) return;
     postJSON(canvas.dataset.startUrl).then((data) => {
       attemptId = data.attempt_id || null;
@@ -977,7 +972,7 @@
   }
 
   function submitScore() {
-    if (adminSandbox) return;
+    if (adminSandbox || adminBossTestMode) return;
     if (scoreSubmitted || !canvas.dataset.finishUrl) return;
     if (!attemptId) {
       pendingFinish = true;
@@ -1157,10 +1152,13 @@
     ctx.restore();
   }
 
-  function startGame(skipIntro = false) {
+  function startGame(skipIntro = false, { forceRestart = false, adminTest = false } = {}) {
     if (!artReady) return;
-    if (mode === "intro") { finishIntro(); return; }
-    if (mode === "running") return;
+    if (!forceRestart && mode === "intro") { finishIntro(); return; }
+    if (!forceRestart && mode === "running") return;
+    adminBossTestMode = adminTest;
+    if (bossTestStatus && !adminTest) bossTestStatus.textContent = "Тест не влияет на рекорды и число попыток";
+    if (bossTestStatus && adminTest) bossTestStatus.textContent = "Тестовый бой · рекорд и попытка не сохраняются";
     cancelAnimationFrame(frame);
     buildGame();
     mode = "intro";
@@ -1178,14 +1176,74 @@
     canvas.focus({ preventScroll: true });
   }
 
+  function startTotoBossTest() {
+    if (!artReady) return;
+    if (!art.spaceBoss || !art.bossWheel) {
+      if (bossTestStatus) bossTestStatus.textContent = "Не удалось загрузить графику босса";
+      return;
+    }
+    if (mode === "running" && !adminBossTestMode) {
+      if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег, чтобы не потерять его попытку";
+      return;
+    }
+
+    startGame(true, { forceRestart: true, adminTest: true });
+    if (mode !== "running" || !player) return;
+
+    const encounterScore = 3500;
+    player.x = width / 2;
+    player.y = startY + encounterScore * 11;
+    player.vx = 0;
+    player.vy = 720;
+    peakY = player.y;
+    cameraY = Math.max(spaceFade.end + 240, player.y - height * .42);
+    openingJump = false;
+    forgottenPaddock = false;
+    portalTransition = null;
+    rocketTimer = 0;
+    invulnerableTimer = 0;
+    freeFlight = false;
+    if (flightButton) {
+      flightButton.setAttribute("aria-pressed", "false");
+      flightButton.textContent = "Свободный полёт: выкл.";
+    }
+
+    // A short ladder of safe launch pads keeps the test alive until the boss
+    // finishes its entrance and opens the stomp target.
+    platforms = [];
+    addPlatform(player.y - player.height / 2 - 10, player.x, "normal");
+    let platformY = player.y + 125;
+    const platformLimit = cameraY + height + 440;
+    while (platformY < platformLimit) {
+      addPlatform(platformY, width / 2, "normal");
+      platformY += 132;
+    }
+    worldTop = platforms[platforms.length - 1].y;
+    enemies = [];
+    hazards = [];
+    hawks = [];
+    powerups = [];
+    marshals = [];
+    effects = [];
+    spaceBoss = null;
+    bossShots = [];
+    guaranteedSpaceBossSpawned = false;
+    bossBonus = 0;
+    bossVictoryUntil = 0;
+    bossWait = 90;
+    updateHud();
+    draw();
+    canvas.focus({ preventScroll: true });
+  }
+
   function endGame() {
     if (mode !== "running") return;
     mode = "over";
     somersault = null;
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30 + marshalBonus + bossBonus;
-    lastWasRecord = finalScore > best;
-    if (!adminSandbox && finalScore > best) {
+    lastWasRecord = !adminBossTestMode && finalScore > best;
+    if (!adminSandbox && !adminBossTestMode && finalScore > best) {
       best = finalScore;
       try { localStorage.setItem(bestStorageKey, String(best)); } catch (error) { /* Keep the run playable without storage. */ }
     }
@@ -2306,7 +2364,11 @@
     lastRenderTime = previousTime;
     updateAccumulator = 0;
   });
-  startButton.addEventListener("click", () => startGame());
+  startButton.addEventListener("click", () => {
+    if (assetLoadFailed) window.location.reload();
+    else startGame();
+  });
+  if (bossTestButton) bossTestButton.addEventListener("click", startTotoBossTest);
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   introPreferenceButton?.addEventListener("click", () => {
     alwaysSkipIntro = !alwaysSkipIntro;
@@ -2381,6 +2443,20 @@
     });
   });
 
+  canvas.addEventListener("contextlost", (event) => {
+    event.preventDefault();
+    cancelAnimationFrame(frame);
+    releaseTouchControls();
+  });
+  canvas.addEventListener("contextrestored", () => {
+    viewportKey = "";
+    garageCache = null;
+    resize();
+    previousTime = lastRenderTime = performance.now();
+    updateAccumulator = 0;
+    if (mode === "running" || mode === "intro") frame = requestAnimationFrame(loop);
+  });
+
   Promise.all([
     image(canvas.dataset.atlasSrc),
     image(canvas.dataset.heroSheetSrc),
@@ -2408,6 +2484,10 @@
     garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
     introScaffold, introDriver, introHero,
   ]) => {
+    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage].every(Boolean)) {
+      showAssetError();
+      return;
+    }
     art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
     art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
     art.hawkFrames = splitSpriteSheet(hawkSheet, 4).filter(Boolean);
@@ -2449,11 +2529,12 @@
     }
     art.powerupFrames = { rocket: bakeSprite(splitSpriteSheet(rocketEmpty, 1)[0], 384) };
     artReady = true;
+    assetLoadFailed = false;
     startButton.disabled = false;
     resize();
     setOverlay("ready");
     machine.classList.remove("is-loading");
-  });
+  }).catch(showAssetError);
 
   if ("ResizeObserver" in window) {
     new ResizeObserver(resize).observe(wrap);
