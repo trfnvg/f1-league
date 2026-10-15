@@ -37,7 +37,6 @@
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   let rasterCache = new WeakMap();
-  let spriteScratch = null;
   let viewportKey = "";
   const held = { left: false, right: false };
   const sprites = [];
@@ -220,14 +219,13 @@
     if (!sheet || !columns) return [];
     const frameHeight = sheet.naturalHeight;
     const frames = [];
-    // Reuse one analysis surface instead of retaining a full-size canvas for
-    // every pose. Render directly from the original artwork after trimming.
-    if (!spriteScratch) spriteScratch = document.createElement("canvas");
     for (let frameIndex = 0; frameIndex < columns; frameIndex += 1) {
       const startX = Math.round((boundaries ? boundaries[frameIndex] : frameIndex / columns) * sheet.naturalWidth);
       const endX = Math.round((boundaries ? boundaries[frameIndex + 1] : (frameIndex + 1) / columns) * sheet.naturalWidth);
       const frameWidth = endX - startX;
-      const tile = spriteScratch;
+      // Keep each frame on its own immutable surface. In particular, do not
+      // reuse a canvas backing store while WebKit may still be reading it.
+      const tile = document.createElement("canvas");
       tile.width = frameWidth;
       tile.height = frameHeight;
       const tileCtx = tile.getContext("2d", { willReadFrequently: true });
@@ -251,7 +249,7 @@
       const sw = maxX - minX + 1;
       const sh = maxY - minY + 1;
       frames.push(maxX >= minX && maxY >= minY
-        ? { image: sheet, sx: startX + minX, sy: minY, sw, sh, mask: needsMask ? alphaMask(pixels, frameWidth, minX, minY, sw, sh) : null }
+        ? { image: tile, sx: minX, sy: minY, sw, sh, mask: needsMask ? alphaMask(pixels, frameWidth, minX, minY, sw, sh) : null }
         : null);
     }
     return frames;
@@ -504,12 +502,10 @@
     const climb = Math.max(0, cameraY);
     const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
     const intoSpace = backgroundFade(climb, spaceFade.start, spaceFade.end);
-    // Opaque scenery already covers every pixel. Avoid an extra full-screen
-    // paint at high DPR, retaining the sky base only for alpha transitions.
-    if (!(journeyCache && intoSky === 0) && !(spacePatternCache && intoSpace === 1)) {
-      ctx.fillStyle = skyGradient || "#6ba5d3";
-      ctx.fillRect(0, 0, width, height);
-    }
+    // Always repaint the base, including on WebKit and during scene fades.
+    // Cached scenery must never be relied upon to erase the previous frame.
+    ctx.fillStyle = skyGradient || "#6ba5d3";
+    ctx.fillRect(0, 0, width, height);
     if (journeyCache && intoSky < 1) {
       const source = journeyCache;
       const view = backgroundView(climb, source.width, source.height, width, height);
@@ -1820,6 +1816,13 @@
 
   function draw() {
     if (!ctx) return;
+    // Clear in physical pixels before any camera/intro transforms. Reset the
+    // compositor too, so no old sprite pixels can accumulate between frames.
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (mode === "intro" && intro) { drawIntro(); return; }
     drawBackdrop();
 
@@ -2318,8 +2321,6 @@
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }
     art.powerupFrames = { rocket: bakeSprite(splitSpriteSheet(rocketEmpty, 1)[0], 384) };
-    // No returned sprite references the analysis surface.
-    if (spriteScratch) { spriteScratch.width = 1; spriteScratch.height = 1; spriteScratch = null; }
     artReady = true;
     startButton.disabled = false;
     resize();
