@@ -34,3 +34,14 @@ Use case: background-extraction. Edit this existing game sprite: preserve the su
 
 Actual game Canvas renderer checked locally at 390×740 and 600×760 logical viewport sizes, with DPR 2. Checked dialogue, lifting pose and airborne pose. Simulated natural completion, Space and touch skip, held-key repeat, one attempt per start, landing alignment, missing-art fallback and admin sandbox bypass. No connected browser was available for an end-to-end browser check.
 
+## Leclerc and intro preference revision
+
+Built-in imagegen edit, transparent background. Edit target: `league/static/league/images/doodle-jump/western-intro-ferrari-v1.png`. Saved asset: `league/static/league/images/doodle-jump/western-intro-leclerc-v2.png`.
+
+Final prompt:
+
+Use case: precise-object-edit. Edit target: the attached existing Ferrari driver game sprite. Replace the generic long cartoon face with a recognizable CHARLES LECLERC likeness: short textured dark brown hair, thick expressive straight eyebrows, hazel-green eyes, defined broad cheekbones, angular jaw, short subtle dark stubble, characteristic small amused crooked smile. Remove the cap to show his recognizable hair and face. He is an adult, not a child. Preserve the full body standing pose facing slightly right, Ferrari red racing suit, small yellow shield, brown cowboy boots and matching crisp retro pixel-art shading and outlines. Face should be distinctly Charles Leclerc, not Woody and not George Russell. Keep both hands by sides, feet on common baseline, whole figure visible. Head slightly larger than realistic for legibility at game size but not oversized. Clean neck visible between chin and collar for code-drawn rope placement. No rope in asset. True fully transparent background, no halos, no glow, no shadows outside character, no scenery, no text. One isolated character.
+
+The rope now uses a rear strand/back arc before each actor and a narrow front arc at the sprite's neck. The dialogue bubble is 100×22 logical pixels (formerly 144×29). An accessible toggle above the game stores the skip preference under `f1-cowboy-skip-intro-v1` in localStorage; it is browser-local, not synced between devices. Storage failures fall back to the current page session.
+
+Verification: Canvas composition and pose rendering; preference on/off and reload persistence; Space on the settings button does not start a run; touch skip does not steer; repeated starts register one attempt; blocked storage does not stop play. These checks use the real game script with a local DOM/Canvas harness, not an end-to-end browser.
