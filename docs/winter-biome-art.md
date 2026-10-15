@@ -45,7 +45,10 @@ Reference: the photograph attached by the user in the winter-biome request.
 
 The entry score is captured when control resumes after the cave. At +100 points,
 the portrait and the exact user-supplied quote fade in once, stay in the background,
-then fade out at 20 seconds. All gameplay objects are drawn on top.
+then fade out at 20 seconds. The portrait and rounded navy quote panel sit
+behind gameplay. The sentence is grouped into three semantic phrases with
+responsive wrapping, bright semibold text and an icy accent. Lettering renders
+in a separate outlined pass so moving platforms cannot hide individual words.
 
 > Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence
 

@@ -787,35 +787,67 @@
     drawFrame(art.winterPlatforms[index], platform.x, platform.y, platform.spriteWidth, "platform");
   }
 
-  function drawWinterMemory() {
+  function drawWinterMemory(foreground = false) {
     if (winterMemoryStartedAt === null || antarcticaArrival) return;
     const age = elapsed - winterMemoryStartedAt;
     const fade = sceneEase(age, 0, 2) * (1 - sceneEase(age, 18, 20));
     if (fade <= 0 || !art.winterPortrait) return;
-    const portraitHeight = Math.min(height * .28, 230);
-    const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
-    const top = Math.min(Math.max(86, height * .13), height * .24);
-    ctx.save(); ctx.globalAlpha = fade * .23;
-    ctx.drawImage(rasterSprite(art.winterPortrait, portraitWidth, portraitHeight),
-      (width - portraitWidth) / 2, top, portraitWidth, portraitHeight);
-    const fontSize = clamp(width / 31, 11, 14), lineHeight = fontSize * 1.5;
-    const maxWidth = width * .84, key = `${width}:${fontSize}`;
-    ctx.font = `500 ${fontSize}px system-ui`;
+    const fontSize = Math.min(clamp(width / 29, 12, 15), Math.max(9, height * .04));
+    const lineHeight = Math.ceil(fontSize * 1.5), padding = height < 320 ? 12 : 18;
+    const cardWidth = Math.min(width * .88, 420), maxWidth = cardWidth - 44;
+    const key = `${cardWidth}:${fontSize}:semibold`;
+    ctx.save(); ctx.font = `600 ${fontSize}px system-ui`;
     if (!winterQuoteLayout || winterQuoteLayout.key !== key) {
-      const lines = []; let line = "";
-      for (const word of winterMemoryQuote.split(" ")) {
-        const next = line ? `${line} ${word}` : word;
-        if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
-        else line = next;
+      const lines = [];
+      // Group the sentence by meaning, then wrap each phrase for the viewport.
+      const phrases = winterMemoryQuote.replace(", he", ",\nhe").replace(" and borderline", "\nand borderline").split("\n");
+      for (const phrase of phrases) {
+        let line = "";
+        for (const word of phrase.split(" ")) {
+          const next = line ? `${line} ${word}` : word;
+          if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
+          else line = next;
+        }
+        if (line) lines.push(line);
       }
-      if (line) lines.push(line);
       winterQuoteLayout = { key, lines };
     }
-    const textY = Math.min(top + portraitHeight + 20, height * .49);
-    ctx.globalAlpha = fade * .72; ctx.textAlign = "center";
-    // Keep the quote behind all platforms, enemies and the playable character.
-    ctx.fillStyle = "#102940";
-    winterQuoteLayout.lines.forEach((line, index) => ctx.fillText(line, width / 2, textY + index * lineHeight));
+    const cardHeight = winterQuoteLayout.lines.length * lineHeight + padding * 2;
+    const cardX = (width - cardWidth) / 2;
+    const cardY = Math.max(16, height * .53 - cardHeight);
+    const portraitTop = Math.min(Math.max(82, height * .12), height * .2);
+    const portraitHeight = Math.min(height * .28, 230, Math.max(0, cardY - portraitTop + 10));
+    if (!foreground && portraitHeight > 0) {
+      const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
+      ctx.globalAlpha = fade * .23;
+      ctx.drawImage(rasterSprite(art.winterPortrait, portraitWidth, portraitHeight),
+        (width - portraitWidth) / 2, portraitTop, portraitWidth, portraitHeight);
+    }
+    // Keep the panel behind gameplay; render its lettering in a separate pass
+    // so passing snow caps cannot erase words from the quote.
+    if (foreground) {
+      ctx.globalAlpha = fade;
+      ctx.textAlign = "center";
+      ctx.strokeStyle = "rgba(6,23,39,.95)"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+      ctx.fillStyle = "#f0f8ff";
+      const textY = cardY + padding + (lineHeight + fontSize) / 2;
+      winterQuoteLayout.lines.forEach((line, index) => {
+        ctx.strokeText(line, width / 2 + 3, textY + index * lineHeight);
+        ctx.fillText(line, width / 2 + 3, textY + index * lineHeight);
+      });
+      ctx.restore();
+      return;
+    }
+    ctx.globalAlpha = fade;
+    const r = 9;
+    ctx.beginPath(); ctx.moveTo(cardX + r, cardY);
+    ctx.lineTo(cardX + cardWidth - r, cardY); ctx.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + r);
+    ctx.lineTo(cardX + cardWidth, cardY + cardHeight - r); ctx.quadraticCurveTo(cardX + cardWidth, cardY + cardHeight, cardX + cardWidth - r, cardY + cardHeight);
+    ctx.lineTo(cardX + r, cardY + cardHeight); ctx.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - r);
+    ctx.lineTo(cardX, cardY + r); ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY); ctx.closePath();
+    ctx.fillStyle = "rgba(6,23,39,.9)"; ctx.fill();
+    ctx.strokeStyle = "rgba(161,213,241,.44)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = "#79c7e9"; ctx.fillRect(cardX + 9, cardY + 16, 2, cardHeight - 32);
     ctx.restore();
   }
 
@@ -2713,6 +2745,7 @@
       }
       ctx.restore();
     }
+    if (antarctica) drawWinterMemory(true);
     const blackout = portalTransition
       ? clamp((portalTransition.age - 2.65) / .35, 0, 1)
       : forgottenPaddock ? clamp((arrivalUntil - elapsed - 3.4) / .6, 0, 1) : 0;
