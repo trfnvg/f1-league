@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=scaffold-intro-v25">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=leclerc-intro-v26">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -20,6 +20,11 @@
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
   </header>
 
+  <div class="doodle-preferences">
+    <button id="doodle-intro-preference" class="doodle-intro-preference" type="button" aria-pressed="false">
+      Всегда пропускать вступление <span id="doodle-intro-preference-state" aria-hidden="true">Выкл.</span>
+    </button>
+  </div>
   <section class="doodle-machine" aria-label="Cowboy GP — прыжковая аркада">
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
@@ -68,7 +73,7 @@
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
           data-hawk-sheet-src="{% static 'league/images/doodle-jump/western-hawk-flap-v1.png' %}"
           data-intro-scaffold-src="{% static 'league/images/doodle-jump/western-intro-scaffold-v1.png' %}"
-          data-intro-driver-src="{% static 'league/images/doodle-jump/western-intro-ferrari-v1.png' %}"
+          data-intro-driver-src="{% static 'league/images/doodle-jump/western-intro-leclerc-v2.png' %}"
           data-intro-hero-src="{% static 'league/images/doodle-jump/western-intro-russell-v1.png' %}"
           data-boss-wheel-src="{% static 'league/images/doodle-jump/space-dirty-wheel-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
@@ -130,6 +135,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=scaffold-intro-v25" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=leclerc-intro-v26" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

@@ -11,6 +11,8 @@
   const kicker = document.getElementById("doodle-overlay-kicker");
   const startButton = document.getElementById("doodle-start");
   const introSkipButton = document.getElementById("doodle-intro-skip");
+  const introPreferenceButton = document.getElementById("doodle-intro-preference");
+  const introPreferenceState = document.getElementById("doodle-intro-preference-state");
   const introCaption = document.getElementById("doodle-intro-caption");
   const scoreNode = document.getElementById("doodle-score");
   const bestNode = document.getElementById("doodle-best");
@@ -21,6 +23,14 @@
   const totalAttemptsNode = document.getElementById("doodle-total-attempts");
   const csrfToken = document.querySelector("#doodle-csrf-form [name=csrfmiddlewaretoken]")?.value || "";
   const bestStorageKey = "f1-doodle-gp-best-v1";
+  const introStorageKey = "f1-cowboy-skip-intro-v1";
+  let alwaysSkipIntro = false;
+  try { alwaysSkipIntro = localStorage.getItem(introStorageKey) === "1"; } catch (error) { /* Session-only preference if storage is disabled. */ }
+  function syncIntroPreference() {
+    introPreferenceButton?.setAttribute("aria-pressed", String(alwaysSkipIntro));
+    if (introPreferenceState) introPreferenceState.textContent = alwaysSkipIntro ? "Вкл." : "Выкл.";
+  }
+  syncIntroPreference();
   const art = {};
   const adminSandbox = canvas.dataset.adminFlight === "1";
   const flightButton = document.getElementById("doodle-flight-toggle");
@@ -985,7 +995,7 @@
     const previousAge = intro.age;
     intro.age += dt;
     if (introCaption && previousAge < .55 && intro.age >= .55) {
-      introCaption.textContent = "Гонщик Ferrari: «В первый раз?»";
+      introCaption.textContent = "Леклер: «В первый раз?»";
     }
     if (introCaption && previousAge < 2.25 && intro.age >= 2.25) {
       introCaption.textContent = "Рассел снимает петлю и прыгает на первую платформу.";
@@ -1003,18 +1013,23 @@
     ctx.restore();
   }
 
-  function drawIntroRope(anchorX, beamY, loopX, loopY, rx, ry) {
+  function drawIntroRope(anchorX, beamY, loopX, loopY, rx, ry, layer = "back") {
     ctx.save();
-    // A loose loop is lifted over the hat; both characters stay on the deck.
-    for (const [color, thickness] of [["#51301d", 3.5], ["#d8b47a", 1.7]]) {
+    // Back strand/arc are occluded by the actor. Only the small front arc
+    // crosses the neck, never an entire ring across the face or torso.
+    ctx.lineCap = "round";
+    for (const [color, thickness] of [["#51301d", 1.7], ["#d8b47a", .8]]) {
       ctx.strokeStyle = color;
       ctx.lineWidth = thickness;
+      if (layer === "back") {
+        ctx.beginPath();
+        ctx.moveTo(anchorX, beamY);
+        ctx.quadraticCurveTo(anchorX, loopY - ry - 12, loopX + rx, loopY);
+        ctx.stroke();
+      }
       ctx.beginPath();
-      ctx.moveTo(anchorX, beamY);
-      ctx.quadraticCurveTo(anchorX, loopY - ry - 12, loopX + rx * .65, loopY - ry * .8);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.ellipse(loopX, loopY, rx, ry, -.12, 0, Math.PI * 2);
+      ctx.ellipse(loopX, loopY, rx, ry, 0,
+        layer === "back" ? Math.PI : 0, layer === "back" ? Math.PI * 2 : Math.PI);
       ctx.stroke();
     }
     ctx.restore();
@@ -1034,6 +1049,16 @@
     const heroX = stageX + stageWidth * .66;
     const driverX = stageX + stageWidth * .36;
     const actorHeight = player.height;
+    const driverHeight = actorHeight * 1.08;
+    // Coordinates measured against the trimmed standing sprites.
+    const driverNeckX = driverX - driverHeight * .018;
+    const driverNeckY = feetY - driverHeight * .795;
+    const lift = clamp((age - 2.25) / .85, 0, 1);
+    const release = clamp((age - 3.1) / .4, 0, 1);
+    const loopX = heroX - actorHeight * .025 + release * (16 + Math.sin((age - 3.1) * 5) * 5);
+    const loopY = feetY - actorHeight * (.62 + lift * .52);
+    const loopRX = actorHeight * (.055 + lift * .295 - release * .12);
+    const loopRY = actorHeight * (.022 + lift * .12);
     const stageOpacity = 1 - clamp((age - 4.05) / 1, 0, 1);
 
     ctx.save();
@@ -1054,12 +1079,14 @@
     ctx.globalAlpha = stageOpacity;
     ctx.drawImage(rasterSprite(art.introScaffold, stageWidth, stageHeight),
       stageX, stageY, stageWidth, stageHeight);
-    drawIntroActor(art.introDriver, driverX, feetY, actorHeight * 1.08);
     drawIntroRope(driverX + actorHeight * .3, beamY,
-      driverX, feetY - actorHeight * .72, actorHeight * .1, actorHeight * .1);
+      driverNeckX, driverNeckY, driverHeight * .045, driverHeight * .02);
+    drawIntroActor(art.introDriver, driverX, feetY, driverHeight);
+    drawIntroRope(driverX + actorHeight * .3, beamY,
+      driverNeckX, driverNeckY, driverHeight * .045, driverHeight * .02, "front");
+    drawIntroRope(heroX + actorHeight * .34, beamY, loopX, loopY, loopRX, loopRY);
     ctx.restore();
 
-    const lift = clamp((age - 2.25) / .85, 0, 1);
     if (age < 3.5) {
       const pose = art.introHeroFrames[age < 2.25 ? 0 : age < 3.1 ? 1 : 2];
       const poseHeight = actorHeight * pose.sh / art.introHeroFrames[0].sh;
@@ -1075,36 +1102,37 @@
 
     ctx.save();
     ctx.globalAlpha = stageOpacity;
-    const released = age >= 3.1;
-    const loopX = heroX + (released ? 16 + Math.sin((age - 3.1) * 5) * 5 : 0);
-    const loopY = feetY - actorHeight * (released ? 1.12 : .64 + lift * .5);
-    drawIntroRope(heroX + actorHeight * .34, beamY, loopX, loopY,
-      actorHeight * (released ? .22 : .11 + lift * .27), actorHeight * (.1 + lift * .08));
+    drawIntroRope(heroX + actorHeight * .34, beamY, loopX, loopY, loopRX, loopRY, "front");
 
     if (age >= .55 && age < 2.9) {
-      const bubbleWidth = 144;
+      const bubbleWidth = 100;
       const bx = driverX - bubbleWidth / 2;
-      const by = feetY - actorHeight * 1.08 - 40;
-      ctx.fillStyle = "#fff0ce";
-      ctx.strokeStyle = "#473625";
-      ctx.lineWidth = 2;
+      const by = feetY - driverHeight - 30;
+      ctx.fillStyle = "#fff5df";
+      ctx.strokeStyle = "#80674d";
+      ctx.lineWidth = 1;
+      ctx.shadowColor = "rgba(42, 29, 18, .25)";
+      ctx.shadowOffsetY = 2;
       ctx.beginPath();
-      ctx.moveTo(bx + 4, by);
-      ctx.lineTo(bx + bubbleWidth - 4, by);
-      ctx.lineTo(bx + bubbleWidth, by + 4);
-      ctx.lineTo(bx + bubbleWidth, by + 29);
-      ctx.lineTo(driverX + 7, by + 29);
-      ctx.lineTo(driverX, by + 37);
-      ctx.lineTo(driverX - 6, by + 29);
-      ctx.lineTo(bx, by + 29);
-      ctx.lineTo(bx, by + 4);
+      ctx.moveTo(bx + 3, by);
+      ctx.lineTo(bx + bubbleWidth - 3, by);
+      ctx.lineTo(bx + bubbleWidth, by + 3);
+      ctx.lineTo(bx + bubbleWidth, by + 19);
+      ctx.lineTo(bx + bubbleWidth - 3, by + 22);
+      ctx.lineTo(driverX + 4, by + 22);
+      ctx.lineTo(driverX, by + 27);
+      ctx.lineTo(driverX - 4, by + 22);
+      ctx.lineTo(bx + 3, by + 22);
+      ctx.lineTo(bx, by + 19);
+      ctx.lineTo(bx, by + 3);
       ctx.closePath();
       ctx.fill();
+      ctx.shadowColor = "transparent";
       ctx.stroke();
       ctx.fillStyle = "#3e2d24";
-      ctx.font = "bold 13px 'Courier New', monospace";
+      ctx.font = "bold 10px 'Courier New', monospace";
       ctx.textAlign = "center";
-      ctx.fillText("В первый раз?".slice(0, Math.floor((age - .55) * 24)), driverX, by + 19);
+      ctx.fillText("В первый раз?".slice(0, Math.floor((age - .55) * 24)), driverX, by + 14);
     }
     ctx.restore();
     ctx.restore();
@@ -1120,11 +1148,11 @@
     intro = { age: 0 };
     machine.classList.add("is-intro");
     if (introSkipButton) introSkipButton.hidden = false;
-    if (introCaption) introCaption.textContent = "Паддок. Рассел и гонщик Ferrari стоят на эшафоте.";
+    if (introCaption) introCaption.textContent = "Паддок. Рассел и Леклер стоят на эшафоте.";
     updateAccumulator = 0;
     nextHudUpdate = 0;
     setOverlay("running");
-    if (skipIntro || !art.introScaffold || !art.introDriver || art.introHeroFrames.length !== 3) finishIntro();
+    if (skipIntro || alwaysSkipIntro || !art.introScaffold || !art.introDriver || art.introHeroFrames.length !== 3) finishIntro();
     previousTime = performance.now();
     lastRenderTime = previousTime;
     frame = requestAnimationFrame(loop);
@@ -2067,6 +2095,8 @@
   }
 
   document.addEventListener("keydown", (event) => {
+    // Let Space activate the settings button normally instead of starting a run.
+    if (event.target?.closest?.("#doodle-intro-preference")) return;
     const key = event.key.toLowerCase();
     if (key === "escape" && isGameFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) {
       event.preventDefault();
@@ -2101,6 +2131,12 @@
   });
   startButton.addEventListener("click", () => startGame());
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
+  introPreferenceButton?.addEventListener("click", () => {
+    alwaysSkipIntro = !alwaysSkipIntro;
+    try { localStorage.setItem(introStorageKey, alwaysSkipIntro ? "1" : "0"); } catch (error) { /* Keep the choice for this page session. */ }
+    syncIntroPreference();
+    if (alwaysSkipIntro && mode === "intro") finishIntro();
+  });
   if (adminSandbox && flightButton) {
     flightButton.addEventListener("click", () => {
       freeFlight = !freeFlight;

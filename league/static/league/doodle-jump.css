@@ -89,6 +89,42 @@
   box-shadow: 2px 2px 0 #1c754c;
 }
 
+.doodle-preferences {
+  display: flex;
+  justify-content: flex-end;
+  width: min(100%, 1180px);
+  margin: 0 auto .75rem;
+}
+.doodle-intro-preference {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  max-width: 100%;
+  min-height: 44px;
+  padding: .55rem .75rem;
+  border: 1px solid var(--doodle-line);
+  border-radius: 6px;
+  background: #17232c;
+  color: var(--doodle-cream);
+  font: 600 .75rem/1.4 system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.doodle-intro-preference span {
+  flex-shrink: 0;
+  min-width: 3rem;
+  padding: .15rem .3rem;
+  border-radius: 3px;
+  background: #2e3a3e;
+  color: var(--doodle-muted);
+  text-align: center;
+}
+.doodle-intro-preference[aria-pressed="true"] { border-color: var(--doodle-yellow); }
+.doodle-intro-preference[aria-pressed="true"] span { background: var(--doodle-yellow); color: #27231b; }
+.doodle-intro-preference:focus-visible { outline: 2px solid var(--doodle-yellow); outline-offset: 3px; }
+
 .doodle-machine {
   width: min(100%, 1180px);
   margin-inline: auto;
