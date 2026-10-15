@@ -83,6 +83,7 @@
   let hawkSpawnWait = 2 + Math.random() * 2;
   let spaceBoss = null;
   let bossShots = [];
+  let guaranteedSpaceBossSpawned = false;
   let marshals = [];
   let nextMarshalY = 1800;
   let marshalBonus = 0;
@@ -752,6 +753,7 @@
     hawkSpawnWait = 2 + Math.random() * 2;
     spaceBoss = null;
     bossShots = [];
+    guaranteedSpaceBossSpawned = false;
     marshals = [];
     nextMarshalY = 1800;
     marshalBonus = 0;
@@ -1422,11 +1424,21 @@
   function updateSpaceBoss(dt) {
     if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
-      bossWait -= dt;
-      if (bossWait <= 0) {
+      const score = runScore();
+      if (!guaranteedSpaceBossSpawned && score >= 3500) {
+        // Trigger the first Toto encounter by score instead of a random timer,
+        // so every run reaches him within the 3,500–4,500 point window.
+        guaranteedSpaceBossSpawned = true;
         spaceBoss = { age: 0, x: width / 2, screenY: 145, nextShot: 3, shots: 0,
           shotLimit: 7 + Math.floor(Math.random() * 3), targetX: width * (.15 + Math.random() * .7),
           retargetAt: 0, leaveAt: Infinity };
+      } else if (guaranteedSpaceBossSpawned && score > 4500) {
+        bossWait -= dt;
+        if (bossWait <= 0) {
+          spaceBoss = { age: 0, x: width / 2, screenY: 145, nextShot: 3, shots: 0,
+            shotLimit: 7 + Math.floor(Math.random() * 3), targetX: width * (.15 + Math.random() * .7),
+            retargetAt: 0, leaveAt: Infinity };
+        }
       }
     }
     if (spaceBoss) {
