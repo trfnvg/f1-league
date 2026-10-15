@@ -52,6 +52,10 @@
   const controlSceneDuration = 11.2;
   const caveSceneDuration = 9.8;
   let antarcticaEntryY = 0;
+  let antarcticaEntryScore = 0;
+  let winterMemoryStartedAt = null;
+  const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
+  let winterQuoteLayout = null;
   let portalTransition = null;
   let arrivalUntil = 0;
   let lastRenderTime = 0;
@@ -265,6 +269,54 @@
       painter.drawImage(pose.image, pose.sx, pose.sy, pose.sw, pose.sh,
         Math.round((cellWidth - pose.sw) / 2), cellHeight - pose.sh, pose.sw, pose.sh);
       return { image: tile, sx: 0, sy: 0, sw: cellWidth, sh: cellHeight };
+    });
+  }
+
+  function walkFrames(sheet) {
+    const poses = splitSpriteSheet(sheet, 8, null, false);
+    if (poses.length !== 8 || poses.some((pose) => !pose)) return [];
+    const anchors = poses.map((pose) => {
+      const rows = Math.max(1, Math.floor(pose.sh * .28));
+      const data = pose.image.getContext("2d").getImageData(pose.sx, pose.sy, pose.sw, rows).data;
+      let left = pose.sw, right = 0;
+      for (let y = 0; y < rows; y += 1) for (let x = 0; x < pose.sw; x += 1) {
+        if (data[(y * pose.sw + x) * 4 + 3] <= 18) continue;
+        left = Math.min(left, x); right = Math.max(right, x);
+      }
+      return (left + right) / 2;
+    });
+    const w = Math.ceil(2 * Math.max(...poses.map((pose, i) => Math.max(anchors[i], pose.sw - anchors[i]))));
+    const h = Math.max(...poses.map((pose) => pose.sh));
+    return poses.map((pose, i) => {
+      const tile = document.createElement("canvas"); tile.width = w; tile.height = h;
+      tile.getContext("2d").drawImage(pose.image, pose.sx, pose.sy, pose.sw, pose.sh,
+        Math.round(w / 2 - anchors[i]), h - pose.sh, pose.sw, pose.sh);
+      return { image: tile, sx: 0, sy: 0, sw: w, sh: h };
+    });
+  }
+
+  function piranhaFrames(sheet) {
+    const poses = splitSpriteSheet(sheet, 4, null, false);
+    if (poses.length !== 4 || poses.some((pose) => !pose)) return [];
+    // Align on the red mouth, not the wing bounds: flapping must not move the
+    // fish body or its collision ellipse between animation frames.
+    const anchors = poses.map((pose) => {
+      const pixels = pose.image.getContext("2d").getImageData(pose.sx, pose.sy, pose.sw, pose.sh).data;
+      let left = pose.sw, right = 0, top = pose.sh, bottom = 0;
+      for (let y = 0; y < pose.sh; y += 1) for (let x = 0; x < pose.sw; x += 1) {
+        const at = (y * pose.sw + x) * 4;
+        if (pixels[at + 3] < 100 || pixels[at] < 90 || pixels[at] < pixels[at + 1] * 1.5 || pixels[at] < pixels[at + 2] * 1.4) continue;
+        left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+      }
+      return { x: right + (right - left) * .65, y: (top + bottom) / 2 - (bottom - top) * .08 };
+    });
+    const w = Math.ceil(2 * Math.max(...poses.map((p, i) => Math.max(anchors[i].x, p.sw - anchors[i].x))));
+    const h = Math.ceil(2 * Math.max(...poses.map((p, i) => Math.max(anchors[i].y, p.sh - anchors[i].y))));
+    return poses.map((pose, i) => {
+      const tile = document.createElement("canvas"); tile.width = w; tile.height = h;
+      tile.getContext("2d").drawImage(pose.image, pose.sx, pose.sy, pose.sw, pose.sh,
+        Math.round(w / 2 - anchors[i].x), Math.round(h / 2 - anchors[i].y), pose.sw, pose.sh);
+      return { image: tile, sx: 0, sy: 0, sw: w, sh: h };
     });
   }
 
@@ -653,6 +705,8 @@
     antarcticaArrival = { age: 0 };
     antarctica = true;
     antarcticaEntryY = cameraY;
+    antarcticaEntryScore = runScore();
+    winterMemoryStartedAt = null;
     arrivalUntil = 0;
     player.x = width * .68;
     // Leave peakY and all earned bonuses untouched through the cutscene.
@@ -663,6 +717,8 @@
     openingJump = false;
     invulnerableTimer = 3;
     platforms = [];
+    enemies = [];
+    hazards = [];
     powerups = [];
     marshals = [];
     effects = [];
@@ -686,6 +742,7 @@
     player.vy = 720;
     invulnerableTimer = 3;
     nextHudUpdate = 0;
+    antarcticaEntryScore = runScore();
     releaseTouchControls();
     if (introCaption) introCaption.textContent = "Сид указывает наверх. Прыгай по ледяным платформам.";
     updateHud();
@@ -722,41 +779,43 @@
       ctx.fillRect(Math.round(x), Math.round(y), size, size);
     }
     ctx.restore();
+    drawWinterMemory();
   }
 
   function drawIcePlatform(platform) {
-    const y = Math.round(worldToScreen(platform.y));
-    if (y > height || y + platform.height + 15 < 0) return;
-    const w = platform.spriteWidth, x = Math.round(platform.x - w / 2);
-    const h = Math.max(12, platform.height);
-    ctx.save();
-    ctx.fillStyle = platform.kind === "break" ? "#64839a" : "#327798";
-    ctx.beginPath(); ctx.moveTo(x, y + 3); ctx.lineTo(x + w, y + 3);
-    ctx.lineTo(x + w - 5, y + h * .65); ctx.lineTo(x + w * .6, y + h);
-    ctx.lineTo(x + w * .2, y + h * .8); ctx.lineTo(x + 4, y + h * .5); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "#87c9df";
-    ctx.fillRect(x + 3, y + 5, w - 6, 6);
-    ctx.fillStyle = "#eaf6fa";
-    ctx.fillRect(x, y, w, 4);
-    ctx.fillRect(x + 4, y - 2, w * .38, 3);
-    ctx.fillStyle = "#b6e0ed";
-    for (let i = 0; i < 3; i += 1) {
-      const tipX = x + w * (.2 + i * .27);
-      ctx.beginPath(); ctx.moveTo(tipX, y + h * .55); ctx.lineTo(tipX + 5, y + h * .55);
-      ctx.lineTo(tipX + 2, y + h + 5 + i % 2 * 5); ctx.fill();
+    const index = platform.kind === "moving" ? 1 : platform.kind === "break" ? 2 : platform.kind === "spring" ? 3 : 0;
+    drawFrame(art.winterPlatforms[index], platform.x, platform.y, platform.spriteWidth, "platform");
+  }
+
+  function drawWinterMemory() {
+    if (winterMemoryStartedAt === null || antarcticaArrival) return;
+    const age = elapsed - winterMemoryStartedAt;
+    const fade = sceneEase(age, 0, 2) * (1 - sceneEase(age, 18, 20));
+    if (fade <= 0 || !art.winterPortrait) return;
+    const portraitHeight = Math.min(height * .28, 230);
+    const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
+    const top = Math.min(Math.max(86, height * .13), height * .24);
+    ctx.save(); ctx.globalAlpha = fade * .23;
+    ctx.drawImage(rasterSprite(art.winterPortrait, portraitWidth, portraitHeight),
+      (width - portraitWidth) / 2, top, portraitWidth, portraitHeight);
+    const fontSize = clamp(width / 31, 11, 14), lineHeight = fontSize * 1.5;
+    const maxWidth = width * .84, key = `${width}:${fontSize}`;
+    ctx.font = `500 ${fontSize}px system-ui`;
+    if (!winterQuoteLayout || winterQuoteLayout.key !== key) {
+      const lines = []; let line = "";
+      for (const word of winterMemoryQuote.split(" ")) {
+        const next = line ? `${line} ${word}` : word;
+        if (line && ctx.measureText(next).width > maxWidth) { lines.push(line); line = word; }
+        else line = next;
+      }
+      if (line) lines.push(line);
+      winterQuoteLayout = { key, lines };
     }
-    if (platform.kind === "break") {
-      ctx.strokeStyle = "#304f70"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + w * .45, y); ctx.lineTo(x + w * .55, y + 6);
-      ctx.lineTo(x + w * .4, y + 12); ctx.stroke();
-    } else if (platform.kind === "moving") {
-      ctx.fillStyle = "#326b9a";
-      ctx.fillRect(x + 7, y + 1, 5, 2); ctx.fillRect(x + w - 12, y + 1, 5, 2);
-    } else if (platform.kind === "spring") {
-      ctx.strokeStyle = "#e9b765"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(x + w * .5, y + 11); ctx.lineTo(x + w * .38, y + 7);
-      ctx.lineTo(x + w * .62, y + 4); ctx.lineTo(x + w * .5, y); ctx.stroke();
-    }
+    const textY = Math.min(top + portraitHeight + 20, height * .49);
+    ctx.globalAlpha = fade * .72; ctx.textAlign = "center";
+    // Keep the quote behind all platforms, enemies and the playable character.
+    ctx.fillStyle = "#102940";
+    winterQuoteLayout.lines.forEach((line, index) => ctx.fillText(line, width / 2, textY + index * lineHeight));
     ctx.restore();
   }
 
@@ -768,6 +827,11 @@
   function sceneMix(from, to, t) { return from + (to - from) * t; }
 
   function storyHeroHeight() { return Math.min(clamp(width * .2, 76, 104), height * .22); }
+
+  function walkingSprite(distance, actorHeight) {
+    const phase = Math.floor(Math.abs(distance) / (actorHeight * .95) * 8) % 8;
+    return art.walkFrames[phase];
+  }
 
   function drawStoryActor(sprite, x, feet, actorHeight, angle = 0, scaleX = 1, scaleY = 1, alpha = 1) {
     if (!sprite || alpha <= 0) return;
@@ -910,7 +974,7 @@
     const landingBounce = Math.sin(clamp((age - 1.45) / .32, 0, 1) * Math.PI) * .13;
     const heroPose = age < 1.45 ? art.heroFrames[1] : age < 1.8 ? art.heroStoryFrames[4]
       : age > 4.42 && age < 5.8 ? art.heroStoryFrames[3]
-        : age > 8.25 ? art.heroFrames[2] : age > 2 && age < 3.15 ? art.heroStoryFrames[1 + Math.floor(age * 9) % 2] : art.heroStoryFrames[0];
+        : age > 8.25 ? art.heroFrames[2] : age > 2 && age < 3.15 ? walkingSprite(width * .09 * ease(2, 3.15), heroHeight) : art.heroStoryFrames[0];
     drawStoryShadow(motion.x, floorY, heroHeight * (.23 - motion.suction * .12), .36 * (1 - motion.suction));
     if (age > 8.4 && age < 10.6) {
       for (let i = 3; i > 0; i -= 1) {
@@ -985,7 +1049,7 @@
     const shrink = sceneMix(1, player.height / heroHeight, handoff);
     const turn = age < .8 ? (1 - landing) * -Math.PI * 1.4 : age > 2 && age < 4.9 ? Math.sin(age * 13) * .025 : 0;
     const pose = age < 1.4 ? art.heroStoryFrames[4] : age > 7.1 ? (age > 8.85 ? art.heroFrames[0] : art.heroFrames[1])
-      : age > 2 && age < 4.9 ? art.heroStoryFrames[1 + Math.floor(age * 9) % 2] : age > 6 ? art.heroStoryFrames[5] : art.heroStoryFrames[0];
+      : age > 2 && age < 4.9 ? walkingSprite((heroEnd - heroStart) * walk, heroHeight) : age > 6 ? art.heroStoryFrames[5] : art.heroStoryFrames[0];
     drawStoryShadow(heroX, floorY, heroHeight * .23, .27 * (1 - jump));
     drawStoryActor(pose, heroX, heroFeet, heroHeight, turn, shrink, shrink);
     const subtitle = age > 5.2 && age < 6.3 ? "Сид: «Ты потерялся?»" : age >= 6.3 && age < 7.4 ? "Сид: «Тебе наверх!»" : "";
@@ -1014,6 +1078,23 @@
   }
 
   function startAntarcticaTest() { startAntarcticaPreview(false); }
+
+  function startWinterBiomeTest() {
+    if (!artReady) return;
+    if (mode === "running" && !adminBossTestMode && !adminSandbox) {
+      if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег";
+      return;
+    }
+    startAntarcticaPreview(true);
+    if (!antarcticaArrival || !adminBossTestMode) return;
+    finishAntarcticaArrival();
+    antarcticaEntryScore = runScore() - 100;
+    winterMemoryStartedAt = elapsed - 2;
+    enemies = [.22, .78].map((lane, i) => ({ type: "piranha", x: width * lane, baseX: width * lane,
+      y: cameraY + height * (.72 + i * .16), phase: i * 1.7, variant: 0, dead: false }));
+    if (bossTestStatus) bossTestStatus.textContent = "Тест зимы · пираньи и фон +100 · без записи результата";
+    draw();
+  }
 
   function drawPortal() {
     if (!portalTransition) return;
@@ -1056,13 +1137,13 @@
     const spriteWidth = kind === "spring"
       ? Math.min(72 * visualScale(), platformWidth * .82)
       : platformWidth;
-    const spriteHeight = spriteSize(sprites[spriteIndex], spriteWidth);
+    const spriteHeight = spriteSize(antarctica ? art.winterPlatforms[spriteIndex] : sprites[spriteIndex], spriteWidth);
     const platform = {
       x,
       originX: x,
       y,
       width: platformWidth,
-      hitboxWidth: kind === "spring" ? spriteWidth * .72 : platformWidth,
+      hitboxWidth: kind === "spring" ? spriteWidth * (antarctica ? .36 : .72) : platformWidth,
       spriteWidth,
       height: spriteHeight,
       kind,
@@ -1145,6 +1226,8 @@
     antarcticaScene = null;
     antarcticaArrival = null;
     antarcticaEntryY = 0;
+    antarcticaEntryScore = 0;
+    winterMemoryStartedAt = null;
     machine.classList.remove("is-story");
     babyKimi = null;
     kimiWait = 12 + Math.random() * 8;
@@ -1240,9 +1323,10 @@
       worldTop = y;
     }
 
-    if (!enemies.length || worldTop - enemies[enemies.length - 1].y > 490) {
+    if (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490)) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
+        type: antarctica ? "piranha" : "tire",
         variant: nextEnemyVariant(),
         x: enemyX,
         baseX: enemyX,
@@ -1251,7 +1335,8 @@
         dead: false,
       });
     }
-    if (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430) {
+    if (antarctica) hazards = [];
+    if (!antarctica && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -2116,7 +2201,45 @@
   }
 
   function enemyFrame(enemy) {
+    if (enemy.type === "piranha") return art.piranhaFrames[Math.floor(elapsed * 10 + enemy.phase) % 4];
     return (art.enemyVariants && art.enemyVariants[enemy.variant]) || sprites[4];
+  }
+
+  function piranhaGeometry(enemy, time = elapsed) {
+    return { x: enemy.x, y: enemy.y + Math.sin(time * 3 + enemy.phase) * 6,
+      rx: 19, ry: 14, width: 74 };
+  }
+
+  function drawPiranha(enemy) {
+    const body = piranhaGeometry(enemy), frame = enemyFrame(enemy);
+    const h = spriteSize(frame, body.width), y = worldToScreen(body.y);
+    if (y + h / 2 < 0 || y - h / 2 > height) return;
+    ctx.save(); ctx.translate(body.x, y);
+    ctx.scale(Math.cos(elapsed * .85 + enemy.phase) > 0 ? -1 : 1, 1);
+    ctx.drawImage(rasterSprite(frame, body.width, h), -body.width / 2, -h / 2, body.width, h);
+    ctx.restore();
+  }
+
+  function collideWithPiranha(enemy, previousFeet, currentFeet, dt) {
+    const body = piranhaGeometry(enemy), previous = piranhaGeometry(enemy, elapsed - dt);
+    const horizontal = Math.abs(player.x - body.x);
+    const top = body.y + body.ry;
+    const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previous.y + previous.ry, top,
+      player.x, body.x, body.rx * 1.7, player.width * .35);
+    if (player.vy < 0 && crossedTop) {
+      enemy.dead = true;
+      frags += 1;
+      player.y = top + player.height / 2;
+      player.vy = 810;
+      somersault = null; openingJump = false;
+      effects.push({ index: 10, x: body.x, y: top, age: 0, duration: .32, size: 42 });
+      return true;
+    }
+    // Only the fish's body is solid. Wing motion never expands the hitbox.
+    const dx = horizontal / (body.rx + player.width * .29);
+    const dy = (player.y - body.y) / (body.ry + player.height * .34);
+    if (invulnerableTimer <= 0 && dx * dx + dy * dy < 1) { endGame(); return true; }
+    return false;
   }
 
   function updateBabyKimi(dt) {
@@ -2193,6 +2316,10 @@
   function collideWithEnemy(previousFeet, currentFeet, dt) {
     for (const enemy of enemies) {
       if (enemy.dead) continue;
+      if (enemy.type === "piranha") {
+        if (collideWithPiranha(enemy, previousFeet, currentFeet, dt)) return true;
+        continue;
+      }
       const targetEnemyWidth = enemyWidth();
       const frame = enemyFrame(enemy);
       const enemyHeight = spriteSize(frame, targetEnemyWidth);
@@ -2247,6 +2374,7 @@
       if (antarcticaArrival.age >= caveSceneDuration) finishAntarcticaArrival();
       return;
     }
+    if (antarctica && winterMemoryStartedAt === null && runScore() >= antarcticaEntryScore + 100) winterMemoryStartedAt = elapsed;
     if (somersault) {
       somersault.age += dt;
       if (somersault.age >= .54) somersault = null;
@@ -2284,8 +2412,9 @@
     }
 
     for (const enemy of enemies) {
-      enemy.x = Math.max(34, Math.min(width - 34,
-        enemy.baseX + Math.sin(elapsed * 1.25 + enemy.phase) * Math.min(54, width * .14)));
+      const fish = enemy.type === "piranha";
+      enemy.x = Math.max(38, Math.min(width - 38,
+        enemy.baseX + Math.sin(elapsed * (fish ? .85 : 1.25) + enemy.phase) * Math.min(fish ? 90 : 54, width * (fish ? .21 : .14))));
     }
 
     collideWithSpaceBoss(previousFeet, currentFeet);
@@ -2442,6 +2571,7 @@
     }
     for (const enemy of enemies) {
       if (enemy.dead) continue;
+      if (enemy.type === "piranha") { drawPiranha(enemy); continue; }
       const bobY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
       drawFrame(enemyFrame(enemy), enemy.x, bobY, enemyWidth());
     }
@@ -2798,6 +2928,7 @@
   if (bossTestButton) bossTestButton.addEventListener("click", startTotoBossTest);
   document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
   document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
+  document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   introPreferenceButton?.addEventListener("click", () => {
     alwaysSkipIntro = !alwaysSkipIntro;
@@ -2913,6 +3044,10 @@
     image(canvas.dataset.sidSheetSrc),
     image(canvas.dataset.totoStorySrc),
     image(canvas.dataset.heroStorySrc),
+    image(canvas.dataset.walkSheetSrc),
+    image(canvas.dataset.piranhaSheetSrc),
+    image(canvas.dataset.winterPlatformsSrc),
+    image(canvas.dataset.winterPortraitSrc),
   ]).then(([
     atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
     platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
@@ -2920,8 +3055,9 @@
     introScaffold, introDriver, introHero,
     antarcticaImage, controlConsoleImage,
     caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage,
+    walkSheetImage, piranhaSheetImage, winterPlatformsImage, winterPortraitImage,
   ]) => {
-    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage, caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage].every(Boolean)) {
+    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage, caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage, walkSheetImage, piranhaSheetImage, winterPlatformsImage, winterPortraitImage].every(Boolean)) {
       showAssetError();
       return;
     }
@@ -2938,6 +3074,11 @@
     art.sidFrames = storyFrames(sidSheetImage, 4);
     art.totoStoryFrames = storyFrames(totoStoryImage, 4, [0, .19, .51, .83, 1]);
     art.heroStoryFrames = storyFrames(heroStoryImage, 6);
+    art.walkFrames = walkFrames(walkSheetImage);
+    art.piranhaFrames = piranhaFrames(piranhaSheetImage);
+    art.winterPlatforms = splitSpriteSheet(winterPlatformsImage, 4, null, false);
+    art.winterPortrait = splitSpriteSheet(winterPortraitImage, 1, null, false)[0];
+    if (art.walkFrames.length !== 8 || art.piranhaFrames.length !== 4 || art.winterPlatforms.some((frame) => !frame) || !art.winterPortrait) { showAssetError(); return; }
     if (art.sidFrames.length !== 4 || art.totoStoryFrames.length !== 4 || art.heroStoryFrames.length !== 6) { showAssetError(); return; }
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;

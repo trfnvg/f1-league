@@ -5,7 +5,7 @@
 
 {% block extra_head %}
   <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" fetchpriority="high">
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=cinematic-cave-v34">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=winter-biome-v35">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -35,6 +35,7 @@
           <button id="doodle-boss-test" type="button" title="Запустить тестовый бой без сохранения результата">Вызвать бой с Тото</button>
           <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <button id="doodle-antarctica-arrival-test" type="button" title="Проверить прибытие в пещеру и встречу с Сидом">Пещера · встреча с Сидом</button>
+          <button id="doodle-winter-biome-test" type="button" title="Проверить зимних мобов и фон после +100 очков">Зима · мобы и фон +100</button>
           <small id="doodle-boss-test-status" aria-live="polite">Тест не влияет на рекорды и число попыток</small>
           {% if request.GET.flight == '1' %}
           <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
@@ -79,6 +80,10 @@
           data-sid-sheet-src="{% static 'league/images/doodle-jump/sid-cinematic-poses-v1.png' %}"
           data-toto-story-src="{% static 'league/images/doodle-jump/toto-cinematic-poses-v1.png' %}"
           data-hero-story-src="{% static 'league/images/doodle-jump/russell-cinematic-poses-v1.png' %}"
+          data-walk-sheet-src="{% static 'league/images/doodle-jump/russell-walk-cycle-v1.png' %}"
+          data-piranha-sheet-src="{% static 'league/images/doodle-jump/winter-piranha-flap-v1.png' %}"
+          data-winter-platforms-src="{% static 'league/images/doodle-jump/winter-platforms-v1.png' %}"
+          data-winter-portrait-src="{% static 'league/images/doodle-jump/winter-memory-portrait-v1.png' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
@@ -146,6 +151,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=cinematic-cave-v34" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=winter-biome-v35" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
