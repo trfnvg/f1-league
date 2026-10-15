@@ -49,6 +49,9 @@ extracted by connected alpha regions and repacked into equal cells without
 altering their source pixels. All cinematic actors share a boot baseline.
 The original gameplay hero sheet is unchanged.
 
+The later eight-phase walking cycle, winter piranhas, platform sprites and
+background portrait are documented in [winter-biome-art.md](winter-biome-art.md).
+
 ### Cave panorama
 
 Asset: `league/static/league/images/doodle-jump/antarctica-cave-arrival-v1.png`
