@@ -1264,12 +1264,16 @@
     kimi.age += dt;
     if (kimi.state === "holding") {
       kimi.hold += dt;
-      player.x = kimi.x + 22;
-      player.y = kimi.y + 12 + Math.sin(kimi.hold / .38 * Math.PI) * 9;
+      const reach = clamp(kimi.hold / .22, 0, 1);
+      const shaking = kimi.hold > .22 && kimi.hold < .95;
+      const shake = shaking ? Math.sin((kimi.hold - .22) * Math.PI * 12) : 0;
+      player.x = kimi.grabX + (kimi.x + 28 - kimi.grabX) * reach + shake * 9;
+      player.y = kimi.grabY + (kimi.y + 12 - kimi.grabY) * reach + shake * 5
+        + Math.max(0, kimi.hold - .95) * 65;
       player.vx = 0;
       player.vy = 0;
       invulnerableTimer = Math.max(invulnerableTimer, 5);
-      if (kimi.hold >= .38) {
+      if (kimi.hold >= 1.15) {
         kimi.state = "launched";
         kimi.leaveAt = kimi.age + .65;
         kimiBoost = 2.3;
@@ -1281,6 +1285,8 @@
     if (kimi.state === "waiting" && rocketTimer <= 0 && kimiBoost <= 0
       && Math.abs(player.x - kimi.x) < 48 && Math.abs(player.y - kimi.y) < 58) {
       kimi.state = "holding";
+      kimi.grabX = player.x;
+      kimi.grabY = player.y;
       invulnerableTimer = Math.max(invulnerableTimer, 5);
       return true;
     }
@@ -1296,8 +1302,13 @@
     const kimi = babyKimi;
     const bob = kimi.state === "waiting" ? Math.sin(elapsed * 2.5) * 4 : 0;
     const size = kimi.state === "holding" ? 83 : kimi.state === "launched" ? 92 : 88;
-    drawFrame(art.babyKimi, kimi.x, kimi.y + bob,
-      size * art.babyKimi.sw / art.babyKimi.sh, "center", size);
+    const drawWidth = size * art.babyKimi.sw / art.babyKimi.sh;
+    ctx.save();
+    ctx.translate(kimi.x, worldToScreen(kimi.y + bob));
+    ctx.rotate(kimi.state === "holding" ? Math.sin(kimi.hold * Math.PI * 12) * .045
+      : kimi.state === "launched" ? -.12 : Math.sin(elapsed * 1.5) * .025);
+    ctx.drawImage(rasterSprite(art.babyKimi, drawWidth, size), -drawWidth / 2, -size / 2, drawWidth, size);
+    ctx.restore();
     const y = worldToScreen(kimi.y);
     if (y > 0 && y < height) {
       ctx.save();
@@ -1561,6 +1572,9 @@
           ctx.translate(player.x, screenY);
         }
         ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
+        if (babyKimi && babyKimi.state === "holding") {
+          ctx.rotate(Math.sin(babyKimi.hold * Math.PI * 12) * .16);
+        }
         ctx.scale(facing, 1);
         const heroSprite = currentHeroSprite();
         if (heroSprite) {
@@ -1576,6 +1590,25 @@
         ctx.restore();
         drawInvulnerabilityShield();
       }
+    }
+
+    if (babyKimi && babyKimi.state === "holding") {
+      // Small hands follow the captured torso, making the grip visible on top
+      // of the player sprite while both characters shake together.
+      const gripY = worldToScreen(player.y) + player.height * .1;
+      ctx.save();
+      ctx.strokeStyle = "#dfc5a2";
+      ctx.lineWidth = 5;
+      for (const side of [-1, 1]) {
+        const gripX = player.x + side * player.width * .35;
+        ctx.beginPath();
+        ctx.moveTo(babyKimi.x + side * 9, worldToScreen(babyKimi.y) + 4);
+        ctx.lineTo(gripX, gripY);
+        ctx.stroke();
+        ctx.fillStyle = "#edb88d";
+        ctx.fillRect(gripX - 3, gripY - 3, 6, 7);
+      }
+      ctx.restore();
     }
 
     if (mode === "running") {
