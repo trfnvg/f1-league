@@ -65,6 +65,8 @@
   let platforms = [];
   let enemies = [];
   let hazards = [];
+  let hawks = [];
+  let hawkSpawnWait = 2 + Math.random() * 2;
   let spaceBoss = null;
   let bossShots = [];
   let marshals = [];
@@ -722,6 +724,8 @@
     platforms = [];
     enemies = [];
     hazards = [];
+    hawks = [];
+    hawkSpawnWait = 2 + Math.random() * 2;
     spaceBoss = null;
     bossShots = [];
     marshals = [];
@@ -1137,6 +1141,84 @@
     drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
   }
 
+  function updateHawks(dt) {
+    if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
+      if (forgottenPaddock || cameraY >= spaceFade.start) hawks = [];
+      return false;
+    }
+    if (!art.hawkFrames || !art.hawkFrames.length) return false;
+
+    hawkSpawnWait -= dt;
+    if (hawkSpawnWait <= 0) {
+      const size = 82 * visualScale();
+      const direction = Math.random() < .5 ? 1 : -1;
+      const screenY = height * (.32 + Math.random() * .4);
+      hawks.push({
+        x: direction > 0 ? -size : width + size,
+        previousX: direction > 0 ? -size : width + size,
+        y: cameraY + height - screenY,
+        direction,
+        speed: 135 + Math.random() * 55,
+        size,
+        flapElapsed: Math.random() * .3,
+      });
+      hawkSpawnWait = 4 + Math.random() * 3.5;
+    }
+
+    let kept = 0;
+    for (const hawk of hawks) {
+      const previousX = hawk.x;
+      hawk.previousX = previousX;
+      hawk.x += hawk.direction * hawk.speed * dt;
+      hawk.flapElapsed += dt;
+      if (hawk.x < -hawk.size || hawk.x > width + hawk.size
+        || hawk.y < cameraY - hawk.size || hawk.y > cameraY + height + hawk.size) continue;
+
+      const frame = art.hawkFrames[Math.floor(hawk.flapElapsed * 12) % art.hawkFrames.length];
+      const hawkHeight = spriteSize(frame, hawk.size);
+      const travel = Math.abs(hawk.x - previousX) + Math.abs(player.vx * dt) + Math.abs(player.vy * dt);
+      const steps = Math.max(1, Math.ceil(travel / 9));
+      let overlaps = false;
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps;
+        if (spriteOverlapsEllipse(frame,
+          previousX + (hawk.x - previousX) * t,
+          hawk.y,
+          hawk.size,
+          hawkHeight,
+          player.x - player.vx * dt * (1 - t),
+          player.y - player.vy * dt * (1 - t),
+          player.width * .29,
+          player.height * .34)) {
+          overlaps = true;
+          break;
+        }
+      }
+      if (overlaps && invulnerableTimer <= 0) {
+        endGame();
+        return true;
+      }
+      hawks[kept++] = hawk;
+    }
+    hawks.length = kept;
+    return false;
+  }
+
+  function drawHawks() {
+    if (!art.hawkFrames || !art.hawkFrames.length) return;
+    for (const hawk of hawks) {
+      const frame = art.hawkFrames[Math.floor(hawk.flapElapsed * 12) % art.hawkFrames.length];
+      const drawHeight = spriteSize(frame, hawk.size);
+      const screenY = worldToScreen(hawk.y);
+      ctx.save();
+      ctx.translate(hawk.x, screenY);
+      if (hawk.direction < 0) ctx.scale(-1, 1);
+      ctx.drawImage(rasterSprite(frame, hawk.size, drawHeight),
+        -hawk.size / 2, -drawHeight / 2, hawk.size, drawHeight);
+      ctx.restore();
+    }
+  }
+
   function updateSpaceBoss(dt) {
     if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
@@ -1364,7 +1446,7 @@
 
   function update(dt) {
     elapsed += dt;
-    if (!forgottenPaddock && !portalTransition && runScore() >= 8000) beginPortal();
+    if (!forgottenPaddock && !portalTransition && runScore() >= 5000) beginPortal();
     if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
@@ -1491,6 +1573,7 @@
     // Keep the racer in the lower-middle band: enough space remains above for
     // incoming platforms, while the player never hugs the bottom edge.
     if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
+    if (updateHawks(dt)) return;
     updateSpaceBoss(dt);
     if (mode !== "running") return;
     updateMarshals();
@@ -1532,6 +1615,7 @@
     for (const hazard of hazards) {
       if (!hazard.dead) drawHazard(hazard);
     }
+    drawHawks();
     drawSpaceBoss();
     drawBabyKimi();
     if (art.marshal) {
@@ -1931,9 +2015,15 @@
     image(canvas.dataset.garagePlatformsSrc),
     image(canvas.dataset.enemyVariantsSrc),
     image(canvas.dataset.babyKimiSrc),
-  ]).then(([atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet, platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage, garagePlatformsImage, enemyVariantsImage, babyKimiImage]) => {
+    image(canvas.dataset.hawkSheetSrc),
+  ]).then(([
+    atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
+    platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
+    garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
+  ]) => {
     art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
     art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
+    art.hawkFrames = splitSpriteSheet(hawkSheet, 4).filter(Boolean);
     art.garage = garageImage;
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
