@@ -46,6 +46,9 @@
   let skyGradient = null;
   let garageCache = null;
   let forgottenPaddock = false;
+  let antarctica = false;
+  let antarcticaScene = null;
+  let antarcticaEntryY = 0;
   let portalTransition = null;
   let arrivalUntil = 0;
   let lastRenderTime = 0;
@@ -493,6 +496,7 @@
   }
 
   function drawBackdrop() {
+    if (antarctica) { drawAntarctica(); return; }
     if (forgottenPaddock) {
       drawForgottenPaddock();
       return;
@@ -604,6 +608,224 @@
     ctx.textAlign = "center";
     ctx.fillText("WE ARE CHECKING…", width / 2, height * .18);
     ctx.restore();
+  }
+
+  function beginAntarcticaScene() {
+    if (antarctica || antarcticaScene || !player) return;
+    antarcticaScene = { age: 0, fromX: player.x / width, fromY: worldToScreen(player.y) / height };
+    rocketTimer = 0;
+    kimiBoost = 0;
+    babyKimi = null;
+    somersault = null;
+    spaceBoss = null;
+    bossShots = [];
+    hazards = [];
+    enemies = [];
+    hawks = [];
+    releaseTouchControls();
+    if (introCaption) introCaption.textContent = "Верхний этаж. Тото отталкивает Рассела и нажимает красную кнопку.";
+  }
+
+  function enterAntarctica() {
+    antarcticaScene = null;
+    antarctica = true;
+    antarcticaEntryY = cameraY;
+    arrivalUntil = elapsed + 4;
+    player.x = width / 2;
+    // Leave peakY and all earned bonuses untouched through the cutscene.
+    player.y = cameraY + height * .42;
+    player.vx = 0;
+    player.vy = 720;
+    openingJump = false;
+    invulnerableTimer = 3;
+    platforms = [];
+    powerups = [];
+    marshals = [];
+    effects = [];
+    worldTop = player.y - player.height / 2 - 8;
+    addPlatform(worldTop, player.x, "normal");
+    // Give the player a reachable first landing after leaving the portal.
+    worldTop += 125;
+    addPlatform(worldTop, player.x + width * .08, "normal");
+    nextMarshalY = worldTop + 1800;
+    lastPowerupSpawnY = worldTop;
+    extendWorld();
+    releaseTouchControls();
+    if (introCaption) introCaption.textContent = "Антарктида. Прыгай по ледяным платформам.";
+    updateHud();
+  }
+
+  function drawAntarctica() {
+    ctx.fillStyle = "#aabdd8";
+    ctx.fillRect(0, 0, width, height);
+    const source = art.antarctica;
+    if (!source) return;
+    const tileHeight = width * source.naturalHeight / source.naturalWidth;
+    const overlap = tileHeight * .18;
+    const cycle = tileHeight - overlap;
+    const offset = Math.max(0, cameraY - antarcticaEntryY) * .13 % cycle;
+    const sourceOverlap = source.naturalHeight * .18;
+    ctx.save();
+    // Blend upright images directly: no giant offscreen texture on iPhones.
+    for (let y = offset - cycle * 2; y < height; y += cycle) {
+      ctx.globalAlpha = 1;
+      ctx.drawImage(source, 0, sourceOverlap, source.naturalWidth, source.naturalHeight - sourceOverlap,
+        0, y + overlap, width, cycle + 1 / dpr);
+      for (let band = 0; band < 16; band += 1) {
+        ctx.globalAlpha = (band + .5) / 16;
+        ctx.drawImage(source, 0, sourceOverlap * band / 16, source.naturalWidth, sourceOverlap / 16,
+          0, y + overlap * band / 16, width, overlap / 16 + 1 / dpr);
+      }
+    }
+    ctx.globalAlpha = .65;
+    ctx.fillStyle = "#f0f8ff";
+    for (let i = 0; i < 32; i += 1) {
+      const x = (decorRandom(i, 43) * width + elapsed * (7 + i % 5)) % width;
+      const y = (decorRandom(i, 71) * height + elapsed * (16 + i % 9) + cameraY * .08) % height;
+      const size = i % 3 === 0 ? 3 : 2;
+      ctx.fillRect(Math.round(x), Math.round(y), size, size);
+    }
+    ctx.restore();
+  }
+
+  function drawIcePlatform(platform) {
+    const y = Math.round(worldToScreen(platform.y));
+    if (y > height || y + platform.height + 15 < 0) return;
+    const w = platform.spriteWidth, x = Math.round(platform.x - w / 2);
+    const h = Math.max(12, platform.height);
+    ctx.save();
+    ctx.fillStyle = platform.kind === "break" ? "#64839a" : "#327798";
+    ctx.beginPath(); ctx.moveTo(x, y + 3); ctx.lineTo(x + w, y + 3);
+    ctx.lineTo(x + w - 5, y + h * .65); ctx.lineTo(x + w * .6, y + h);
+    ctx.lineTo(x + w * .2, y + h * .8); ctx.lineTo(x + 4, y + h * .5); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "#87c9df";
+    ctx.fillRect(x + 3, y + 5, w - 6, 6);
+    ctx.fillStyle = "#eaf6fa";
+    ctx.fillRect(x, y, w, 4);
+    ctx.fillRect(x + 4, y - 2, w * .38, 3);
+    ctx.fillStyle = "#b6e0ed";
+    for (let i = 0; i < 3; i += 1) {
+      const tipX = x + w * (.2 + i * .27);
+      ctx.beginPath(); ctx.moveTo(tipX, y + h * .55); ctx.lineTo(tipX + 5, y + h * .55);
+      ctx.lineTo(tipX + 2, y + h + 5 + i % 2 * 5); ctx.fill();
+    }
+    if (platform.kind === "break") {
+      ctx.strokeStyle = "#304f70"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x + w * .45, y); ctx.lineTo(x + w * .55, y + 6);
+      ctx.lineTo(x + w * .4, y + 12); ctx.stroke();
+    } else if (platform.kind === "moving") {
+      ctx.fillStyle = "#326b9a";
+      ctx.fillRect(x + 7, y + 1, 5, 2); ctx.fillRect(x + w - 12, y + 1, 5, 2);
+    } else if (platform.kind === "spring") {
+      ctx.strokeStyle = "#e9b765"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x + w * .5, y + 11); ctx.lineTo(x + w * .38, y + 7);
+      ctx.lineTo(x + w * .62, y + 4); ctx.lineTo(x + w * .5, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawAntarcticaScene() {
+    const scene = antarcticaScene, age = scene.age;
+    const ease = (from, to) => { const t = clamp((age - from) / (to - from), 0, 1); return t * t * (3 - 2 * t); };
+    const floorY = height * .68;
+    const heroHeight = clamp(width * .18, 66, 96);
+    const consoleWidth = Math.min(width * .32, 170);
+    const consoleHeight = spriteSize(art.controlConsole, consoleWidth);
+    const consoleX = width * .58;
+    const buttonX = consoleX + consoleWidth * .79;
+    const buttonY = floorY - consoleHeight * .79;
+    const bossWidth = Math.min(width * .3, 144);
+    const bossHeight = spriteSize(art.spaceBoss, bossWidth);
+    const bossX = width * 1.2 + (width * .53 - width * 1.2) * ease(1.6, 2.7);
+    const bossY = floorY - bossHeight * .55 + Math.sin(age * 3) * 2;
+    const portalX = width * .25, portalY = height * .39;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,12,20,.36)"; ctx.fillRect(0, 0, width, height);
+    // An elevated steel floor and rails establish the top control room.
+    ctx.fillStyle = "#263945"; ctx.fillRect(width * .07, floorY, width * .86, 22);
+    ctx.fillStyle = "#83949c"; ctx.fillRect(width * .07, floorY, width * .86, 4);
+    ctx.fillStyle = "#43545c";
+    for (let i = 0; i < 7; i += 1) ctx.fillRect(width * (.1 + i * .13), floorY + 22, 5, height * .14);
+    ctx.fillRect(width * .07, floorY + height * .1, width * .86, 4);
+    ctx.drawImage(rasterSprite(art.controlConsole, consoleWidth, consoleHeight), consoleX, floorY - consoleHeight, consoleWidth, consoleHeight);
+    if (age >= 4.25) {
+      ctx.globalAlpha = .35 + Math.sin(age * 12) * .15;
+      ctx.fillStyle = "#ff453e"; ctx.beginPath(); ctx.ellipse(buttonX, buttonY + 2, consoleWidth * .12, consoleWidth * .09, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    // The same Toto sprite appears on his saucer; a mechanical arm performs
+    // the shove and button press instead of replacing the established villain.
+    if (age > 1.6 && art.spaceBoss) {
+      ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight), bossX - bossWidth / 2, bossY - bossHeight / 2, bossWidth, bossHeight);
+      if (age > 2.6 && age < 3.35 || age > 3.7) {
+        const pressing = age > 3.7;
+        const extension = pressing ? ease(3.7, 4.3) : Math.sin(clamp((age - 2.6) / .75, 0, 1) * Math.PI);
+        const originX = bossX + (pressing ? 1 : -1) * bossWidth * .28;
+        const originY = bossY + bossHeight * .2;
+        const handX = originX + ((pressing ? buttonX : width * .39) - originX) * extension;
+        const handY = originY + ((pressing ? buttonY + 3 : floorY - heroHeight * .55) - originY) * extension;
+        ctx.strokeStyle = "#9aa8b5"; ctx.lineWidth = 5;
+        ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(handX, handY); ctx.stroke();
+        ctx.fillStyle = "#d2dae2"; ctx.fillRect(handX - 5, handY - 3, 10, 7);
+      }
+    }
+    if (age >= 4.6) {
+      const radius = Math.min(width * .2, 92) * ease(4.6, 5.6);
+      ctx.save(); ctx.translate(portalX, portalY);
+      ctx.fillStyle = "#12283e"; ctx.beginPath(); ctx.ellipse(0, 0, radius, radius * 1.15, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.save(); ctx.clip();
+      ctx.drawImage(art.antarctica, -radius, -radius * 1.15, radius * 2, radius * 2.3);
+      ctx.restore();
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.strokeStyle = ring % 2 ? "#d3f6ff" : "#63b9e8"; ctx.lineWidth = 3 - ring * .6;
+        ctx.beginPath(); ctx.ellipse(0, 0, radius + ring * 5, radius * 1.15 + ring * 4, Math.sin(age * 3 + ring) * .12, 0, Math.PI * 2); ctx.stroke();
+      }
+      for (let i = 0; i < 18; i += 1) {
+        const angle = i * Math.PI / 9 + age * 1.5;
+        const r = radius * (1.1 + (i % 3) * .13);
+        ctx.fillStyle = i % 2 ? "#b5eeff" : "#4e97cf";
+        ctx.fillRect(Math.cos(angle) * r, Math.sin(angle) * r * 1.15, 3, 3);
+      }
+      ctx.restore();
+    }
+    const landing = ease(0, 1.6), shove = ease(2.75, 3.35), suction = ease(5.65, 7.95);
+    let heroX = scene.fromX * width + (width * .4 - scene.fromX * width) * landing - width * .16 * shove;
+    let heroY = scene.fromY * height + (floorY - heroHeight / 2 - scene.fromY * height) * landing
+      - Math.sin(landing * Math.PI) * Math.min(100, height * .16) - Math.sin(shove * Math.PI) * 30;
+    heroX += (portalX - heroX) * suction;
+    heroY += (portalY - heroY) * suction;
+    const hero = art.heroFrames[age < 1.6 ? 1 : age < 2.75 ? 3 : 2];
+    const heroWidth = heroHeight * hero.sw / hero.sh;
+    ctx.save(); ctx.translate(heroX, heroY);
+    ctx.rotate(-shove * .45 + suction * Math.PI * 4);
+    const shrink = 1 - suction * .98; ctx.scale(shrink, shrink); ctx.globalAlpha = 1 - suction;
+    ctx.drawImage(rasterSprite(hero, heroWidth, heroHeight), -heroWidth / 2, -heroHeight / 2, heroWidth, heroHeight);
+    ctx.restore();
+    const caption = age < 2.6 ? "ВЕРХНИЙ ЭТАЖ · ПУЛЬТ БОЛЛИДА" : age < 4.6 ? "ТОТО: «Я САМ.»" : "МАРШРУТ ИЗМЕНЁН: АНТАРКТИДА";
+    ctx.fillStyle = "rgba(6,17,29,.88)"; ctx.fillRect(width * .05, height * .84, width * .9, 40);
+    ctx.fillStyle = "#e2f3fb"; ctx.font = `bold ${Math.min(13, width / 30)}px system-ui`; ctx.textAlign = "center";
+    ctx.fillText(caption, width / 2, height * .84 + 25);
+    if (age > 7.95) { ctx.globalAlpha = ease(7.95, 8.4); ctx.fillStyle = "#d9edff"; ctx.fillRect(0, 0, width, height); }
+    ctx.restore();
+  }
+
+  function startAntarcticaTest() {
+    if (!artReady) return;
+    if (mode === "running" && !adminBossTestMode && !adminSandbox) {
+      if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег";
+      return;
+    }
+    startGame(true, { forceRestart: true, adminTest: true });
+    forgottenPaddock = true;
+    peakY = player.y = startY + 8000 * 11;
+    player.x = width / 2;
+    cameraY = player.y - height * .42;
+    openingJump = false;
+    freeFlight = false;
+    if (flightButton) { flightButton.setAttribute("aria-pressed", "false"); flightButton.textContent = "Свободный полёт: выкл."; }
+    beginAntarcticaScene();
+    if (bossTestStatus) bossTestStatus.textContent = "Тест Антарктиды · рекорд и попытка не сохраняются";
+    updateHud(); draw();
   }
 
   function drawPortal() {
@@ -732,6 +954,9 @@
   }
 
   function buildGame() {
+    antarctica = false;
+    antarcticaScene = null;
+    antarcticaEntryY = 0;
     babyKimi = null;
     kimiWait = 12 + Math.random() * 8;
     kimiBoost = 0;
@@ -881,7 +1106,7 @@
     const zoneIndex = cameraY < paddockEnd ? 0
       : cameraY < skyFade.end ? 1
         : cameraY < spaceFade.start ? 2 : 3;
-    const displayName = forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
+    const displayName = antarctica ? "Антарктида" : forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -1639,8 +1864,6 @@
       const targetY = worldToScreen(boss.landingY);
       ctx.strokeStyle = "#b7f0ce";
       ctx.lineWidth = 3;
-      ctx.strokeRect(boss.support.x - boss.support.spriteWidth / 2 - 3,
-        worldToScreen(boss.support.y) - 2, boss.support.spriteWidth + 6, boss.support.height + 4);
       ctx.beginPath();
       ctx.moveTo(boss.x - 39, targetY);
       ctx.lineTo(boss.x + 39, targetY);
@@ -1709,7 +1932,7 @@
 
   function updateBabyKimi(dt) {
     kimiBoost = Math.max(0, kimiBoost - dt);
-    if (!forgottenPaddock || !art.babyKimi) return false;
+    if (!forgottenPaddock || antarctica || !art.babyKimi) return false;
     if (!babyKimi) {
       kimiWait -= dt;
       if (kimiWait <= 0 && rocketTimer <= 0 && kimiBoost <= 0) {
@@ -1824,6 +2047,12 @@
 
   function update(dt) {
     elapsed += dt;
+    if (forgottenPaddock && !antarctica && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
+    if (antarcticaScene) {
+      antarcticaScene.age += dt;
+      if (antarcticaScene.age >= 8.4) enterAntarctica();
+      return;
+    }
     if (somersault) {
       somersault.age += dt;
       if (somersault.age >= .54) somersault = null;
@@ -2003,11 +2232,14 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (mode === "intro" && intro) { drawIntro(); return; }
     drawBackdrop();
+    if (antarcticaScene) { drawAntarcticaScene(); return; }
 
     for (const platform of platforms) {
       if (platform.broken) continue;
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
-      if (garagePlatform) {
+      if (antarctica) {
+        drawIcePlatform(platform);
+      } else if (garagePlatform) {
         drawFrame(garagePlatform, platform.x, platform.y, platform.spriteWidth, "platform");
       } else {
         drawSprite(platform.spriteIndex, platform.x, platform.y, platform.spriteWidth, "platform", platform.height);
@@ -2122,7 +2354,7 @@
         ctx.fillStyle = "#baf3df";
         ctx.font = "bold 19px system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("ЗАБЫТЫЙ ПАДДОК", width / 2, height * .25 + 39);
+        ctx.fillText(antarctica ? "АНТАРКТИДА" : "ЗАБЫТЫЙ ПАДДОК", width / 2, height * .25 + 39);
         ctx.restore();
       }
       if (elapsed < bossVictoryUntil) {
@@ -2162,7 +2394,7 @@
     if (blackout > 0) {
       ctx.save();
       ctx.globalAlpha = blackout;
-      ctx.fillStyle = "#020207";
+      ctx.fillStyle = antarctica ? "#d9edff" : "#020207";
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
     }
@@ -2330,8 +2562,8 @@
   }
 
   document.addEventListener("keydown", (event) => {
-    // Let Space activate the settings button normally instead of starting a run.
-    if (event.target?.closest?.("#doodle-intro-preference")) return;
+    // Let Space activate settings and admin preview buttons normally.
+    if (event.target?.closest?.("#doodle-intro-preference, .doodle-test-controls")) return;
     const key = event.key.toLowerCase();
     if (key === "escape" && isGameFullscreen() && !document.fullscreenElement && !document.webkitFullscreenElement) {
       event.preventDefault();
@@ -2369,6 +2601,7 @@
     else startGame();
   });
   if (bossTestButton) bossTestButton.addEventListener("click", startTotoBossTest);
+  document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   introPreferenceButton?.addEventListener("click", () => {
     alwaysSkipIntro = !alwaysSkipIntro;
@@ -2478,13 +2711,16 @@
     image(canvas.dataset.introScaffoldSrc),
     image(canvas.dataset.introDriverSrc),
     image(canvas.dataset.introHeroSrc),
+    image(canvas.dataset.antarcticaSrc),
+    image(canvas.dataset.controlConsoleSrc),
   ]).then(([
     atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
     platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
     garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
     introScaffold, introDriver, introHero,
+    antarcticaImage, controlConsoleImage,
   ]) => {
-    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage].every(Boolean)) {
+    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage].every(Boolean)) {
       showAssetError();
       return;
     }
@@ -2495,6 +2731,8 @@
     art.introDriver = splitSpriteSheet(introDriver, 1, null, false)[0] || null;
     art.introHeroFrames = splitSpriteSheet(introHero, 3, null, false).filter(Boolean);
     art.garage = garageImage;
+    art.antarctica = antarcticaImage;
+    art.controlConsole = splitSpriteSheet(controlConsoleImage, 1, null, false)[0] || null;
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
     art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;
