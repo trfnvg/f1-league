@@ -84,6 +84,8 @@
   let spaceBoss = null;
   let bossShots = [];
   let guaranteedSpaceBossSpawned = false;
+  let bossBonus = 0;
+  let bossVictoryUntil = 0;
   let marshals = [];
   let nextMarshalY = 1800;
   let marshalBonus = 0;
@@ -539,7 +541,7 @@
   }
 
   function runScore() {
-    return Math.max(0, Math.floor((peakY - startY) / 11)) + frags * 30 + marshalBonus;
+    return Math.max(0, Math.floor((peakY - startY) / 11)) + frags * 30 + marshalBonus + bossBonus;
   }
 
   function beginPortal() {
@@ -754,6 +756,8 @@
     spaceBoss = null;
     bossShots = [];
     guaranteedSpaceBossSpawned = false;
+    bossBonus = 0;
+    bossVictoryUntil = 0;
     marshals = [];
     nextMarshalY = 1800;
     marshalBonus = 0;
@@ -862,7 +866,7 @@
 
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    const score = heightPoints + frags * 30 + marshalBonus;
+    const score = heightPoints + frags * 30 + marshalBonus + bossBonus;
     const levelNumber = Math.floor(storyProgress());
     const displayScore = mode === "over" ? finalScore : score;
     if (scoreNode.dataset.value !== String(displayScore)) {
@@ -1179,7 +1183,7 @@
     mode = "over";
     somersault = null;
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    finalScore = heightPoints + frags * 30 + marshalBonus;
+    finalScore = heightPoints + frags * 30 + marshalBonus + bossBonus;
     lastWasRecord = finalScore > best;
     if (!adminSandbox && finalScore > best) {
       best = finalScore;
@@ -1421,63 +1425,122 @@
     }
   }
 
+  function setBossWarning(boss) {
+    boss.phase = "warning";
+    boss.timer = 0;
+    boss.round += 1;
+    // Keep the safe lane close enough to reach during the warning on touch.
+    const lane = clamp(Math.floor(player.x / (width / 4)), 0, 3);
+    boss.safeLane = clamp(lane + (Math.random() < .5 ? -1 : 1), 0, 3);
+  }
+
+  function openBossTarget(boss) {
+    boss.phase = "descending";
+    boss.timer = 0;
+    bossShots = [];
+    // An ordinary 720-speed jump reaches ~209 world units. Put a stable
+    // launch platform below the player and the target only 115 units above it.
+    const supportY = player.y - player.height / 2 - 25;
+    const supportX = clamp(player.x, 55, width - 55);
+    boss.support = addPlatform(supportY, supportX, "normal");
+    platforms.sort((a, b) => a.y - b.y);
+    boss.targetX = clamp(supportX + (boss.round % 2 ? 30 : -30), 55, width - 55);
+    boss.landingY = supportY + 115;
+  }
+
+  function collideWithSpaceBoss(previousFeet, currentFeet) {
+    const boss = spaceBoss;
+    if (!boss || boss.phase !== "open" || rocketTimer > 0 || player.vy >= 0) return false;
+    if (!crossedLandingSurface(previousFeet, currentFeet, boss.landingY, boss.landingY,
+      player.x, boss.x, 78, player.width * .44)) return false;
+    player.y = boss.landingY + player.height / 2;
+    player.vy = 720;
+    openingJump = false;
+    somersault = null;
+    invulnerableTimer = Math.max(invulnerableTimer, 1.2);
+    boss.hp -= 1;
+    boss.timer = 0;
+    boss.phase = boss.hp === 0 ? "defeated" : "hit";
+    bossShots = [];
+    effects.push({ index: 10, x: boss.x, y: boss.landingY, age: 0, duration: .5, size: 70 });
+    if (boss.hp === 0) {
+      bossBonus += 300;
+      bossVictoryUntil = elapsed + 3;
+      updateHud();
+    }
+    return true;
+  }
+
   function updateSpaceBoss(dt) {
     if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
       const score = runScore();
-      if (!guaranteedSpaceBossSpawned && score >= 3500) {
-        // Trigger the first Toto encounter by score instead of a random timer,
-        // so every run reaches him within the 3,500–4,500 point window.
+      const firstEncounter = !guaranteedSpaceBossSpawned && score >= 3500;
+      if (guaranteedSpaceBossSpawned && score > 4500) bossWait -= dt;
+      if (firstEncounter || (guaranteedSpaceBossSpawned && score > 4500 && bossWait <= 0)) {
         guaranteedSpaceBossSpawned = true;
-        spaceBoss = { age: 0, x: width / 2, screenY: 145, nextShot: 3, shots: 0,
-          shotLimit: 7 + Math.floor(Math.random() * 3), targetX: width * (.15 + Math.random() * .7),
-          retargetAt: 0, leaveAt: Infinity };
-      } else if (guaranteedSpaceBossSpawned && score > 4500) {
-        bossWait -= dt;
-        if (bossWait <= 0) {
-          spaceBoss = { age: 0, x: width / 2, screenY: 145, nextShot: 3, shots: 0,
-            shotLimit: 7 + Math.floor(Math.random() * 3), targetX: width * (.15 + Math.random() * .7),
-            retargetAt: 0, leaveAt: Infinity };
-        }
+        spaceBoss = { age: 0, timer: 0, phase: "arrival", hp: 3, round: 0,
+          x: width / 2, screenY: 170, safeLane: 1, landingY: 0 };
+        // The boss encounter supplies its own hazards with readable safe lanes.
+        enemies = [];
+        hazards = [];
+        hawks = [];
+        bossShots = [];
       }
     }
     if (spaceBoss) {
       const boss = spaceBoss;
       boss.age += dt;
-      if (boss.age >= boss.retargetAt || Math.abs(boss.x - boss.targetX) < 8) {
-        boss.targetX = width * (.15 + Math.random() * .7);
-        boss.retargetAt = boss.age + 1.5 + Math.random() * 2;
+      boss.timer += dt;
+      if (boss.phase === "descending") {
+        const targetY = worldToScreen(boss.landingY) + spriteSize(art.spaceBoss, 100) / 2;
+        boss.x += (boss.targetX - boss.x) * Math.min(1, dt * 6);
+        boss.screenY += (targetY - boss.screenY) * Math.min(1, dt * 6);
+        if (boss.timer >= .65) {
+          boss.x = boss.targetX;
+          boss.screenY = targetY;
+          boss.phase = "open";
+          boss.timer = 0;
+        }
+      } else if (boss.phase === "open" || boss.phase === "hit" || boss.phase === "defeated") {
+        boss.screenY = worldToScreen(boss.landingY) + spriteSize(art.spaceBoss, 100) / 2;
+      } else {
+        boss.screenY += (170 - boss.screenY) * Math.min(1, dt * 4);
+        boss.x += (width * (.5 + Math.sin(boss.age * .7) * .25) - boss.x) * Math.min(1, dt * 2);
       }
-      boss.x += clamp(boss.targetX - boss.x, -48 * dt, 48 * dt);
-      boss.screenY = 145 + Math.sin(boss.age * 2) * 5;
-      if (boss.age >= boss.nextShot && boss.shots < boss.shotLimit) {
-        const screenY = boss.screenY + 40;
-        bossShots.push({ x: boss.x, screenY, y: cameraY + height - screenY,
-          vx: (Math.random() - .5) * 80, speed: 85 + Math.random() * 20 });
-        boss.shots += 1;
-        boss.nextShot = boss.age + 2.2 + Math.random() * 1.1;
-        if (boss.shots === boss.shotLimit) boss.leaveAt = boss.age + 1.5;
+      if (boss.phase === "arrival" && boss.timer >= 1.2) setBossWarning(boss);
+      else if (boss.phase === "warning" && boss.timer >= 1.1) {
+        boss.phase = "volley";
+        boss.timer = 0;
+        for (let lane = 0; lane < 4; lane += 1) {
+          if (lane === boss.safeLane) continue;
+          const screenY = 165;
+          bossShots.push({ x: (lane + .5) * width / 4, screenY,
+            y: cameraY + height - screenY, speed: 175 });
+        }
+      } else if (boss.phase === "volley" && boss.timer >= 2.6) openBossTarget(boss);
+      else if ((boss.phase === "open" && boss.timer >= 4.2) || (boss.phase === "hit" && boss.timer >= .65)) {
+        if (boss.round < 3) setBossWarning(boss);
+        else { boss.phase = "leaving"; boss.timer = 0; bossShots = []; }
       }
-      if (boss.age >= boss.leaveAt) {
+      if ((boss.phase === "leaving" || boss.phase === "defeated") && boss.timer >= 1) {
         spaceBoss = null;
+        bossShots = [];
         bossWait = 120 + Math.random() * 60;
       }
     }
-    const shotWidth = 48;
+    const shotWidth = 36;
     const shotHeight = spriteSize(art.bossWheel, shotWidth);
     let kept = 0;
     for (const shot of bossShots) {
       const previousY = shot.y;
-      const previousX = shot.x;
-      shot.x += shot.vx * dt;
       shot.screenY += shot.speed * dt;
       shot.y = cameraY + height - shot.screenY;
-      // Sweep relative motion so fast rocket travel cannot skip a collision.
       const steps = Math.max(1, Math.ceil((Math.abs(player.vy) * dt + Math.abs(shot.y - previousY)) / 10));
       let hit = false;
       for (let step = 0; step <= steps; step += 1) {
         const t = step / steps;
-        if (spriteOverlapsEllipse(art.bossWheel, previousX + (shot.x - previousX) * t, previousY + (shot.y - previousY) * t,
+        if (spriteOverlapsEllipse(art.bossWheel, shot.x, previousY + (shot.y - previousY) * t,
           shotWidth, shotHeight, player.x - player.vx * dt * (1 - t),
           player.y - player.vy * dt * (1 - t), player.width * .29, player.height * .34)) {
           hit = true;
@@ -1485,25 +1548,68 @@
         }
       }
       if (hit && invulnerableTimer <= 0) { endGame(); return; }
-      if (!hit && shot.screenY < height + 60 && shot.x > -60 && shot.x < width + 60) bossShots[kept++] = shot;
+      if (!hit && shot.screenY < height + 60) bossShots[kept++] = shot;
     }
     bossShots.length = kept;
   }
 
   function drawSpaceBoss() {
-    for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 48);
+    for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 36);
     if (!spaceBoss || !art.spaceBoss) return;
     const boss = spaceBoss;
-    const bossWidth = 90;
+    const bossWidth = 100;
     const bossHeight = spriteSize(art.spaceBoss, bossWidth);
     ctx.save();
-    ctx.globalAlpha = Math.max(0, Math.min(1, boss.age / .8, (boss.leaveAt - boss.age) / .8));
-    ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight),
-      boss.x - bossWidth / 2, boss.screenY - bossHeight / 2, bossWidth, bossHeight);
-    if (boss.shots < boss.shotLimit && boss.nextShot - boss.age < .7) {
-      ctx.fillStyle = Math.sin(boss.age * 25) > 0 ? "#ffc779" : "#b75f50";
-      ctx.fillRect(boss.x - 3, boss.screenY + bossHeight / 2, 6, 18);
+    if (boss.phase === "warning") {
+      for (let lane = 0; lane < 4; lane += 1) {
+        const safe = lane === boss.safeLane;
+        ctx.fillStyle = safe ? "rgba(129,209,168,.1)" : "rgba(222,110,99,.13)";
+        ctx.fillRect(lane * width / 4 + 4, 165, width / 4 - 8, height - 165);
+        ctx.fillStyle = safe ? "#a5e6c5" : "#ffc28c";
+        ctx.font = "bold 13px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(safe ? "↓" : "!", (lane + .5) * width / 4, 190);
+      }
     }
+    const leaving = boss.phase === "leaving" || boss.phase === "defeated";
+    ctx.globalAlpha = leaving ? Math.max(0, 1 - boss.timer) : Math.min(1, boss.age / .6);
+    const shake = boss.phase === "hit" ? Math.sin(boss.timer * 55) * 5 : 0;
+    ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight),
+      boss.x - bossWidth / 2 + shake, boss.screenY - bossHeight / 2 - (leaving ? boss.timer * 70 : 0), bossWidth, bossHeight);
+    ctx.globalAlpha = 1;
+    if (boss.phase === "open") {
+      const targetY = worldToScreen(boss.landingY);
+      ctx.strokeStyle = "#b7f0ce";
+      ctx.lineWidth = 3;
+      ctx.strokeRect(boss.support.x - boss.support.spriteWidth / 2 - 3,
+        worldToScreen(boss.support.y) - 2, boss.support.spriteWidth + 6, boss.support.height + 4);
+      ctx.beginPath();
+      ctx.moveTo(boss.x - 39, targetY);
+      ctx.lineTo(boss.x + 39, targetY);
+      ctx.stroke();
+      ctx.font = "bold 11px monospace";
+      ctx.fillStyle = "#d0ffe3";
+      ctx.textAlign = "center";
+      ctx.fillText("↓ ПРЫГНИ СВЕРХУ", boss.x, targetY - 12);
+    }
+    const panelWidth = Math.min(270, width - 30);
+    ctx.fillStyle = "rgba(17,21,35,.88)";
+    ctx.fillRect((width - panelWidth) / 2, 88, panelWidth, 54);
+    ctx.textAlign = "center";
+    ctx.font = "bold 12px monospace";
+    ctx.fillStyle = "#f8e9cf";
+    const label = boss.phase === "defeated" ? "ТОТО ПОБЕЖДЁН · +300"
+      : boss.phase === "leaving" ? "ТОТО УЛЕТАЕТ"
+        : boss.phase === "open" ? "ТАРЕЛКА УЯЗВИМА"
+          : boss.phase === "descending" ? "ТАРЕЛКА ОПУСКАЕТСЯ" : "ТОТО ВОЛЬФ · БОСС";
+    ctx.fillText(label, width / 2, 105);
+    for (let i = 0; i < 3; i += 1) {
+      ctx.fillStyle = i < boss.hp ? "#e6b76e" : "#424854";
+      ctx.fillRect(width / 2 - 40 + i * 28, 115, 24, 6);
+    }
+    ctx.font = "10px monospace";
+    ctx.fillStyle = "#c4cddd";
+    ctx.fillText(boss.phase === "open" ? "Прыгни с подсвеченной платформы" : "Залп " + Math.max(1, boss.round) + "/3 · уклоняйся", width / 2, 135);
     ctx.restore();
   }
 
@@ -1701,6 +1807,7 @@
         enemy.baseX + Math.sin(elapsed * 1.25 + enemy.phase) * Math.min(54, width * .14)));
     }
 
+    collideWithSpaceBoss(previousFeet, currentFeet);
     collideWithEnemy(previousFeet, currentFeet, dt);
     if (mode !== "running") return;
 
@@ -1811,6 +1918,7 @@
     if (mode !== "running") return;
     updateMarshals();
     extendWorld();
+    if (spaceBoss) { enemies = []; hazards = []; hawks = []; }
     pruneWorldObjects(platforms, 160, "broken");
     pruneWorldObjects(enemies, 130, "dead");
     pruneWorldObjects(hazards, 180, "dead");
@@ -1959,7 +2067,14 @@
         ctx.fillText("ЗАБЫТЫЙ ПАДДОК", width / 2, height * .25 + 39);
         ctx.restore();
       }
-      if (elapsed < bonusNoticeUntil) {
+      if (elapsed < bossVictoryUntil) {
+        ctx.save();
+        ctx.fillStyle = "#c4f4cf";
+        ctx.font = "bold 17px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("ТОТО ПОБЕЖДЁН  +300", width / 2, height * .3);
+        ctx.restore();
+      } else if (elapsed < bonusNoticeUntil) {
         ctx.save();
         ctx.fillStyle = "#fff0b4";
         ctx.font = "bold 14px system-ui";
