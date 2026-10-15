@@ -33,6 +33,7 @@
         {% if user.is_staff %}
         <div class="doodle-test-controls">
           <button id="doodle-boss-test" type="button" title="Запустить тестовый бой без сохранения результата">Вызвать бой с Тото</button>
+          <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <small id="doodle-boss-test-status" aria-live="polite">Тест не влияет на рекорды и число попыток</small>
           {% if request.GET.flight == '1' %}
           <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
@@ -71,6 +72,8 @@
           data-space-boss-src="{% static 'league/images/doodle-jump/space-toto-boss-v1.png' %}"
           data-marshal-src="{% static 'league/images/doodle-jump/marshal-checkered-v1.png' %}"
           data-garage-src="{% static 'league/images/doodle-jump/forgotten-paddock-v1.jpg' %}"
+          data-antarctica-src="{% static 'league/images/doodle-jump/antarctica-canyon-v1.png' %}"
+          data-control-console-src="{% static 'league/images/doodle-jump/f1-control-console-v1.png' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
@@ -138,6 +141,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=mobile-backdrop-v32" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=antarctica-story-v33" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
