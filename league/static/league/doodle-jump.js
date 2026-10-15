@@ -48,6 +48,9 @@
   let forgottenPaddock = false;
   let antarctica = false;
   let antarcticaScene = null;
+  let antarcticaArrival = null;
+  const controlSceneDuration = 11.2;
+  const caveSceneDuration = 9.8;
   let antarcticaEntryY = 0;
   let portalTransition = null;
   let arrivalUntil = 0;
@@ -246,6 +249,23 @@
       frames.push({ image: tile, sx: 0, sy: 0, sw: frameWidth, sh: frameHeight });
     }
     return frames;
+  }
+
+  function storyFrames(sheet, count, boundaries = null) {
+    const poses = splitSpriteSheet(sheet, count, boundaries, false);
+    if (poses.length !== count || poses.some((pose) => !pose)) return [];
+    const cellWidth = Math.max(...poses.map((pose) => pose.sw));
+    const cellHeight = Math.max(...poses.map((pose) => pose.sh));
+    return poses.map((pose) => {
+      const tile = document.createElement("canvas");
+      tile.width = cellWidth;
+      tile.height = cellHeight;
+      const painter = tile.getContext("2d");
+      painter.imageSmoothingEnabled = false;
+      painter.drawImage(pose.image, pose.sx, pose.sy, pose.sw, pose.sh,
+        Math.round((cellWidth - pose.sw) / 2), cellHeight - pose.sh, pose.sw, pose.sh);
+      return { image: tile, sx: 0, sy: 0, sw: cellWidth, sh: cellHeight };
+    });
   }
 
   function splitSpriteSheet(sheet, columns, boundaries = null, needsMask = true) {
@@ -613,6 +633,8 @@
   function beginAntarcticaScene() {
     if (antarctica || antarcticaScene || !player) return;
     antarcticaScene = { age: 0, fromX: player.x / width, fromY: worldToScreen(player.y) / height };
+    antarcticaArrival = null;
+    machine.classList.add("is-story");
     rocketTimer = 0;
     kimiBoost = 0;
     babyKimi = null;
@@ -628,21 +650,23 @@
 
   function enterAntarctica() {
     antarcticaScene = null;
+    antarcticaArrival = { age: 0 };
     antarctica = true;
     antarcticaEntryY = cameraY;
-    arrivalUntil = elapsed + 4;
-    player.x = width / 2;
+    arrivalUntil = 0;
+    player.x = width * .68;
     // Leave peakY and all earned bonuses untouched through the cutscene.
     player.y = cameraY + height * .42;
     player.vx = 0;
-    player.vy = 720;
+    player.vy = 0;
+    facing = 1;
     openingJump = false;
     invulnerableTimer = 3;
     platforms = [];
     powerups = [];
     marshals = [];
     effects = [];
-    worldTop = player.y - player.height / 2 - 8;
+    worldTop = player.y - player.height / 2;
     addPlatform(worldTop, player.x, "normal");
     // Give the player a reachable first landing after leaving the portal.
     worldTop += 125;
@@ -651,7 +675,19 @@
     lastPowerupSpawnY = worldTop;
     extendWorld();
     releaseTouchControls();
-    if (introCaption) introCaption.textContent = "Антарктида. Прыгай по ледяным платформам.";
+    if (introCaption) introCaption.textContent = "Рассел выпадает из портала в ледяную пещеру. У выхода справа его встречает Сид.";
+    updateHud();
+  }
+
+  function finishAntarcticaArrival() {
+    antarcticaArrival = null;
+    machine.classList.remove("is-story");
+    player.vx = 0;
+    player.vy = 720;
+    invulnerableTimer = 3;
+    nextHudUpdate = 0;
+    releaseTouchControls();
+    if (introCaption) introCaption.textContent = "Сид указывает наверх. Прыгай по ледяным платформам.";
     updateHud();
   }
 
@@ -724,92 +760,240 @@
     ctx.restore();
   }
 
-  function drawAntarcticaScene() {
-    const scene = antarcticaScene, age = scene.age;
-    const ease = (from, to) => { const t = clamp((age - from) / (to - from), 0, 1); return t * t * (3 - 2 * t); };
-    const floorY = height * .68;
-    const heroHeight = clamp(width * .18, 66, 96);
-    const consoleWidth = Math.min(width * .32, 170);
-    const consoleHeight = spriteSize(art.controlConsole, consoleWidth);
-    const consoleX = width * .58;
-    const buttonX = consoleX + consoleWidth * .79;
-    const buttonY = floorY - consoleHeight * .79;
-    const bossWidth = Math.min(width * .3, 144);
-    const bossHeight = spriteSize(art.spaceBoss, bossWidth);
-    const bossX = width * 1.2 + (width * .53 - width * 1.2) * ease(1.6, 2.7);
-    const bossY = floorY - bossHeight * .55 + Math.sin(age * 3) * 2;
-    const portalX = width * .25, portalY = height * .39;
+  function sceneEase(age, start, end) {
+    const t = clamp((age - start) / (end - start), 0, 1);
+    return t * t * t * (t * (t * 6 - 15) + 10);
+  }
+
+  function sceneMix(from, to, t) { return from + (to - from) * t; }
+
+  function storyHeroHeight() { return Math.min(clamp(width * .2, 76, 104), height * .22); }
+
+  function drawStoryActor(sprite, x, feet, actorHeight, angle = 0, scaleX = 1, scaleY = 1, alpha = 1) {
+    if (!sprite || alpha <= 0) return;
+    const actorWidth = actorHeight * sprite.sw / sprite.sh;
     ctx.save();
-    ctx.fillStyle = "rgba(3,12,20,.36)"; ctx.fillRect(0, 0, width, height);
-    // An elevated steel floor and rails establish the top control room.
-    ctx.fillStyle = "#263945"; ctx.fillRect(width * .07, floorY, width * .86, 22);
-    ctx.fillStyle = "#83949c"; ctx.fillRect(width * .07, floorY, width * .86, 4);
-    ctx.fillStyle = "#43545c";
-    for (let i = 0; i < 7; i += 1) ctx.fillRect(width * (.1 + i * .13), floorY + 22, 5, height * .14);
-    ctx.fillRect(width * .07, floorY + height * .1, width * .86, 4);
-    ctx.drawImage(rasterSprite(art.controlConsole, consoleWidth, consoleHeight), consoleX, floorY - consoleHeight, consoleWidth, consoleHeight);
-    if (age >= 4.25) {
-      ctx.globalAlpha = .35 + Math.sin(age * 12) * .15;
-      ctx.fillStyle = "#ff453e"; ctx.beginPath(); ctx.ellipse(buttonX, buttonY + 2, consoleWidth * .12, consoleWidth * .09, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    // The same Toto sprite appears on his saucer; a mechanical arm performs
-    // the shove and button press instead of replacing the established villain.
-    if (age > 1.6 && art.spaceBoss) {
-      ctx.drawImage(rasterSprite(art.spaceBoss, bossWidth, bossHeight), bossX - bossWidth / 2, bossY - bossHeight / 2, bossWidth, bossHeight);
-      if (age > 2.6 && age < 3.35 || age > 3.7) {
-        const pressing = age > 3.7;
-        const extension = pressing ? ease(3.7, 4.3) : Math.sin(clamp((age - 2.6) / .75, 0, 1) * Math.PI);
-        const originX = bossX + (pressing ? 1 : -1) * bossWidth * .28;
-        const originY = bossY + bossHeight * .2;
-        const handX = originX + ((pressing ? buttonX : width * .39) - originX) * extension;
-        const handY = originY + ((pressing ? buttonY + 3 : floorY - heroHeight * .55) - originY) * extension;
-        ctx.strokeStyle = "#9aa8b5"; ctx.lineWidth = 5;
-        ctx.beginPath(); ctx.moveTo(originX, originY); ctx.lineTo(handX, handY); ctx.stroke();
-        ctx.fillStyle = "#d2dae2"; ctx.fillRect(handX - 5, handY - 3, 10, 7);
-      }
-    }
-    if (age >= 4.6) {
-      const radius = Math.min(width * .2, 92) * ease(4.6, 5.6);
-      ctx.save(); ctx.translate(portalX, portalY);
-      ctx.fillStyle = "#12283e"; ctx.beginPath(); ctx.ellipse(0, 0, radius, radius * 1.15, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.save(); ctx.clip();
-      ctx.drawImage(art.antarctica, -radius, -radius * 1.15, radius * 2, radius * 2.3);
-      ctx.restore();
-      for (let ring = 0; ring < 3; ring += 1) {
-        ctx.strokeStyle = ring % 2 ? "#d3f6ff" : "#63b9e8"; ctx.lineWidth = 3 - ring * .6;
-        ctx.beginPath(); ctx.ellipse(0, 0, radius + ring * 5, radius * 1.15 + ring * 4, Math.sin(age * 3 + ring) * .12, 0, Math.PI * 2); ctx.stroke();
-      }
-      for (let i = 0; i < 18; i += 1) {
-        const angle = i * Math.PI / 9 + age * 1.5;
-        const r = radius * (1.1 + (i % 3) * .13);
-        ctx.fillStyle = i % 2 ? "#b5eeff" : "#4e97cf";
-        ctx.fillRect(Math.cos(angle) * r, Math.sin(angle) * r * 1.15, 3, 3);
-      }
-      ctx.restore();
-    }
-    const landing = ease(0, 1.6), shove = ease(2.75, 3.35), suction = ease(5.65, 7.95);
-    let heroX = scene.fromX * width + (width * .4 - scene.fromX * width) * landing - width * .16 * shove;
-    let heroY = scene.fromY * height + (floorY - heroHeight / 2 - scene.fromY * height) * landing
-      - Math.sin(landing * Math.PI) * Math.min(100, height * .16) - Math.sin(shove * Math.PI) * 30;
-    heroX += (portalX - heroX) * suction;
-    heroY += (portalY - heroY) * suction;
-    const hero = art.heroFrames[age < 1.6 ? 1 : age < 2.75 ? 3 : 2];
-    const heroWidth = heroHeight * hero.sw / hero.sh;
-    ctx.save(); ctx.translate(heroX, heroY);
-    ctx.rotate(-shove * .45 + suction * Math.PI * 4);
-    const shrink = 1 - suction * .98; ctx.scale(shrink, shrink); ctx.globalAlpha = 1 - suction;
-    ctx.drawImage(rasterSprite(hero, heroWidth, heroHeight), -heroWidth / 2, -heroHeight / 2, heroWidth, heroHeight);
-    ctx.restore();
-    const caption = age < 2.6 ? "ВЕРХНИЙ ЭТАЖ · ПУЛЬТ БОЛЛИДА" : age < 4.6 ? "ТОТО: «Я САМ.»" : "МАРШРУТ ИЗМЕНЁН: АНТАРКТИДА";
-    ctx.fillStyle = "rgba(6,17,29,.88)"; ctx.fillRect(width * .05, height * .84, width * .9, 40);
-    ctx.fillStyle = "#e2f3fb"; ctx.font = `bold ${Math.min(13, width / 30)}px system-ui`; ctx.textAlign = "center";
-    ctx.fillText(caption, width / 2, height * .84 + 25);
-    if (age > 7.95) { ctx.globalAlpha = ease(7.95, 8.4); ctx.fillStyle = "#d9edff"; ctx.fillRect(0, 0, width, height); }
+    ctx.globalAlpha *= alpha;
+    ctx.translate(x, feet);
+    ctx.rotate(angle);
+    ctx.scale(scaleX, scaleY);
+    // Raster size stays fixed while camera/pose transforms animate the image.
+    ctx.drawImage(rasterSprite(sprite, actorWidth, actorHeight), -actorWidth / 2, -actorHeight, actorWidth, actorHeight);
     ctx.restore();
   }
 
-  function startAntarcticaTest() {
+  function drawStoryShadow(x, y, radius, alpha) {
+    ctx.save(); ctx.globalAlpha *= alpha;
+    ctx.fillStyle = "#08121e";
+    ctx.beginPath(); ctx.ellipse(x, y + 2, radius, radius * .18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCinemaFrame(label, subtitle, visibility = 1) {
+    const bar = Math.min(34, Math.max(22, height * .055)) * visibility;
+    ctx.save(); ctx.globalAlpha = visibility;
+    ctx.fillStyle = "#071019";
+    ctx.fillRect(0, 0, width, bar);
+    ctx.fillRect(0, height - bar - 14, width, bar + 14);
+    ctx.fillStyle = "#a6bac8";
+    ctx.textAlign = "left"; ctx.font = "600 10px system-ui";
+    ctx.fillText(label, 16, Math.max(17, bar * .64), width - 70);
+    ctx.fillStyle = "#edf4f8";
+    ctx.textAlign = "center"; ctx.font = `500 ${Math.min(14, width / 28)}px system-ui`;
+    if (subtitle) ctx.fillText(subtitle, width / 2, height - (bar + 14) / 2 + 5, width - 32);
+    ctx.restore();
+  }
+
+  function drawStoryPortal(x, y, radius, age, scenery) {
+    if (radius <= .1) return;
+    ctx.save(); ctx.translate(x, y);
+    ctx.fillStyle = "rgba(91,190,239,.08)";
+    ctx.beginPath(); ctx.ellipse(0, 0, radius * 1.3, radius * 1.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, radius, radius * 1.16, 0, 0, Math.PI * 2);
+    ctx.save(); ctx.clip();
+    ctx.fillStyle = "#0b1d37"; ctx.fillRect(-radius, -radius * 1.2, radius * 2, radius * 2.4);
+    if (scenery) ctx.drawImage(scenery, -radius, -radius * 1.16, radius * 2, radius * 2.32);
+    ctx.fillStyle = `rgba(120,205,250,${.12 + Math.sin(age * 5) * .06})`;
+    ctx.fillRect(-radius, -radius * 1.2, radius * 2, radius * 2.4);
+    ctx.restore();
+    for (let ring = 0; ring < 3; ring += 1) {
+      ctx.strokeStyle = ring % 2 ? "#e2faff" : "#71c5f1";
+      ctx.lineWidth = ring ? 1.5 : 3;
+      ctx.beginPath(); ctx.ellipse(0, 0, radius + ring * 4, radius * 1.16 + ring * 3,
+        Math.sin(age * 2.5 + ring) * .08, age * .4 + ring, age * .4 + ring + Math.PI * 1.8); ctx.stroke();
+    }
+    for (let i = 0; i < 24; i += 1) {
+      const angle = i * Math.PI / 12 + age * .9;
+      const r = radius * (1.15 + (1 - (age * .75 + i / 24) % 1) * .7);
+      ctx.globalAlpha = .25 + (i % 3) * .2;
+      ctx.strokeStyle = "#beeaff"; ctx.lineWidth = i % 3 ? 1 : 2;
+      ctx.beginPath(); ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r * 1.16);
+      ctx.lineTo(Math.cos(angle - .05) * r * .91, Math.sin(angle - .05) * r * 1.06); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function controlHeroMotion(age, scene, floorY, heroHeight, portalX, portalY) {
+    const landing = sceneEase(age, 0, 1.45), approach = sceneEase(age, 2.0, 3.15);
+    const shove = sceneEase(age, 4.42, 5.1), suction = sceneEase(age, 8.25, 10.65);
+    let x = sceneMix(scene.fromX * width, width * .38, landing) + width * .09 * approach - width * .24 * shove;
+    let feet = sceneMix(scene.fromY * height + player.height / 2, floorY, landing)
+      - Math.sin(landing * Math.PI) * Math.min(125, height * .17) - Math.sin(shove * Math.PI) * heroHeight * .5;
+    if (age > 2 && age < 3.15) feet -= Math.abs(Math.sin(age * 12)) * 2;
+    x = sceneMix(x, portalX + Math.sin(suction * Math.PI * 2) * width * .06, suction);
+    feet = sceneMix(feet, portalY + heroHeight * .3, suction);
+    return { x, feet, shove, suction, rotation: -shove * .25 * (1 - sceneEase(age, 5.25, 5.8)) + suction * Math.PI * 2.4 };
+  }
+
+  function drawAntarcticaScene() {
+    const scene = antarcticaScene, age = scene.age;
+    const ease = (from, to) => sceneEase(age, from, to);
+    const floorY = height * .71, heroHeight = storyHeroHeight();
+    const consoleWidth = Math.min(width * .31, 174, height * .25), consoleHeight = spriteSize(art.controlConsole, consoleWidth);
+    const consoleX = width * .63, buttonX = consoleX + consoleWidth * .79;
+    const buttonY = floorY - consoleHeight * .79;
+    const portalX = width * .245, portalY = floorY - heroHeight * 1.7;
+    const buttonShot = ease(5.95, 6.55) * (1 - ease(7.35, 8.0));
+    const portalShot = ease(7.8, 8.65);
+    const zoom = 1 + buttonShot * .72 + portalShot * .08;
+    const focusX = sceneMix(width * .5, buttonX - width * .08, buttonShot) - portalShot * width * .045;
+    const focusY = sceneMix(height * .53, buttonY + heroHeight * .15, buttonShot);
+    const impactAge = age - 4.45;
+    const impact = impactAge > 0 ? Math.exp(-impactAge * 15) : 0;
+    const pressAge = age - 6.92;
+    const pressImpact = pressAge > 0 ? Math.exp(-pressAge * 16) : 0;
+    ctx.save();
+    ctx.fillStyle = "rgba(3,12,20,.22)"; ctx.fillRect(0, 0, width, height);
+    ctx.translate(width / 2 + Math.sin(age * 91) * impact * 3, height * .53 + Math.sin(age * 75) * pressImpact * 2);
+    ctx.scale(zoom, zoom); ctx.translate(-focusX, -focusY);
+    // Floor depth, foot shadows and suspended dust ground the actors.
+    ctx.fillStyle = "#111d28"; ctx.fillRect(width * .025, floorY + 10, width * .95, height * .2);
+    ctx.fillStyle = "#34444e"; ctx.fillRect(width * .025, floorY, width * .95, 16);
+    ctx.fillStyle = "#8b999e"; ctx.fillRect(width * .025, floorY, width * .95, 3);
+    for (let i = 0; i < 12; i += 1) {
+      const x = width * (.04 + i * .08);
+      ctx.fillStyle = i % 2 ? "#b49a54" : "#30373b"; ctx.fillRect(x, floorY + 8, width * .04, 4);
+      ctx.fillStyle = "#3d4b54"; ctx.fillRect(x, floorY + 20, 4, height * .12);
+    }
+    ctx.fillStyle = "#46535a"; ctx.fillRect(width * .025, floorY + height * .11, width * .95, 3);
+    for (let i = 0; i < 16; i += 1) {
+      ctx.globalAlpha = .1 + i % 3 * .06; ctx.fillStyle = "#adbbc7";
+      ctx.fillRect((decorRandom(i, 11) * width + age * 3) % width, floorY - decorRandom(i, 14) * height * .5, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+    drawStoryShadow(consoleX + consoleWidth / 2, floorY, consoleWidth * .48, .5);
+    const buttonPress = ease(6.8, 6.96) * (1 - ease(7.15, 7.4));
+    ctx.save(); ctx.translate(0, buttonPress * 2);
+    ctx.drawImage(rasterSprite(art.controlConsole, consoleWidth, consoleHeight), consoleX, floorY - consoleHeight, consoleWidth, consoleHeight);
+    ctx.restore();
+    if (age > 6.9) {
+      ctx.save(); ctx.globalAlpha = .1 + Math.sin(age * 8) * .025;
+      ctx.fillStyle = "#fb4539"; ctx.beginPath(); ctx.ellipse(buttonX, buttonY, consoleWidth * .24, consoleWidth * .19, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      ctx.fillStyle = "#f36a59";
+      for (let i = 0; i < 4; i += 1) ctx.fillRect(consoleX + consoleWidth * (.14 + i * .12), floorY - consoleHeight * .54, 3, 2);
+    }
+    const bossHeight = heroHeight * 1.38;
+    const bossEnter = ease(3.25, 4.15), bossStep = ease(5.6, 6.35);
+    const pressX = buttonX - bossHeight * .3;
+    const bossX = sceneMix(width * 1.15, width * .61, bossEnter) + (pressX - width * .61) * bossStep;
+    if (age > 3.25) {
+      const pose = age > 4.25 && age < 5.15 ? 1 : age > 6.25 && age < 7.55 ? 2 : age >= 7.55 ? 3 : 0;
+      const lunge = Math.sin(ease(4.28, 4.7) * Math.PI) * 5;
+      drawStoryShadow(bossX, floorY, bossHeight * .23, .5);
+      drawStoryActor(art.totoStoryFrames[pose], bossX - lunge, floorY, bossHeight,
+        age < 4.15 ? -.035 * Math.sin(age * 14) : 0, 1, 1 - buttonPress * .025);
+    }
+    const portalGrow = ease(7.45, 8.5);
+    drawStoryPortal(portalX, portalY, Math.min(width * .2, 98, height * .16) * portalGrow, age, art.caveArrival);
+    const motion = controlHeroMotion(age, scene, floorY, heroHeight, portalX, portalY);
+    const landingBounce = Math.sin(clamp((age - 1.45) / .32, 0, 1) * Math.PI) * .13;
+    const heroPose = age < 1.45 ? art.heroFrames[1] : age < 1.8 ? art.heroStoryFrames[4]
+      : age > 4.42 && age < 5.8 ? art.heroStoryFrames[3]
+        : age > 8.25 ? art.heroFrames[2] : age > 2 && age < 3.15 ? art.heroStoryFrames[1 + Math.floor(age * 9) % 2] : art.heroStoryFrames[0];
+    drawStoryShadow(motion.x, floorY, heroHeight * (.23 - motion.suction * .12), .36 * (1 - motion.suction));
+    if (age > 8.4 && age < 10.6) {
+      for (let i = 3; i > 0; i -= 1) {
+        const ghost = controlHeroMotion(age - i * .07, scene, floorY, heroHeight, portalX, portalY);
+        drawStoryActor(heroPose, ghost.x, ghost.feet, heroHeight, ghost.rotation, 1 - ghost.suction * .97, 1 - ghost.suction * .97, .055);
+      }
+    }
+    drawStoryActor(heroPose, motion.x, motion.feet, heroHeight, motion.rotation,
+      (1 + landingBounce) * (1 - motion.suction * .97), (1 - landingBounce) * (1 - motion.suction * .97), 1 - motion.suction);
+    ctx.restore();
+    // A short impact flash and a matching cold-white portal cut punctuate actions.
+    if (impact > .02) { ctx.save(); ctx.globalAlpha = impact * .07; ctx.fillStyle = "#edf6ff"; ctx.fillRect(0, 0, width, height); ctx.restore(); }
+    drawCinemaFrame("ВЕРХНИЙ ЭТАЖ / ПУЛЬТ БОЛЛИДА", age > 4 && age < 6 ? "Тото: «Я сам.»" : age > 7.5 && age < 9.1 ? "Маршрут изменён." : "");
+    if (age > 10.65) { ctx.save(); ctx.globalAlpha = ease(10.65, controlSceneDuration); ctx.fillStyle = "#d9edff"; ctx.fillRect(0, 0, width, height); ctx.restore(); }
+  }
+
+  function drawAntarcticaArrival() {
+    const age = antarcticaArrival.age, ease = (a, b) => sceneEase(age, a, b);
+    const source = art.caveArrival;
+    const sceneWidth = Math.max(width * 1.8, height * source.naturalWidth / source.naturalHeight);
+    const sceneHeight = sceneWidth * source.naturalHeight / source.naturalWidth;
+    const floorY = height * .76;
+    const heroHeight = storyHeroHeight();
+    const portalX = sceneWidth * .24, heroStart = portalX + heroHeight * .28;
+    const heroEnd = sceneWidth * .7, sidX = heroEnd + width * .46;
+    const walk = ease(2.0, 4.9), jump = ease(7.1, 8.85), handoff = ease(8.25, 9.65);
+    const pan = ease(1.8, 5.0);
+    const cameraX = clamp(sceneMix(portalX - width * .32, heroEnd - width * .42, pan), 0, sceneWidth - width);
+    ctx.save(); ctx.globalAlpha = 1 - handoff;
+    ctx.drawImage(source, -cameraX, floorY - sceneHeight * .78, sceneWidth, sceneHeight);
+    // Near-field snow sweeps past more quickly than the panoramic cave walls.
+    for (let i = 0; i < 24; i += 1) {
+      const x = (decorRandom(i, 73) * sceneWidth + age * (12 + i % 7)) % sceneWidth - cameraX;
+      if (x < sceneWidth * .54 - cameraX) continue;
+      ctx.globalAlpha = (1 - handoff) * (.2 + i % 3 * .17); ctx.fillStyle = "#e7f6ff";
+      ctx.fillRect(x, (decorRandom(i, 81) * height + age * (15 + i % 8)) % height, 2, 2);
+    }
+    ctx.globalAlpha = 1 - handoff;
+    const collapse = 1 - ease(1.0, 1.75);
+    drawStoryPortal(portalX - cameraX, floorY - heroHeight, heroHeight * .66 * collapse, age + 11, art.garage);
+    const sidPose = age < 4.65 ? 0 : age < 5.25 ? 1 : age < 6.3 ? 2 : 3;
+    const sidHeight = heroHeight * 1.3;
+    drawStoryShadow(sidX - cameraX, floorY, sidHeight * .25, .3);
+    drawStoryActor(art.sidFrames[sidPose], sidX - cameraX, floorY, sidHeight, Math.sin(age * 2.5) * .012);
+    // A small snow burst and two settling bounces give the portal landing weight.
+    const landing = ease(0, .8), stand = ease(1.1, 1.8);
+    let heroX = sceneMix(portalX - heroHeight * .12, heroStart, landing) + (heroEnd - heroStart) * walk - cameraX;
+    let heroFeet = floorY - (1 - landing) * heroHeight * .9 - Math.abs(Math.sin(age * 10)) * (1 - stand) * (age > .8 ? 2.5 : 0);
+    if (age > 2 && age < 4.9) heroFeet -= Math.abs(Math.sin(age * 13)) * 2;
+    const finalFeet = worldToScreen(player.y) + player.height / 2;
+    heroX = sceneMix(heroX, player.x, jump);
+    heroFeet = sceneMix(heroFeet, finalFeet, jump) - Math.sin(jump * Math.PI) * Math.min(85, height * .12);
+    if (age > .7 && age < 1.6) {
+      const puff = clamp((age - .7) / .9, 0, 1);
+      ctx.save(); ctx.globalAlpha *= 1 - puff; ctx.fillStyle = "#dcefff";
+      for (let i = 0; i < 12; i += 1) {
+        const direction = i % 2 ? -1 : 1;
+        ctx.fillRect(heroStart - cameraX + direction * (5 + puff * (18 + i * 2)), floorY - Math.sin(puff * Math.PI) * (6 + i * 1.5), 3, 2);
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+    // The previewed landing platform is the actual collision platform used
+    // when control resumes; cinematic and gameplay positions share a baseline.
+    if (age > 6.3) {
+      ctx.save(); ctx.globalAlpha = ease(6.3, 7.0);
+      drawIcePlatform(platforms[0]);
+      ctx.globalAlpha = handoff;
+      for (let i = 1; i < platforms.length; i += 1) drawIcePlatform(platforms[i]);
+      ctx.restore();
+    }
+    const shrink = sceneMix(1, player.height / heroHeight, handoff);
+    const turn = age < .8 ? (1 - landing) * -Math.PI * 1.4 : age > 2 && age < 4.9 ? Math.sin(age * 13) * .025 : 0;
+    const pose = age < 1.4 ? art.heroStoryFrames[4] : age > 7.1 ? (age > 8.85 ? art.heroFrames[0] : art.heroFrames[1])
+      : age > 2 && age < 4.9 ? art.heroStoryFrames[1 + Math.floor(age * 9) % 2] : age > 6 ? art.heroStoryFrames[5] : art.heroStoryFrames[0];
+    drawStoryShadow(heroX, floorY, heroHeight * .23, .27 * (1 - jump));
+    drawStoryActor(pose, heroX, heroFeet, heroHeight, turn, shrink, shrink);
+    const subtitle = age > 5.2 && age < 6.3 ? "Сид: «Ты потерялся?»" : age >= 6.3 && age < 7.4 ? "Сид: «Тебе наверх!»" : "";
+    drawCinemaFrame("АНТАРКТИДА / ЛЕДЯНАЯ ПЕЩЕРА", subtitle, 1 - ease(8.85, caveSceneDuration));
+    if (age < .5) { ctx.save(); ctx.globalAlpha = 1 - ease(0, .5); ctx.fillStyle = "#d9edff"; ctx.fillRect(0, 0, width, height); ctx.restore(); }
+  }
+
+  function startAntarcticaPreview(arrivalOnly = false) {
     if (!artReady) return;
     if (mode === "running" && !adminBossTestMode && !adminSandbox) {
       if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег";
@@ -824,9 +1008,12 @@
     freeFlight = false;
     if (flightButton) { flightButton.setAttribute("aria-pressed", "false"); flightButton.textContent = "Свободный полёт: выкл."; }
     beginAntarcticaScene();
-    if (bossTestStatus) bossTestStatus.textContent = "Тест Антарктиды · рекорд и попытка не сохраняются";
+    if (arrivalOnly) enterAntarctica();
+    if (bossTestStatus) bossTestStatus.textContent = arrivalOnly ? "Тест пещеры · рекорд и попытка не сохраняются" : "Тест Антарктиды · рекорд и попытка не сохраняются";
     updateHud(); draw();
   }
+
+  function startAntarcticaTest() { startAntarcticaPreview(false); }
 
   function drawPortal() {
     if (!portalTransition) return;
@@ -956,7 +1143,9 @@
   function buildGame() {
     antarctica = false;
     antarcticaScene = null;
+    antarcticaArrival = null;
     antarcticaEntryY = 0;
+    machine.classList.remove("is-story");
     babyKimi = null;
     kimiWait = 12 + Math.random() * 8;
     kimiBoost = 0;
@@ -2050,7 +2239,12 @@
     if (forgottenPaddock && !antarctica && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
     if (antarcticaScene) {
       antarcticaScene.age += dt;
-      if (antarcticaScene.age >= 8.4) enterAntarctica();
+      if (antarcticaScene.age >= controlSceneDuration) enterAntarctica();
+      return;
+    }
+    if (antarcticaArrival) {
+      antarcticaArrival.age += dt;
+      if (antarcticaArrival.age >= caveSceneDuration) finishAntarcticaArrival();
       return;
     }
     if (somersault) {
@@ -2233,6 +2427,7 @@
     if (mode === "intro" && intro) { drawIntro(); return; }
     drawBackdrop();
     if (antarcticaScene) { drawAntarcticaScene(); return; }
+    if (antarcticaArrival) { drawAntarcticaArrival(); return; }
 
     for (const platform of platforms) {
       if (platform.broken) continue;
@@ -2602,6 +2797,7 @@
   });
   if (bossTestButton) bossTestButton.addEventListener("click", startTotoBossTest);
   document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
+  document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   introPreferenceButton?.addEventListener("click", () => {
     alwaysSkipIntro = !alwaysSkipIntro;
@@ -2713,14 +2909,19 @@
     image(canvas.dataset.introHeroSrc),
     image(canvas.dataset.antarcticaSrc),
     image(canvas.dataset.controlConsoleSrc),
+    image(canvas.dataset.caveArrivalSrc),
+    image(canvas.dataset.sidSheetSrc),
+    image(canvas.dataset.totoStorySrc),
+    image(canvas.dataset.heroStorySrc),
   ]).then(([
     atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
     platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
     garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
     introScaffold, introDriver, introHero,
     antarcticaImage, controlConsoleImage,
+    caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage,
   ]) => {
-    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage].every(Boolean)) {
+    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage, caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage].every(Boolean)) {
       showAssetError();
       return;
     }
@@ -2733,6 +2934,11 @@
     art.garage = garageImage;
     art.antarctica = antarcticaImage;
     art.controlConsole = splitSpriteSheet(controlConsoleImage, 1, null, false)[0] || null;
+    art.caveArrival = caveArrivalImage;
+    art.sidFrames = storyFrames(sidSheetImage, 4);
+    art.totoStoryFrames = storyFrames(totoStoryImage, 4, [0, .19, .51, .83, 1]);
+    art.heroStoryFrames = storyFrames(heroStoryImage, 6);
+    if (art.sidFrames.length !== 4 || art.totoStoryFrames.length !== 4 || art.heroStoryFrames.length !== 6) { showAssetError(); return; }
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
     art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;

@@ -161,6 +161,13 @@
   box-shadow: none;
 }
 .doodle-machine.is-intro .doodle-scoreboard > div { visibility: hidden; }
+.doodle-machine.is-story .doodle-scoreboard {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.doodle-machine.is-story .doodle-scoreboard > div,
+.doodle-machine.is-story .doodle-scoreboard .doodle-live { visibility: hidden; }
 .doodle-intro-skip {
   position: absolute;
   z-index: 4;
