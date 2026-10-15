@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=focus-scale-v17">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=scaffold-intro-v25">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -67,6 +67,9 @@
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
           data-hawk-sheet-src="{% static 'league/images/doodle-jump/western-hawk-flap-v1.png' %}"
+          data-intro-scaffold-src="{% static 'league/images/doodle-jump/western-intro-scaffold-v1.png' %}"
+          data-intro-driver-src="{% static 'league/images/doodle-jump/western-intro-ferrari-v1.png' %}"
+          data-intro-hero-src="{% static 'league/images/doodle-jump/western-intro-russell-v1.png' %}"
           data-boss-wheel-src="{% static 'league/images/doodle-jump/space-dirty-wheel-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
           {% if user.is_staff and request.GET.flight == '1' %}
@@ -80,6 +83,10 @@
           role="application"
           aria-label="Пиксельный ковбой-пилот подпрыгивает по платформам. На телефоне касайтесь левой или правой половины игрового поля, на компьютере используйте стрелки, A и D или Ф и В."
         ></canvas>
+        <button class="doodle-intro-skip" id="doodle-intro-skip" type="button" hidden>
+          Пропустить <span>· пробел / касание</span>
+        </button>
+        <span class="doodle-sr-only" id="doodle-intro-caption" role="status" aria-live="polite"></span>
         <div class="doodle-overlay" id="doodle-overlay">
           <div class="doodle-overlay-card">
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
@@ -123,6 +130,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=western-hawks-v24" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=scaffold-intro-v25" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

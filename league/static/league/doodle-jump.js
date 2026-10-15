@@ -10,6 +10,8 @@
   const copy = document.getElementById("doodle-overlay-copy");
   const kicker = document.getElementById("doodle-overlay-kicker");
   const startButton = document.getElementById("doodle-start");
+  const introSkipButton = document.getElementById("doodle-intro-skip");
+  const introCaption = document.getElementById("doodle-intro-caption");
   const scoreNode = document.getElementById("doodle-score");
   const bestNode = document.getElementById("doodle-best");
   const levelNode = document.getElementById("doodle-level");
@@ -56,6 +58,8 @@
   let height = 1;
   let dpr = 1;
   let mode = "ready";
+  let intro = null;
+  const introDuration = 5.3;
   let artReady = false;
   let frame = 0;
   let previousTime = 0;
@@ -720,7 +724,7 @@
     const heroHeight = 70 * visualScale();
     // Preserve the previous gameplay hitbox independently of the new hat/arms.
     const heroWidth = heroHeight * .75;
-    const firstY = Math.max(86, Math.min(118, height * .14));
+    const firstY = Math.max(150, Math.min(190, height * .22));
     platforms = [];
     enemies = [];
     hazards = [];
@@ -957,16 +961,170 @@
       .catch(() => { scoreSubmitted = false; });
   }
 
-  function startGame() {
+  function finishIntro() {
+    if (mode !== "intro") return;
+    intro = null;
+    mode = "running";
+    machine.classList.remove("is-intro");
+    if (introSkipButton) introSkipButton.hidden = true;
+    if (introCaption) introCaption.textContent = "Забег начался.";
+    releaseTouchControls();
+    const firstPlatform = platforms[0];
+    player.x = firstPlatform.x;
+    player.y = firstPlatform.y + player.height / 2;
+    player.vx = 0;
+    player.vy = 720;
+    facing = -1;
+    registerAttempt();
+    updateHud();
+    canvas.focus({ preventScroll: true });
+  }
+
+  function updateIntro(dt) {
+    if (!intro) return;
+    const previousAge = intro.age;
+    intro.age += dt;
+    if (introCaption && previousAge < .55 && intro.age >= .55) {
+      introCaption.textContent = "Гонщик Ferrari: «В первый раз?»";
+    }
+    if (introCaption && previousAge < 2.25 && intro.age >= 2.25) {
+      introCaption.textContent = "Рассел снимает петлю и прыгает на первую платформу.";
+    }
+    if (intro.age >= introDuration) finishIntro();
+  }
+
+  function drawIntroActor(sprite, x, feetY, actorHeight, flipped = false) {
+    const actorWidth = actorHeight * sprite.sw / sprite.sh;
+    ctx.save();
+    ctx.translate(x, feetY);
+    if (flipped) ctx.scale(-1, 1);
+    ctx.drawImage(rasterSprite(sprite, actorWidth, actorHeight),
+      -actorWidth / 2, -actorHeight, actorWidth, actorHeight);
+    ctx.restore();
+  }
+
+  function drawIntroRope(anchorX, beamY, loopX, loopY, rx, ry) {
+    ctx.save();
+    // A loose loop is lifted over the hat; both characters stay on the deck.
+    for (const [color, thickness] of [["#51301d", 3.5], ["#d8b47a", 1.7]]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.beginPath();
+      ctx.moveTo(anchorX, beamY);
+      ctx.quadraticCurveTo(anchorX, loopY - ry - 12, loopX + rx * .65, loopY - ry * .8);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(loopX, loopY, rx, ry, -.12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawIntro() {
+    const age = intro.age;
+    const leap = clamp((age - 3.5) / 1.55, 0, 1);
+    const ease = leap * leap * (3 - 2 * leap);
+    const zoom = 1.32 - .32 * ease;
+    const stageWidth = Math.min(width * .68, 390);
+    const stageHeight = spriteSize(art.introScaffold, stageWidth);
+    const stageX = (width - stageWidth) / 2;
+    const feetY = height - 80;
+    const stageY = feetY - stageHeight * .75;
+    const beamY = stageY + stageHeight * .1;
+    const heroX = stageX + stageWidth * .66;
+    const driverX = stageX + stageWidth * .36;
+    const actorHeight = player.height;
+    const stageOpacity = 1 - clamp((age - 4.05) / 1, 0, 1);
+
+    ctx.save();
+    // Zoom out around the ground as the actor joins the real game world.
+    ctx.translate(width / 2, height);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-width / 2, -height);
+    drawBackdrop();
+    ctx.save();
+    ctx.globalAlpha = clamp((age - 3.15) / .7, 0, 1);
+    for (const platform of platforms) {
+      drawSprite(platform.spriteIndex, platform.x, platform.y,
+        platform.spriteWidth, "platform", platform.height);
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = stageOpacity;
+    ctx.drawImage(rasterSprite(art.introScaffold, stageWidth, stageHeight),
+      stageX, stageY, stageWidth, stageHeight);
+    drawIntroActor(art.introDriver, driverX, feetY, actorHeight * 1.08);
+    drawIntroRope(driverX + actorHeight * .3, beamY,
+      driverX, feetY - actorHeight * .72, actorHeight * .1, actorHeight * .1);
+    ctx.restore();
+
+    const lift = clamp((age - 2.25) / .85, 0, 1);
+    if (age < 3.5) {
+      const pose = art.introHeroFrames[age < 2.25 ? 0 : age < 3.1 ? 1 : 2];
+      const poseHeight = actorHeight * pose.sh / art.introHeroFrames[0].sh;
+      drawIntroActor(pose, heroX, feetY, poseHeight, true);
+    } else {
+      const firstPlatform = platforms[0];
+      const destinationFeet = worldToScreen(firstPlatform.y);
+      const x = heroX + (firstPlatform.x - heroX) * ease;
+      const y = feetY + (destinationFeet - feetY) * leap - Math.sin(leap * Math.PI) * 112;
+      const pose = art.heroFrames[leap >= 1 ? 0 : leap < .5 ? 1 : 3];
+      drawIntroActor(pose, x, y, actorHeight, true);
+    }
+
+    ctx.save();
+    ctx.globalAlpha = stageOpacity;
+    const released = age >= 3.1;
+    const loopX = heroX + (released ? 16 + Math.sin((age - 3.1) * 5) * 5 : 0);
+    const loopY = feetY - actorHeight * (released ? 1.12 : .64 + lift * .5);
+    drawIntroRope(heroX + actorHeight * .34, beamY, loopX, loopY,
+      actorHeight * (released ? .22 : .11 + lift * .27), actorHeight * (.1 + lift * .08));
+
+    if (age >= .55 && age < 2.9) {
+      const bubbleWidth = 144;
+      const bx = driverX - bubbleWidth / 2;
+      const by = feetY - actorHeight * 1.08 - 40;
+      ctx.fillStyle = "#fff0ce";
+      ctx.strokeStyle = "#473625";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx + 4, by);
+      ctx.lineTo(bx + bubbleWidth - 4, by);
+      ctx.lineTo(bx + bubbleWidth, by + 4);
+      ctx.lineTo(bx + bubbleWidth, by + 29);
+      ctx.lineTo(driverX + 7, by + 29);
+      ctx.lineTo(driverX, by + 37);
+      ctx.lineTo(driverX - 6, by + 29);
+      ctx.lineTo(bx, by + 29);
+      ctx.lineTo(bx, by + 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#3e2d24";
+      ctx.font = "bold 13px 'Courier New', monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("В первый раз?".slice(0, Math.floor((age - .55) * 24)), driverX, by + 19);
+    }
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function startGame(skipIntro = false) {
     if (!artReady) return;
+    if (mode === "intro") { finishIntro(); return; }
+    if (mode === "running") return;
     cancelAnimationFrame(frame);
     buildGame();
-    mode = "running";
-    player.vy = 720;
+    mode = "intro";
+    intro = { age: 0 };
+    machine.classList.add("is-intro");
+    if (introSkipButton) introSkipButton.hidden = false;
+    if (introCaption) introCaption.textContent = "Паддок. Рассел и гонщик Ferrari стоят на эшафоте.";
     updateAccumulator = 0;
     nextHudUpdate = 0;
-    registerAttempt();
     setOverlay("running");
+    if (skipIntro || !art.introScaffold || !art.introDriver || art.introHeroFrames.length !== 3) finishIntro();
     previousTime = performance.now();
     lastRenderTime = previousTime;
     frame = requestAnimationFrame(loop);
@@ -1595,6 +1753,7 @@
 
   function draw() {
     if (!ctx) return;
+    if (mode === "intro" && intro) { drawIntro(); return; }
     drawBackdrop();
 
     for (const platform of platforms) {
@@ -1751,7 +1910,7 @@
   }
 
   function loop(now) {
-    if (mode !== "running") return;
+    if (mode !== "running" && mode !== "intro") return;
     if (document.hidden) {
       previousTime = now;
       updateAccumulator = 0;
@@ -1762,17 +1921,18 @@
     previousTime = now;
     updateAccumulator = Math.min(.1, updateAccumulator + dt);
     const fixedStep = 1 / 60;
-    while (updateAccumulator >= fixedStep && mode === "running") {
-      update(fixedStep);
+    while (updateAccumulator >= fixedStep && (mode === "running" || mode === "intro")) {
+      if (mode === "intro") updateIntro(fixedStep);
+      else update(fixedStep);
       updateAccumulator -= fixedStep;
     }
     const renderInterval = 1000 / 60;
-    if (now - lastRenderTime >= renderInterval - .5 || mode !== "running") {
+    if (now - lastRenderTime >= renderInterval - .5 || (mode !== "running" && mode !== "intro")) {
       draw();
       lastRenderTime += renderInterval * Math.max(1,
         Math.floor((now - lastRenderTime + .5) / renderInterval));
     }
-    if (mode === "running") frame = requestAnimationFrame(loop);
+    if (mode === "running" || mode === "intro") frame = requestAnimationFrame(loop);
   }
 
   function resize() {
@@ -1914,9 +2074,13 @@
       return;
     }
     if (["arrowleft", "arrowright", " ", "a", "d", "ф", "в"].includes(key)) event.preventDefault();
+    if (key === " " && !event.repeat) {
+      if (mode === "intro") finishIntro();
+      else if (mode !== "running") startGame();
+    }
+    if (mode === "intro") return;
     if (key === "arrowleft" || key === "a" || key === "ф") setDirection("left", true);
     if (key === "arrowright" || key === "d" || key === "в") setDirection("right", true);
-    if (key === " " && mode !== "running") startGame();
   });
   document.addEventListener("keyup", (event) => {
     const key = event.key.toLowerCase();
@@ -1935,13 +2099,14 @@
     lastRenderTime = previousTime;
     updateAccumulator = 0;
   });
-  startButton.addEventListener("click", startGame);
+  startButton.addEventListener("click", () => startGame());
+  if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   if (adminSandbox && flightButton) {
     flightButton.addEventListener("click", () => {
       freeFlight = !freeFlight;
       flightButton.setAttribute("aria-pressed", String(freeFlight));
       flightButton.textContent = `Свободный полёт: ${freeFlight ? "вкл." : "выкл."}`;
-      if (freeFlight && mode !== "running") startGame();
+      if (freeFlight && mode !== "running") startGame(true);
       if (freeFlight && player) player.vy = 720;
       canvas.focus({ preventScroll: true });
     });
@@ -1950,7 +2115,7 @@
   if (adminSandbox && portalTestButton) {
     portalTestButton.addEventListener("click", () => {
       if (!artReady) return;
-      if (mode !== "running") startGame();
+      if (mode !== "running") startGame(true);
       beginPortal();
     });
   }
@@ -1973,6 +2138,11 @@
   canvas.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
   canvas.addEventListener("touchmove", (event) => event.preventDefault(), { passive: false });
   canvas.addEventListener("pointerdown", (event) => {
+    if (mode === "intro") {
+      event.preventDefault();
+      finishIntro();
+      return;
+    }
     if (event.pointerType === "mouse") return;
     event.preventDefault();
     const bounds = touchBounds = canvas.getBoundingClientRect();
@@ -2016,14 +2186,21 @@
     image(canvas.dataset.enemyVariantsSrc),
     image(canvas.dataset.babyKimiSrc),
     image(canvas.dataset.hawkSheetSrc),
+    image(canvas.dataset.introScaffoldSrc),
+    image(canvas.dataset.introDriverSrc),
+    image(canvas.dataset.introHeroSrc),
   ]).then(([
     atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
     platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
     garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
+    introScaffold, introDriver, introHero,
   ]) => {
     art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
     art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
     art.hawkFrames = splitSpriteSheet(hawkSheet, 4).filter(Boolean);
+    art.introScaffold = splitSpriteSheet(introScaffold, 1)[0] || null;
+    art.introDriver = splitSpriteSheet(introDriver, 1)[0] || null;
+    art.introHeroFrames = splitSpriteSheet(introHero, 3).filter(Boolean);
     art.garage = garageImage;
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
