@@ -64,8 +64,8 @@
           data-marshal-src="{% static 'league/images/doodle-jump/marshal-checkered-v1.png' %}"
           data-garage-src="{% static 'league/images/doodle-jump/forgotten-paddock-v1.jpg' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
-          data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-gremlins-hats-v1.png' %}"
-          data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-trophy-v1.png' %}"
+          data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v2.png' %}"
+          data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
           data-boss-wheel-src="{% static 'league/images/doodle-jump/space-dirty-wheel-v1.png' %}"
           data-wheel-compounds-src="{% static 'league/images/doodle-jump/f1-wheel-compounds-v2.png' %}?v=2"
           {% if user.is_staff and request.GET.flight == '1' %}
@@ -122,6 +122,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=kimi-hats-v20" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=western-newborn-v21" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
