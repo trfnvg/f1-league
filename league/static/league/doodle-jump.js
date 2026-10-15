@@ -37,6 +37,7 @@
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   let rasterCache = new WeakMap();
+  let spriteScratch = null;
   let viewportKey = "";
   const held = { left: false, right: false };
   const sprites = [];
@@ -91,6 +92,9 @@
   let powerups = [];
   let effects = [];
   let cameraY = 0;
+  let openingJump = true;
+  let somersault = null;
+  let nextSomersaultAt = 2;
   let worldTop = 0;
   let startY = 86;
   let peakY = 0;
@@ -117,6 +121,7 @@
 
   const image = (src) => new Promise((resolve) => {
     const img = new Image();
+    img.decoding = "async";
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = src;
@@ -193,7 +198,7 @@
     if (!sheet) return [];
     // The generated poses have unequal widths. Cut at verified transparent
     // gutters, then place them in identical cells with a common boot baseline.
-    const poses = splitSpriteSheet(sheet, 4, [0, .251, .486, .787, 1]);
+    const poses = splitSpriteSheet(sheet, 4, [0, .251, .486, .787, 1], false);
     if (poses.some((pose) => !pose)) return [];
     const frameWidth = Math.max(...poses.map((pose) => pose.sw));
     const frameHeight = Math.max(...poses.map((pose) => pose.sh));
@@ -211,15 +216,18 @@
     return frames;
   }
 
-  function splitSpriteSheet(sheet, columns, boundaries = null) {
+  function splitSpriteSheet(sheet, columns, boundaries = null, needsMask = true) {
     if (!sheet || !columns) return [];
     const frameHeight = sheet.naturalHeight;
     const frames = [];
+    // Reuse one analysis surface instead of retaining a full-size canvas for
+    // every pose. Render directly from the original artwork after trimming.
+    if (!spriteScratch) spriteScratch = document.createElement("canvas");
     for (let frameIndex = 0; frameIndex < columns; frameIndex += 1) {
-      const startX = (boundaries ? boundaries[frameIndex] : frameIndex / columns) * sheet.naturalWidth;
-      const endX = (boundaries ? boundaries[frameIndex + 1] : (frameIndex + 1) / columns) * sheet.naturalWidth;
-      const frameWidth = Math.ceil(endX - startX);
-      const tile = document.createElement("canvas");
+      const startX = Math.round((boundaries ? boundaries[frameIndex] : frameIndex / columns) * sheet.naturalWidth);
+      const endX = Math.round((boundaries ? boundaries[frameIndex + 1] : (frameIndex + 1) / columns) * sheet.naturalWidth);
+      const frameWidth = endX - startX;
+      const tile = spriteScratch;
       tile.width = frameWidth;
       tile.height = frameHeight;
       const tileCtx = tile.getContext("2d", { willReadFrequently: true });
@@ -243,7 +251,7 @@
       const sw = maxX - minX + 1;
       const sh = maxY - minY + 1;
       frames.push(maxX >= minX && maxY >= minY
-        ? { image: tile, sx: minX, sy: minY, sw, sh, mask: alphaMask(pixels, frameWidth, minX, minY, sw, sh) }
+        ? { image: sheet, sx: startX + minX, sy: minY, sw, sh, mask: needsMask ? alphaMask(pixels, frameWidth, minX, minY, sw, sh) : null }
         : null);
     }
     return frames;
@@ -496,8 +504,12 @@
     const climb = Math.max(0, cameraY);
     const intoSky = backgroundFade(climb, skyFade.start, skyFade.end);
     const intoSpace = backgroundFade(climb, spaceFade.start, spaceFade.end);
-    ctx.fillStyle = skyGradient || "#6ba5d3";
-    ctx.fillRect(0, 0, width, height);
+    // Opaque scenery already covers every pixel. Avoid an extra full-screen
+    // paint at high DPR, retaining the sky base only for alpha transitions.
+    if (!(journeyCache && intoSky === 0) && !(spacePatternCache && intoSpace === 1)) {
+      ctx.fillStyle = skyGradient || "#6ba5d3";
+      ctx.fillRect(0, 0, width, height);
+    }
     if (journeyCache && intoSky < 1) {
       const source = journeyCache;
       const view = backgroundView(climb, source.width, source.height, width, height);
@@ -537,6 +549,8 @@
     if (forgottenPaddock || portalTransition || !player) return;
     portalTransition = { age: 0, x: player.x / width, y: worldToScreen(player.y) / height };
     rocketTimer = 0;
+    somersault = null;
+    openingJump = false;
     invulnerableTimer = Math.max(invulnerableTimer, 6);
     spaceBoss = null;
     bossShots = [];
@@ -750,6 +764,9 @@
     powerups = [];
     effects = [];
     cameraY = 0;
+    openingJump = true;
+    somersault = null;
+    nextSomersaultAt = 2;
     startY = firstY;
     worldTop = firstY;
     peakY = firstY + heroHeight / 2;
@@ -1162,6 +1179,7 @@
   function endGame() {
     if (mode !== "running") return;
     mode = "over";
+    somersault = null;
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30 + marshalBonus;
     lastWasRecord = finalScore > best;
@@ -1294,7 +1312,7 @@
     ctx.save();
     ctx.translate(Math.round(player.x), Math.round(screenY));
     ctx.rotate(Math.sin(elapsed * 5) * .025);
-    ctx.drawImage(frame.image, frame.sx, frame.sy, frame.sw, frame.sh,
+    ctx.drawImage(rasterSprite(frame, rocketWidth, rocketHeight),
       -rocketWidth / 2, -rocketHeight / 2, rocketWidth, rocketHeight);
     // A small amber pulse brightens the exhaust so the ride reads as motion.
     const flamePulse = .82 + Math.sin(elapsed * 24) * .18;
@@ -1617,6 +1635,8 @@
         frags += 1;
         player.y = enemyTop + player.height / 2;
         player.vy = 810;
+        somersault = null;
+        openingJump = false;
         effects.push({ index: 7, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 42 * visualScale() });
         effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 56 * visualScale() });
         effects.push({ index: 10, x: enemy.x, y: enemyTop, age: 0, duration: .28, size: 42 * visualScale() });
@@ -1632,11 +1652,15 @@
 
   function update(dt) {
     elapsed += dt;
+    if (somersault) {
+      somersault.age += dt;
+      if (somersault.age >= .54) somersault = null;
+    }
     if (!forgottenPaddock && !portalTransition && runScore() >= 5000) beginPortal();
     if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
-    if (updateBabyKimi(dt)) return;
+    if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
     const direction = Number(held.right) - Number(held.left);
     const targetVx = direction * Math.min(440, width * .62);
     player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
@@ -1685,6 +1709,12 @@
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
         player.vy = platform.kind === "spring" ? 930 : 720;
+        openingJump = false;
+        somersault = null;
+        if (elapsed >= nextSomersaultAt && !freeFlight && Math.random() < .14) {
+          somersault = { age: 0, direction: facing };
+          nextSomersaultAt = elapsed + 6;
+        }
         if (platform.kind === "spring") {
           effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 * visualScale() });
         }
@@ -1731,6 +1761,8 @@
           hazard.dead = true;
           player.y = hazardTop + player.height / 2;
           player.vy = 880;
+          somersault = null;
+          openingJump = false;
           effects.push({ index: 10, x: player.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
           continue;
         }
@@ -1758,7 +1790,14 @@
 
     // Keep the racer in the lower-middle band: enough space remains above for
     // incoming platforms, while the player never hugs the bottom edge.
-    if (player.y > cameraY + height * .42) cameraY = player.y - height * .42;
+    if (rocketTimer > 0 || kimiBoost > 0 || freeFlight) {
+      openingJump = false;
+      somersault = null;
+    }
+    if (!openingJump) {
+      const targetCameraY = Math.max(cameraY, player.y - height * .42);
+      cameraY += (targetCameraY - cameraY) * (1 - Math.exp(-8 * dt));
+    }
     if (updateHawks(dt)) return;
     updateSpaceBoss(dt);
     if (mode !== "running") return;
@@ -1843,11 +1882,15 @@
           ctx.translate(player.x, screenY);
         }
         ctx.rotate(Math.max(-.08, Math.min(.08, -player.vx / Math.max(1, width) * .1)));
+        if (somersault && !portalTransition) {
+          const t = clamp(somersault.age / .54, 0, 1);
+          ctx.rotate(somersault.direction * Math.PI * 2 * t * t * (3 - 2 * t));
+        }
         if (babyKimi && babyKimi.state === "holding") {
           ctx.rotate(Math.sin(babyKimi.hold * Math.PI * 12) * .16);
         }
         ctx.scale(facing, 1);
-        const heroSprite = currentHeroSprite();
+        const heroSprite = somersault ? art.heroFrames[0] : currentHeroSprite();
         if (heroSprite) {
           const heroDrawWidth = player.height * heroSprite.sw / heroSprite.sh;
           ctx.drawImage(rasterSprite(heroSprite, heroDrawWidth, player.height),
@@ -1985,11 +2028,15 @@
     ctx.imageSmoothingEnabled = false;
     rasterCache = new WeakMap();
     if (!artReady) {
-      drawBackdrop();
+      // The HTML poster remains visible until the first complete game frame.
       return;
     }
     touchBounds = null;
     cacheBackground();
+    // Warm all four hero poses at display resolution before play, including
+    // the tucked pose used by the somersault. Source pixels stay untouched.
+    const heroHeight = 70 * visualScale();
+    for (const pose of art.heroFrames) rasterSprite(pose, heroHeight * pose.sw / pose.sh, heroHeight);
     if (player && previousWidth > 1 && previousHeight > 1) {
       const scaleX = width / previousWidth;
       // Keep the playfield's world geometry proportional when its visible height
@@ -2234,9 +2281,9 @@
     art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
     art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
     art.hawkFrames = splitSpriteSheet(hawkSheet, 4).filter(Boolean);
-    art.introScaffold = splitSpriteSheet(introScaffold, 1)[0] || null;
-    art.introDriver = splitSpriteSheet(introDriver, 1)[0] || null;
-    art.introHeroFrames = splitSpriteSheet(introHero, 3).filter(Boolean);
+    art.introScaffold = splitSpriteSheet(introScaffold, 1, null, false)[0] || null;
+    art.introDriver = splitSpriteSheet(introDriver, 1, null, false)[0] || null;
+    art.introHeroFrames = splitSpriteSheet(introHero, 3, null, false).filter(Boolean);
     art.garage = garageImage;
     art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
     art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
@@ -2252,7 +2299,7 @@
       medium: wheelFrames[1] || null,
       hard: wheelFrames[2] || null,
     };
-    art.rocketRide = bakeSprite(splitSpriteSheet(rocketRide, 1)[0], 768);
+    art.rocketRide = bakeSprite(splitSpriteSheet(rocketRide, 1, null, false)[0], 768);
     if (art.heroFrames.length !== 4) {
       copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
       startButton.disabled = true;
@@ -2271,10 +2318,13 @@
       art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
     }
     art.powerupFrames = { rocket: bakeSprite(splitSpriteSheet(rocketEmpty, 1)[0], 384) };
+    // No returned sprite references the analysis surface.
+    if (spriteScratch) { spriteScratch.width = 1; spriteScratch.height = 1; spriteScratch = null; }
     artReady = true;
     startButton.disabled = false;
     resize();
     setOverlay("ready");
+    machine.classList.remove("is-loading");
   });
 
   if ("ResizeObserver" in window) {

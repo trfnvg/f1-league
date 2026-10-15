@@ -4,7 +4,8 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=leclerc-intro-v26">
+  <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" fetchpriority="high">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=opening-performance-v27">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -25,9 +26,10 @@
       Всегда пропускать вступление <span id="doodle-intro-preference-state" aria-hidden="true">Выкл.</span>
     </button>
   </div>
-  <section class="doodle-machine" aria-label="Cowboy GP — прыжковая аркада">
+  <section class="doodle-machine is-loading" aria-label="Cowboy GP — прыжковая аркада">
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
+        <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
         {% if user.is_staff %}
         <div class="doodle-test-controls">
           {% if request.GET.flight == '1' %}
@@ -97,7 +99,7 @@
             <span class="doodle-overlay-kicker" id="doodle-overlay-kicker">{% if arcade_admin_preview %}СЕССИЯ ТОЛЬКО ДЛЯ АДМИНА{% else %}АРКАДА НЕДЕЛИ{% endif %}</span>
             <h2 id="doodle-overlay-title">Седлай платформу!</h2>
             <p id="doodle-overlay-copy">Прыгай всё выше через пыльный паддок и каньоны Дикого Запада. На телефоне касайся левой или правой половины широкого поля, чтобы вести героя.</p>
-            <button class="doodle-start" id="doodle-start" type="button">Начать прыжок <span aria-hidden="true">↗</span></button>
+            <button class="doodle-start" id="doodle-start" type="button" disabled>Загрузка игры…</button>
           </div>
         </div>
       </div>
@@ -135,6 +137,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=leclerc-intro-v26" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=opening-performance-v27" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
