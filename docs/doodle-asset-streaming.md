@@ -14,7 +14,9 @@ device-pixel-ratio changes are part of this optimization.
 - Forgotten paddock: prefetched at score 4000; required at 4900, before the
   portal at 5000. Includes platforms and Kimi.
 - Antarctica: prefetched in the forgotten paddock at score 6500; required at
-  7900, before the cutscene at 8000. Includes both cutscenes and winter mobs.
+  7900, before the cutscene at 8000. Includes both cutscenes, piranhas and the
+  Iceman/Ferrari strategist/FIA snowman encounters. Their three animation
+  sheets are never requested at startup (12 of 33 images load initially).
 
 Chapters share in-flight requests. Prepared artwork is published only after the
 whole chapter is valid. A failed chapter retries after a backoff; unavailable

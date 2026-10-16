@@ -33,6 +33,9 @@
           <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <button id="doodle-antarctica-arrival-test" type="button" title="Проверить прибытие в пещеру и встречу с Сидом">Пещера · встреча с Сидом</button>
           <button id="doodle-winter-biome-test" type="button" title="Проверить зимних мобов и фон после +100 очков">Зима · мобы и фон +100</button>
+          <button id="doodle-winter-iceman-test" type="button">Зима · Айсмен</button>
+          <button id="doodle-winter-strategist-test" type="button">Зима · стратег Ferrari</button>
+          <button id="doodle-winter-steward-test" type="button">Зима · снеговик FIA</button>
           <small id="doodle-boss-test-status" aria-live="polite">Тест не влияет на рекорды и число попыток</small>
           {% if request.GET.flight == '1' %}
           <button id="doodle-flight-toggle" type="button" aria-pressed="false">Свободный полёт: выкл.</button>
@@ -85,6 +88,9 @@
           data-piranha-sheet-src="{% static 'league/images/doodle-jump/winter-piranha-flap-v1.png' %}"
           data-winter-platforms-src="{% static 'league/images/doodle-jump/winter-platforms-v1.png' %}"
           data-winter-portrait-src="{% static 'league/images/doodle-jump/winter-memory-portrait-v1.png' %}"
+          data-winter-iceman-src="{% static 'league/images/doodle-jump/winter-iceman-v1.png' %}"
+          data-winter-strategist-src="{% static 'league/images/doodle-jump/winter-strategist-v1.png' %}"
+          data-winter-steward-src="{% static 'league/images/doodle-jump/winter-steward-v1.png' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
@@ -152,6 +158,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=compact-winter-quote-v38" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=winter-encounters-v39" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
