@@ -5,7 +5,7 @@
 
 {% block extra_head %}
   <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" fetchpriority="high">
-  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=winter-biome-v35">
+  <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=admin-toolbar-v38">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
@@ -26,12 +26,9 @@
       Всегда пропускать вступление <span id="doodle-intro-preference-state" aria-hidden="true">Выкл.</span>
     </button>
   </div>
-  <section class="doodle-machine is-loading" aria-label="Cowboy GP — прыжковая аркада">
-    <div class="doodle-game-stage">
-      <div class="doodle-board-wrap" id="doodle-board-wrap">
-        <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
-        {% if user.is_staff %}
-        <div class="doodle-test-controls">
+  {% if user.is_staff %}
+        <div class="doodle-test-controls" role="group" aria-label="Тестирование игры администратором">
+          <span class="doodle-test-controls-label">ТЕСТИРОВАНИЕ ИГРЫ</span>
           <button id="doodle-boss-test" type="button" title="Запустить тестовый бой без сохранения результата">Вызвать бой с Тото</button>
           <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <button id="doodle-antarctica-arrival-test" type="button" title="Проверить прибытие в пещеру и встречу с Сидом">Пещера · встреча с Сидом</button>
@@ -45,7 +42,11 @@
           <a href="?{{ request.GET.urlencode }}&amp;flight=1">Тест: свободный полёт</a>
           {% endif %}
         </div>
-        {% endif %}
+  {% endif %}
+  <section class="doodle-machine is-loading" aria-label="Cowboy GP — прыжковая аркада">
+    <div class="doodle-game-stage">
+      <div class="doodle-board-wrap" id="doodle-board-wrap">
+        <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
           <span class="doodle-live"><i></i> WILD GP</span>
@@ -151,6 +152,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=winter-quote-card-v36" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=compact-winter-quote-v38" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
