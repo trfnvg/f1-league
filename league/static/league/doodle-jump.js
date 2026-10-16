@@ -45,6 +45,8 @@
   const sprites = [];
   let skyGradient = null;
   let garageCache = null;
+  let winterSeamCache = null;
+  let waitingForStage = null;
   let forgottenPaddock = false;
   let antarctica = false;
   let antarcticaScene = null;
@@ -137,7 +139,12 @@
     const load = (attempt) => {
       const img = new Image();
       img.decoding = "async";
+      let finished = false;
+      let timeout;
       const failed = () => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeout);
         img.onload = img.onerror = null;
         if (attempt < 2) setTimeout(() => load(attempt + 1), 350 * (attempt + 1));
         else resolve(null);
@@ -147,14 +154,90 @@
         try {
           if (img.decode) await img.decode();
           if (!img.naturalWidth || !img.naturalHeight) { failed(); return; }
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
           img.onload = img.onerror = null;
           resolve(img);
         } catch (error) { failed(); }
       };
+      timeout = setTimeout(failed, 20000);
       img.src = attempt ? `${src}${src.includes("?") ? "&" : "?"}asset_retry=${attempt}` : src;
     };
     load(0);
   });
+
+  // Download only the current chapter. Each chapter is published atomically:
+  // simulation never encounters partially prepared sprites or collision masks.
+  const assetStages = new Map();
+  const stageNames = { sky: "Облака", space: "Космос", garage: "Забытый паддок", winter: "Антарктида" };
+  const yieldAssetWork = () => new Promise((resolve) => {
+    if (window.requestIdleCallback) window.requestIdleCallback(resolve, { timeout: 250 });
+    else setTimeout(resolve, 0);
+  });
+
+  async function prepareAssets(entries) {
+    const images = await Promise.all(entries.map(([key]) => image(canvas.dataset[key])));
+    if (images.some((loaded) => !loaded)) throw new Error("Incomplete game artwork");
+    const prepared = {};
+    for (let i = 0; i < entries.length; i += 1) {
+      await yieldAssetWork();
+      Object.assign(prepared, entries[i][1](images[i]));
+    }
+    return prepared;
+  }
+
+  function loadStage(name) {
+    let stage = assetStages.get(name);
+    if (stage?.ready) return Promise.resolve(true);
+    if (stage?.pending) return stage.pending;
+    if (stage && performance.now() < stage.retryAt) return Promise.resolve(false);
+    if (!stage) { stage = { ready: false, pending: null, retryAt: 0 }; assetStages.set(name, stage); }
+    stage.pending = prepareAssets(stageAssets(name)).then((prepared) => {
+      Object.assign(art, prepared);
+      stage.ready = true;
+      return true;
+    }).catch(() => {
+      stage.retryAt = performance.now() + 3000;
+      return false;
+    }).finally(() => { stage.pending = null; });
+    return stage.pending;
+  }
+
+  function stageReady(name) {
+    if (assetStages.get(name)?.ready) return true;
+    loadStage(name);
+    waitingForStage = name;
+    return false;
+  }
+
+  function streamWorldAssets() {
+    waitingForStage = null;
+    if (antarctica || antarcticaScene || antarcticaArrival) return stageReady("winter");
+    if (portalTransition) return stageReady("garage");
+    const score = runScore();
+    if (forgottenPaddock) {
+      if (!stageReady("garage")) return false;
+      if (score >= 6500) loadStage("winter");
+      return score < 7900 || stageReady("winter");
+    }
+    // Prefetch well ahead of the first visible pixel/encounter. Fast admin
+    // flights still hit readiness barriers, without advancing the game clock.
+    if (cameraY >= 1200) loadStage("sky");
+    if (cameraY >= 7000) loadStage("space");
+    if (score >= 4000) loadStage("garage");
+    if (cameraY >= 2700 && !stageReady("sky")) return false;
+    if (cameraY >= 10000 && !stageReady("space")) return false;
+    if (score >= 4900 && !stageReady("garage")) return false;
+    return true;
+  }
+
+  async function preparePreview(names) {
+    if (bossTestStatus) bossTestStatus.textContent = "Загружаем графику для теста…";
+    const ready = (await Promise.all(names.map(loadStage))).every(Boolean);
+    if (!ready && bossTestStatus) bossTestStatus.textContent = "Графика не загрузилась. Проверьте соединение и повторите тест.";
+    return ready;
+  }
 
   function showAssetError() {
     assetLoadFailed = true;
@@ -353,9 +436,15 @@
       }
       const sw = maxX - minX + 1;
       const sh = maxY - minY + 1;
-      frames.push(maxX >= minX && maxY >= minY
-        ? { image: tile, sx: minX, sy: minY, sw, sh, mask: needsMask ? alphaMask(pixels, frameWidth, minX, minY, sw, sh) : null }
-        : null);
+      if (maxX < minX || maxY < minY) { frames.push(null); continue; }
+      const mask = needsMask ? alphaMask(pixels, frameWidth, minX, minY, sw, sh) : null;
+      // Keep precisely the original pixels, but discard transparent margins
+      // from retained canvas surfaces (especially large cinematic sheets).
+      const cropped = document.createElement("canvas");
+      cropped.width = sw;
+      cropped.height = sh;
+      cropped.getContext("2d").drawImage(tile, minX, minY, sw, sh, 0, 0, sw, sh);
+      frames.push({ image: cropped, sx: 0, sy: 0, sw, sh, mask });
     }
     return frames;
   }
@@ -436,6 +525,7 @@
   }
 
   function cacheBackground() {
+    winterSeamCache = null;
     skyGradient = ctx.createLinearGradient(0, 0, 0, height);
     skyGradient.addColorStop(0, "#498bc9");
     skyGradient.addColorStop(1, "#89bddc");
@@ -758,17 +848,31 @@
     const cycle = tileHeight - overlap;
     const offset = Math.max(0, cameraY - antarcticaEntryY) * .13 % cycle;
     const sourceOverlap = source.naturalHeight * .18;
+    const seamWidth = canvas.width;
+    const seamHeight = Math.max(1, Math.ceil(overlap * dpr));
+    if (!winterSeamCache || winterSeamCache.width !== seamWidth || winterSeamCache.height !== seamHeight) {
+      // Only cache the narrow join, at full display resolution. No giant
+      // repeating backdrop surface, and no 16 alpha blends on every frame.
+      winterSeamCache = document.createElement("canvas");
+      winterSeamCache.width = seamWidth;
+      winterSeamCache.height = seamHeight;
+      const painter = winterSeamCache.getContext("2d", { alpha: false });
+      painter.imageSmoothingEnabled = false;
+      painter.drawImage(source, 0, source.naturalHeight - sourceOverlap, source.naturalWidth, sourceOverlap,
+        0, 0, seamWidth, seamHeight);
+      for (let band = 0; band < 16; band += 1) {
+        painter.globalAlpha = (band + .5) / 16;
+        painter.drawImage(source, 0, sourceOverlap * band / 16, source.naturalWidth, sourceOverlap / 16,
+          0, seamHeight * band / 16, seamWidth, seamHeight / 16 + 1);
+      }
+    }
     ctx.save();
     // Blend upright images directly: no giant offscreen texture on iPhones.
     for (let y = offset - cycle * 2; y < height; y += cycle) {
       ctx.globalAlpha = 1;
       ctx.drawImage(source, 0, sourceOverlap, source.naturalWidth, source.naturalHeight - sourceOverlap,
         0, y + overlap, width, cycle + 1 / dpr);
-      for (let band = 0; band < 16; band += 1) {
-        ctx.globalAlpha = (band + .5) / 16;
-        ctx.drawImage(source, 0, sourceOverlap * band / 16, source.naturalWidth, sourceOverlap / 16,
-          0, y + overlap * band / 16, width, overlap / 16 + 1 / dpr);
-      }
+      ctx.drawImage(winterSeamCache, 0, y, width, overlap);
     }
     ctx.globalAlpha = .65;
     ctx.fillStyle = "#f0f8ff";
@@ -792,10 +896,10 @@
     const age = elapsed - winterMemoryStartedAt;
     const fade = sceneEase(age, 0, 2) * (1 - sceneEase(age, 18, 20));
     if (fade <= 0 || !art.winterPortrait) return;
-    const fontSize = Math.min(clamp(width / 29, 12, 15), Math.max(9, height * .04));
-    const lineHeight = Math.ceil(fontSize * 1.5), padding = height < 320 ? 12 : 18;
-    const cardWidth = Math.min(width * .88, 420), maxWidth = cardWidth - 44;
-    const key = `${cardWidth}:${fontSize}:semibold`;
+    const fontSize = Math.min(clamp(width / 35, 10, 12), Math.max(9, height * .035));
+    const lineHeight = Math.ceil(fontSize * 1.5);
+    const maxWidth = Math.min(width * .86, 420);
+    const key = `${maxWidth}:${fontSize}:semibold`;
     ctx.save(); ctx.font = `600 ${fontSize}px system-ui`;
     if (!winterQuoteLayout || winterQuoteLayout.key !== key) {
       const lines = [];
@@ -812,42 +916,29 @@
       }
       winterQuoteLayout = { key, lines };
     }
-    const cardHeight = winterQuoteLayout.lines.length * lineHeight + padding * 2;
-    const cardX = (width - cardWidth) / 2;
-    const cardY = Math.max(16, height * .53 - cardHeight);
+    const textHeight = winterQuoteLayout.lines.length * lineHeight;
+    const textTop = Math.max(16, height * .5 - textHeight);
     const portraitTop = Math.min(Math.max(82, height * .12), height * .2);
-    const portraitHeight = Math.min(height * .28, 230, Math.max(0, cardY - portraitTop + 10));
+    const portraitHeight = Math.min(height * .28, 230, Math.max(0, textTop - portraitTop + 10));
     if (!foreground && portraitHeight > 0) {
       const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
       ctx.globalAlpha = fade * .23;
       ctx.drawImage(rasterSprite(art.winterPortrait, portraitWidth, portraitHeight),
         (width - portraitWidth) / 2, portraitTop, portraitWidth, portraitHeight);
     }
-    // Keep the panel behind gameplay; render its lettering in a separate pass
-    // so passing snow caps cannot erase words from the quote.
+    // Lettering only: no panel or background obscuring the winter scenery.
+    // A fine frost-coloured outline keeps navy letters readable over ice.
     if (foreground) {
       ctx.globalAlpha = fade;
       ctx.textAlign = "center";
-      ctx.strokeStyle = "rgba(6,23,39,.95)"; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
-      ctx.fillStyle = "#f0f8ff";
-      const textY = cardY + padding + (lineHeight + fontSize) / 2;
+      ctx.strokeStyle = "rgba(240,248,255,.95)"; ctx.lineWidth = 2; ctx.lineJoin = "round";
+      ctx.fillStyle = "#27385f";
+      const textY = textTop + fontSize;
       winterQuoteLayout.lines.forEach((line, index) => {
-        ctx.strokeText(line, width / 2 + 3, textY + index * lineHeight);
-        ctx.fillText(line, width / 2 + 3, textY + index * lineHeight);
+        ctx.strokeText(line, width / 2, textY + index * lineHeight);
+        ctx.fillText(line, width / 2, textY + index * lineHeight);
       });
-      ctx.restore();
-      return;
     }
-    ctx.globalAlpha = fade;
-    const r = 9;
-    ctx.beginPath(); ctx.moveTo(cardX + r, cardY);
-    ctx.lineTo(cardX + cardWidth - r, cardY); ctx.quadraticCurveTo(cardX + cardWidth, cardY, cardX + cardWidth, cardY + r);
-    ctx.lineTo(cardX + cardWidth, cardY + cardHeight - r); ctx.quadraticCurveTo(cardX + cardWidth, cardY + cardHeight, cardX + cardWidth - r, cardY + cardHeight);
-    ctx.lineTo(cardX + r, cardY + cardHeight); ctx.quadraticCurveTo(cardX, cardY + cardHeight, cardX, cardY + cardHeight - r);
-    ctx.lineTo(cardX, cardY + r); ctx.quadraticCurveTo(cardX, cardY, cardX + r, cardY); ctx.closePath();
-    ctx.fillStyle = "rgba(6,23,39,.9)"; ctx.fill();
-    ctx.strokeStyle = "rgba(161,213,241,.44)"; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = "#79c7e9"; ctx.fillRect(cardX + 9, cardY + 16, 2, cardHeight - 32);
     ctx.restore();
   }
 
@@ -1089,12 +1180,14 @@
     if (age < .5) { ctx.save(); ctx.globalAlpha = 1 - ease(0, .5); ctx.fillStyle = "#d9edff"; ctx.fillRect(0, 0, width, height); ctx.restore(); }
   }
 
-  function startAntarcticaPreview(arrivalOnly = false) {
+  async function startAntarcticaPreview(arrivalOnly = false) {
     if (!artReady) return;
     if (mode === "running" && !adminBossTestMode && !adminSandbox) {
       if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег";
       return;
     }
+    if (!await preparePreview(["garage", "winter"])) return;
+    if (mode === "running" && !adminBossTestMode && !adminSandbox) return;
     startGame(true, { forceRestart: true, adminTest: true });
     forgottenPaddock = true;
     peakY = player.y = startY + 8000 * 11;
@@ -1109,15 +1202,15 @@
     updateHud(); draw();
   }
 
-  function startAntarcticaTest() { startAntarcticaPreview(false); }
+  function startAntarcticaTest() { return startAntarcticaPreview(false); }
 
-  function startWinterBiomeTest() {
+  async function startWinterBiomeTest() {
     if (!artReady) return;
     if (mode === "running" && !adminBossTestMode && !adminSandbox) {
       if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег";
       return;
     }
-    startAntarcticaPreview(true);
+    await startAntarcticaPreview(true);
     if (!antarcticaArrival || !adminBossTestMode) return;
     finishAntarcticaArrival();
     antarcticaEntryScore = runScore() - 100;
@@ -1254,6 +1347,7 @@
   }
 
   function buildGame() {
+    waitingForStage = null;
     antarctica = false;
     antarcticaScene = null;
     antarcticaArrival = null;
@@ -1707,16 +1801,15 @@
     canvas.focus({ preventScroll: true });
   }
 
-  function startTotoBossTest() {
+  async function startTotoBossTest() {
     if (!artReady) return;
-    if (!art.spaceBoss || !art.bossWheel) {
-      if (bossTestStatus) bossTestStatus.textContent = "Не удалось загрузить графику босса";
-      return;
-    }
     if (mode === "running" && !adminBossTestMode) {
       if (bossTestStatus) bossTestStatus.textContent = "Сначала завершите текущий забег, чтобы не потерять его попытку";
       return;
     }
+
+    if (!await preparePreview(["sky", "space"])) return;
+    if (mode === "running" && !adminBossTestMode) return;
 
     startGame(true, { forceRestart: true, adminTest: true });
     if (mode !== "running" || !player) return;
@@ -2394,6 +2487,7 @@
   }
 
   function update(dt) {
+    if (!streamWorldAssets()) return;
     elapsed += dt;
     if (forgottenPaddock && !antarctica && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
     if (antarcticaScene) {
@@ -2778,6 +2872,19 @@
     const renderInterval = 1000 / 60;
     if (now - lastRenderTime >= renderInterval - .5 || (mode !== "running" && mode !== "intro")) {
       draw();
+      if (waitingForStage) {
+        ctx.save();
+        const boxWidth = Math.min(width - 32, 310);
+        ctx.fillStyle = "rgba(8, 15, 22, .9)";
+        ctx.fillRect((width - boxWidth) / 2, height * .45, boxWidth, 58);
+        ctx.fillStyle = "#f5eee2";
+        ctx.textAlign = "center";
+        ctx.font = "bold 13px monospace";
+        ctx.fillText(`Загружаем: ${stageNames[waitingForStage]}`, width / 2, height * .45 + 23);
+        ctx.font = "11px monospace";
+        ctx.fillText("Игра на паузе · прогресс сохранён", width / 2, height * .45 + 43);
+        ctx.restore();
+      }
       lastRenderTime += renderInterval * Math.max(1,
         Math.floor((now - lastRenderTime + .5) / renderInterval));
     }
@@ -2981,8 +3088,9 @@
   }
   const portalTestButton = document.getElementById("doodle-portal-test");
   if (adminSandbox && portalTestButton) {
-    portalTestButton.addEventListener("click", () => {
+    portalTestButton.addEventListener("click", async () => {
       if (!artReady) return;
+      if (!await preparePreview(["garage"])) return;
       if (mode !== "running") startGame(true);
       beginPortal();
     });
@@ -3044,108 +3152,72 @@
   canvas.addEventListener("contextrestored", () => {
     viewportKey = "";
     garageCache = null;
+    winterSeamCache = null;
     resize();
     previousTime = lastRenderTime = performance.now();
     updateAccumulator = 0;
     if (mode === "running" || mode === "intro") frame = requestAnimationFrame(loop);
   });
 
-  Promise.all([
-    image(canvas.dataset.atlasSrc),
-    image(canvas.dataset.heroSheetSrc),
-    image(canvas.dataset.backgroundJourneySrc),
-    image(canvas.dataset.backgroundCloudSrc),
-    image(canvas.dataset.backgroundSpaceSrc),
-    image(canvas.dataset.rocketSrc),
-    image(canvas.dataset.rocketEmptySrc),
-    image(canvas.dataset.wheelCompoundsSrc),
-    image(canvas.dataset.platformSheetSrc),
-    image(canvas.dataset.spaceBossSrc),
-    image(canvas.dataset.bossWheelSrc),
-    image(canvas.dataset.marshalSrc),
-    image(canvas.dataset.garageSrc),
-    image(canvas.dataset.garagePlatformsSrc),
-    image(canvas.dataset.enemyVariantsSrc),
-    image(canvas.dataset.babyKimiSrc),
-    image(canvas.dataset.hawkSheetSrc),
-    image(canvas.dataset.introScaffoldSrc),
-    image(canvas.dataset.introDriverSrc),
-    image(canvas.dataset.introHeroSrc),
-    image(canvas.dataset.antarcticaSrc),
-    image(canvas.dataset.controlConsoleSrc),
-    image(canvas.dataset.caveArrivalSrc),
-    image(canvas.dataset.sidSheetSrc),
-    image(canvas.dataset.totoStorySrc),
-    image(canvas.dataset.heroStorySrc),
-    image(canvas.dataset.walkSheetSrc),
-    image(canvas.dataset.piranhaSheetSrc),
-    image(canvas.dataset.winterPlatformsSrc),
-    image(canvas.dataset.winterPortraitSrc),
-  ]).then(([
-    atlas, heroSheet, journey, cloud, space, rocketRide, rocketEmpty, wheelSheet,
-    platformSheet, spaceBossImage, bossWheelImage, marshalImage, garageImage,
-    garagePlatformsImage, enemyVariantsImage, babyKimiImage, hawkSheet,
-    introScaffold, introDriver, introHero,
-    antarcticaImage, controlConsoleImage,
-    caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage,
-    walkSheetImage, piranhaSheetImage, winterPlatformsImage, winterPortraitImage,
-  ]) => {
-    if (![atlas, heroSheet, platformSheet, journey, cloud, space, garageImage, antarcticaImage, controlConsoleImage, spaceBossImage, caveArrivalImage, sidSheetImage, totoStoryImage, heroStoryImage, walkSheetImage, piranhaSheetImage, winterPlatformsImage, winterPortraitImage].every(Boolean)) {
-      showAssetError();
-      return;
-    }
-    art.enemyVariants = splitSpriteSheet(enemyVariantsImage, 4).filter(Boolean);
-    art.babyKimi = splitSpriteSheet(babyKimiImage, 1)[0] || null;
-    art.hawkFrames = splitSpriteSheet(hawkSheet, 4).filter(Boolean);
-    art.introScaffold = splitSpriteSheet(introScaffold, 1, null, false)[0] || null;
-    art.introDriver = splitSpriteSheet(introDriver, 1, null, false)[0] || null;
-    art.introHeroFrames = splitSpriteSheet(introHero, 3, null, false).filter(Boolean);
-    art.garage = garageImage;
-    art.antarctica = antarcticaImage;
-    art.controlConsole = splitSpriteSheet(controlConsoleImage, 1, null, false)[0] || null;
-    art.caveArrival = caveArrivalImage;
-    art.sidFrames = storyFrames(sidSheetImage, 4);
-    art.totoStoryFrames = storyFrames(totoStoryImage, 4, [0, .19, .51, .83, 1]);
-    art.heroStoryFrames = storyFrames(heroStoryImage, 6);
-    art.walkFrames = walkFrames(walkSheetImage);
-    art.piranhaFrames = piranhaFrames(piranhaSheetImage);
-    art.winterPlatforms = splitSpriteSheet(winterPlatformsImage, 4, null, false);
-    art.winterPortrait = splitSpriteSheet(winterPortraitImage, 1, null, false)[0];
-    if (art.walkFrames.length !== 8 || art.piranhaFrames.length !== 4 || art.winterPlatforms.some((frame) => !frame) || !art.winterPortrait) { showAssetError(); return; }
-    if (art.sidFrames.length !== 4 || art.totoStoryFrames.length !== 4 || art.heroStoryFrames.length !== 6) { showAssetError(); return; }
-    art.garagePlatforms = splitSpriteSheet(garagePlatformsImage, 4, [0, .26, .535, .80, 1]);
-    art.marshal = splitSpriteSheet(marshalImage, 1)[0] || null;
-    art.spaceBoss = splitSpriteSheet(spaceBossImage, 1)[0] || null;
-    art.bossWheel = splitSpriteSheet(bossWheelImage, 1)[0] || null;
-    art.journey = journey;
-    art.cloud = cloud;
-    art.space = space;
-    art.heroFrames = splitHeroSheet(heroSheet);
-    const wheelFrames = splitSpriteSheet(wheelSheet, 3);
-    art.wheelFrames = {
-      soft: wheelFrames[0] || null,
-      medium: wheelFrames[1] || null,
-      hard: wheelFrames[2] || null,
-    };
-    art.rocketRide = bakeSprite(splitSpriteSheet(rocketRide, 1, null, false)[0], 768);
-    if (art.heroFrames.length !== 4) {
-      copy.textContent = "Не удалось загрузить анимацию персонажа. Обновите страницу и попробуйте ещё раз.";
-      startButton.disabled = true;
-      return;
-    }
-    cropSprites(atlas);
-    // Cut in the transparent gutters, not through the generated artwork.
-    const platformFrames = splitSpriteSheet(platformSheet, 4, [0, .26, .536, .806, 1]);
-    platformFrames.forEach((sprite, index) => { if (sprite) sprites[index] = sprite; });
-    for (let index = 0; index < sprites.length; index += 1) sprites[index] = bakeSprite(sprites[index]);
-    // Keep more source detail for the hero; the other game sprites stay small
-    // to keep the per-frame draw workload light on mobile.
-    // Retain full-resolution hero poses; rasterSprite prepares display-sized
-    // textures directly, avoiding the former intermediate 384px reduction.
-    for (const compound of ["soft", "medium", "hard"]) {
-      art.wheelFrames[compound] = bakeSprite(art.wheelFrames[compound]);
-    }
-    art.powerupFrames = { rocket: bakeSprite(splitSpriteSheet(rocketEmpty, 1)[0], 384) };
+  function checkedFrames(frames, count) {
+    if (frames.length !== count || frames.some((pose) => !pose)) throw new Error("Invalid animation frames");
+    return frames;
+  }
+
+  function stageAssets(name) {
+    const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
+    if (name === "sky") return [
+      ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
+      ["hawkSheetSrc", (sheet) => ({ hawkFrames: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
+    ];
+    if (name === "space") return [
+      ["backgroundSpaceSrc", (sheet) => ({ space: sheet })],
+      ["spaceBossSrc", single("spaceBoss")],
+      ["bossWheelSrc", single("bossWheel")],
+    ];
+    if (name === "garage") return [
+      ["garageSrc", (sheet) => ({ garage: sheet })],
+      ["garagePlatformsSrc", (sheet) => ({ garagePlatforms: checkedFrames(splitSpriteSheet(sheet, 4, [0, .26, .535, .80, 1]), 4) })],
+      ["babyKimiSrc", single("babyKimi")],
+    ];
+    if (name === "winter") return [
+      ["antarcticaSrc", (sheet) => ({ antarctica: sheet })],
+      ["controlConsoleSrc", (sheet) => ({ controlConsole: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+      ["caveArrivalSrc", (sheet) => ({ caveArrival: sheet })],
+      ["sidSheetSrc", (sheet) => ({ sidFrames: checkedFrames(storyFrames(sheet, 4), 4) })],
+      ["totoStorySrc", (sheet) => ({ totoStoryFrames: checkedFrames(storyFrames(sheet, 4, [0, .19, .51, .83, 1]), 4) })],
+      ["heroStorySrc", (sheet) => ({ heroStoryFrames: checkedFrames(storyFrames(sheet, 6), 6) })],
+      ["walkSheetSrc", (sheet) => ({ walkFrames: checkedFrames(walkFrames(sheet), 8) })],
+      ["piranhaSheetSrc", (sheet) => ({ piranhaFrames: checkedFrames(piranhaFrames(sheet), 4) })],
+      ["winterPlatformsSrc", (sheet) => ({ winterPlatforms: checkedFrames(splitSpriteSheet(sheet, 4, null, false), 4) })],
+      ["winterPortraitSrc", (sheet) => ({ winterPortrait: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+    ];
+    throw new Error(`Unknown asset stage: ${name}`);
+  }
+
+  prepareAssets([
+    ["atlasSrc", (sheet) => { cropSprites(sheet); return {}; }],
+    ["heroSheetSrc", (sheet) => ({ heroFrames: checkedFrames(splitHeroSheet(sheet), 4) })],
+    ["backgroundJourneySrc", (sheet) => ({ journey: sheet })],
+    ["platformSheetSrc", (sheet) => {
+      checkedFrames(splitSpriteSheet(sheet, 4, [0, .26, .536, .806, 1]), 4)
+        .forEach((sprite, index) => { sprites[index] = sprite; });
+      for (let i = 0; i < sprites.length; i += 1) sprites[i] = bakeSprite(sprites[i]);
+      return {};
+    }],
+    ["rocketSrc", (sheet) => ({ rocketRide: bakeSprite(checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0], 768) })],
+    ["rocketEmptySrc", (sheet) => ({ powerupFrames: { rocket: bakeSprite(checkedFrames(splitSpriteSheet(sheet, 1), 1)[0], 384) } })],
+    ["wheelCompoundsSrc", (sheet) => {
+      const frames = checkedFrames(splitSpriteSheet(sheet, 3), 3).map((pose) => bakeSprite(pose));
+      return { wheelFrames: { soft: frames[0], medium: frames[1], hard: frames[2] } };
+    }],
+    ["marshalSrc", (sheet) => ({ marshal: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] })],
+    ["enemyVariantsSrc", (sheet) => ({ enemyVariants: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
+    ["introScaffoldSrc", (sheet) => ({ introScaffold: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+    ["introDriverSrc", (sheet) => ({ introDriver: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+    ["introHeroSrc", (sheet) => ({ introHeroFrames: checkedFrames(splitSpriteSheet(sheet, 3, null, false), 3) })],
+  ]).then((prepared) => {
+    Object.assign(art, prepared);
     artReady = true;
     assetLoadFailed = false;
     startButton.disabled = false;

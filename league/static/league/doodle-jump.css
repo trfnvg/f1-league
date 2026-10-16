@@ -316,20 +316,23 @@
 }
 
 .doodle-test-controls {
-  position: absolute;
-  z-index: 4;
-  top: max(88px, calc(env(safe-area-inset-top) + 72px));
-  left: 10px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  max-width: calc(100% - 20px);
-  padding: 6px 8px;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 12px;
   color: #ddd4bc;
   background: rgba(15, 24, 33, .92);
   border: 1px solid #68776c;
   font: 12px/1.4 system-ui, sans-serif;
+}
+.doodle-test-controls-label {
+  flex-basis: 100%;
+  color: var(--doodle-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
 }
 .doodle-test-controls a { color: #f3d395; }
 .doodle-test-controls button {
@@ -346,7 +349,7 @@
   background: #493b29;
   color: #fff0c9;
 }
-.doodle-test-controls #doodle-boss-test-status { flex-basis: 100%; }
+.doodle-test-controls #doodle-boss-test-status { flex-basis: 100%; order: 1; color: var(--doodle-muted); }
 .doodle-test-controls button[aria-pressed="true"] { border-color: #f3d395; }
 
 #doodle-canvas {
