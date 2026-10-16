@@ -63,6 +63,10 @@
   let winterSlide = 0;
   let winterWind = 0;
   let winterWindDirection = 0;
+  let sidBoss = null;
+  let sidBossCleared = false;
+  let summit = false;
+  let summitEntryY = 0;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -182,7 +186,7 @@
   // Download only the current chapter. Each chapter is published atomically:
   // simulation never encounters partially prepared sprites or collision masks.
   const assetStages = new Map();
-  const stageNames = { sky: "Облака", space: "Космос", garage: "Забытый паддок", winter: "Антарктида" };
+  const stageNames = { sky: "Облака", space: "Космос", garage: "Забытый паддок", winter: "Антарктида", summit: "Высокогорный паддок" };
   const yieldAssetWork = () => new Promise((resolve) => {
     if (window.requestIdleCallback) window.requestIdleCallback(resolve, { timeout: 250 });
     else setTimeout(resolve, 0);
@@ -225,7 +229,11 @@
 
   function streamWorldAssets() {
     waitingForStage = null;
-    if (antarctica || antarcticaScene || antarcticaArrival) return stageReady("winter");
+    if (summit) return stageReady("summit");
+    if (antarctica || antarcticaScene || antarcticaArrival) {
+      if (runScore() >= 9700) loadStage("summit");
+      return stageReady("winter");
+    }
     if (portalTransition) return stageReady("garage");
     const score = runScore();
     if (forgottenPaddock) {
@@ -482,6 +490,7 @@
   function currentHeroSprite() {
     const frames = art.heroFrames;
     if (!frames || frames.length < 4 || !player) return frames && frames[1] ? frames[1] : null;
+    if (sidBoss?.phase === "victory") return frames[sidBoss.timer < 1.15 ? 3 : sidBoss.timer < 4.6 ? 1 : 2];
 
     // The western sheet follows the jump arc: compact, takeoff, arms-wide peak,
     // and descent. Mapping from velocity keeps poses aligned with landings.
@@ -670,6 +679,7 @@
   }
 
   function drawBackdrop() {
+    if (summit) { drawSummitBackdrop(); return; }
     if (antarctica) { drawAntarctica(); return; }
     if (forgottenPaddock) {
       drawForgottenPaddock();
@@ -928,15 +938,16 @@
   }
 
   function spawnWinterEncounter(kind = null) {
-    if (!antarctica || antarcticaArrival || winterEncounter) return false;
+    if (!antarctica || antarcticaArrival || winterEncounter || sidBoss) return false;
     const kinds = ["iceman", "strategist", "steward"];
     winterEnemyIndex = winterEnemyIndex < 0 ? Math.floor(Math.random() * kinds.length) : (winterEnemyIndex + 1) % kinds.length;
     const type = kind || kinds[winterEnemyIndex];
-    winterEncounter = { type, age: 0, phase: "idle", phaseAge: 0, round: 0,
-      x: width * (player.x < width / 2 ? .74 : .26), y: cameraY + height * .78,
+    // Queue the encounter above the entire viewport and existing fish. It
+    // enters naturally as the camera rises; never erase visible piranhas.
+    const spawnY = enemies.reduce((top, enemy) => enemy.dead ? top : Math.max(top, enemy.y + 250), cameraY + height + 100);
+    winterEncounter = { type, age: 0, phase: "arriving", phaseAge: 0, round: 0,
+      x: width * (player.x < width / 2 ? .74 : .26), y: spawnY,
       direction: player.x < width / 2 ? -1 : 1, target: null };
-    // Avoid overlapping simultaneous attack patterns from other winter mobs.
-    enemies = [];
     return true;
   }
 
@@ -951,7 +962,7 @@
   }
 
   function updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX = player.x) {
-    if (!antarctica || antarcticaArrival) return;
+    if (!antarctica || antarcticaArrival || sidBoss) return;
     winterSlide = Math.max(0, winterSlide - dt);
     winterWind = Math.max(0, winterWind - dt);
     if (!winterEncounter) {
@@ -962,13 +973,19 @@
     if (mob) {
       const previousY = mob.y;
       mob.age += dt;
-      mob.phaseAge += dt;
-      // Slow world-space hovering, not a camera-locked enemy the player can
-      // never reach. The racer can overtake it and land on its upper surface.
-      if (mob.age < 9 && mob.phase !== "defeated") {
-        mob.y += clamp(cameraY + height * .5 - mob.y, -70 * dt, 70 * dt);
-      }
       const go = (phase) => { mob.phase = phase; mob.phaseAge = 0; };
+      const body = winterEnemyGeometry(mob);
+      const screenY = worldToScreen(mob.y);
+      const fullyVisible = screenY >= body.height / 2 + 28 && screenY < height - body.height / 2;
+      if (mob.phase === "arriving") {
+        if (fullyVisible) go("idle");
+      } else if (mob.phase === "defeated") {
+        mob.phaseAge += dt;
+        mob.y -= (80 + mob.phaseAge * 140) * dt;
+      } else if (fullyVisible) {
+        // Do not run attack timers while hidden above the screen or below it.
+        mob.phaseAge += dt;
+      }
       if (mob.phase === "idle" && mob.phaseAge >= 1.1) {
         mob.direction = player.x < mob.x ? -1 : 1;
         if (mob.type === "strategist") {
@@ -993,8 +1010,8 @@
       } else if (mob.phase === "attack" && mob.phaseAge >= .65) go("open");
       else if (mob.phase === "open" && mob.phaseAge >= 2.4) go("idle");
 
-      const body = winterEnemyGeometry(mob);
-      const canBounce = mob.phase !== "defeated" && (mob.type !== "steward" || mob.phase === "open");
+      const active = mob.phase !== "arriving" && mob.phase !== "defeated";
+      const canBounce = active && (mob.type !== "steward" || mob.phase === "open");
       if (canBounce && player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet,
         previousY + body.ry, mob.y + body.ry, player.x, mob.x, body.rx * 2, player.width * .44)) {
         player.y = mob.y + body.ry + player.height / 2;
@@ -1006,12 +1023,13 @@
         winterProjectiles = [];
         invulnerableTimer = Math.max(invulnerableTimer, .45);
         effects.push({ index: 10, x: mob.x, y: mob.y, age: 0, duration: .4, size: 48 * visualScale() });
-      } else if (mob.type === "steward" && mob.phase !== "open" && mob.phase !== "defeated" && invulnerableTimer <= 0) {
+      } else if (active && mob.type === "steward" && mob.phase !== "open" && invulnerableTimer <= 0) {
         const dx = (player.x - body.x) / (body.rx + player.width * .29);
         const dy = (player.y - body.y) / (body.ry + player.height * .34);
         if (dx * dx + dy * dy < 1) { endGame(); return; }
       }
-      if (mob.age > 15 || mob.y < cameraY - 100 || (mob.phase === "defeated" && mob.phaseAge > .85)) {
+      // Retire only once body AND caption have moved below the viewport.
+      if (mob.y < cameraY - body.height / 2 - 32) {
         winterEncounter = null;
         winterEncounterWait = 12 + Math.random() * 8;
       }
@@ -1058,7 +1076,7 @@
         const anchor = mob.type === "iceman" ? [.5, .41, .3, .5][pose] : .5;
         ctx.save(); ctx.translate(mob.x, sy); ctx.scale(mob.direction, 1);
         if (mob.phase === "warning") ctx.globalAlpha = .8 + Math.sin(mob.phaseAge * 16) * .2;
-        if (mob.phase === "defeated") { ctx.globalAlpha = 1 - mob.phaseAge / .85; ctx.rotate(mob.phaseAge * .5); }
+        if (mob.phase === "defeated") ctx.rotate(Math.min(1.2, mob.phaseAge * .5));
         ctx.drawImage(rasterSprite(sprite, w, h), -w * anchor, -h / 2, w, h);
         ctx.restore();
         let label = mob.type === "iceman" ? "LEAVE ME ALONE" : mob.type === "strategist"
@@ -1097,7 +1115,7 @@
   }
 
   function drawWinterMemory(foreground = false) {
-    if (winterMemoryStartedAt === null || antarcticaArrival) return;
+    if (winterMemoryStartedAt === null || antarcticaArrival || sidBoss) return;
     const age = elapsed - winterMemoryStartedAt;
     const fade = sceneEase(age, 0, 2) * (1 - sceneEase(age, 18, 20));
     if (fade <= 0 || !art.winterPortrait) return;
@@ -1127,7 +1145,7 @@
     const portraitHeight = Math.min(height * .28, 230, Math.max(0, textTop - portraitTop + 10));
     if (!foreground && portraitHeight > 0) {
       const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
-      ctx.globalAlpha = fade * .23;
+      ctx.globalAlpha = fade * .55;
       ctx.drawImage(rasterSprite(art.winterPortrait, portraitWidth, portraitHeight),
         (width - portraitWidth) / 2, portraitTop, portraitWidth, portraitHeight);
     }
@@ -1145,6 +1163,287 @@
       });
     }
     ctx.restore();
+  }
+
+  function sidBossGeometry() {
+    return { x: width * .5 + Math.sin(sidBoss.age * .5) * Math.min(22, width * .04),
+      feet: cameraY + height - Math.min(215, height * .32), h: Math.min(112, height * .21) };
+  }
+
+  function buildSidArena(previousHeight = null) {
+    const oldY = player.y;
+    platforms = [];
+    const floorY = cameraY + height * .09, gap = Math.min(112, height * .19);
+    const tiles = Math.ceil(width / 68);
+    for (let i = 0; i < tiles; i += 1) {
+      const p = addPlatform(floorY, (i + .5) * width / tiles, "normal");
+      p.width = p.hitboxWidth = width / tiles + 3;
+      p.spriteWidth = width / tiles + 12;
+    }
+    for (let row = 1; row <= 3; row += 1) {
+      if (floorY + row * gap + player.height >= cameraY + height - Math.min(72, height * .18)) break;
+      for (const lane of [.18, .5, .82]) addPlatform(floorY + row * gap, width * lane, "normal");
+    }
+    worldTop = cameraY + height;
+    if (previousHeight) player.y = cameraY + (oldY - cameraY) / previousHeight * height;
+    player.y = clamp(player.y, floorY + player.height / 2,
+      cameraY + height - Math.min(72, height * .18) - player.height / 2);
+    if (previousHeight && sidBoss) {
+      for (const shot of sidBoss.shots) {
+        for (const key of ["y", "fromY", "targetY"]) if (shot[key] !== undefined) shot[key] = cameraY + (shot[key] - cameraY) / previousHeight * height;
+      }
+      for (const key of ["heroFromY", "heroLandY"]) if (sidBoss[key] !== undefined) sidBoss[key] = cameraY + (sidBoss[key] - cameraY) / previousHeight * height;
+    }
+  }
+
+  function beginSidBoss() {
+    if (!antarctica || antarcticaArrival || sidBoss || sidBossCleared) return false;
+    resetWinterEncounters();
+    enemies = []; hazards = []; hawks = []; marshals = []; powerups = []; effects = [];
+    rocketTimer = kimiBoost = softBootJumps = 0;
+    freeFlight = false;
+    if (flightButton) { flightButton.setAttribute("aria-pressed", "false"); flightButton.textContent = "Свободный полёт: выкл."; }
+    sidBoss = { hp: 10, age: 0, phase: "intro", timer: 0, round: 0, shots: [], lanes: [], hits: 0 };
+    player.y = cameraY + height * .35; player.vy = 720;
+    openingJump = false; somersault = null;
+    invulnerableTimer = Math.max(invulnerableTimer, 2);
+    buildSidArena();
+    loadStage("summit");
+    updateHud();
+    return true;
+  }
+
+  function sidPhase(phase) { sidBoss.phase = phase; sidBoss.timer = 0; }
+
+  function beginSidIceWarning() {
+    const safe = clamp(Math.floor(player.x / width * 4), 0, 3);
+    const lanes = [0, 1, 2, 3].filter(lane => lane !== safe);
+    // Two marked lanes; at least two unmarked lanes remain safe.
+    if (Math.random() < .5) lanes.reverse();
+    sidBoss.lanes = lanes.slice(0, 2);
+    sidPhase("ice-warning");
+  }
+
+  function sidShotGeometry(shot) {
+    const frame = art.sidBossProps[shot.kind === "can" ? 0 : shot.kind === "crushed" ? 1 : 2];
+    const h = shot.kind === "ice" ? 43 : shot.kind === "can" ? 34 : 27;
+    return { frame, h, w: h * frame.sw / frame.sh };
+  }
+
+  function throwSidCan() {
+    const b = sidBossGeometry(), targetX = sidBoss.canLane;
+    sidBoss.shots.push({ kind: "can", x: b.x, y: b.feet + b.h * .55, fromX: b.x,
+      fromY: b.feet + b.h * .55, targetX, targetY: b.feet - 30,
+      age: 0, vy: -(83 + Math.min(28, sidBoss.hits * 3)), reflected: false });
+    const otherX = targetX < width / 2 ? width * .84 : width * .16;
+    sidBoss.shots.push({ kind: "crushed", x: otherX, y: cameraY + height + 35,
+      age: 0, vy: -112, reflected: false });
+  }
+
+  function updateSidBoss(dt) {
+    const boss = sidBoss;
+    if (!boss) return false;
+    boss.age += dt; boss.timer += dt;
+    if (boss.phase === "victory") {
+      invulnerableTimer = Math.max(invulnerableTimer, .2);
+      boss.shots = [];
+      const t = sceneEase(boss.timer, 4.6, 6.7);
+      const landing = sceneEase(boss.timer, 0, 1.15);
+      const landX = sceneMix(boss.heroFromX, boss.heroLandX, landing);
+      const landY = sceneMix(boss.heroFromY, boss.heroLandY, landing) + Math.sin(landing * Math.PI) * 12;
+      player.x = sceneMix(landX, width / 2, t);
+      player.y = sceneMix(landY, cameraY + height * .9, t);
+      if (boss.timer >= 6.8 && stageReady("summit")) enterSummit();
+      return true;
+    }
+    if (boss.phase === "intro" && boss.timer >= 1.8) beginSidIceWarning();
+    else if (boss.phase === "ice-warning" && boss.timer >= Math.max(.95, 1.25 - boss.hits * .025)) {
+      for (const lane of boss.lanes) boss.shots.push({ kind: "ice", x: (lane + .5) * width / 4,
+        y: cameraY + height + 35, age: 0, vy: -(100 + boss.hits * 2) });
+      sidPhase("ice");
+    } else if (boss.phase === "ice" && boss.timer >= 1.7) {
+      boss.canLane = clamp(player.x, 50, width - 50); sidPhase("can-warning");
+    } else if (boss.phase === "can-warning" && boss.timer >= 1) {
+      throwSidCan(); boss.round += 1; sidPhase("can");
+    } else if (boss.phase === "can" && boss.timer >= 7) {
+      boss.shots = []; beginSidIceWarning();
+    } else if (boss.phase === "hit" && boss.timer >= .8) beginSidIceWarning();
+    return false;
+  }
+
+  function collideSidShots(dt, previousFeet, currentFeet, previousPlayerX = player.x) {
+    const boss = sidBoss;
+    if (!boss || boss.phase === "victory") return;
+    const kept = [];
+    for (const shot of boss.shots) {
+      const oldX = shot.x, oldY = shot.y;
+      shot.age += dt;
+      const geometry = sidShotGeometry(shot);
+      if (shot.reflected) {
+        const b = sidBossGeometry(), targetY = b.feet + b.h * .65;
+        const dx = b.x - shot.x, dy = targetY - shot.y, distance = Math.hypot(dx, dy);
+        if (distance <= 520 * dt + 12) {
+          boss.hp = Math.max(0, boss.hp - 1); boss.hits = 10 - boss.hp; boss.shots = [];
+          invulnerableTimer = Math.max(invulnerableTimer, .65);
+          if (boss.hp === 0) {
+            effects = []; somersault = null; rocketTimer = 0;
+            boss.heroFromX = player.x; boss.heroFromY = player.y;
+            const land = platforms.filter(p => !p.broken && p.y <= player.y - player.height / 2)
+              .reduce((best, p) => !best || Math.abs(p.x - player.x) + Math.abs(p.y - player.y) < Math.abs(best.x - player.x) + Math.abs(best.y - player.y) ? p : best, null);
+            boss.heroLandX = land?.x ?? width / 2;
+            boss.heroLandY = (land?.y ?? cameraY + height * .09) + player.height / 2;
+            player.vx = player.vy = 0; sidPhase("victory");
+          } else sidPhase("hit");
+          updateHud(); return;
+        }
+        shot.x += dx / distance * 520 * dt; shot.y += dy / distance * 520 * dt;
+        kept.push(shot); continue;
+      }
+      if (shot.kind === "can" && shot.age < .65) {
+        const t = clamp(shot.age / .65, 0, 1);
+        shot.x = sceneMix(shot.fromX, shot.targetX, t);
+        shot.y = sceneMix(shot.fromY, shot.targetY, t) + Math.sin(t * Math.PI) * 26;
+      } else shot.y += shot.vy * dt;
+      if (shot.y + geometry.h / 2 < cameraY - 40 || shot.age > 10) continue;
+      if (shot.kind === "can" && shot.age >= .65 && player.vy < 0
+        && crossedLandingSurface(previousFeet, currentFeet, oldY + geometry.h / 2, shot.y + geometry.h / 2,
+          player.x, shot.x, Math.max(28, geometry.w), player.width * .44)) {
+        player.y = shot.y + geometry.h / 2 + player.height / 2;
+        player.vy = 760; shot.reflected = true;
+        openingJump = false; somersault = null;
+        invulnerableTimer = Math.max(invulnerableTimer, .35);
+        kept.push(shot); continue;
+      }
+      if (invulnerableTimer <= 0) {
+        const oldPlayerY = previousFeet + player.height / 2;
+        const oldPlayerX = Math.abs(player.x - previousPlayerX) > width / 2 ? player.x : previousPlayerX;
+        const steps = Math.max(1, Math.ceil((Math.abs(player.vy) + Math.abs(shot.vy)) * dt / 8));
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps;
+          if (spriteOverlapsEllipse(geometry.frame, sceneMix(oldX, shot.x, t), sceneMix(oldY, shot.y, t), geometry.w, geometry.h,
+            sceneMix(oldPlayerX, player.x, t), sceneMix(oldPlayerY, player.y, t), player.width * .28, player.height * .34)) {
+            endGame(); return;
+          }
+        }
+      }
+      kept.push(shot);
+    }
+    boss.shots = kept;
+  }
+
+  function drawSidBoss() {
+    const boss = sidBoss;
+    if (!boss) return;
+    const b = sidBossGeometry(), victory = boss.phase === "victory", age = boss.timer;
+    const pose = boss.phase === "ice-warning" || boss.phase === "ice" ? 1
+      : boss.phase === "can-warning" ? 2 : boss.phase === "can" && age < .6 ? 3 : 0;
+    const finalePose = boss.phase === "hit" ? 0 : age < .8 ? 0 : age < 1.9 ? 1 : age < 2.8 ? 2 : (Math.floor(age * 9) % 2 ? 3 : 2);
+    const sprite = victory || boss.phase === "hit" ? art.sidBossFinale[finalePose] : art.sidBossAttack[pose];
+    const shake = boss.phase === "ice-warning" ? Math.sin(age * 32) * 3 : boss.phase === "hit" ? Math.sin(age * 28) * 5 : 0;
+    const fly = victory ? sceneEase(age, 2.8, 4.4) : 0;
+    const squash = boss.phase === "can-warning" ? 1 + Math.sin(age * 8) * .035 : 1;
+    if (!victory || age < 3.5) drawFrame(art.winterPlatforms[0], b.x, b.feet, Math.min(150, width * .4), "platform");
+    if (victory || boss.phase === "hit") {
+      const fridge = art.sidBossProps[3], fridgeH = b.h * .55;
+      const fall = victory ? Math.max(0, age - 3.5) ** 2 * 90 : 0;
+      drawFrame(fridge, b.x + b.h * .54, b.feet + fridgeH / 2 - fall,
+        fridgeH * fridge.sw / fridge.sh, "center", fridgeH);
+    }
+    drawStoryActor(sprite, b.x + shake + (victory ? Math.sin(age * 2.5) * 18 * fly : 0),
+      worldToScreen(b.feet) - fly * (height * .55 + b.h), b.h,
+      victory ? Math.sin(age * 7) * .035 : Math.sin(boss.age * 2) * .015, 1 / squash, squash);
+    const roofY = Math.min(72, height * .18);
+    ctx.save();
+    // Roof shards are deliberately small code-native ice facets, not a large
+    // offscreen texture; the fall/open animation stays sharp at any DPR.
+    if (!victory || age < 3.5) {
+      const cap = art.winterPlatforms[0], tileW = width / 7 + 3, tileH = spriteSize(cap, tileW);
+      for (let i = 0; i < 7; i += 1) {
+        ctx.drawImage(rasterSprite(cap, tileW, tileH), i * width / 7 - 1.5, roofY - tileH, tileW, tileH);
+      }
+    } else if (age < 4.8) {
+      const t = age - 3.5; ctx.fillStyle = "#b7e9ff"; ctx.globalAlpha = Math.max(0, 1 - t / 1.3);
+      for (let i = 0; i < 20; i += 1) {
+        const x = width / 2 + (i - 10) * (12 + t * 18), y = roofY + t * t * (100 + i % 4 * 16);
+        ctx.fillRect(x, y, 4 + i % 3, 7);
+      }
+    }
+    if (boss.phase === "ice-warning") {
+      ctx.setLineDash([3, 8]); ctx.strokeStyle = "#e49c7e"; ctx.lineWidth = 1.5;
+      for (const lane of boss.lanes) {
+        const x = (lane + .5) * width / 4;
+        ctx.beginPath(); ctx.moveTo(x, roofY + 30); ctx.lineTo(x, height - 24); ctx.stroke();
+      }
+    }
+    ctx.restore();
+    for (const shot of boss.shots) {
+      const s = sidShotGeometry(shot);
+      if (shot.kind === "can") {
+        ctx.save(); ctx.strokeStyle = shot.reflected ? "#f5e18b" : "#80e7ff"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.ellipse(shot.x, worldToScreen(shot.y), s.w / 2 + 5, s.h / 2 + 4, 0, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      }
+      drawFrame(s.frame, shot.x, shot.y, s.w, "center", s.h);
+    }
+    ctx.save(); ctx.font = "bold 11px monospace"; ctx.fillStyle = "#eaf8ff";
+    ctx.strokeStyle = "#162d49"; ctx.lineWidth = 3; ctx.textAlign = "left";
+    const hudY = Math.min(98, height * .15);
+    const title = victory ? "СИД ПОБЕЖДЁН · 10/10" : `СИД · ${boss.hits}/10`;
+    ctx.strokeText(title, 14, hudY); ctx.fillText(title, 14, hudY);
+    for (let i = 0; i < 10; i += 1) { ctx.fillStyle = i < boss.hp ? "#e59e66" : "#7594a7"; ctx.fillRect(14 + i * 13, hudY + 7, 10, 4); }
+    ctx.textAlign = "center"; ctx.font = "bold 10px monospace";
+    const hint = victory ? "RED BULL ДАЁТ КРЫЛЬЯ" : boss.phase === "ice-warning" ? "УКЛОНЯЙСЯ ОТ ЛЬДА"
+      : boss.phase === "can-warning" || boss.phase === "can" ? "ЦЕЛУЮ БАНКУ — ОТБЕЙ СВЕРХУ" : "10 БАНОК ОТКРОЮТ ПРОХОД";
+    ctx.strokeText(hint, width / 2, height - 9); ctx.fillStyle = "#f4df9f"; ctx.fillText(hint, width / 2, height - 9); ctx.restore();
+    if (victory && age > 4.3) {
+      const size = Math.min(width * .19, height * .14) * sceneEase(age, 4.3, 5.2);
+      drawStoryPortal(width / 2, height * .18, size, age, art.summit);
+      drawCinemaFrame("ПРОХОД ОТКРЫТ", "Высокогорный паддок", sceneEase(age, 4.4, 5));
+    }
+  }
+
+  function enterSummit() {
+    if (!sidBoss || sidBoss.hp > 0 || !assetStages.get("summit")?.ready) return false;
+    sidBossCleared = true; sidBoss = null; summit = true; antarctica = false;
+    resetWinterEncounters();
+    summitEntryY = cameraY; bossBonus += 500;
+    platforms = []; enemies = []; hazards = []; hawks = []; powerups = []; marshals = []; effects = [];
+    player.x = width / 2; player.y = cameraY + height * .35; player.vy = 720;
+    openingJump = false; invulnerableTimer = 3;
+    worldTop = player.y - player.height / 2;
+    addPlatform(worldTop, player.x, "normal");
+    extendWorld(); updateHud();
+    return true;
+  }
+
+  function drawSummitBackdrop() {
+    const source = art.summit;
+    ctx.fillStyle = "#69a5de"; ctx.fillRect(0, 0, width, height);
+    if (!source) return;
+    const scale = Math.max(width / source.naturalWidth, height / source.naturalHeight) * 1.3;
+    const sourceHeight = height / scale, sourceWidth = width / scale;
+    const climb = Math.max(0, cameraY - summitEntryY), progress = clamp(climb / 6000, 0, 1);
+    const sy = (source.naturalHeight - sourceHeight) * (1 - progress);
+    ctx.drawImage(source, (source.naturalWidth - sourceWidth) / 2, sy, sourceWidth, sourceHeight, 0, 0, width, height);
+    if (art.cloud && climb > 3500) {
+      ctx.save(); ctx.globalAlpha = Math.min(.4, (climb - 3500) / 5000);
+      for (let i = 0; i < 4; i += 1) {
+        const w = width * .4, h = w * art.cloud.naturalHeight / art.cloud.naturalWidth, cycle = height + h * 2;
+        const y = ((i / 4 * cycle + climb * .13) % cycle) - h;
+        ctx.drawImage(art.cloud, i % 2 ? width - w * .8 : -w * .2, y, w, h);
+      }
+      ctx.restore();
+    }
+  }
+
+  async function startSidBossTest() {
+    if (!artReady || (mode === "running" && !adminBossTestMode && !adminSandbox)) return;
+    if (!await preparePreview(["sky", "garage", "winter"])) return;
+    if (mode === "running" && !adminBossTestMode && !adminSandbox) return;
+    await startWinterBiomeTest();
+    if (!antarctica || !adminBossTestMode) return;
+    peakY = startY + 10000 * 11;
+    beginSidBoss(); draw();
+    if (bossTestStatus) bossTestStatus.textContent = "Сид · 10 попаданий · тест без сохранения результата";
   }
 
   function sceneEase(age, start, end) {
@@ -1467,13 +1766,13 @@
     const spriteWidth = kind === "spring"
       ? Math.min(72 * visualScale(), platformWidth * .82)
       : platformWidth;
-    const spriteHeight = spriteSize(antarctica ? art.winterPlatforms[spriteIndex] : sprites[spriteIndex], spriteWidth);
+    const spriteHeight = spriteSize(antarctica || summit ? art.winterPlatforms[spriteIndex] : sprites[spriteIndex], spriteWidth);
     const platform = {
       x,
       originX: x,
       y,
       width: platformWidth,
-      hitboxWidth: kind === "spring" ? spriteWidth * (antarctica ? .36 : .72) : platformWidth,
+      hitboxWidth: kind === "spring" ? spriteWidth * (antarctica || summit ? .36 : .72) : platformWidth,
       spriteWidth,
       height: spriteHeight,
       kind,
@@ -1552,6 +1851,10 @@
   }
 
   function buildGame() {
+    sidBoss = null;
+    sidBossCleared = false;
+    summit = false;
+    summitEntryY = 0;
     resetSpaceEncounters();
     resetWinterEncounters();
     waitingForStage = null;
@@ -1640,6 +1943,7 @@
   }
 
   function extendWorld() {
+    if (sidBoss) return;
     const targetWorldTop = cameraY + height + 420;
     while (worldTop < targetWorldTop) {
       const lastPlatform = platforms[platforms.length - 1];
@@ -1660,7 +1964,7 @@
       && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
-        type: antarctica ? "piranha" : "tire",
+        type: antarctica || summit ? "piranha" : "tire",
         variant: nextEnemyVariant(),
         x: enemyX,
         baseX: enemyX,
@@ -1669,8 +1973,8 @@
         dead: false,
       });
     }
-    if (antarctica) hazards = [];
-    if (!antarctica && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
+    if (antarctica || summit) hazards = [];
+    if (!antarctica && !summit && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -1694,7 +1998,7 @@
 
   function updateHud() {
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
-    const score = heightPoints + frags * 30 + marshalBonus + bossBonus;
+    const score = runScore();
     const levelNumber = Math.floor(storyProgress());
     const displayScore = mode === "over" ? finalScore : score;
     if (scoreNode.dataset.value !== String(displayScore)) {
@@ -1714,7 +2018,7 @@
     const zoneIndex = cameraY < paddockEnd ? 0
       : cameraY < skyFade.end ? 1
         : cameraY < spaceFade.start ? 2 : 3;
-    const displayName = antarctica ? "Антарктида" : forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
+    const displayName = summit ? "Высокогорный паддок" : sidBoss ? "Сид · босс" : antarctica ? "Антарктида" : forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -2807,7 +3111,7 @@
 
   function updateBabyKimi(dt) {
     kimiBoost = Math.max(0, kimiBoost - dt);
-    if (!forgottenPaddock || antarctica || !art.babyKimi) return false;
+    if (!forgottenPaddock || antarctica || summit || !art.babyKimi) return false;
     if (!babyKimi) {
       kimiWait -= dt;
       if (kimiWait <= 0 && rocketTimer <= 0 && kimiBoost <= 0) {
@@ -2927,7 +3231,7 @@
   function update(dt) {
     if (!streamWorldAssets()) return;
     elapsed += dt;
-    if (forgottenPaddock && !antarctica && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
+    if (forgottenPaddock && !antarctica && !summit && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
     if (antarcticaScene) {
       antarcticaScene.age += dt;
       if (antarcticaScene.age >= controlSceneDuration) enterAntarctica();
@@ -2947,6 +3251,8 @@
     if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
+    if (antarctica && !sidBossCleared && !sidBoss && runScore() >= 10000) beginSidBoss();
+    if (updateSidBoss(dt)) return;
     if (updateSpaceEvents(dt)) { somersault = null; return; }
     if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
     const direction = Number(held.right) - Number(held.left);
@@ -2968,8 +3274,12 @@
     if (rocketTimer > 0) player.vy = 1240;
     if (kimiBoost > 0) player.vy = 1400;
     player.y += player.vy * dt;
+    if (sidBoss) {
+      const ceiling = cameraY + height - Math.min(72, height * .18) - player.height / 2;
+      if (player.y > ceiling) { player.y = ceiling; player.vy = Math.min(0, player.vy); }
+    }
     const currentFeet = player.y - player.height / 2;
-    peakY = Math.max(peakY, player.y);
+    if (!sidBoss) peakY = Math.max(peakY, player.y);
 
     for (const platform of platforms) {
       if (platform.kind === "moving" && !platform.broken) {
@@ -2986,6 +3296,8 @@
 
     updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running") return;
+    collideSidShots(dt, previousFeet, currentFeet, previousPlayerX);
+    if (mode !== "running" || sidBoss?.phase === "victory") return;
     collideWithSpaceEvents(previousFeet, currentFeet, dt);
     if (mode !== "running" || spacePitHold) return;
     collideWithSpaceBoss(previousFeet, currentFeet);
@@ -3093,7 +3405,7 @@
       openingJump = false;
       somersault = null;
     }
-    if (!openingJump) {
+    if (!openingJump && !sidBoss) {
       const targetCameraY = Math.max(cameraY, player.y - height * .42);
       cameraY += (targetCameraY - cameraY) * (1 - Math.exp(-8 * dt));
     }
@@ -3137,7 +3449,7 @@
       if (platform.broken) continue;
       if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
-      if (antarctica) {
+      if (antarctica || summit) {
         drawIcePlatform(platform);
       } else if (garagePlatform) {
         drawFrame(garagePlatform, platform.x, platform.y, platform.spriteWidth, "platform");
@@ -3160,6 +3472,7 @@
     drawSpaceEvents();
     drawBabyKimi();
     drawWinterEncounter();
+    drawSidBoss();
     if (art.marshal) {
       for (const marshal of marshals) {
         const h = 58;
@@ -3408,6 +3721,7 @@
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
+      if (sidBoss && previousHeight !== height) buildSidArena(previousHeight);
       draw();
     } else {
       buildGame();
@@ -3527,6 +3841,7 @@
   document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
   document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
   document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
+  document.getElementById("doodle-sid-boss-test")?.addEventListener("click", startSidBossTest);
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }
@@ -3536,7 +3851,7 @@
       if (!antarctica || !adminBossTestMode || mode !== "running") return;
       resetWinterEncounters();
       spawnWinterEncounter(kind);
-      if (bossTestStatus) bossTestStatus.textContent = "Тест зимнего врага · без сохранения результата";
+      if (bossTestStatus) bossTestStatus.textContent = "Враг выше экрана — допрыгните до него · тест без сохранения результата";
       draw();
     });
   }
@@ -3637,6 +3952,7 @@
 
   function stageAssets(name) {
     const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
+    if (name === "summit") return [["summitBackgroundSrc", (sheet) => ({ summit: sheet })]];
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
       ["hawkSheetSrc", (sheet) => ({ hawkFrames: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
@@ -3669,6 +3985,9 @@
       ["winterIcemanSrc", (sheet) => ({ winterIceman: checkedFrames(splitSpriteSheet(sheet, 4, [0, .237, .491, .79, 1], false), 4) })],
       ["winterStrategistSrc", (sheet) => ({ winterStrategist: checkedFrames(splitSpriteSheet(sheet, 4, [0, .217, .499, .794, 1], false), 4) })],
       ["winterStewardSrc", (sheet) => ({ winterSteward: checkedFrames(splitSpriteSheet(sheet, 4, [0, .242, .489, .795, 1], false), 4) })],
+      ["sidBossAttackSrc", (sheet) => ({ sidBossAttack: checkedFrames(splitSpriteSheet(sheet, 4, [0, .248, .474, .741, 1], false), 4) })],
+      ["sidBossFinaleSrc", (sheet) => ({ sidBossFinale: checkedFrames(splitSpriteSheet(sheet, 4, [0, .233, .462, .707, 1], false), 4) })],
+      ["sidBossPropsSrc", (sheet) => ({ sidBossProps: checkedFrames(splitSpriteSheet(sheet, 4, [0, .208, .422, .741, 1]), 4) })],
     ];
     throw new Error(`Unknown asset stage: ${name}`);
   }

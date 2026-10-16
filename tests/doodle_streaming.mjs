@@ -63,14 +63,17 @@ async function harness(mobile, failStartup = false) {
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       spawnWinterEncounter, updateWinterEncounter, resetWinterEncounters, winterEnemyGeometry, drawWinterEncounter,
       startSpaceEventTest, spawnSpaceEncounter, clearSpaceEncounter, updateSpaceEvents, collideWithSpaceEvents, drawSpaceEvents,
+      startSidBossTest, beginSidBoss, updateSidBoss, collideSidShots, drawSidBoss, enterSummit, drawSummitBackdrop,
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
-        spaceEncounter, spacePitHold, softBootJumps}),
+        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
-      enemyCase(kind, phase="idle"){resetWinterEncounters();spawnWinterEncounter(kind);winterEncounter.phase=phase;winterEncounter.phaseAge=0;winterEncounter.age=1;},
+      enemyCase(kind, phase="idle"){resetWinterEncounters();spawnWinterEncounter(kind);winterEncounter.y=cameraY+height*.65;winterEncounter.phase=phase;winterEncounter.phaseAge=0;winterEncounter.age=1;
+        if(kind==="strategist"){player.y=cameraY+height*.4;addPlatform(cameraY+height*.6,width*.5,"normal");}},
+      cameraAt(y){cameraY=y;},
       tickEnemy(dt){elapsed+=dt;const feet=player.y-player.height/2;updateWinterEncounter(dt,feet,feet);},
       enemyLanding(){const b=winterEnemyGeometry();player.x=b.x;player.y=b.y+b.ry+player.height/2-2;player.vy=-300;
         updateWinterEncounter(0,b.y+b.ry+4,b.y+b.ry-2);},
@@ -91,6 +94,15 @@ async function harness(mobile, failStartup = false) {
       forceBoss(){peakY=startY+3500*11;updateSpaceBoss(1/60);},
       portal(){beginPortal();},
       setSpaceAge(age){spaceEncounter.age=age;},
+      peakScore(n){peakY=startY+(n-frags*30-marshalBonus-bossBonus)*11;},
+      bossShield(){invulnerableTimer=100;},
+      reflectSidCan(){const shot={kind:"can",x:width*.5,y:cameraY+height*.4,age:1,vy:-90,reflected:false};sidBoss.shots=[shot];
+        const top=shot.y+17;player.x=shot.x;player.y=top+player.height/2-2;player.vy=-300;
+        collideSidShots(0,top+3,top-2);return shot;},
+      impactSidCan(){for(let i=0;i<180&&sidBoss.shots.length;i++){const feet=player.y-player.height/2;collideSidShots(1/60,feet,feet);}},
+      sidHazard(kind,shield=false){const shot={kind,x:player.x,y:player.y,age:1,vy:-100,reflected:false};sidBoss.shots=[shot];invulnerableTimer=shield?2:0;player.vy=10;
+        const feet=player.y-player.height/2;collideSidShots(1/60,feet,feet);},
+      sidPose(phase,timer){sidBoss.phase=phase;sidBoss.timer=timer;draw();},
     });})();`);
   new Function("document", "window", "Image", "localStorage", "requestAnimationFrame", "cancelAnimationFrame", "fetch", "expose", source)(
     document, window, LoadedImage, { getItem: () => null, setItem() {} }, () => 1, () => {},
@@ -155,6 +167,8 @@ for (const mobile of [true, false]) {
   const quotePainter = h.canvas.getContext("2d");
   const originalFill = quotePainter.fill.bind(quotePainter), originalRect = quotePainter.fillRect.bind(quotePainter);
   const originalText = quotePainter.fillText.bind(quotePainter);
+  const portraitDraw = quotePainter.drawImage.bind(quotePainter), portraitAlphas = [];
+  quotePainter.drawImage = (...args) => { portraitAlphas.push(quotePainter.globalAlpha); return portraitDraw(...args); };
   let panels = 0;
   const lettering = [];
   quotePainter.fill = (...args) => { panels += 1; return originalFill(...args); };
@@ -164,7 +178,9 @@ for (const mobile of [true, false]) {
   assert.equal(panels, 0, "Winter quotation must have no background panel");
   assert.ok(lettering.length >= 3);
   assert.ok(lettering.every(({ font, color }) => parseFloat(font.match(/[\d.]+(?=px)/)[0]) <= 12 && color === "#27385f"));
+  assert.ok(portraitAlphas.some(alpha=>Math.abs(alpha-.55)<1/255),"Russell portrait should be clearly visible at 55% opacity");
   quotePainter.fill = originalFill; quotePainter.fillRect = originalRect; quotePainter.fillText = originalText;
+  quotePainter.drawImage = portraitDraw;
   const painter = h.canvas.getContext("2d"), nativeDrawImage = painter.drawImage.bind(painter);
   let drawCalls = 0;
   painter.drawImage = (...args) => { drawCalls += 1; return nativeDrawImage(...args); };
@@ -212,6 +228,20 @@ for (const mobile of [true, false]) {
   console.log(`${mobile ? "Mobile" : "Desktop"}: prefetch, pause/resume, failure/retry, atomic publication, previews, resize and full-resolution seam passed`);
 
   await a.startWinterBiomeTest();
+  const visibleFish = a.state().enemies.slice();
+  a.resetWinterEncounters(); a.spawnWinterEncounter("iceman");
+  const entering = a.state().winterEncounter, originalY = entering.y;
+  assert.ok(a.state().height-(entering.y-a.state().cameraY)+a.winterEnemyGeometry().height/2<0,
+    "New winter mob must be completely above the viewport");
+  assert.deepEqual(a.state().enemies,visibleFish,"Starting a winter encounter must not erase existing piranhas");
+  a.tickEnemy(20);
+  assert.equal(a.state().winterEncounter,entering,"Offscreen mobs must not expire after fifteen seconds");
+  assert.equal(entering.phase,"arriving");assert.equal(a.state().winterProjectiles.length,0,"No unseen attacks");
+  a.cameraAt(entering.y-a.state().height+a.winterEnemyGeometry().height/2+40);
+  a.tickEnemy(0);assert.equal(entering.phase,"idle");
+  a.tickEnemy(1.2);assert.equal(entering.phase,"warning");
+  assert.equal(entering.y,originalY,"Living winter mobs stay in world space instead of chasing the camera");
+  await a.startWinterBiomeTest();
   a.resetWinterEncounters(); a.tickEnemy(7.9);
   assert.equal(a.state().winterEncounter,null,"No new enemies during initial winter grace period");
   a.tickEnemy(.2); assert.ok(a.state().winterEncounter,"Winter enemies must spawn without admin buttons");
@@ -231,7 +261,11 @@ for (const mobile of [true, false]) {
     assert.equal(a.state().player.vy, 830);
     assert.equal(a.state().winterProjectiles.length, 0, "Defeat clears lingering attacks");
     a.draw();
-    a.tickEnemy(.9); assert.equal(a.state().winterEncounter, null);
+    a.tickEnemy(.9); assert.ok(a.state().winterEncounter,"Defeated mob falls away instead of vanishing on a timer");
+    const savedCamera = a.state().cameraY;
+    a.cameraAt(a.state().winterEncounter.y+200);a.tickEnemy(0);
+    assert.equal(a.state().winterEncounter,null,"Retire only after fully leaving the viewport");
+    a.cameraAt(savedCamera);
     if (process.env.DOODLE_PREVIEW_DIR) {
       a.enemyCase(kind, "warning"); a.draw();
       await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR, `doodle-${kind}-${mobile ? "mobile" : "desktop"}.png`), await h.canvas.encode("png"));
@@ -316,6 +350,55 @@ for (const mobile of [true, false]) {
   assert.ok(a.state().spaceEncounter,"Events must spawn naturally without test buttons");
   a.clearSpaceEncounter();assert.equal(a.state().spaceEncounter,null);
   console.log(`${mobile ? "Mobile" : "Desktop"}: all four space events, warnings, safe lane, real hazards, three-jump limit, Toto exclusion and cleanup passed`);
+  h.blocked.add(dataset.summitBackgroundSrc);
+  await a.startWinterBiomeTest();a.peakScore(9999);a.update(1/60);
+  assert.equal(a.state().sidBoss,null,"Sid must not spawn before 10000 points");
+  a.peakScore(10000);a.update(1/60);
+  assert.equal(a.state().sidBoss.hp,10);assert.equal(a.state().score,10000);
+  assert.equal(a.spawnWinterEncounter("iceman"),false,"No other winter encounters during Sid fight");
+  const bossCamera=a.state().cameraY, bossScore=a.state().score;
+  a.bossShield();for(let i=0;i<100;i++)a.update(1/60);
+  assert.equal(a.state().cameraY,bossCamera,"Arena camera must remain locked");
+  assert.equal(a.state().score,bossScore,"Arena jumps must not farm score");
+  assert.equal(a.state().enemies.length,0);
+  a.sidPose("intro",0);a.updateSidBoss(1.81);
+  assert.equal(a.state().sidBoss.phase,"ice-warning");
+  assert.equal(a.state().sidBoss.lanes.length,2,"At least two safe ice lanes");
+  a.updateSidBoss(1.3);assert.ok(a.state().sidBoss.shots.some(s=>s.kind==="ice"));
+  a.updateSidBoss(1.71);assert.equal(a.state().sidBoss.phase,"can-warning");
+  a.updateSidBoss(1.01);assert.ok(a.state().sidBoss.shots.some(s=>s.kind==="can"));
+  for(let hit=1;hit<=10;hit++){
+    const shot=a.reflectSidCan();assert.equal(shot.reflected,true);
+    assert.equal(a.state().sidBoss.hp,11-hit,"Reflection alone must not count as a hit");
+    a.impactSidCan();assert.equal(a.state().sidBoss.hp,10-hit);
+    if(hit<10)assert.equal(a.enterSummit(),false,"Cannot bypass Sid before all ten hits");
+  }
+  assert.equal(a.state().sidBoss.phase,"victory");assert.equal(a.state().summit,false);
+  for(const [w,ht]of mobile?[[390,844],[844,390],[390,844]]:[[1000,800],[900,1000]]){
+    h.resize(w,ht);assert.ok(a.state().platforms.length>=3);a.sidPose("victory",2.5);
+    assert.ok(a.state().player.y>a.state().cameraY,"Player remains in resized arena");
+  }
+  if(process.env.DOODLE_PREVIEW_DIR){a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-sid-wings-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));}
+  a.updateSidBoss(4.4);assert.equal(a.state().summit,false,"Wait for the next chapter artwork instead of showing blank scenery");
+  h.blocked.delete(dataset.summitBackgroundSrc);assert.equal(await a.loadStage("summit"),true);
+  a.updateSidBoss(0);assert.equal(a.state().summit,true);assert.equal(a.state().sidBossCleared,true);
+  assert.equal(a.state().score,bossScore+500);assert.equal(a.state().antarctica,false);
+  a.update(1/60);assert.equal(a.state().antarcticaScene,null,"Summit must not retrigger the old Antarctic entrance");a.draw();
+  a.drawSummitBackdrop();const summitBefore=await h.canvas.encode("png"), beforeClimb=a.state().cameraY;
+  a.cameraAt(beforeClimb+1000);a.drawSummitBackdrop();
+  assert.notDeepEqual(await h.canvas.encode("png"),summitBefore,"Summit painting must pan on mobile and desktop, not remain static");
+  a.cameraAt(beforeClimb);a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-summit-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
+  await h.events.get("doodle-sid-boss-test:click")();
+  assert.equal(a.state().sidBoss.hp,10);assert.equal(a.state().adminBossTestMode,true);
+  a.sidHazard("ice",true);assert.equal(a.state().mode,"running");
+  a.sidHazard("ice",false);assert.equal(a.state().mode,"over","Ice boulders have lethal collision");
+  await a.startSidBossTest();a.sidHazard("crushed",false);assert.equal(a.state().mode,"over","Crushed cans are not reflectable pickups");
+  await a.startSidBossTest();a.sidPose("can-warning",.4);
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-sid-arena-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
+  a.startGame(true,{forceRestart:true,adminTest:true});assert.equal(a.state().sidBoss,null);assert.equal(a.state().summit,false);assert.equal(a.state().sidBossCleared,false);
+  assert.deepEqual(h.calls,[],"Sid boss admin preview must not submit attempts");
+  console.log(`${mobile?"Mobile":"Desktop"}: Sid 10000 gate, ten actual impacts, locked camera/score, telegraphs, shield/death, wing finale, resize, lazy summit transition and restart passed`);
 }
 
 // Admin deep links must load their own resources from a cold startup too.
@@ -338,6 +421,11 @@ assert.ok(coldSpace.api.art.spaceAlonso.length===4);
 assert.equal(coldSpace.requests.has(dataset.antarcticaSrc),false);
 assert.deepEqual(coldSpace.calls,[]);
 console.log("Cold space event preview passed without downloading winter assets");
+const coldSid=await harness(true);
+await coldSid.events.get("doodle-sid-boss-test:click")();
+assert.equal(coldSid.api.state().sidBoss.hp,10);assert.equal(coldSid.api.state().adminBossTestMode,true);
+assert.deepEqual(coldSid.calls,[]);
+console.log("Cold Sid preview loads its artwork without recording a real attempt");
 const failed = await harness(true, true);
 assert.equal(failed.api.state().artReady, false);
 assert.equal(failed.requests.get(dataset.backgroundJourneySrc), 3);
