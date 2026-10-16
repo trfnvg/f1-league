@@ -61,11 +61,21 @@ async function harness(mobile, failStartup = false) {
   const source = originalSource.replace("resolve(img)", "resolve(img.native)")
     .replace(/\}\)\(\);\s*$/, `expose({ art, assetStages, loadStage, streamWorldAssets, draw, drawAntarctica, drawWinterMemory,
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
+      spawnWinterEncounter, updateWinterEncounter, resetWinterEncounters, winterEnemyGeometry, drawWinterEncounter,
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
-        antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY}),
+        antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY,
+        winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
+      enemyCase(kind, phase="idle"){resetWinterEncounters();spawnWinterEncounter(kind);winterEncounter.phase=phase;winterEncounter.phaseAge=0;winterEncounter.age=1;},
+      tickEnemy(dt){elapsed+=dt;const feet=player.y-player.height/2;updateWinterEncounter(dt,feet,feet);},
+      enemyLanding(){const b=winterEnemyGeometry();player.x=b.x;player.y=b.y+b.ry+player.height/2-2;player.vy=-300;
+        updateWinterEncounter(0,b.y+b.ry+4,b.y+b.ry-2);},
+      aimPenalty(shield=false){invulnerableTimer=shield?2:0;winterProjectiles=[{type:"penalty",x:player.x,y:player.y,vx:0,vy:-112,age:0}];},
+      aimGust(){invulnerableTimer=0;winterProjectiles=[{type:"gust",x:player.x,y:player.y,vx:115,vy:0,age:0}];},
+      freezeLanding(){const p=platforms.find(p=>!p.broken);p.kind="normal";p.frozenUntil=elapsed+7;
+        p.y=cameraY+height*.35;player.x=p.x;player.y=p.y+player.height/2+1;player.vy=-300;winterEncounter=null;winterProjectiles=[];winterEncounterWait=100;},
     });})();`);
   new Function("document", "window", "Image", "localStorage", "requestAnimationFrame", "cancelAnimationFrame", "fetch", "expose", source)(
     document, window, LoadedImage, { getItem: () => null, setItem() {} }, () => 1, () => {},
@@ -81,7 +91,7 @@ for (const mobile of [true, false]) {
   assert.equal(a.art.space, undefined);
   assert.equal(a.art.antarctica, undefined);
   const bytes = (await Promise.all([...h.requests.keys()].map(async (src) => (await fs.stat(src)).size))).reduce((sum, n) => sum + n, 0);
-  console.log(`${mobile ? "Mobile" : "Desktop"}: startup ${h.requests.size}/30 files, ${(bytes / 1048576).toFixed(2)} MiB`);
+  console.log(`${mobile ? "Mobile" : "Desktop"}: startup ${h.requests.size}/${Object.keys(dataset).length} files, ${(bytes / 1048576).toFixed(2)} MiB`);
   a.startGame(true, { adminTest: true });
   const skyPath = dataset.backgroundCloudSrc;
   h.blocked.add(skyPath);
@@ -123,6 +133,7 @@ for (const mobile of [true, false]) {
   assert.equal(await a.loadStage("winter"), true);
   assert.equal(a.art.walkFrames.length, 8);
   assert.equal(a.art.piranhaFrames.length, 4);
+  for (const key of ["winterIceman", "winterStrategist", "winterSteward"]) assert.equal(a.art[key].length, 4);
   await a.startWinterBiomeTest();
   assert.equal(a.state().antarctica, true);
   assert.equal(a.state().adminBossTestMode, true);
@@ -184,6 +195,51 @@ for (const mobile of [true, false]) {
   assert.deepEqual(pose.image.getContext("2d").getImageData(0, 0, pose.sw, pose.sh).data,
     expected.getContext("2d").getImageData(0, 0, pose.sw, pose.sh).data, "Cropping must preserve pixels exactly");
   console.log(`${mobile ? "Mobile" : "Desktop"}: prefetch, pause/resume, failure/retry, atomic publication, previews, resize and full-resolution seam passed`);
+
+  await a.startWinterBiomeTest();
+  a.resetWinterEncounters(); a.tickEnemy(7.9);
+  assert.equal(a.state().winterEncounter,null,"No new enemies during initial winter grace period");
+  a.tickEnemy(.2); assert.ok(a.state().winterEncounter,"Winter enemies must spawn without admin buttons");
+  for (const kind of ["iceman", "strategist", "steward"]) {
+    a.enemyCase(kind);
+    assert.equal(a.spawnWinterEncounter("steward"), false, "Only one encounter can be active");
+    a.tickEnemy(1.2); assert.equal(a.state().winterEncounter.phase, "warning");
+    assert.equal(a.state().winterProjectiles.length, 0, "No attack before warning finishes");
+    a.tickEnemy(1.61); assert.equal(a.state().winterEncounter.phase, "attack");
+    if (kind === "strategist") {
+      assert.ok(a.state().platforms.some(p=>p.frozenUntil>0), "Ferrari strategist must really freeze a platform");
+    } else assert.equal(a.state().winterProjectiles.length, 1);
+    a.draw();
+    a.tickEnemy(.66); assert.equal(a.state().winterEncounter.phase, "open");
+    a.enemyLanding();
+    assert.equal(a.state().winterEncounter.phase, "defeated");
+    assert.equal(a.state().player.vy, 830);
+    assert.equal(a.state().winterProjectiles.length, 0, "Defeat clears lingering attacks");
+    a.draw();
+    a.tickEnemy(.9); assert.equal(a.state().winterEncounter, null);
+    if (process.env.DOODLE_PREVIEW_DIR) {
+      a.enemyCase(kind, "warning"); a.draw();
+      await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR, `doodle-${kind}-${mobile ? "mobile" : "desktop"}.png`), await h.canvas.encode("png"));
+    }
+  }
+  a.resetWinterEncounters(); a.freezeLanding(); a.update(1/60);
+  assert.ok(a.state().winterSlide>0 && a.state().player.vy>0, "Frozen platforms preserve bounce and enable sliding");
+  a.resetWinterEncounters(); a.aimGust(); a.tickEnemy(.01);
+  assert.ok(a.state().winterWind>0 && a.state().mode==="running", "Wind pushes but does not kill");
+  a.aimPenalty(true); a.tickEnemy(.01); assert.equal(a.state().mode,"running", "Rocket shield protects against penalty boards");
+  a.aimPenalty(false); a.tickEnemy(.01); assert.equal(a.state().mode,"over", "Penalty boards have real collision");
+  await a.startWinterBiomeTest(); a.enemyCase("iceman");
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().winterEncounter,null);assert.equal(a.state().winterProjectiles.length,0);
+  assert.equal(a.state().winterSlide,0);assert.equal(a.state().winterWind,0);
+  assert.equal(a.spawnWinterEncounter("iceman"),false,"Winter encounters must not spawn in other biomes");
+  for (const kind of ["iceman", "strategist", "steward"]) {
+    await h.events.get(`doodle-winter-${kind}-test:click`)();
+    assert.equal(a.state().winterEncounter.type,kind);
+    assert.equal(a.state().adminBossTestMode,true);
+  }
+  assert.deepEqual(h.calls,[],"New admin enemy previews must remain unscored");
+  console.log(`${mobile ? "Mobile" : "Desktop"}: winter warnings, attack patterns, stomp, sliding, shield, collisions and restart passed`);
 }
 
 // Admin deep links must load their own resources from a cold startup too.

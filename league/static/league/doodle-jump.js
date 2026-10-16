@@ -56,6 +56,13 @@
   let antarcticaEntryY = 0;
   let antarcticaEntryScore = 0;
   let winterMemoryStartedAt = null;
+  let winterEncounter = null;
+  let winterProjectiles = [];
+  let winterEncounterWait = 8;
+  let winterEnemyIndex = -1;
+  let winterSlide = 0;
+  let winterWind = 0;
+  let winterWindDirection = 0;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -791,6 +798,7 @@
   }
 
   function enterAntarctica() {
+    resetWinterEncounters();
     antarcticaScene = null;
     antarcticaArrival = { age: 0 };
     antarctica = true;
@@ -889,6 +897,197 @@
   function drawIcePlatform(platform) {
     const index = platform.kind === "moving" ? 1 : platform.kind === "break" ? 2 : platform.kind === "spring" ? 3 : 0;
     drawFrame(art.winterPlatforms[index], platform.x, platform.y, platform.spriteWidth, "platform");
+    if (platform.frozenUntil > elapsed) {
+      const y = worldToScreen(platform.y);
+      if (y < -20 || y > height + 20) return;
+      ctx.save();
+      ctx.strokeStyle = "#94e5ff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(platform.x - platform.hitboxWidth * .44, y + 1);
+      ctx.lineTo(platform.x + platform.hitboxWidth * .44, y + 1);
+      ctx.stroke();
+      ctx.fillStyle = "#e2faff";
+      for (let i = -1; i <= 1; i += 1) ctx.fillRect(platform.x + i * platform.hitboxWidth * .25, y + 4, 3, 3);
+      ctx.restore();
+    }
+  }
+
+  function resetWinterEncounters() {
+    winterEncounter = null;
+    winterProjectiles = [];
+    winterEncounterWait = 8;
+    winterEnemyIndex = -1;
+    winterSlide = winterWind = winterWindDirection = 0;
+  }
+
+  function spawnWinterEncounter(kind = null) {
+    if (!antarctica || antarcticaArrival || winterEncounter) return false;
+    const kinds = ["iceman", "strategist", "steward"];
+    winterEnemyIndex = winterEnemyIndex < 0 ? Math.floor(Math.random() * kinds.length) : (winterEnemyIndex + 1) % kinds.length;
+    const type = kind || kinds[winterEnemyIndex];
+    winterEncounter = { type, age: 0, phase: "idle", phaseAge: 0, round: 0,
+      x: width * (player.x < width / 2 ? .74 : .26), y: cameraY + height * .78,
+      direction: player.x < width / 2 ? -1 : 1, target: null };
+    // Avoid overlapping simultaneous attack patterns from other winter mobs.
+    enemies = [];
+    return true;
+  }
+
+  function winterEnemyGeometry(mob = winterEncounter) {
+    const actorHeight = mob.type === "iceman" ? 94 : 82;
+    return { x: mob.x, y: mob.y, rx: mob.type === "iceman" ? 24 : 22, ry: actorHeight * .36, height: actorHeight };
+  }
+
+  function winterEnemyPose(mob) {
+    return mob.phase === "defeated" || mob.phase === "open" ? 3
+      : mob.phase === "attack" ? 2 : mob.phase === "warning" ? 1 : 0;
+  }
+
+  function updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX = player.x) {
+    if (!antarctica || antarcticaArrival) return;
+    winterSlide = Math.max(0, winterSlide - dt);
+    winterWind = Math.max(0, winterWind - dt);
+    if (!winterEncounter) {
+      winterEncounterWait -= dt;
+      if (winterEncounterWait <= 0 && !winterProjectiles.length) spawnWinterEncounter();
+    }
+    const mob = winterEncounter;
+    if (mob) {
+      const previousY = mob.y;
+      mob.age += dt;
+      mob.phaseAge += dt;
+      // Slow world-space hovering, not a camera-locked enemy the player can
+      // never reach. The racer can overtake it and land on its upper surface.
+      if (mob.age < 9 && mob.phase !== "defeated") {
+        mob.y += clamp(cameraY + height * .5 - mob.y, -70 * dt, 70 * dt);
+      }
+      const go = (phase) => { mob.phase = phase; mob.phaseAge = 0; };
+      if (mob.phase === "idle" && mob.phaseAge >= 1.1) {
+        mob.direction = player.x < mob.x ? -1 : 1;
+        if (mob.type === "strategist") {
+          // A normal, reachable platform, never the only spring or a broken one.
+          const candidates = platforms.filter((p) => !p.broken && p.kind === "normal"
+            && p.y > cameraY + 50 && p.y < cameraY + height * .8 && p.y > player.y - 80);
+          mob.target = candidates.reduce((best, p) => !best || Math.abs(p.y - player.y - 160) < Math.abs(best.y - player.y - 160) ? p : best, null);
+        }
+        go("warning");
+      } else if (mob.phase === "warning" && mob.phaseAge >= 1.6) {
+        go("attack");
+        mob.round += 1;
+        if (mob.type === "strategist") {
+          if (mob.target && !mob.target.broken) mob.target.frozenUntil = elapsed + 7;
+        } else if (mob.type === "iceman") {
+          winterProjectiles.push({ type: "gust", x: mob.x + mob.direction * 34, y: mob.y + 8,
+            vx: mob.direction * 115, vy: 0, age: 0 });
+        } else {
+          const vx = clamp((player.x - mob.x) * .35, -65, 65);
+          winterProjectiles.push({ type: "penalty", x: mob.x, y: mob.y - 25, vx, vy: -112, age: 0 });
+        }
+      } else if (mob.phase === "attack" && mob.phaseAge >= .65) go("open");
+      else if (mob.phase === "open" && mob.phaseAge >= 2.4) go("idle");
+
+      const body = winterEnemyGeometry(mob);
+      const canBounce = mob.phase !== "defeated" && (mob.type !== "steward" || mob.phase === "open");
+      if (canBounce && player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet,
+        previousY + body.ry, mob.y + body.ry, player.x, mob.x, body.rx * 2, player.width * .44)) {
+        player.y = mob.y + body.ry + player.height / 2;
+        player.vy = 830;
+        somersault = null;
+        openingJump = false;
+        frags += 1;
+        go("defeated");
+        winterProjectiles = [];
+        invulnerableTimer = Math.max(invulnerableTimer, .45);
+        effects.push({ index: 10, x: mob.x, y: mob.y, age: 0, duration: .4, size: 48 * visualScale() });
+      } else if (mob.type === "steward" && mob.phase !== "open" && mob.phase !== "defeated" && invulnerableTimer <= 0) {
+        const dx = (player.x - body.x) / (body.rx + player.width * .29);
+        const dy = (player.y - body.y) / (body.ry + player.height * .34);
+        if (dx * dx + dy * dy < 1) { endGame(); return; }
+      }
+      if (mob.age > 15 || mob.y < cameraY - 100 || (mob.phase === "defeated" && mob.phaseAge > .85)) {
+        winterEncounter = null;
+        winterEncounterWait = 12 + Math.random() * 8;
+      }
+    }
+    let kept = 0;
+    for (const shot of winterProjectiles) {
+      const oldX = shot.x, oldY = shot.y;
+      shot.age += dt;
+      shot.x += shot.vx * dt;
+      shot.y += shot.vy * dt;
+      if (shot.age > 5 || shot.y < cameraY - 60 || shot.x < -80 || shot.x > width + 80) continue;
+      const rx = shot.type === "gust" ? 25 : 20, ry = shot.type === "gust" ? 11 : 12;
+      let hit = false;
+      if (invulnerableTimer <= 0) {
+        // Sweep relative motion; the hero can be moving much faster than a shot.
+        const oldPlayerY = previousFeet + player.height / 2;
+        const oldPlayerX = Math.abs(player.x - previousPlayerX) > width / 2 ? player.x : previousPlayerX;
+        const dx = shot.x - oldX - (player.x - oldPlayerX), dy = shot.y - oldY - (player.y - oldPlayerY);
+        const ox = oldX - oldPlayerX, oy = oldY - oldPlayerY;
+        const t = clamp(-(ox * dx + oy * dy) / Math.max(.001, dx * dx + dy * dy), 0, 1);
+        hit = ((ox + dx * t) / (rx + player.width * .27)) ** 2
+          + ((oy + dy * t) / (ry + player.height * .33)) ** 2 < 1;
+      }
+      if (hit && shot.type === "penalty") { endGame(); return; }
+      if (hit) {
+        winterWind = .8;
+        winterWindDirection = Math.sign(shot.vx);
+        continue;
+      }
+      winterProjectiles[kept++] = shot;
+    }
+    winterProjectiles.length = kept;
+  }
+
+  function drawWinterEncounter() {
+    if (!antarctica || antarcticaArrival) return;
+    const mob = winterEncounter;
+    if (mob) {
+      const frames = art[`winter${mob.type[0].toUpperCase()}${mob.type.slice(1)}`];
+      const pose = winterEnemyPose(mob), sprite = frames?.[pose];
+      if (sprite) {
+        const body = winterEnemyGeometry(mob), h = body.height;
+        const w = h * sprite.sw / sprite.sh, sy = worldToScreen(mob.y);
+        const anchor = mob.type === "iceman" ? [.5, .41, .3, .5][pose] : .5;
+        ctx.save(); ctx.translate(mob.x, sy); ctx.scale(mob.direction, 1);
+        if (mob.phase === "warning") ctx.globalAlpha = .8 + Math.sin(mob.phaseAge * 16) * .2;
+        if (mob.phase === "defeated") { ctx.globalAlpha = 1 - mob.phaseAge / .85; ctx.rotate(mob.phaseAge * .5); }
+        ctx.drawImage(rasterSprite(sprite, w, h), -w * anchor, -h / 2, w, h);
+        ctx.restore();
+        let label = mob.type === "iceman" ? "LEAVE ME ALONE" : mob.type === "strategist"
+          ? (mob.phase === "attack" || mob.phase === "open" ? "STAY OUT" : "BOX BOX")
+          : mob.phase === "open" ? "ПРЫГАЙ СВЕРХУ!" : "FIA · +5 SEC";
+        if (mob.phase === "defeated") label = "+30";
+        ctx.save(); ctx.textAlign = "center"; ctx.font = "bold 10px monospace";
+        ctx.strokeStyle = "#f2faff"; ctx.lineWidth = 3; ctx.lineJoin = "round";
+        ctx.fillStyle = mob.type === "strategist" ? "#a32c35" : "#21385a";
+        const x = clamp(mob.x, 85, width - 85), y = sy - h / 2 - 10;
+        ctx.strokeText(label, x, y); ctx.fillText(label, x, y); ctx.restore();
+        if (mob.type === "strategist" && mob.phase === "warning" && mob.target && !mob.target.broken) {
+          ctx.save(); ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(190,55,64,.65)"; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(mob.x, sy + h * .3); ctx.lineTo(mob.target.x, worldToScreen(mob.target.y)); ctx.stroke(); ctx.restore();
+        }
+      }
+    }
+    for (const shot of winterProjectiles) {
+      const y = worldToScreen(shot.y);
+      if (y < -40 || y > height + 40) continue;
+      ctx.save(); ctx.translate(shot.x, y);
+      if (shot.type === "gust") {
+        ctx.scale(Math.sign(shot.vx), 1);
+        ctx.strokeStyle = "#b4edff"; ctx.lineWidth = 3;
+        for (let i = -1; i <= 1; i += 1) {
+          ctx.beginPath(); ctx.moveTo(-22, i * 9); ctx.quadraticCurveTo(28, i * 9 + 7, 19, i * 9 - 3); ctx.stroke();
+        }
+      } else {
+        ctx.rotate(Math.sin(shot.age * 4) * .1);
+        ctx.fillStyle = "#19304d"; ctx.fillRect(-22, -14, 44, 28);
+        ctx.strokeStyle = "#c5edff"; ctx.lineWidth = 2; ctx.strokeRect(-22, -14, 44, 28);
+        ctx.fillStyle = "#f2faff"; ctx.font = "bold 10px monospace"; ctx.textAlign = "center"; ctx.fillText("+5 SEC", 0, 3);
+      }
+      ctx.restore();
+    }
   }
 
   function drawWinterMemory(foreground = false) {
@@ -1347,6 +1546,7 @@
   }
 
   function buildGame() {
+    resetWinterEncounters();
     waitingForStage = null;
     antarctica = false;
     antarcticaScene = null;
@@ -1449,7 +1649,8 @@
       worldTop = y;
     }
 
-    if (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490)) {
+    if ((!antarctica || (!winterEncounter && !winterProjectiles.length))
+      && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
         type: antarctica ? "piranha" : "tire",
@@ -2511,8 +2712,10 @@
     rocketTimer = Math.max(0, rocketTimer - dt);
     if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
     const direction = Number(held.right) - Number(held.left);
-    const targetVx = direction * Math.min(440, width * .62);
-    player.vx += (targetVx - player.vx) * Math.min(1, 10 * dt);
+    const previousPlayerX = player.x;
+    const targetVx = direction * Math.min(440, width * .62) + (winterWind > 0 ? winterWindDirection * 100 : 0);
+    const traction = winterSlide > 0 ? (direction ? 8 : 1.8) : 10;
+    player.vx += (targetVx - player.vx) * Math.min(1, traction * dt);
     player.x += player.vx * dt;
     const halfPlayer = player.width / 2;
     if (player.x < -halfPlayer) player.x = width + halfPlayer;
@@ -2543,6 +2746,8 @@
         enemy.baseX + Math.sin(elapsed * (fish ? .85 : 1.25) + enemy.phase) * Math.min(fish ? 90 : 54, width * (fish ? .21 : .14))));
     }
 
+    updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX);
+    if (mode !== "running") return;
     collideWithSpaceBoss(previousFeet, currentFeet);
     collideWithEnemy(previousFeet, currentFeet, dt);
     if (mode !== "running") return;
@@ -2560,6 +2765,7 @@
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
         player.vy = platform.kind === "spring" ? 930 : 720;
+        if (antarctica && platform.frozenUntil > elapsed) winterSlide = 1.1;
         openingJump = false;
         somersault = null;
         if (elapsed >= nextSomersaultAt && !freeFlight && Math.random() < .14) {
@@ -2708,6 +2914,7 @@
     drawHawks();
     drawSpaceBoss();
     drawBabyKimi();
+    drawWinterEncounter();
     if (art.marshal) {
       for (const marshal of marshals) {
         const h = 58;
@@ -3069,6 +3276,16 @@
   document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
   document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
   document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
+  for (const kind of ["iceman", "strategist", "steward"]) {
+    document.getElementById(`doodle-winter-${kind}-test`)?.addEventListener("click", async () => {
+      await startWinterBiomeTest();
+      if (!antarctica || !adminBossTestMode || mode !== "running") return;
+      resetWinterEncounters();
+      spawnWinterEncounter(kind);
+      if (bossTestStatus) bossTestStatus.textContent = "Тест зимнего врага · без сохранения результата";
+      draw();
+    });
+  }
   if (introSkipButton) introSkipButton.addEventListener("click", finishIntro);
   introPreferenceButton?.addEventListener("click", () => {
     alwaysSkipIntro = !alwaysSkipIntro;
@@ -3191,6 +3408,9 @@
       ["piranhaSheetSrc", (sheet) => ({ piranhaFrames: checkedFrames(piranhaFrames(sheet), 4) })],
       ["winterPlatformsSrc", (sheet) => ({ winterPlatforms: checkedFrames(splitSpriteSheet(sheet, 4, null, false), 4) })],
       ["winterPortraitSrc", (sheet) => ({ winterPortrait: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+      ["winterIcemanSrc", (sheet) => ({ winterIceman: checkedFrames(splitSpriteSheet(sheet, 4, [0, .237, .491, .79, 1], false), 4) })],
+      ["winterStrategistSrc", (sheet) => ({ winterStrategist: checkedFrames(splitSpriteSheet(sheet, 4, [0, .217, .499, .794, 1], false), 4) })],
+      ["winterStewardSrc", (sheet) => ({ winterSteward: checkedFrames(splitSpriteSheet(sheet, 4, [0, .242, .489, .795, 1], false), 4) })],
     ];
     throw new Error(`Unknown asset stage: ${name}`);
   }
