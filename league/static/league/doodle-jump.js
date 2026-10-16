@@ -102,6 +102,11 @@
   let hawks = [];
   let hawkSpawnWait = 2 + Math.random() * 2;
   let spaceBoss = null;
+  let spaceEncounter = null;
+  let spaceEncounterWait = 7;
+  let spaceEncounterIndex = -1;
+  let spacePitHold = null;
+  let softBootJumps = 0;
   let bossShots = [];
   let guaranteedSpaceBossSpawned = false;
   let bossBonus = 0;
@@ -451,7 +456,7 @@
       cropped.width = sw;
       cropped.height = sh;
       cropped.getContext("2d").drawImage(tile, minX, minY, sw, sh, 0, 0, sw, sh);
-      frames.push({ image: cropped, sx: 0, sy: 0, sw, sh, mask });
+      frames.push({ image: cropped, sx: 0, sy: 0, sw, sh, mask, sourceY: minY });
     }
     return frames;
   }
@@ -714,6 +719,7 @@
 
   function beginPortal() {
     if (forgottenPaddock || portalTransition || !player) return;
+    resetSpaceEncounters(false);
     portalTransition = { age: 0, x: player.x / width, y: worldToScreen(player.y) / height };
     rocketTimer = 0;
     somersault = null;
@@ -1546,6 +1552,7 @@
   }
 
   function buildGame() {
+    resetSpaceEncounters();
     resetWinterEncounters();
     waitingForStage = null;
     antarctica = false;
@@ -1649,7 +1656,7 @@
       worldTop = y;
     }
 
-    if ((!antarctica || (!winterEncounter && !winterProjectiles.length))
+    if (!spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
       && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
@@ -1663,7 +1670,7 @@
       });
     }
     if (antarctica) hazards = [];
-    if (!antarctica && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
+    if (!antarctica && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -2354,6 +2361,235 @@
     return true;
   }
 
+  function resetSpaceEncounters(clearBoots = true) {
+    if (spaceEncounter?.platform) delete spaceEncounter.platform.spaceService;
+    spaceEncounter = null;
+    spacePitHold = null;
+    spaceEncounterWait = 7;
+    spaceEncounterIndex = -1;
+    if (clearBoots) softBootJumps = 0;
+  }
+
+  function inSpaceChapter() {
+    return !forgottenPaddock && !antarctica && !portalTransition && cameraY >= spaceFade.end;
+  }
+
+  function spawnSpaceEncounter(kind = null) {
+    if (!inSpaceChapter() || spaceBoss || spaceEncounter || spacePitHold) return false;
+    const kinds = ["carbon", "satellite", "pitstop", "alonso"];
+    spaceEncounterIndex = (spaceEncounterIndex + 1) % kinds.length;
+    const type = kind || kinds[spaceEncounterIndex];
+    const event = { type, age: 0, x: width * .5, y: player.y + 160, used: false, debris: [], ghosts: [] };
+    if (type === "carbon") {
+      const safeLane = clamp(Math.floor(player.x / width * 4), 0, 3);
+      for (let lane = 0; lane < 4; lane += 1) {
+        if (lane === safeLane) continue;
+        const index = event.debris.length;
+        event.debris.push({ x: (lane + .5) * width / 4, y: cameraY + height + 50 + index * 35,
+          index: index < 2 ? index : 2 + Math.floor(Math.random() * 2), vy: -(72 + index * 11), dead: false });
+      }
+    } else if (type === "satellite") {
+      event.x = width * (player.x < width / 2 ? .78 : .22);
+      event.y = cameraY + height * .76;
+      for (let i = 0; i < 3; i += 1) event.ghosts.push({ x: width * (i % 2 ? .7 : .3), y: player.y + 100 + i * 125 });
+    } else if (type === "pitstop") {
+      const candidates = platforms.filter((p) => !p.broken && p.y > player.y + 40 && p.y < player.y + 230);
+      const target = candidates.find((p) => p.kind === "normal") || candidates[0];
+      event.x = clamp(target?.x || player.x, 85, width - 85);
+      event.y = target?.y || player.y + 150;
+      // The service deck temporarily takes over this real landing surface.
+      // Its old platform is restored if Toto interrupts the event.
+      event.platform = target || null;
+      if (target) target.spaceService = event;
+    } else {
+      event.direction = player.x < width / 2 ? -1 : 1;
+      event.x = event.direction > 0 ? -85 : width + 85;
+      event.y = player.y + 210;
+    }
+    spaceEncounter = event;
+    enemies = []; hazards = []; hawks = [];
+    return true;
+  }
+
+  function clearSpaceEncounter() {
+    if (spaceEncounter?.platform) delete spaceEncounter.platform.spaceService;
+    spaceEncounter = null;
+    spacePitHold = null;
+    spaceEncounterWait = 8 + Math.random() * 5;
+  }
+
+  function spacePitDeck(event) {
+    return { x: event.platform?.x ?? event.x, y: event.platform?.y ?? event.y, width: 150 };
+  }
+
+  function updateSpaceEvents(dt) {
+    if (!inSpaceChapter() || spaceBoss) {
+      if (spaceEncounter || spacePitHold) clearSpaceEncounter();
+      return false;
+    }
+    if (!spaceEncounter) {
+      spaceEncounterWait -= dt;
+      if (spaceEncounterWait <= 0) spawnSpaceEncounter();
+    }
+    const event = spaceEncounter;
+    if (!event) return false;
+    event.age += dt;
+    if (event.type === "carbon" && event.age >= 1.5) {
+      for (const item of event.debris) item.y += item.vy * dt;
+    }
+    if (event.type === "alonso") {
+      event.x += event.direction * 48 * dt;
+      if (event.x > width + 100 || event.x < -100) { clearSpaceEncounter(); return false; }
+    }
+    if (spacePitHold) {
+      const deck = spacePitDeck(event);
+      spacePitHold.age += dt;
+      player.x = deck.x; player.y = deck.y + player.height / 2;
+      player.vx = player.vy = 0;
+      invulnerableTimer = Math.max(invulnerableTimer, 1.1);
+      if (spacePitHold.age >= .75) {
+        spacePitHold = null;
+        softBootJumps = 2; // The service launch is the first of three soft jumps.
+        player.vy = 930;
+        openingJump = false;
+      }
+      return true;
+    }
+    if (event.age > 11 || (event.type !== "carbon" && event.y < cameraY - 180)) clearSpaceEncounter();
+    return false;
+  }
+
+  function collideWithSpaceEvents(previousFeet, currentFeet, dt) {
+    const event = spaceEncounter;
+    if (!event || !inSpaceChapter() || spaceBoss) return;
+    if (event.type === "pitstop" && rocketTimer <= 0) {
+      const deck = spacePitDeck(event);
+      if (deck.y > cameraY + 4 && player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet,
+        deck.y, deck.y, player.x, deck.x, deck.width * .8, player.width * .44)) {
+        player.y = deck.y + player.height / 2;
+        if (!event.used) {
+          event.used = true; spacePitHold = { age: 0 };
+          player.x = deck.x; player.vx = player.vy = 0;
+          invulnerableTimer = Math.max(invulnerableTimer, 1.1);
+        } else {
+          player.vy = softBootJumps > 0 ? 930 : 720;
+          if (softBootJumps > 0) softBootJumps -= 1;
+        }
+        somersault = null;
+        hazards = []; enemies = [];
+      }
+    } else if (event.type === "alonso") {
+      const frame = art.spaceAlonso[0], drawWidth = 150, drawHeight = spriteSize(frame, drawWidth);
+      const contactX = event.x + (player.x - event.x) * event.direction;
+      const top = spriteTopAtX(frame, event.x, event.y, drawWidth, drawHeight, contactX);
+      if (player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet, top, top,
+        player.x, event.x, 90, player.width * .44)) {
+        player.y = top + player.height / 2;
+        player.vy = event.used ? 720 : 1080;
+        event.used = true;
+        invulnerableTimer = Math.max(invulnerableTimer, .65);
+        openingJump = false; somersault = null;
+      }
+    } else if (event.type === "carbon" && event.age >= 1.5) {
+      for (const item of event.debris) {
+        if (item.dead || item.y < cameraY - 80) continue;
+        const sprite = art.spaceCarbon[item.index], w = item.index < 2 ? 72 : 26, h = spriteSize(sprite, w);
+        if (item.index < 2 && player.vy < 0) {
+          const top = spriteTopAtX(sprite, item.x, item.y, w, h, player.x);
+          const previousTop = spriteTopAtX(sprite, item.x, item.y - item.vy * dt, w, h, player.x);
+          if (crossedLandingSurface(previousFeet, currentFeet, previousTop, top, player.x, item.x, w * .78, player.width * .44)) {
+            player.y = top + player.height / 2; player.vy = 850;
+            openingJump = false; somersault = null; item.dead = true;
+            continue;
+          }
+        }
+        if (invulnerableTimer > 0) continue;
+        const oldPlayerY = previousFeet + player.height / 2;
+        const steps = Math.max(1, Math.ceil((Math.abs(player.vy) + Math.abs(item.vy)) * dt / 8));
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps;
+          if (spriteOverlapsEllipse(sprite, item.x, item.y - item.vy * dt * (1 - t), w, h,
+            player.x, oldPlayerY + (player.y - oldPlayerY) * t, player.width * .27, player.height * .33)) {
+            endGame(); return;
+          }
+        }
+      }
+    }
+  }
+
+  function drawSpaceEvents() {
+    const event = spaceEncounter;
+    if (!event || !inSpaceChapter() || spaceBoss) return;
+    let label = "", labelX = event.x, labelY = worldToScreen(event.y) - 55;
+    if (event.type === "carbon") {
+      if (event.age < 1.5) {
+        ctx.save(); ctx.setLineDash([3, 8]); ctx.lineWidth = 1.5;
+        for (const item of event.debris) {
+          ctx.strokeStyle = item.index < 2 ? "#9cceea" : "#edab83";
+          ctx.beginPath(); ctx.moveTo(item.x, 65); ctx.lineTo(item.x, height - 40); ctx.stroke();
+        }
+        ctx.restore(); label = "КАРБОНОВЫЙ ДОЖДЬ"; labelX = width / 2; labelY = 108;
+      } else for (const item of event.debris) {
+        if (!item.dead) drawFrame(art.spaceCarbon[item.index], item.x, item.y, item.index < 2 ? 72 : 26);
+      }
+    } else if (event.type === "satellite") {
+      const pose = event.age < 1.5 ? 0 : event.age < 3.5 ? 1 : event.age < 8 ? 2 : 3;
+      drawFrame(art.spaceSatellite[pose], event.x, event.y, 112);
+      label = event.age < 3.5 ? (event.x > width / 2 ? "← WE ARE CHECKING" : "WE ARE CHECKING →") : "STAY OUT!";
+      if (event.age >= 1.5 && event.age < 8) {
+        for (const ghost of event.ghosts) {
+          ctx.save(); ctx.globalAlpha = .24 + Math.sin(elapsed * (event.age > 3.5 ? 21 : 9)) * .12;
+          drawSprite(0, ghost.x, ghost.y, 72, "platform");
+          const y = worldToScreen(ghost.y);
+          ctx.strokeStyle = "#9be8ff"; ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+          ctx.beginPath(); ctx.moveTo(ghost.x - 31, y + 2); ctx.lineTo(ghost.x + 31, y + 2); ctx.stroke();
+          ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.globalAlpha = .65; ctx.fillStyle = "#9be8ff";
+          ctx.fillText("HOLOGRAM", ghost.x, y + 22); ctx.restore();
+        }
+      }
+    } else if (event.type === "pitstop") {
+      const deck = spacePitDeck(event);
+      const pose = spacePitHold ? (spacePitHold.age < .25 ? 1 : 2) : event.used ? 3 : 0;
+      const sprite = art.spacePitstop[pose], h = spriteSize(sprite, deck.width);
+      // Original sheet deck is at row 356 in every frame; keep that exact
+      // plane fixed while mechanics raise/lower their tools around the hero.
+      const deckOffset = (356 - sprite.sourceY) / sprite.sh * h;
+      ctx.drawImage(rasterSprite(sprite, deck.width, h), deck.x - deck.width / 2, worldToScreen(deck.y) - deckOffset, deck.width, h);
+      labelX = deck.x; labelY = worldToScreen(deck.y) - 61;
+      label = spacePitHold ? "МЕНЯЕМ НА SOFT…" : event.used ? "SOFT · 3 ПРЫЖКА" : "ЛУННЫЙ ПИТ-СТОП";
+    } else {
+      const pose = Math.floor(event.age * 6) % 4;
+      const sprite = art.spaceAlonso[pose], h = spriteSize(sprite, 150);
+      ctx.save(); ctx.translate(event.x, worldToScreen(event.y)); ctx.scale(event.direction, 1);
+      ctx.drawImage(rasterSprite(sprite, 150, h), -75, -h / 2, 150, h); ctx.restore();
+      label = "GP2 ENGINE!";
+    }
+    if (label) {
+      ctx.save(); ctx.font = "bold 10px monospace"; ctx.textAlign = "center";
+      ctx.strokeStyle = "#10192c"; ctx.lineWidth = 3; ctx.fillStyle = "#e9d5ac";
+      const x = clamp(labelX, 94, width - 94), y = Math.max(95, labelY);
+      ctx.strokeText(label, x, y); ctx.fillText(label, x, y); ctx.restore();
+    }
+  }
+
+  async function startSpaceEventTest(kind) {
+    if (!artReady || (mode === "running" && !adminBossTestMode && !adminSandbox)) return;
+    if (!await preparePreview(["sky", "space"])) return;
+    if (mode === "running" && !adminBossTestMode && !adminSandbox) return;
+    startGame(true, { forceRestart: true, adminTest: true });
+    peakY = player.y = startY + 2000 * 11;
+    player.x = width / 2; player.vy = 720;
+    cameraY = player.y - height * .42; openingJump = false;
+    platforms = []; enemies = []; hazards = []; powerups = []; marshals = [];
+    let y = player.y - player.height / 2 - 8, x = player.x;
+    addPlatform(y, x, "normal");
+    while (y < cameraY + height + 320) { const gap = platformGap(); y += gap; x = choosePlatformX(x, gap); addPlatform(y, x, "normal"); }
+    worldTop = y;
+    spawnSpaceEncounter(kind);
+    if (bossTestStatus) bossTestStatus.textContent = "Тест космического события · без сохранения результата";
+    updateHud(); draw();
+  }
+
   function updateSpaceBoss(dt) {
     if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
@@ -2362,6 +2598,7 @@
       if (guaranteedSpaceBossSpawned && score > 4500) bossWait -= dt;
       if (firstEncounter || (guaranteedSpaceBossSpawned && score > 4500 && bossWait <= 0)) {
         guaranteedSpaceBossSpawned = true;
+        if (spaceEncounter) clearSpaceEncounter();
         spaceBoss = { age: 0, timer: 0, phase: "arrival", hp: 3, round: 0,
           x: width / 2, screenY: 170, safeLane: 1, landingY: 0 };
         // The boss encounter supplies its own hazards with readable safe lanes.
@@ -2710,6 +2947,7 @@
     if (updatePortal(dt)) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
+    if (updateSpaceEvents(dt)) { somersault = null; return; }
     if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
     const direction = Number(held.right) - Number(held.left);
     const previousPlayerX = player.x;
@@ -2748,12 +2986,15 @@
 
     updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running") return;
+    collideWithSpaceEvents(previousFeet, currentFeet, dt);
+    if (mode !== "running" || spacePitHold) return;
     collideWithSpaceBoss(previousFeet, currentFeet);
     collideWithEnemy(previousFeet, currentFeet, dt);
     if (mode !== "running") return;
 
     if (player.vy < 0) {
       for (const platform of platforms) {
+        if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
         // A platform that has already slipped below the visible playfield must
         // not catch the player off-screen. This prevents invisible landings at
         // the bottom edge after the camera has moved upward.
@@ -2765,6 +3006,7 @@
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
         player.vy = platform.kind === "spring" ? 930 : 720;
+        if (softBootJumps > 0) { player.vy = Math.max(player.vy, 930); softBootJumps -= 1; }
         if (antarctica && platform.frozenUntil > elapsed) winterSlide = 1.1;
         openingJump = false;
         somersault = null;
@@ -2860,6 +3102,7 @@
     if (mode !== "running") return;
     updateMarshals();
     extendWorld();
+    if (spaceEncounter) { enemies = []; hazards = []; hawks = []; }
     if (spaceBoss) { enemies = []; hazards = []; hawks = []; }
     pruneWorldObjects(platforms, 160, "broken");
     pruneWorldObjects(enemies, 130, "dead");
@@ -2892,6 +3135,7 @@
 
     for (const platform of platforms) {
       if (platform.broken) continue;
+      if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
       if (antarctica) {
         drawIcePlatform(platform);
@@ -2913,6 +3157,7 @@
     }
     drawHawks();
     drawSpaceBoss();
+    drawSpaceEvents();
     drawBabyKimi();
     drawWinterEncounter();
     if (art.marshal) {
@@ -3045,6 +3290,12 @@
         ctx.fillText(`РАКЕТА  ${rocketTimer.toFixed(1)}с`, 20, 103);
       }
       ctx.restore();
+    }
+    if (softBootJumps > 0) {
+      ctx.save(); ctx.textAlign = "right"; ctx.font = "bold 10px monospace";
+      ctx.fillStyle = "#efb2a2"; ctx.strokeStyle = "#111c2d"; ctx.lineWidth = 3;
+      ctx.strokeText(`SOFT ×${softBootJumps}`, width - 15, 94);
+      ctx.fillText(`SOFT ×${softBootJumps}`, width - 15, 94); ctx.restore();
     }
     if (antarctica) drawWinterMemory(true);
     const blackout = portalTransition
@@ -3276,6 +3527,9 @@
   document.getElementById("doodle-antarctica-test")?.addEventListener("click", startAntarcticaTest);
   document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
   document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
+  for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
+    document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
+  }
   for (const kind of ["iceman", "strategist", "steward"]) {
     document.getElementById(`doodle-winter-${kind}-test`)?.addEventListener("click", async () => {
       await startWinterBiomeTest();
@@ -3391,6 +3645,10 @@
       ["backgroundSpaceSrc", (sheet) => ({ space: sheet })],
       ["spaceBossSrc", single("spaceBoss")],
       ["bossWheelSrc", single("bossWheel")],
+      ["spaceCarbonSrc", (sheet) => ({ spaceCarbon: checkedFrames(splitSpriteSheet(sheet, 4, [0, .42, .718, .86, 1]), 4) })],
+      ["spaceSatelliteSrc", (sheet) => ({ spaceSatellite: checkedFrames(splitSpriteSheet(sheet, 4, null, false), 4) })],
+      ["spacePitstopSrc", (sheet) => ({ spacePitstop: checkedFrames(splitSpriteSheet(sheet, 4, null, false), 4) })],
+      ["spaceAlonsoSrc", (sheet) => ({ spaceAlonso: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
     ];
     if (name === "garage") return [
       ["garageSrc", (sheet) => ({ garage: sheet })],

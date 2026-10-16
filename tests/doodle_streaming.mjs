@@ -62,9 +62,11 @@ async function harness(mobile, failStartup = false) {
     .replace(/\}\)\(\);\s*$/, `expose({ art, assetStages, loadStage, streamWorldAssets, draw, drawAntarctica, drawWinterMemory,
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       spawnWinterEncounter, updateWinterEncounter, resetWinterEncounters, winterEnemyGeometry, drawWinterEncounter,
+      startSpaceEventTest, spawnSpaceEncounter, clearSpaceEncounter, updateSpaceEvents, collideWithSpaceEvents, drawSpaceEvents,
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY,
-        winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer}),
+        winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
+        spaceEncounter, spacePitHold, softBootJumps}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -76,6 +78,19 @@ async function harness(mobile, failStartup = false) {
       aimGust(){invulnerableTimer=0;winterProjectiles=[{type:"gust",x:player.x,y:player.y,vx:115,vy:0,age:0}];},
       freezeLanding(){const p=platforms.find(p=>!p.broken);p.kind="normal";p.frozenUntil=elapsed+7;
         p.y=cameraY+height*.35;player.x=p.x;player.y=p.y+player.height/2+1;player.vy=-300;winterEncounter=null;winterProjectiles=[];winterEncounterWait=100;},
+      spaceLanding(){const e=spaceEncounter;let x=e.x,top=e.y;
+        if(e.type==="pitstop"){const d=spacePitDeck(e);x=d.x;top=d.y;}
+        if(e.type==="alonso"){e.x=width*.5;x=e.x;const s=art.spaceAlonso[0];top=spriteTopAtX(s,e.x,e.y,150,spriteSize(s,150),x);}
+        if(e.type==="carbon"){e.age=2;const d=e.debris[0];x=d.x;const s=art.spaceCarbon[d.index];top=spriteTopAtX(s,d.x,d.y,72,spriteSize(s,72),x);}
+        player.x=x;player.y=top+player.height/2-2;player.vy=-300;
+        collideWithSpaceEvents(top+4,top-2,0);},
+      hitCarbon(shield=false){const e=spaceEncounter;e.age=2;const d=e.debris.find(d=>d.index>=2);
+        for(const other of e.debris)other.dead=other!==d;
+        d.x=player.x;d.y=player.y;player.vy=0;invulnerableTimer=shield?2:0;
+        const feet=player.y-player.height/2;collideWithSpaceEvents(feet,feet,1/60);},
+      forceBoss(){peakY=startY+3500*11;updateSpaceBoss(1/60);},
+      portal(){beginPortal();},
+      setSpaceAge(age){spaceEncounter.age=age;},
     });})();`);
   new Function("document", "window", "Image", "localStorage", "requestAnimationFrame", "cancelAnimationFrame", "fetch", "expose", source)(
     document, window, LoadedImage, { getItem: () => null, setItem() {} }, () => 1, () => {},
@@ -240,6 +255,67 @@ for (const mobile of [true, false]) {
   }
   assert.deepEqual(h.calls,[],"New admin enemy previews must remain unscored");
   console.log(`${mobile ? "Mobile" : "Desktop"}: winter warnings, attack patterns, stomp, sliding, shield, collisions and restart passed`);
+  for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
+    await h.events.get(`doodle-space-${kind}-test:click`)();
+    assert.equal(a.state().spaceEncounter.type,kind);
+    assert.equal(a.state().adminBossTestMode,true);
+    assert.equal(a.spawnSpaceEncounter("carbon"),false,"Space events cannot stack");
+    if (kind === "carbon") {
+      assert.equal(a.state().spaceEncounter.debris.length,3,"Carbon shower must leave one of four lanes clear");
+      a.updateSpaceEvents(1.4); assert.ok(a.state().spaceEncounter.age<1.5,"Meteor warning lasts before collision is enabled");
+      a.draw();
+      a.spaceLanding(); assert.equal(a.state().player.vy,850);
+      assert.ok(a.state().spaceEncounter.debris[0].dead);
+    } else if (kind === "satellite") {
+      const before = a.state().platforms.slice();
+      a.setSpaceAge(4); a.draw();
+      assert.deepEqual(a.state().platforms,before,"Holograms must never alter the real reachable path");
+      assert.equal(a.state().spaceEncounter.ghosts.length,3);
+    } else if (kind === "pitstop") {
+      a.spaceLanding(); assert.ok(a.state().spacePitHold);
+      a.updateSpaceEvents(.76);
+      assert.equal(a.state().spacePitHold,null);
+      assert.equal(a.state().player.vy,930); assert.equal(a.state().softBootJumps,2);
+      a.spaceLanding(); assert.equal(a.state().player.vy,930); assert.equal(a.state().softBootJumps,1);
+      a.spaceLanding(); assert.equal(a.state().player.vy,930); assert.equal(a.state().softBootJumps,0);
+      a.spaceLanding(); assert.equal(a.state().player.vy,720,"Only three service-enhanced jumps, never unlimited refills");
+      assert.equal(a.state().softBootJumps,0);
+    } else {
+      const x = a.state().spaceEncounter.x;
+      a.updateSpaceEvents(.2); assert.notEqual(a.state().spaceEncounter.x,x,"Alonso shuttle moves horizontally");
+      a.spaceLanding(); assert.equal(a.state().player.vy,1080);
+      a.spaceLanding(); assert.equal(a.state().player.vy,720,"Repeat landings cannot chain unlimited super boosts");
+    }
+    a.draw();
+    if(process.env.DOODLE_PREVIEW_DIR){
+      await a.startSpaceEventTest(kind);
+      if(kind==="carbon")a.updateSpaceEvents(2.5);
+      if(kind==="satellite")a.setSpaceAge(4);
+      if(kind==="alonso")a.updateSpaceEvents(4);
+      a.draw();
+      await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-space-${kind}-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
+    }
+  }
+  await a.startSpaceEventTest("carbon");a.hitCarbon(true);assert.equal(a.state().mode,"running");
+  a.hitCarbon(false);assert.equal(a.state().mode,"over","Small carbon shards must be real hazards");
+  await a.startSpaceEventTest("pitstop");
+  const servicePlatform = a.state().spaceEncounter.platform;
+  assert.ok(servicePlatform?.spaceService);
+  a.forceBoss();assert.equal(a.state().spaceEncounter,null);assert.equal(servicePlatform.spaceService,undefined);
+  assert.equal(a.spawnSpaceEncounter("alonso"),false,"No space events during Toto fight");
+  await a.startSpaceEventTest("pitstop");a.spaceLanding();a.updateSpaceEvents(.76);
+  const portalPlatform=a.state().spaceEncounter.platform;
+  a.portal();assert.equal(a.state().spaceEncounter,null);assert.equal(portalPlatform.spaceService,undefined);
+  assert.equal(a.state().softBootJumps,2,"Earned boosts survive the portal");
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().softBootJumps,0);assert.equal(a.state().spaceEncounter,null);
+  assert.equal(a.spawnSpaceEncounter("carbon"),false,"Space events must never appear in the paddock");
+  assert.deepEqual(h.calls,[],"Space admin buttons never record attempts");
+  await a.startSpaceEventTest("carbon");a.clearSpaceEncounter();
+  for(let frame=0;frame<850&&!a.state().spaceEncounter;frame+=1)a.updateSpaceEvents(1/60);
+  assert.ok(a.state().spaceEncounter,"Events must spawn naturally without test buttons");
+  a.clearSpaceEncounter();assert.equal(a.state().spaceEncounter,null);
+  console.log(`${mobile ? "Mobile" : "Desktop"}: all four space events, warnings, safe lane, real hazards, three-jump limit, Toto exclusion and cleanup passed`);
 }
 
 // Admin deep links must load their own resources from a cold startup too.
@@ -256,6 +332,12 @@ assert.ok(portal.api.art.garage);
 assert.equal(portal.requests.has(dataset.backgroundSpaceSrc), false);
 assert.deepEqual(portal.calls, []);
 console.log("Cold admin portal preview passed");
+const coldSpace = await harness(true);
+await coldSpace.api.startSpaceEventTest("alonso");
+assert.ok(coldSpace.api.art.spaceAlonso.length===4);
+assert.equal(coldSpace.requests.has(dataset.antarcticaSrc),false);
+assert.deepEqual(coldSpace.calls,[]);
+console.log("Cold space event preview passed without downloading winter assets");
 const failed = await harness(true, true);
 assert.equal(failed.api.state().artReady, false);
 assert.equal(failed.requests.get(dataset.backgroundJourneySrc), 3);

@@ -10,13 +10,14 @@ device-pixel-ratio changes are part of this optimization.
 - Sky: prefetched at camera height 1200; required at 2700, before the first
   clouds at 2800. Includes hawk animation.
 - Space: prefetched at camera height 7000; required at 10000, before the fade
-  starts at 10500. Includes Toto and his projectiles.
+  starts at 10500. Includes Toto and his projectiles, carbon debris, Ferrari
+  satellite, lunar service crew and Alonso's shuttle.
 - Forgotten paddock: prefetched at score 4000; required at 4900, before the
   portal at 5000. Includes platforms and Kimi.
 - Antarctica: prefetched in the forgotten paddock at score 6500; required at
   7900, before the cutscene at 8000. Includes both cutscenes, piranhas and the
   Iceman/Ferrari strategist/FIA snowman encounters. Their three animation
-  sheets are never requested at startup (12 of 33 images load initially).
+  sheets are never requested at startup (12 of 37 images load initially).
 
 Chapters share in-flight requests. Prepared artwork is published only after the
 whole chapter is valid. A failed chapter retries after a backoff; unavailable

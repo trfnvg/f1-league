@@ -30,6 +30,10 @@
         <div class="doodle-test-controls" role="group" aria-label="Тестирование игры администратором">
           <span class="doodle-test-controls-label">ТЕСТИРОВАНИЕ ИГРЫ</span>
           <button id="doodle-boss-test" type="button" title="Запустить тестовый бой без сохранения результата">Вызвать бой с Тото</button>
+          <button id="doodle-space-carbon-test" type="button">Космос · карбоновый дождь</button>
+          <button id="doodle-space-satellite-test" type="button">Космос · спутник Ferrari</button>
+          <button id="doodle-space-pitstop-test" type="button">Космос · лунный пит-стоп</button>
+          <button id="doodle-space-alonso-test" type="button">Космос · Алонсо</button>
           <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <button id="doodle-antarctica-arrival-test" type="button" title="Проверить прибытие в пещеру и встречу с Сидом">Пещера · встреча с Сидом</button>
           <button id="doodle-winter-biome-test" type="button" title="Проверить зимних мобов и фон после +100 очков">Зима · мобы и фон +100</button>
@@ -76,6 +80,10 @@
           data-rocket-src="{% static 'league/images/doodle-jump/western-rocket-pilot-v2.png' %}"
           data-rocket-empty-src="{% static 'league/images/doodle-jump/western-rocket-empty-v1.png' %}"
           data-space-boss-src="{% static 'league/images/doodle-jump/space-toto-boss-v1.png' %}"
+          data-space-carbon-src="{% static 'league/images/doodle-jump/space-carbon-v1.png' %}"
+          data-space-satellite-src="{% static 'league/images/doodle-jump/space-satellite-v1.png' %}"
+          data-space-pitstop-src="{% static 'league/images/doodle-jump/space-pitstop-v1.png' %}"
+          data-space-alonso-src="{% static 'league/images/doodle-jump/space-alonso-v1.png' %}"
           data-marshal-src="{% static 'league/images/doodle-jump/marshal-checkered-v1.png' %}"
           data-garage-src="{% static 'league/images/doodle-jump/forgotten-paddock-v1.jpg' %}"
           data-antarctica-src="{% static 'league/images/doodle-jump/antarctica-canyon-v1.png' %}"
@@ -158,6 +166,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=winter-encounters-v39" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=space-encounters-v40" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
