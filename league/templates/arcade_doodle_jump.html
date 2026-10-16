@@ -4,7 +4,7 @@
 {% block title %}Cowboy GP · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" fetchpriority="high">
+  <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-retro-v4.png' %}" fetchpriority="high">
   <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=admin-toolbar-v38">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
@@ -54,7 +54,7 @@
   <section class="doodle-machine is-loading" aria-label="Cowboy GP — прыжковая аркада">
     <div class="doodle-game-stage">
       <div class="doodle-board-wrap" id="doodle-board-wrap">
-        <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
+        <img class="doodle-loading-poster" src="{% static 'league/images/doodle-jump/western-ascent-retro-v4.png' %}" alt="" fetchpriority="high" decoding="async" aria-hidden="true">
         <div class="doodle-scoreboard" aria-live="polite">
           <div><small>СЧЁТ</small><strong id="doodle-score">0</strong></div>
           <span class="doodle-live"><i></i> WILD GP</span>
@@ -75,9 +75,9 @@
           data-atlas-src="{% static 'league/images/doodle-jump/western-game-sprite-atlas-v1.png' %}"
           data-platform-sheet-src="{% static 'league/images/doodle-jump/western-platforms-v3.webp' %}"
           data-hero-sheet-src="{% static 'league/images/doodle-jump/western-russell-toy-hero-v3.webp' %}"
-          data-background-journey-src="{% static 'league/images/doodle-jump/western-ascent-v3.webp' %}"
-          data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-v3.webp' %}"
-          data-background-space-src="{% static 'league/images/doodle-jump/western-space-v2.jpg' %}"
+          data-background-journey-src="{% static 'league/images/doodle-jump/western-ascent-retro-v4.png' %}"
+          data-background-cloud-src="{% static 'league/images/doodle-jump/western-cloud-retro-v4.png' %}"
+          data-background-space-src="{% static 'league/images/doodle-jump/western-space-retro-v3.png' %}"
           data-rocket-src="{% static 'league/images/doodle-jump/western-rocket-pilot-v2.png' %}"
           data-rocket-empty-src="{% static 'league/images/doodle-jump/western-rocket-empty-v1.png' %}"
           data-space-boss-src="{% static 'league/images/doodle-jump/space-toto-boss-v1.png' %}"
@@ -86,8 +86,8 @@
           data-space-pitstop-src="{% static 'league/images/doodle-jump/space-pitstop-v1.png' %}"
           data-space-alonso-src="{% static 'league/images/doodle-jump/space-alonso-v1.png' %}"
           data-marshal-src="{% static 'league/images/doodle-jump/marshal-checkered-v1.png' %}"
-          data-garage-src="{% static 'league/images/doodle-jump/forgotten-paddock-v1.jpg' %}"
-          data-antarctica-src="{% static 'league/images/doodle-jump/antarctica-canyon-v1.png' %}"
+          data-garage-src="{% static 'league/images/doodle-jump/forgotten-paddock-retro-v2.png' %}"
+          data-antarctica-src="{% static 'league/images/doodle-jump/antarctica-canyon-retro-v2.png' %}"
           data-control-console-src="{% static 'league/images/doodle-jump/f1-control-console-v1.png' %}"
           data-cave-arrival-src="{% static 'league/images/doodle-jump/antarctica-cave-arrival-v1.png' %}"
           data-sid-sheet-src="{% static 'league/images/doodle-jump/sid-cinematic-poses-v1.png' %}"
@@ -103,7 +103,7 @@
           data-sid-boss-attack-src="{% static 'league/images/doodle-jump/sid-boss-attack-v1.png' %}"
           data-sid-boss-finale-src="{% static 'league/images/doodle-jump/sid-boss-finale-v1.png' %}"
           data-sid-boss-props-src="{% static 'league/images/doodle-jump/sid-boss-props-v1.png' %}"
-          data-summit-background-src="{% static 'league/images/doodle-jump/summit-paddock-v1.png' %}"
+          data-summit-background-src="{% static 'league/images/doodle-jump/summit-paddock-retro-v2.png' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
@@ -171,6 +171,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=sid-boss-v43" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=physics-render-v44" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

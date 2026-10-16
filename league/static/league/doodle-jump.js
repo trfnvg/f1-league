@@ -317,8 +317,8 @@
   }
 
   // Read sprite alpha once at load and retain a compact silhouette. Runtime
-  // collision checks touch only these 18x18 bits after a cheap bounds check.
-  function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 18, rows = 18) {
+  // collision checks touch only these 32x32 bits after a cheap bounds check.
+  function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 32, rows = 32) {
     const bits = new Uint8Array(columns * rows);
     const topRows = new Uint8Array(columns);
     topRows.fill(rows);
@@ -508,6 +508,19 @@
     const pixelHeight = Math.max(1, Math.round(targetHeight * dpr));
     const key = `${pixelWidth}:${pixelHeight}`;
     if (sizes.has(key)) return sizes.get(key);
+    // Cinematic zooms can request a new size every frame. Keep their original
+    // cropped pixels instead of continuously allocating and evicting textures.
+    if (sizes.size >= 8) {
+      if (!sizes.has("source")) {
+        const original = document.createElement("canvas");
+        original.width = sprite.sw;
+        original.height = sprite.sh;
+        original.getContext("2d").drawImage(sprite.image, sprite.sx, sprite.sy,
+          sprite.sw, sprite.sh, 0, 0, sprite.sw, sprite.sh);
+        sizes.set("source", original);
+      }
+      return sizes.get("source");
+    }
     const texture = document.createElement("canvas");
     texture.width = pixelWidth;
     texture.height = pixelHeight;
@@ -516,8 +529,6 @@
     painter.imageSmoothingQuality = "high";
     painter.drawImage(sprite.image, sprite.sx, sprite.sy, sprite.sw, sprite.sh,
       0, 0, pixelWidth, pixelHeight);
-    // Bound caches for variable-size effects and pickups.
-    if (sizes.size >= 24) sizes.delete(sizes.keys().next().value);
     sizes.set(key, texture);
     return texture;
   }
@@ -2440,6 +2451,21 @@
     return y + objectHeight / 2 - topRow / mask.rows * objectHeight;
   }
 
+  function sweptHazardContact(hitbox, previousHazardY, previousX, previousY) {
+    if (Math.abs(player.x - previousX) > width / 2) previousX = player.x;
+    const dx = player.x - previousX;
+    const relativeDy = player.y - previousY - (hitbox.y - previousHazardY);
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(relativeDy)) / 4));
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps;
+      if (spriteOverlapsEllipse(hitbox.sprite, hitbox.x,
+        previousHazardY + (hitbox.y - previousHazardY) * t, hitbox.width, hitbox.height,
+        previousX + dx * t, previousY + (player.y - previousY) * t,
+        player.width * .29, player.height * .34)) return true;
+    }
+    return false;
+  }
+
   function pruneWorldObjects(items, cameraMargin, inactiveFlag = null) {
     const lowestY = cameraY - cameraMargin;
     let kept = 0;
@@ -2448,6 +2474,28 @@
       if (item.y > lowestY && (!inactiveFlag || !item[inactiveFlag])) items[kept++] = item;
     }
     items.length = kept;
+  }
+
+  function landingPlatform(previousFeet, currentFeet, previousX, currentX) {
+    let landing = null;
+    let earliest = Infinity;
+    const descent = previousFeet - currentFeet;
+    if (descent <= 0) return null;
+    // Wrapping around the screen is not a sweep through its centre.
+    if (Math.abs(currentX - previousX) > width / 2) previousX = currentX;
+    for (const platform of platforms) {
+      if (platform.broken || platform.y < cameraY + 4) continue;
+      if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
+      const t = (previousFeet - platform.y) / descent;
+      if (t < 0 || t > 1 || t >= earliest) continue;
+      const feetX = previousX + (currentX - previousX) * t;
+      const platformX = (platform.previousX ?? platform.x)
+        + (platform.x - (platform.previousX ?? platform.x)) * t;
+      if (Math.abs(feetX - platformX) > platform.hitboxWidth * .5 + player.width * .3) continue;
+      landing = platform;
+      earliest = t;
+    }
+    return landing;
   }
 
   function hazardHitbox(hazard) {
@@ -3282,6 +3330,7 @@
     if (!sidBoss) peakY = Math.max(peakY, player.y);
 
     for (const platform of platforms) {
+      platform.previousX = platform.x;
       if (platform.kind === "moving" && !platform.broken) {
         platform.x = Math.max(platform.width * .55, Math.min(width - platform.width * .55,
           platform.originX + Math.sin(elapsed * 1.65 + platform.phase) * platform.range));
@@ -3305,14 +3354,8 @@
     if (mode !== "running") return;
 
     if (player.vy < 0) {
-      for (const platform of platforms) {
-        if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
-        // A platform that has already slipped below the visible playfield must
-        // not catch the player off-screen. This prevents invisible landings at
-        // the bottom edge after the camera has moved upward.
-        if (platform.y < cameraY + 4) continue;
-        if (platform.broken || previousFeet < platform.y || currentFeet > platform.y) continue;
-        if (Math.abs(player.x - platform.x) > platform.hitboxWidth * .5 + player.width * .3) continue;
+      const platform = landingPlatform(previousFeet, currentFeet, previousPlayerX, player.x);
+      if (platform) {
         if (platform.kind === "break") platform.broken = true;
         // Snap the sprite's feet to the exact contact plane; otherwise one frame of
         // downward travel makes the character visibly sink into the platform.
@@ -3329,7 +3372,6 @@
         if (platform.kind === "spring") {
           effects.push({ index: 10, x: player.x, y: platform.y, age: 0, duration: .3, size: 46 * visualScale() });
         }
-        break;
       }
     }
     if (mode !== "running") return;
@@ -3356,7 +3398,7 @@
       const horizontalReach = Math.max(
         (hitbox.width + player.width * .44) / 2,
         hitbox.width / 2 + player.width * .29,
-      );
+      ) + Math.abs(player.vx) * dt;
       const verticalReach = hitbox.height / 2 + player.height / 2
         + (Math.abs(player.vy) + hazard.speed) * dt + 4;
       if (Math.abs(player.x - hitbox.x) > horizontalReach || Math.abs(player.y - hitbox.y) > verticalReach) continue;
@@ -3379,8 +3421,8 @@
         }
       }
       if (invulnerableTimer > 0) continue;
-      const overlaps = spriteOverlapsEllipse(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
-        player.x, player.y, player.width * .29, player.height * .34);
+      const overlaps = sweptHazardContact(hitbox, previousHazardY, previousPlayerX,
+        previousFeet + player.height / 2);
       if (overlaps) {
         endGame();
         return;
@@ -3433,11 +3475,12 @@
 
   function draw() {
     if (!ctx) return;
-    // Clear in physical pixels before any camera/intro transforms. Reset the
-    // compositor too, so no old sprite pixels can accumulate between frames.
+    // Reset the compositor before the opaque backdrop paints the entire frame.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = "source-over";
+    // Keep an explicit physical-pixel clear for restored WebKit contexts;
+    // mobile regressions here previously left trails across scene changes.
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (mode === "intro" && intro) { drawIntro(); return; }

@@ -61,6 +61,8 @@ async function harness(mobile, failStartup = false) {
   const source = originalSource.replace("resolve(img)", "resolve(img.native)")
     .replace(/\}\)\(\);\s*$/, `expose({ art, assetStages, loadStage, streamWorldAssets, draw, drawAntarctica, drawWinterMemory,
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
+      rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
+      cacheSize(sprite){return rasterCache.get(sprite)?.size || 0;},
       spawnWinterEncounter, updateWinterEncounter, resetWinterEncounters, winterEnemyGeometry, drawWinterEncounter,
       startSpaceEventTest, spawnSpaceEncounter, clearSpaceEncounter, updateSpaceEvents, collideWithSpaceEvents, drawSpaceEvents,
       startSidBossTest, beginSidBoss, updateSidBoss, collideSidShots, drawSidBoss, enterSummit, drawSummitBackdrop,
@@ -120,6 +122,41 @@ for (const mobile of [true, false]) {
   const bytes = (await Promise.all([...h.requests.keys()].map(async (src) => (await fs.stat(src)).size))).reduce((sum, n) => sum + n, 0);
   console.log(`${mobile ? "Mobile" : "Desktop"}: startup ${h.requests.size}/${Object.keys(dataset).length} files, ${(bytes / 1048576).toFixed(2)} MiB`);
   a.startGame(true, { adminTest: true });
+  // Fast descents must hit the first surface in space, not array order.
+  const landingState = a.state();
+  const savedPlatforms = [...landingState.platforms];
+  const platform = (y, x=100) => ({y, x, hitboxWidth:20, broken:false});
+  const low = platform(110), high = platform(130);
+  landingState.platforms.splice(0, landingState.platforms.length, low, high);
+  assert.equal(a.landingPlatform(140, 100, 100, 100), high);
+  assert.equal(a.landingPlatform(100, 140, 100, 100), null, "Ascending feet cannot land");
+  landingState.platforms.splice(0, landingState.platforms.length, platform(120));
+  assert.ok(a.landingPlatform(140, 100, 80, 120), "Use horizontal position at contact time");
+  assert.equal(a.landingPlatform(140,100,landingState.width+5,-5),null,"Screen wrap must not cross middle platforms");
+  const moving = {...platform(120,120), previousX:80};
+  landingState.platforms.splice(0, landingState.platforms.length, moving);
+  assert.equal(a.landingPlatform(140,100,100,100),moving,"Moving platform uses position at contact time");
+  landingState.platforms.splice(0, landingState.platforms.length, ...savedPlatforms);
+  const pixels = new Uint8ClampedArray(32*32*4);
+  for(let y=8;y<24;y++) for(let x=8;x<24;x++) pixels[(y*32+x)*4+3]=255;
+  const masked = {mask:a.alphaMask(pixels,32,0,0,32,32)};
+  assert.equal(a.spriteOverlapsEllipse(masked,100,100,32,32,86,100,2,2),false,"Transparent margins cannot kill");
+  assert.equal(a.spriteOverlapsEllipse(masked,100,100,32,32,100,100,2,2),true);
+  const savedPlayer = {...landingState.player};
+  Object.assign(landingState.player,{x:100,y:60,width:8,height:8});
+  assert.equal(a.sweptHazardContact({sprite:masked,x:100,y:100,width:32,height:32},100,100,140),true,
+    "A fast player crossing a hazard cannot tunnel between frames");
+  assert.equal(a.sweptHazardContact({sprite:masked,x:140,y:100,width:32,height:32},100,100,140),false,
+    "Swept collision must preserve a safe near miss");
+  Object.assign(landingState.player,savedPlayer);
+  const cachePose = a.art.heroFrames[0];
+  for(let i=0;i<120;i++) a.rasterSprite(cachePose,100+i,150+i);
+  assert.ok(a.cacheSize(cachePose)<=9,"Animated sizes must not churn texture allocations");
+  const originalTexture=a.rasterSprite(cachePose,800,900);
+  assert.equal(originalTexture.width,cachePose.sw,"Fallback preserves original source resolution");
+  assert.equal(originalTexture,a.rasterSprite(cachePose,801,901),"Variable sizes reuse original texture");
+  a.resize();
+  console.log(`${mobile ? "Mobile" : "Desktop"}: swept landings, moving platforms, wrap, alpha contours and bounded animation cache passed`);
   const skyPath = dataset.backgroundCloudSrc;
   h.blocked.add(skyPath);
   a.stage(1300); a.streamWorldAssets();
