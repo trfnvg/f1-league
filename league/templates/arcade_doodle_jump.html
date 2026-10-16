@@ -37,6 +37,7 @@
           <button id="doodle-antarctica-test" type="button" title="Посмотреть переход в Антарктиду без сохранения результата">Катсцена · 8000 → Антарктида</button>
           <button id="doodle-antarctica-arrival-test" type="button" title="Проверить прибытие в пещеру и встречу с Сидом">Пещера · встреча с Сидом</button>
           <button id="doodle-winter-biome-test" type="button" title="Проверить зимних мобов и фон после +100 очков">Зима · мобы и фон +100</button>
+          <button id="doodle-sid-boss-test" type="button">Зима · босс Сид · 10 000</button>
           <button id="doodle-winter-iceman-test" type="button">Зима · Айсмен</button>
           <button id="doodle-winter-strategist-test" type="button">Зима · стратег Ferrari</button>
           <button id="doodle-winter-steward-test" type="button">Зима · снеговик FIA</button>
@@ -99,6 +100,10 @@
           data-winter-iceman-src="{% static 'league/images/doodle-jump/winter-iceman-v1.png' %}"
           data-winter-strategist-src="{% static 'league/images/doodle-jump/winter-strategist-v1.png' %}"
           data-winter-steward-src="{% static 'league/images/doodle-jump/winter-steward-v1.png' %}"
+          data-sid-boss-attack-src="{% static 'league/images/doodle-jump/sid-boss-attack-v1.png' %}"
+          data-sid-boss-finale-src="{% static 'league/images/doodle-jump/sid-boss-finale-v1.png' %}"
+          data-sid-boss-props-src="{% static 'league/images/doodle-jump/sid-boss-props-v1.png' %}"
+          data-summit-background-src="{% static 'league/images/doodle-jump/summit-paddock-v1.png' %}"
           data-garage-platforms-src="{% static 'league/images/doodle-jump/forgotten-platforms-v1.png' %}"
           data-enemy-variants-src="{% static 'league/images/doodle-jump/tire-western-v4.png' %}"
           data-baby-kimi-src="{% static 'league/images/doodle-jump/baby-kimi-newborn-v2.png' %}"
@@ -166,6 +171,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=space-encounters-v40" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=sid-boss-v43" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
