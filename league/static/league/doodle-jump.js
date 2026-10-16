@@ -2786,7 +2786,7 @@
     const event = spaceEncounter;
     if (!event) return false;
     event.age += dt;
-    if (event.type === "carbon" && event.age >= 1.5) {
+    if (event.type === "carbon") {
       for (const item of event.debris) item.y += item.vy * dt;
     }
     if (event.type === "alonso") {
@@ -2842,7 +2842,7 @@
         invulnerableTimer = Math.max(invulnerableTimer, .65);
         openingJump = false; somersault = null;
       }
-    } else if (event.type === "carbon" && event.age >= 1.5) {
+    } else if (event.type === "carbon") {
       for (const item of event.debris) {
         if (item.dead || item.y < cameraY - 80) continue;
         const sprite = art.spaceCarbon[item.index], w = item.index < 2 ? 72 : 26, h = spriteSize(sprite, w);
@@ -2874,14 +2874,9 @@
     if (!event || !inSpaceChapter() || spaceBoss) return;
     let label = "", labelX = event.x, labelY = worldToScreen(event.y) - 55;
     if (event.type === "carbon") {
-      if (event.age < 1.5) {
-        ctx.save(); ctx.setLineDash([3, 8]); ctx.lineWidth = 1.5;
-        for (const item of event.debris) {
-          ctx.strokeStyle = item.index < 2 ? "#9cceea" : "#edab83";
-          ctx.beginPath(); ctx.moveTo(item.x, 65); ctx.lineTo(item.x, height - 40); ctx.stroke();
-        }
-        ctx.restore(); label = "КАРБОНОВЫЙ ДОЖДЬ"; labelX = width / 2; labelY = 108;
-      } else for (const item of event.debris) {
+      // Draw continuously from spawn above the viewport: hiding the sprites
+      // during a warning let the rising camera reveal them mid-screen at once.
+      for (const item of event.debris) {
         if (!item.dead) drawFrame(art.spaceCarbon[item.index], item.x, item.y, item.index < 2 ? 72 : 26);
       }
     } else if (event.type === "satellite") {

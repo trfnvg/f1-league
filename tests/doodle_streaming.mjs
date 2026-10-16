@@ -333,7 +333,14 @@ for (const mobile of [true, false]) {
     assert.equal(a.spawnSpaceEncounter("carbon"),false,"Space events cannot stack");
     if (kind === "carbon") {
       assert.equal(a.state().spaceEncounter.debris.length,3,"Carbon shower must leave one of four lanes clear");
-      a.updateSpaceEvents(1.4); assert.ok(a.state().spaceEncounter.age<1.5,"Meteor warning lasts before collision is enabled");
+      const debris = a.state().spaceEncounter.debris;
+      assert.ok(debris.every(d=>d.y-a.state().cameraY>a.state().height+40),"Carbon starts above the viewport");
+      const initialY=debris.map(d=>d.y);
+      a.updateSpaceEvents(1/60);
+      debris.forEach((d,i)=>{
+        assert.ok(d.y<initialY[i],"Carbon falls immediately without a hidden warning phase");
+        assert.ok(initialY[i]-d.y<2,"First frame must move smoothly without a teleport");
+      });
       a.draw();
       a.spaceLanding(); assert.equal(a.state().player.vy,850);
       assert.ok(a.state().spaceEncounter.debris[0].dead);
