@@ -175,6 +175,7 @@
   }
 
   async function startGame() {
+    await enterGameFullscreen();
     if (deadlineClosed || (Number.isFinite(closeAt) && Date.now() >= closeAt)) {
       closeGameAtDeadline();
       return;
@@ -628,6 +629,28 @@
     animationFrame = window.requestAnimationFrame(frame);
   }
 
+  const fullscreenMachine = document.getElementById("flappy-machine");
+  async function enterGameFullscreen() {
+    if (!fullscreenMachine || fullscreenMachine.classList.contains("is-fullscreen")) return;
+    fullscreenMachine.classList.add("is-fullscreen");
+    document.body.classList.add("arcade-fs-active");
+    resize();
+    const enter = fullscreenMachine.requestFullscreen || fullscreenMachine.webkitRequestFullscreen;
+    if (enter) { try { await enter.call(fullscreenMachine); } catch (_) { /* Fixed viewport fallback for Safari. */ } }
+    resize();
+  }
+  function leaveGameFullscreen() {
+    fullscreenMachine?.classList.remove("is-fullscreen");
+    document.body.classList.remove("arcade-fs-active");
+    resize();
+  }
+  document.getElementById("arcade-exit-fullscreen")?.addEventListener("click", () => {
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (document.fullscreenElement || document.webkitFullscreenElement) exit?.call(document);
+    leaveGameFullscreen();
+  });
+  document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) leaveGameFullscreen(); });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") leaveGameFullscreen(); });
   startButton.addEventListener("click", () => { void startGame(); });
   canvas.addEventListener("pointerdown", (event) => {
     if (state !== "playing") return;

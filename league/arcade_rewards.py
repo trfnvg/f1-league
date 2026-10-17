@@ -2,7 +2,7 @@ import secrets
 from datetime import timedelta
 
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import F, Sum
 from django.utils import timezone
 
 from .models import (
@@ -10,9 +10,12 @@ from .models import (
     ArcadeAttempt,
     ArcadeGameClosure,
     ArcadeRecord,
+    ArcadeSettings,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
+    DoodleAttempt,
     Event,
+    MinesweeperAttempt,
     PlayerWildcard,
     Prediction,
 )
@@ -80,25 +83,61 @@ class ArcadeWheelError(ValueError):
 
 
 def arcade_wheel_event(season_year, now=None):
-    now = now or timezone.now()
-    events = Event.objects.filter(season_year=season_year).exclude(
-        status=Event.Status.SCORED
-    ).order_by("deadline", "round_number")
-    for event in events:
-        if event.race_datetime and event.race_datetime <= now:
-            continue
-        return event
-    return None
+    """Compatibility for callers outside the library; use the selected event."""
+    settings = ArcadeSettings.objects.select_related("competition_event").filter(pk=1).first()
+    event = settings.competition_event if settings and settings.competition_opened_at else None
+    return event if event and event.season_year == season_year else None
 
 
-def best_event_arcade_attempt(event, *, through=None):
-    return event_arcade_attempts(event, through=through).first()
+def best_event_arcade_attempt(
+    event, *, through=None, game_key=ArcadeSettings.Game.FLAPPY, opened_at=None,
+):
+    """Return the event leader, optionally limited to an admin-opened contest window."""
+    if not event:
+        return None
+    through = min(through or timezone.now(), event.deadline)
+    window_start = opened_at or event.deadline - WHEEL_WINDOW
+    eligible_users = Prediction.objects.filter(event=event).values("user_id")
+    eligible = {
+        "user_id__in": eligible_users,
+        "user__is_active": True,
+        "user__is_staff": False,
+        "finished_at__gte": window_start,
+        "finished_at__lte": through,
+    }
+    from .models import ArcadeCompetition
+    contest = ArcadeCompetition.objects.filter(event=event, game_key=game_key).first()
+    if contest:
+        eligible["competition_id"] = contest.pk
+    if game_key == ArcadeSettings.Game.DOODLE_JUMP:
+        return (
+            DoodleAttempt.objects.filter(**eligible, score__isnull=False)
+            .select_related("user")
+            .order_by("-score", "finished_at", "user__username")
+            .first()
+        )
+    if game_key == ArcadeSettings.Game.MINESWEEPER:
+        return (
+            MinesweeperAttempt.objects.filter(
+                **eligible,
+                completed=True,
+                elapsed_ms__isnull=False,
+            )
+            .select_related("user")
+            .annotate(score=F("elapsed_ms"))
+            .order_by("elapsed_ms", "finished_at", "user__username")
+            .first()
+        )
+    attempts = event_arcade_attempts(event, through=through, opened_at=opened_at)
+    if contest:
+        attempts = attempts.filter(competition=contest)
+    return attempts.first()
 
 
-def event_arcade_attempts(event, *, through=None):
+def event_arcade_attempts(event, *, through=None, opened_at=None):
     if through is None:
         through = timezone.now()
-    window_start = event.deadline - WHEEL_WINDOW
+    window_start = opened_at or event.deadline - WHEEL_WINDOW
     eligible_users = Prediction.objects.filter(event=event).values("user_id")
     return (
         ArcadeAttempt.objects.filter(
@@ -115,7 +154,7 @@ def event_arcade_attempts(event, *, through=None):
 
 
 def get_or_create_arcade_game_closure(season_year, now=None):
-    """Freeze Pit Lane Flight once the active event's prediction deadline passes."""
+    """Freeze the manually selected Pit Lane Flight event after its deadline."""
     now = now or timezone.now()
     with transaction.atomic():
         closure = ArcadeGameClosure.objects.filter(
@@ -125,20 +164,25 @@ def get_or_create_arcade_game_closure(season_year, now=None):
         if closure:
             return closure, False
 
-        event = arcade_wheel_event(season_year, now)
-        if event and event.deadline > now:
-            return None, False
-        if event is None:
-            event = (
-                Event.objects.filter(season_year=season_year, deadline__lte=now)
-                .order_by("-deadline", "-round_number")
-                .first()
-            )
-        if not event:
+        arcade_settings = ArcadeSettings.objects.filter(pk=1).select_related("competition_event").first()
+        event = arcade_settings.competition_event if arcade_settings else None
+        opened_at = arcade_settings.competition_opened_at if arcade_settings else None
+        if (
+            not event
+            or event.season_year != season_year
+            or not opened_at
+            or arcade_settings.active_game != ArcadeSettings.Game.FLAPPY
+            or event.deadline > now
+        ):
             return None, False
 
-        award, _ = award_event_arcade_trophy(event, now=now)
-        attempt = best_event_arcade_attempt(event, through=event.deadline)
+        award, _ = award_event_arcade_trophy(event, now=now, opened_at=opened_at)
+        attempt = best_event_arcade_attempt(
+            event,
+            through=event.deadline,
+            game_key=ArcadeSettings.Game.FLAPPY,
+            opened_at=opened_at,
+        )
         winner = award.player if award else (attempt.user if attempt else None)
         score = attempt.score if attempt and winner and attempt.user_id == winner.id else None
         attempts = award.attempts if award else 0
@@ -156,7 +200,7 @@ def get_or_create_arcade_game_closure(season_year, now=None):
         return closure, created
 
 
-def closed_event_arcade_leaderboard(event, user=None):
+def closed_event_arcade_leaderboard(event, user=None, *, opened_at=None):
     if not event:
         return {
             "records": [],
@@ -167,7 +211,7 @@ def closed_event_arcade_leaderboard(event, user=None):
             "attempts": 0,
         }
 
-    attempts = list(event_arcade_attempts(event, through=event.deadline))
+    attempts = list(event_arcade_attempts(event, through=event.deadline, opened_at=opened_at))
     best_by_user = {}
     for attempt in attempts:
         best_by_user.setdefault(attempt.user_id, attempt)
@@ -193,7 +237,7 @@ def closed_event_arcade_leaderboard(event, user=None):
         for index, attempt in enumerate(ordered_best, start=1)
     ]
     own_record = next((row for row in rows if row["is_current_user"]), None)
-    total_attempts = ArcadeRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0
+    total_attempts = ArcadeRecord.objects.filter(user__is_staff=False).aggregate(total=Sum("total_attempts"))["total"] or 0
     total_attempts += sum(fallback_counts.values())
     return {
         "records": rows[:10],
@@ -205,7 +249,7 @@ def closed_event_arcade_leaderboard(event, user=None):
     }
 
 
-def award_event_arcade_trophy(event, now=None):
+def award_event_arcade_trophy(event, now=None, *, opened_at=None):
     """Award one Pit Lane Flight trophy to this event's deadline-period winner."""
     now = now or timezone.now()
     if not event or now < event.deadline:
@@ -220,7 +264,12 @@ def award_event_arcade_trophy(event, now=None):
         if existing:
             return existing, False
 
-        attempt = best_event_arcade_attempt(locked_event, through=locked_event.deadline)
+        attempt = best_event_arcade_attempt(
+            locked_event,
+            through=locked_event.deadline,
+            game_key=ArcadeSettings.Game.FLAPPY,
+            opened_at=opened_at,
+        )
         if not attempt:
             return None, False
 
@@ -284,11 +333,20 @@ def spin_event_wheel(event, user, now=None):
     if not wheel_window_is_open(locked_event, now):
         raise ArcadeWheelError("Колесо открывается после дедлайна и закрывается перед стартом гонки.")
 
-    attempt = best_event_arcade_attempt(locked_event, through=locked_event.deadline)
+    settings = ArcadeSettings.objects.filter(pk=1).first()
+    if not settings or settings.competition_event_id != locked_event.pk or not settings.competition_opened_at:
+        raise ArcadeWheelError("Администратор ещё не открыл зачёт для этого этапа.")
+    game_key = settings.active_game
+    attempt = best_event_arcade_attempt(
+        locked_event,
+        through=locked_event.deadline,
+        game_key=game_key,
+        opened_at=settings.competition_opened_at,
+    )
     if not attempt:
-        raise ArcadeWheelError("За эту неделю пока нет засчитанных заездов участников этапа.")
+        raise ArcadeWheelError("За выбранный этап пока нет засчитанных попыток участников.")
     if attempt.user_id != user.id:
-        raise ArcadeWheelError("Прокрутить колесо может только лидер аркады за эту неделю.")
+        raise ArcadeWheelError("Прокрутить колесо может только победитель зачёта выбранного этапа.")
 
     existing = ArcadeWheelSpin.objects.filter(event=locked_event).first()
     if existing:
@@ -384,7 +442,7 @@ def activate_event_wheel_prize(event, user, payload, now=None):
 
     spin = ArcadeWheelSpin.objects.select_for_update().filter(event=locked_event).first()
     if not spin or spin.winner_id != user.id:
-        raise ArcadeWheelError("Этот приз доступен только победителю аркадной недели.")
+        raise ArcadeWheelError("Этот приз доступен только победителю аркадного зачёта выбранного этапа.")
     if spin.activated_at:
         raise ArcadeWheelError("Приз уже активирован.")
 

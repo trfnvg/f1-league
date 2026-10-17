@@ -969,6 +969,7 @@ class TelegramBotState(models.Model):
 
 
 class ArcadeAttempt(models.Model):
+    competition = models.ForeignKey("ArcadeCompetition", null=True, blank=True, on_delete=models.SET_NULL, related_name="flappy_attempts")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="arcade_attempts")
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -983,6 +984,7 @@ class ArcadeAttempt(models.Model):
 
 
 class DoodleAttempt(models.Model):
+    competition = models.ForeignKey("ArcadeCompetition", null=True, blank=True, on_delete=models.SET_NULL, related_name="doodle_attempts")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="doodle_attempts")
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -1149,6 +1151,21 @@ class ArcadeSettings(models.Model):
         default=False,
         help_text="Если выключено, страницу и игру видят только администраторы. Можно включить позже без удаления результатов.",
     )
+    competition_event = models.ForeignKey(
+        Event,
+        verbose_name="Этап зачёта",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        help_text="Игра и её победитель привязаны только к этому выбранному этапу.",
+    )
+    competition_opened_at = models.DateTimeField(
+        "Открыто участникам с",
+        null=True,
+        blank=True,
+        help_text="С этой даты и до дедлайна выбранного этапа попытки идут в зачёт.",
+    )
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 
     class Meta:
@@ -1161,6 +1178,18 @@ class ArcadeSettings(models.Model):
 
     def __str__(self):
         return "Активная мини-игра и доступ"
+
+
+class ArcadeCompetition(models.Model):
+    game_key = models.CharField(max_length=24, choices=ArcadeSettings.Game.choices)
+    event = models.OneToOneField(Event, on_delete=models.PROTECT, related_name="arcade_competition")
+    opened_at = models.DateTimeField()
+    frozen_at = models.DateTimeField(null=True, blank=True)
+    standings = models.JSONField(default=list, blank=True)
+    total_attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("-event__deadline",)
 
 
 class MinesweeperAttempt(models.Model):
