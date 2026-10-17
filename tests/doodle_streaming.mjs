@@ -62,7 +62,8 @@ async function harness(mobile, failStartup = false) {
     .replace(/\}\)\(\);\s*$/, `expose({ art, assetStages, loadStage, streamWorldAssets, draw, drawAntarctica, drawWinterMemory,
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
-      updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour,
+      updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
+      cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
         player.x=pos.x;player.y=top+player.height/2-2;player.vy=-300;
@@ -202,6 +203,16 @@ for (const mobile of [true, false]) {
   a.skyState().hawks.push(existingHawk);
   a.updateSkyDetails(1/60);
   assert.ok(a.skyState().hawks.includes(existingHawk),"Sky details must not erase existing enemies");
+  a.draw();
+  const cloudTextures = a.cloudTextures();
+  assert.ok(cloudTextures?.size > 0, "Visible clouds have display-resolution textures");
+  const cachedClouds = [...cloudTextures.values()];
+  for (let i = 0; i < 60; i++) a.draw();
+  assert.deepEqual([...a.cloudTextures().values()], cachedClouds,
+    "Steady sky rendering must reuse textures without frame-by-frame allocations");
+  const count = cloudTextures.size;
+  a.drawCloud(0, -10000, 123, 45);
+  assert.equal(cloudTextures.size, count, "Offscreen scenery must not allocate textures");
   a.draw();
   if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-sky-ducks-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
   a.duckLanding();
