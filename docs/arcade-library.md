@@ -1,0 +1,19 @@
+# Arcade library and competition history
+
+Built-in GPT imagegen covers saved in `league/static/league/images/arcade-doodle-cover-v1.png` and `arcade-flappy-cover-v1.png`. Original generated resolution retained.
+
+## Doodle cover prompt
+
+Use case: stylized-concept. Production cover art for browser arcade library card, landscape 3:2 composition. Game title will be added in HTML; NO text or letters. Reference 1 is hero character identity, reference 2 is scene and pixel style. A cheerful cowboy Formula 1 toy driver (exact white suit, cream cowboy hat, brown boots, turquoise trim from reference) leaps upward from a sandstone platform through sunlit western canyon with a little blue sky above. Preserve game identity, polished crisp 16-bit pixel art, warm sandstone and calm blue palette, clean strong silhouette, purposeful pixel clusters. Driver in right half, less busy left third for UI crop. No UI, borders, logos invented, no watermark. Opaque illustration.
+
+## Flappy cover prompt
+
+Use case: stylized-concept. Production cover art for browser arcade library card, landscape 3:2 composition. Game title will be added in HTML, NO text or letters. Reference 1 is the recognizable banana Leclerc character: yellow banana costume with a smiling dark-haired racing driver's face visible in opening; translate into sharp charming 16-bit pixel-art game hero. Reference 2 is game track scenery. Banana floats midair between two red-white racing barrier gates at a sunny seaside Formula 1 paddock, blue mountains and grandstand distant, turquoise sea and red-white kerbs. Hero right of centre, open calmer blue space left for crop. Polished crisp pixel clusters, same clean retro arcade treatment as cowboy Formula 1 jumping game. No UI, frame, words, captions, watermark. Opaque illustration.
+
+## Release behaviour
+
+`/arcade/` is the library. Both published games remain playable, including after a deadline. Starts create all-time attempts; only starts inside an open selected contest bind to its immutable game/event record. Finishes after the deadline update global records only. Event standings and attempt totals freeze once under the competition lock. Settings changes cannot delete old contest snapshots. Historical Flappy closures are imported by migration 0038, using existing attempts and the persisted winner when old detailed attempts are unavailable.
+
+The current competition retains the wheel through the race start. Archived games have no wheel; free play cannot alter its eligible attempts. The admin page explicitly selects a game and future-deadline event. Admin test links do not save results.
+
+Play requests fullscreen inside the user interaction. Doodle retains its existing fixed viewport fallback; Flappy adds a fixed viewport fallback and exit control for browsers that reject native fullscreen. Actual browser testing was unavailable in this session. Server regression tests cover both pages, deadline/late finish, frozen attempts, archival wheel removal, publication, test isolation and duplicate submissions.

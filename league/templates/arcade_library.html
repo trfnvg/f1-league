@@ -1,0 +1,18 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Аркады · Fastlap{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">{% endblock %}
+{% block content %}
+<main class="arcade-library">
+  <header class="library-heading"><div><p class="library-eyebrow">FASTLAP · PLAY ROOM</p><h1>Аркады</h1><p>Играй, ставь рекорды и участвуй в соревнованиях Гран-при.</p></div>{% if user.is_staff %}<a class="library-link" href="{% url 'league:arcade_control' %}">Управление аркадами ↗</a>{% endif %}</header>
+  {% if current_game %}
+  <section class="library-featured">
+    <img src="{% static current_game.cover %}" alt="" fetchpriority="high">
+    <div class="library-featured-copy"><p class="library-eyebrow">{% if contest_open %}<i></i> СОРЕВНОВАНИЕ ГРАН-ПРИ{% else %}ЗАЧЁТ ЗАВЕРШЁН{% endif %}</p><p class="library-event">R{{ contest.event.round_number }} · {{ contest.event.name }}</p><h2>{{ current_game.title }}</h2><p>{% if contest_open %}Результаты идут в зачёт до {{ contest.event.deadline|date:'d.m · H:i' }}. Победителю откроется колесо.{% else %}Результаты этапа зафиксированы. Продолжай играть за глобальный рекорд.{% endif %}</p><a class="library-play" href="{{ current_game.url }}">{% if contest_open %}Участвовать{% else %}Играть{% endif %} <span>↗</span></a></div>
+  </section>
+  {% else %}<div class="library-notice">Сейчас нет активного соревнования. Все игры доступны для свободных забегов.</div>{% endif %}
+  <div class="library-section-heading"><h2>Библиотека игр</h2><span>Глобальные рекорды · без ограничения попыток</span></div>
+  <div class="library-grid">{% for game in games %}
+    <article class="library-card"><a class="library-cover" href="{{ game.url }}" tabindex="-1" aria-hidden="true"><img src="{% static game.cover %}" alt="" loading="lazy"></a><div class="library-card-copy"><p class="library-eyebrow">{{ game.subtitle }}</p><h3>{{ game.title }}</h3><p>{{ game.description }}</p><a class="library-play" href="{{ game.url }}">Играть <span>↗</span></a></div></article>
+  {% endfor %}</div>
+</main>
+{% endblock %}

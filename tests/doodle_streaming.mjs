@@ -191,7 +191,11 @@ for (const mobile of [true, false]) {
   for(let i=0;i<480;i++)a.updateSkyDetails(1/60);
   assert.equal(a.skyState().skyFlock.birds.length,5);
   assert.ok(a.skyState().totoCloud,"Toto should assemble only in the blue sky");
-  assert.equal(a.skyState().hawks.length,0,"The flock should not overlap hawks");
+  assert.ok(a.skyState().skyFlock.birds.every(b=>!("number" in b)),"The flock has no racing numbers");
+  const existingHawk={x:100,previousX:100,y:6600,size:50,direction:1,speed:150,flapElapsed:0};
+  a.skyState().hawks.push(existingHawk);
+  a.updateSkyDetails(1/60);
+  assert.ok(a.skyState().hawks.includes(existingHawk),"Sky details must not erase existing enemies");
   a.draw();
   if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-sky-ducks-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
   a.duckLanding();

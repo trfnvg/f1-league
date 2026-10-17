@@ -7,10 +7,12 @@
   <link rel="preload" as="image" href="{% static 'league/images/doodle-jump/western-ascent-retro-v4.png' %}" fetchpriority="high">
   <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=admin-toolbar-v38">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
+  <link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
 {% endblock %}
 
 {% block content %}
 <section class="doodle-page" aria-labelledby="doodle-title">
+  <nav class="arcade-game-nav"><a href="{% url 'league:arcade' %}">← Все аркады</a><span>{% if competitive_now %}Идёт зачёт Гран-при{% else %}Свободная игра · глобальные рекорды{% endif %}</span></nav>
   <header class="doodle-heading">
     <div>
       <p class="doodle-kicker"><span></span> WESTERN PIXEL ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
@@ -147,7 +149,7 @@
     <div class="doodle-leaderboard-heading">
       <div>
         <p class="doodle-kicker"><span></span> WILD GP · ALL-TIME</p>
-        <h2 id="doodle-leaderboard-title">Рейтинг высоты</h2>
+        <h2 id="doodle-leaderboard-title">Глобальный рейтинг</h2>
       </div>
       <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> завершённых заездов</span>
     </div>
@@ -167,12 +169,14 @@
   </section>
 
   <form hidden id="doodle-csrf-form">{% csrf_token %}</form>
+  {% include "arcade_competition_history.html" %}
+  {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 
   {% if arcade_admin_preview %}<p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>{% endif %}
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=sky-contours-v47" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=arcade-library-v48" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

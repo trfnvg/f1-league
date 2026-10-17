@@ -2357,6 +2357,7 @@
 
   function startGame(skipIntro = false, { forceRestart = false, adminTest = false } = {}) {
     if (!artReady) return;
+    if (!adminTest && !isGameFullscreen()) void toggleFullscreen();
     if (!forceRestart && mode === "intro") { finishIntro(); return; }
     if (!forceRestart && mode === "running") return;
     adminBossTestMode = adminTest;
@@ -2663,8 +2664,7 @@
     if (!skyFlock && skyFlockWait <= 0 && art.duckFrames) {
       const direction = Math.random() < .5 ? -1 : 1;
       skyFlock = { age: 0, x: direction > 0 ? -65 : width + 65,
-        y: cameraY + height * .78, direction, birds: [63, 16, 1, 44, 81].map(number => ({ number, used: false })) };
-      hawks = [];
+        y: cameraY + height * .78, direction, birds: Array.from({ length: 5 }, () => ({ used: false })) };
       skyFlockWait = 20 + Math.random() * 10;
     }
     if (skyFlock) {
@@ -2736,10 +2736,6 @@
       ctx.drawImage(rasterSprite(pose, w, h),
         (pose.sourceX - art.duckCellWidth * .5) * scale,
         (pose.sourceY - art.duckBodyY) * scale, w, h); ctx.restore();
-      // Labels are drawn after mirroring so they read correctly both ways.
-      ctx.fillStyle = "#f4e9c8"; ctx.fillRect(-8, -3, 13, 9);
-      ctx.fillStyle = "#293746"; ctx.textAlign = "center";
-      ctx.font = "bold 7px monospace"; ctx.fillText(String(bird.number), -1.5, 4);
       ctx.restore();
     }
   }
@@ -2751,7 +2747,6 @@
     }
     if (!art.hawkFrames || !art.hawkFrames.length) return false;
 
-    if (skyFlock) return false;
     hawkSpawnWait -= dt;
     if (hawkSpawnWait <= 0) {
       const size = 82 * visualScale();
