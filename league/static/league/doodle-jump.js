@@ -2198,7 +2198,8 @@
       score.className = "doodle-record-score";
       score.textContent = String(record.score);
       const attempts = document.createElement("small");
-      attempts.textContent = `${record.attempts} попыток`;
+      attempts.textContent = new Intl.NumberFormat("ru-RU").format(record.attempts);
+      attempts.setAttribute("aria-label", `${record.attempts} попыток`);
       row.append(rank, name, score, attempts);
       leaderboardNode.appendChild(row);
     });
@@ -2790,7 +2791,8 @@
     }
   }
 
-  function updateHawks(dt) {
+  function updateHawks(dt, previousFeet = player.y - player.height / 2 - player.vy * dt,
+    currentFeet = player.y - player.height / 2, previousPlayerX = player.x - player.vx * dt) {
     if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
       if (forgottenPaddock || cameraY >= spaceFade.start) hawks = [];
       return false;
@@ -2809,7 +2811,6 @@
         direction,
         speed: 135 + Math.random() * 55,
         size,
-        flapElapsed: Math.random() * .3,
       });
       hawkSpawnWait = 4 + Math.random() * 3.5;
     }
@@ -2819,23 +2820,48 @@
       const previousX = hawk.x;
       hawk.previousX = previousX;
       hawk.x += hawk.direction * hawk.speed * dt;
-      hawk.flapElapsed += dt;
       if (hawk.x < -hawk.size || hawk.x > width + hawk.size
         || hawk.y < cameraY - hawk.size || hawk.y > cameraY + height + hawk.size) continue;
 
-      const frame = art.hawkFrames[Math.floor(hawk.flapElapsed * 12) % art.hawkFrames.length];
+      const frame = art.hawkFrames[0];
       const hawkHeight = spriteSize(frame, hawk.size);
+      // Check the descending feet against the actual, mirrored silhouette
+      // before testing harmful side contacts. Interpolate the moving bird too.
+      const startX = Math.abs(player.x - previousPlayerX) > width / 2 ? player.x : previousPlayerX;
+      let bounced = false;
+      if (player.vy < 0 && previousFeet > currentFeet) {
+        const samples = Math.max(1, Math.ceil((previousFeet - currentFeet
+          + Math.abs(hawk.x - previousX) + Math.abs(player.x - startX)) / 3));
+        for (let i = 0; i <= samples; i += 1) {
+          const t = i / samples;
+          const birdX = previousX + (hawk.x - previousX) * t;
+          const feetX = startX + (player.x - startX) * t;
+          if (Math.abs(feetX - birdX) > hawk.size * .46) continue;
+          const maskX = birdX + (feetX - birdX) * hawk.direction;
+          const top = spriteTopAtX(frame, birdX, hawk.y, hawk.size, hawkHeight, maskX);
+          const feet = previousFeet + (currentFeet - previousFeet) * t;
+          if (top <= hawk.y - hawkHeight * .45 || previousFeet < top || feet > top) continue;
+          player.y = top + player.height / 2;
+          player.vy = 810;
+          openingJump = false;
+          bounced = true;
+          break;
+        }
+      }
+      if (bounced) { hawks[kept++] = hawk; continue; }
       const travel = Math.abs(hawk.x - previousX) + Math.abs(player.vx * dt) + Math.abs(player.vy * dt);
       const steps = Math.max(1, Math.ceil(travel / 9));
       let overlaps = false;
       for (let step = 0; step <= steps; step += 1) {
         const t = step / steps;
+        const birdX = previousX + (hawk.x - previousX) * t;
+        const playerX = startX + (player.x - startX) * t;
         if (spriteOverlapsEllipse(frame,
-          previousX + (hawk.x - previousX) * t,
+          birdX,
           hawk.y,
           hawk.size,
           hawkHeight,
-          player.x - player.vx * dt * (1 - t),
+          birdX + (playerX - birdX) * hawk.direction,
           player.y - player.vy * dt * (1 - t),
           player.width * .29,
           player.height * .34)) {
@@ -2856,7 +2882,7 @@
   function drawHawks() {
     if (!art.hawkFrames || !art.hawkFrames.length) return;
     for (const hawk of hawks) {
-      const frame = art.hawkFrames[Math.floor(hawk.flapElapsed * 12) % art.hawkFrames.length];
+      const frame = art.hawkFrames[0];
       const drawHeight = spriteSize(frame, hawk.size);
       const screenY = worldToScreen(hawk.y);
       ctx.save();
@@ -3502,7 +3528,7 @@
     updateSkyDetails(dt);
     const direction = Number(held.right) - Number(held.left);
     const previousPlayerX = player.x;
-    const targetVx = direction * Math.min(440, width * .62) + (winterWind > 0 ? winterWindDirection * 100 : 0);
+    const targetVx = direction * Math.min(440, width * .62) * 1.2 + (winterWind > 0 ? winterWindDirection * 100 : 0);
     const traction = winterSlide > 0 ? (direction ? 8 : 1.8) : 10;
     player.vx += (targetVx - player.vx) * Math.min(1, traction * dt);
     player.x += player.vx * dt;
@@ -3649,7 +3675,7 @@
       const targetCameraY = Math.max(cameraY, player.y - height * .42);
       cameraY += (targetCameraY - cameraY) * (1 - Math.exp(-8 * dt));
     }
-    if (updateHawks(dt)) return;
+    if (updateHawks(dt, previousFeet, currentFeet, previousPlayerX)) return;
     updateSpaceBoss(dt);
     if (mode !== "running") return;
     updateMarshals();

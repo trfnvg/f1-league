@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="{% static 'league/doodle-jump.css' %}?v=admin-toolbar-v38">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
   <link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
+  <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -17,7 +18,7 @@
     <div>
       <p class="doodle-kicker"><span></span> WESTERN PIXEL ARCADE{% if arcade_admin_preview %} · ADMIN ONLY{% endif %}</p>
       <h1 id="doodle-title">COWBOY <em>GP</em></h1>
-      <p class="doodle-lede">Джордж Рассел в ковбойском образе отправляется через гоночный Дикий Запад на поиски легендарного руля. Прыгай по платформам, сбивай шинных гремлинов и продержись как можно дольше.</p>
+      <p class="doodle-lede">От паддока до космоса — прыгай по платформам, встречай боссов и поднимай свой рекорд вместе с Расселом.</p>
       {% if user.is_staff %}<a class="doodle-admin-settings-link" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     </div>
     {% if arcade_admin_preview %}<span class="doodle-admin-badge"><i aria-hidden="true"></i> Только для администраторов</span>{% endif %}
@@ -154,13 +155,14 @@
       </div>
       <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> попыток</span>
     </div>
+    <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Очки</span><span>Попытки</span></div>
     <ol class="doodle-leaderboard-list" id="doodle-leaderboard-list">
       {% for record in doodle_records %}
         <li{% if record.is_current_user %} class="is-current-user"{% endif %}>
           <span class="doodle-rank">{{ record.rank|stringformat:"02d" }}</span>
           <strong>{{ record.username }}</strong>
           <span class="doodle-record-score">{{ record.score }}</span>
-          <small>{{ record.attempts }} попыток</small>
+          <small aria-label="{{ record.attempts }} попыток">{{ record.attempts }}</small>
         </li>
       {% empty %}
         <li class="doodle-board-empty">Рейтинг пока пуст — первый рекорд можно поставить прямо сейчас.</li>
@@ -177,6 +179,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=single-board-v51" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=player-room-v52" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
