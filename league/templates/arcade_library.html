@@ -1,6 +1,6 @@
 {% extends "base.html" %}{% load static %}
 {% block title %}Аркады · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/arcade-library.css' %}"><link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">{% endblock %}
 {% block content %}
 <main class="arcade-library">
   <header class="library-heading"><div><p class="library-eyebrow">FASTLAP · PLAY ROOM</p><h1>Аркады</h1><p>Играй, ставь рекорды и участвуй в соревнованиях Гран-при.</p></div>{% if user.is_staff %}<a class="library-link" href="{% url 'league:arcade_control' %}">Управление аркадами ↗</a>{% endif %}</header>

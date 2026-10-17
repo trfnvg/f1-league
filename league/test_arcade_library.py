@@ -43,6 +43,18 @@ class ArcadeLibraryTests(TestCase):
         from .models import ArcadeAttempt
         self.assertIsNone(ArcadeAttempt.objects.get(pk=response.json()["attempt_id"]).competition_id)
 
+    def test_global_place_is_available_below_top_ten(self):
+        ArcadeRecord.objects.create(user=self.user, best_score=5, total_attempts=3)
+        for i in range(11):
+            rival = User.objects.create_user(f"ranked-{i}")
+            ArcadeRecord.objects.create(user=rival, best_score=10+i, total_attempts=1)
+        data = self.client.get(reverse("league:arcade_leaderboard")).json()
+        self.assertEqual(len(data["records"]), 10)
+        self.assertEqual(data["rank"], 12)
+        self.assertEqual(data["board_record"], 5)
+        page = self.client.get(reverse("league:arcade_game", args=["flappy"]))
+        self.assertContains(page, 'id="arcade-own-rank">12</strong>')
+
     def test_single_board_switches_at_deadline_and_when_paused(self):
         DoodleRecord.objects.create(user=self.user, best_score=900, total_attempts=20)
         attempt = DoodleAttempt.objects.create(user=self.user, competition=self.contest, score=200)

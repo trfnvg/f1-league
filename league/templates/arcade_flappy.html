@@ -5,6 +5,7 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}"><link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
+  <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -13,7 +14,7 @@
   <header class="arcade-heading">
     <div>
       <div class="arcade-kicker"><span></span> 16-BIT RACE MODE</div>
-      <h1 id="arcade-title">PIT LANE<br><em>FLIGHT</em></h1>
+      <h1 id="arcade-title">PIT LANE <em>FLIGHT</em></h1>
       {% if not arcade_scoring_open %}
       <p>Зачёт этой игры закрыт. Победитель выбранного этапа и колесо бонусов — в блоке Pit Lane Power-Up.</p>
       {% else %}
@@ -92,6 +93,7 @@
       </div>
     </div>
     <form hidden id="arcade-csrf-form">{% csrf_token %}</form>
+    <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Ворота</span><span>Попытки</span></div>
     {% if user.is_authenticated %}
       <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
@@ -107,10 +109,6 @@
       </ol>
       <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ board_own_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ board_own_attempts }}</strong></p>
     {% else %}
-      <div class="arcade-board-login">
-        <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
-        <a href="{% url 'login' %}?next=/arcade/">Войти в аккаунт</a>
-      </div>
       <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
           <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong><small>ворот</small></span><span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span></li>
@@ -118,6 +116,10 @@
           <li class="arcade-board-empty" id="arcade-board-empty">{% if arcade_closed_event %}До дедлайна не было завершённых заездов.{% else %}Пока нет рекордов.{% endif %}</li>
         {% endfor %}
       </ol>
+      <div class="arcade-board-login">
+        <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
+        <a href="{% url 'login' %}?next=/arcade/">Войти в аккаунт →</a>
+      </div>
     {% endif %}
   </section>
 

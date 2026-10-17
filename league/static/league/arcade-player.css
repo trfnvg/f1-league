@@ -1,0 +1,78 @@
+/* Shared player-facing chrome. Game canvases and fullscreen geometry are owned
+   by their individual game stylesheets. */
+:is(.arcade-page,.doodle-page,.arcade-library){
+  --room-bg:#101820;--room-panel:#151e27;--room-line:#2c3843;
+  --room-text:#eef2f6;--room-muted:#9aa9b7;--room-accent:#e46b70;
+  font-family:Manrope,system-ui,sans-serif;
+}
+:is(.arcade-page,.doodle-page){max-width:1120px;margin:24px auto 56px}
+.arcade-game-nav{align-items:center;flex-wrap:wrap;padding:0 0 20px;border-bottom:1px solid var(--room-line);font-size:12px;line-height:1.6}
+.arcade-game-nav a{color:#e2e8ef;text-decoration:none;font-weight:700}
+.arcade-game-nav>span{color:var(--room-muted)}
+:is(.arcade-heading,.doodle-heading){margin:28px 0;gap:24px}
+:is(.arcade-heading,.doodle-heading) h1{font-family:Manrope,system-ui,sans-serif;font-size:clamp(32px,5vw,56px);line-height:1.05;letter-spacing:-.045em;color:var(--room-text);text-shadow:none}
+:is(.arcade-heading,.doodle-heading) h1 em{color:var(--room-accent);font-style:normal}
+:is(.arcade-heading,.doodle-heading) p{max-width:680px;font-family:inherit;font-size:14px;line-height:1.8;color:var(--room-muted)}
+:is(.arcade-kicker,.doodle-kicker,.arcade-section-kicker){font-family:Manrope,system-ui,sans-serif;font-size:10px;letter-spacing:.16em;color:var(--room-muted)}
+.arcade-personal-record{background:var(--room-panel);border:1px solid var(--room-line);border-radius:14px;box-shadow:none;padding:18px 24px}
+.arcade-personal-record strong{color:var(--room-text);text-shadow:none;font-variant-numeric:tabular-nums}
+:is(.arcade-page,.doodle-page) :is(.arcade-start,.doodle-start),.arcade-library .library-play{
+  min-height:46px;border:1px solid #885058;border-radius:10px;background:#36232b;
+  color:#fff0f0;box-shadow:none;text-shadow:none;font:800 14px Manrope,system-ui,sans-serif;
+  padding:12px 20px;transition:background .15s,border-color .15s;
+}
+:is(.arcade-page,.doodle-page) :is(.arcade-start,.doodle-start):hover,.arcade-library .library-play:hover{background:#4a2c35;border-color:#d37a81}
+:is(.arcade-game-nav .btn,.doodle-intro-preference,.arcade-reset){background:#17212b;border:1px solid #394652;border-radius:9px;color:#d3dce5;font:600 12px Manrope,system-ui,sans-serif;padding:10px 14px;box-shadow:none}
+:is(.arcade-page,.doodle-page,.arcade-library) :is(button,a):focus-visible{outline:2px solid #e18b90;outline-offset:4px}
+:is(.arcade-leaderboard,.doodle-leaderboard){margin:32px 0 0;padding:0;overflow:hidden;background:var(--room-bg);border:1px solid var(--room-line);border-radius:18px;box-shadow:0 12px 32px #0002;font-family:Manrope,system-ui,sans-serif}
+:is(.arcade-leaderboard-heading,.doodle-leaderboard-heading){display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;margin:0;padding:24px;background:var(--room-panel);border-bottom:1px solid var(--room-line)}
+:is(.arcade-leaderboard-heading,.doodle-leaderboard-heading) h2{margin:6px 0 0;color:var(--room-text);font:800 clamp(18px,2.5vw,24px)/1.45 Manrope,system-ui,sans-serif;letter-spacing:-.025em}
+:is(.arcade-board-meta,.doodle-leaderboard-total){font-size:12px;line-height:1.7;color:var(--room-muted);white-space:normal}
+.arcade-board-meta p{margin:0}
+.arcade-page .arcade-board-meta p{font:500 12px/1.8 Manrope,system-ui,sans-serif;letter-spacing:0;text-transform:none}
+.arcade-page .arcade-board-login a{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:10px 16px;border:1px solid #885058;border-radius:9px;background:#36232b;color:#fff0f0;box-shadow:none;font:700 12px Manrope,system-ui,sans-serif;text-decoration:none}
+.arcade-board-login{gap:12px;flex-wrap:wrap}
+:is(.arcade-total-attempts,.doodle-leaderboard-total) strong{font-size:16px;color:var(--room-text);font-variant-numeric:tabular-nums}
+.arcade-table-labels,:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li{
+  display:grid;grid-template-columns:44px minmax(0,1fr) 100px 100px;align-items:center;gap:16px;
+}
+.arcade-table-labels{padding:13px 24px;color:#91a1b0;font-size:10px;letter-spacing:.09em;text-transform:uppercase;background:#111b24}
+.arcade-table-labels span:nth-child(n+3){text-align:right}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list){display:block;margin:0;padding:0;list-style:none}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li{min-height:74px;padding:15px 24px;margin:0;border:0;border-top:1px solid #25313c;border-radius:0;background:transparent;box-shadow:none}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li:first-child:not(.arcade-board-empty):not(.doodle-board-empty){background:linear-gradient(90deg,#c5a15a12,transparent)}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li:is(.is-you,.is-current-user){background:#20303a;border-left:3px solid #a3bdcc;padding-left:21px}
+:is(.arcade-rank,.doodle-rank){display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #37434f;border-radius:9px;background:#19232c;color:#bdc9d4;font:700 12px Manrope,system-ui,sans-serif}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li:first-child :is(.arcade-rank,.doodle-rank){color:#e3c784;border-color:#8a7548;background:#302b21}
+.arcade-driver-name,.doodle-leaderboard-list>li>strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--room-text);font:700 14px Manrope,system-ui,sans-serif}
+:is(.arcade-record-score,.doodle-record-score){text-align:right;justify-self:stretch;color:var(--room-text);font:800 22px Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums;background:none;border:0;box-shadow:none;padding:0}
+.arcade-leaderboard-list li .arcade-record-score strong{font:inherit;color:inherit}
+.arcade-record-score small,.arcade-attempt-count>small{display:none}
+.arcade-attempt-count,.doodle-leaderboard-list>li>small{text-align:right;justify-self:stretch;grid-column:auto;color:var(--room-muted);font:500 12px Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+.arcade-attempt-count{min-width:0;border:0;padding:0}
+.arcade-leaderboard-list li .arcade-attempt-count strong{color:inherit;font:inherit}
+:is(.arcade-page,.doodle-page) :is(.arcade-start,.doodle-start):is(:hover,:active){transform:none;box-shadow:none}
+:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li:is(.arcade-board-empty,.doodle-board-empty){display:block;padding:32px 24px;color:var(--room-muted);font-size:14px;line-height:1.8}
+:is(.arcade-own-rank,.doodle-leaderboard-note,.arcade-board-login){margin:0;padding:16px 24px;border-top:1px solid var(--room-line);color:var(--room-muted);font:500 12px/1.8 Manrope,system-ui,sans-serif}
+.arcade-wheel-panel{border-radius:18px;border-color:var(--room-line);box-shadow:none}
+.library-featured{border-color:#3b4854;box-shadow:0 16px 36px #0003}
+.library-card{border-color:#303d48;transition:border-color .15s}
+.library-card:hover{border-color:#63727f}
+.library-card-copy{padding:26px}
+.library-card-copy .library-play{width:100%}
+.library-heading h1{color:#f0f3f7}
+.library-eyebrow{color:#aab9c6!important}
+.library-section-heading{margin-top:36px}
+@media(max-width:600px){
+  :is(.arcade-page,.doodle-page){margin-top:16px}
+  :is(.arcade-leaderboard-heading,.doodle-leaderboard-heading){padding:18px;gap:12px;align-items:flex-start;flex-direction:column}
+  .arcade-table-labels,:is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li{grid-template-columns:30px minmax(0,1fr) 62px 68px;gap:8px;padding-left:14px;padding-right:14px}
+  :is(.arcade-leaderboard-list,.doodle-leaderboard-list)>li:is(.is-you,.is-current-user){padding-left:11px}
+  :is(.arcade-rank,.doodle-rank){width:27px;height:29px;font-size:11px}
+  .arcade-driver-name,.doodle-leaderboard-list>li>strong{font-size:12px}
+  :is(.arcade-record-score,.doodle-record-score){font-size:18px}
+  .arcade-attempt-count,.doodle-leaderboard-list>li>small{font-size:10px;grid-column:auto}
+  .arcade-table-labels{font-size:9px;letter-spacing:0}
+  .library-card-copy{padding:20px}
+}
+@media(prefers-reduced-motion:reduce){.library-card,.library-play,.arcade-start,.doodle-start{transition:none}}

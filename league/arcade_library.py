@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, F, Sum
+from django.db.models import Count, F, Q, Sum
 from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -71,11 +71,18 @@ def board(user, game):
     _, Record = models_for(game)
     records = Record.objects.filter(user__is_staff=False, best_score__gt=0).select_related("user").order_by("-best_score", "updated_at", "user_id")
     own = Record.objects.filter(user=user).first() if user.is_authenticated else None
+    own_rank = None
+    if own and own.best_score > 0 and not user.is_staff:
+        own_rank = records.filter(
+            Q(best_score__gt=own.best_score)
+            | Q(best_score=own.best_score, updated_at__lt=own.updated_at)
+            | Q(best_score=own.best_score, updated_at=own.updated_at, user_id__lt=user.pk)
+        ).count() + 1
     rows = [{"username": r.user.get_full_name().strip() or r.user.username, "score": r.best_score,
              "attempts": r.total_attempts, "rank": i, "is_current_user": user.is_authenticated and r.user_id == user.pk}
             for i, r in enumerate(records[:10], 1)]
     data = {"records": rows, "record": own.best_score if own else 0, "attempts": own.total_attempts if own else 0,
-            "rank": next((r["rank"] for r in rows if r["is_current_user"]), None),
+            "rank": own_rank,
             "total_attempts": Record.objects.filter(user__is_staff=False).aggregate(total=Sum("total_attempts"))["total"] or 0}
     data.update(board_title="Глобальный рейтинг", board_scope="global",
                 board_record=data["record"], board_attempts=data["attempts"])

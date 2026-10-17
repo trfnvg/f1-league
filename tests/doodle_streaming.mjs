@@ -63,6 +63,7 @@ async function harness(mobile, failStartup = false) {
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
+      updateHawks, spriteTopAtX, spriteSize,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -537,3 +538,33 @@ assert.ok(failed.events.get("doodle-start:click"));
 failed.events.get("doodle-start:click")({ preventDefault() {} });
 assert.deepEqual(failed.calls, ["reload"]);
 console.log("Startup failure: bounded image retries and reload action passed");
+
+for (const mobile of [true, false]) {
+  const h = await harness(mobile), a = h.api;
+  a.startGame(true, {adminTest:true});
+  const p = a.state().player;
+  p.vx = 0;
+  h.events.get('document:keydown')({code:'ArrowRight',key:'ArrowRight',preventDefault(){}});
+  a.update(1/60);
+  assert.ok(Math.abs(p.vx - Math.min(440,a.state().width*.62)*1.2/6)<.001,
+    'Keyboard movement must be 20% faster on both viewport widths');
+  a.stage(6500);
+  await a.loadStage('sky');
+  for (const direction of [1,-1]) {
+    const hawk={x:a.state().width*.5,y:6800,size:60,direction,speed:150};
+    a.skyState().hawks.splice(0,a.skyState().hawks.length,hawk);
+    p.x=hawk.x; p.vy=-300;
+    const pose=a.art.hawkFrames[0], hh=a.spriteSize(pose,hawk.size);
+    const top=a.spriteTopAtX(pose,hawk.x,hawk.y,hawk.size,hh,hawk.x);
+    p.y=top+p.height/2-4;
+    a.updateHawks(1/60,top+6,top-4,p.x);
+    assert.equal(p.vy,810,'Landing on either flight direction must bounce');
+    assert.equal(a.state().mode,'running');
+    assert.ok(p.y>=top+p.height/2-2,'Landing must not sink into the bird');
+  }
+  const hawk=a.skyState().hawks[0];
+  p.x=hawk.x; p.y=hawk.y; p.vy=0;
+  a.updateHawks(0,p.y-p.height/2,p.y-p.height/2,p.x);
+  assert.equal(a.state().mode,'over','Side contacts remain harmful');
+  console.log(`${mobile?'Mobile':'Desktop'}: 20% faster controls, mirrored hawk landings and harmful side contacts passed`);
+}
