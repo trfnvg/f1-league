@@ -2206,6 +2206,8 @@
 
   function applyLeaderboard(data) {
     if (!data) return;
+    const title = document.getElementById("doodle-leaderboard-title");
+    if (title && data.board_title) title.textContent = data.board_title;
     if (Array.isArray(data.records)) renderLeaderboard(data.records);
     if (totalAttemptsNode && Number.isFinite(data.total_attempts)) totalAttemptsNode.textContent = String(data.total_attempts);
   }

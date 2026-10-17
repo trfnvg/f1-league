@@ -317,15 +317,17 @@
     rankValue.textContent = String(result.rank || "—");
     ownRankLine.append(rankValue, document.createTextNode(" · рекорд "));
     const ownScore = document.createElement("strong");
-    ownScore.textContent = String(result.record || 0);
+    ownScore.textContent = String(result.board_record ?? result.record ?? 0);
     ownRankLine.append(ownScore, document.createTextNode(" · попыток "));
     const attempts = document.createElement("strong");
     attempts.id = "arcade-own-attempts";
-    attempts.textContent = String(result.attempts || 0);
+    attempts.textContent = String(result.board_attempts ?? result.attempts ?? 0);
     ownRankLine.append(attempts);
   }
 
   function syncLeaderboardStats(result) {
+    const title = document.getElementById("arcade-leaderboard-title");
+    if (title && result.board_title) title.textContent = result.board_title;
     if (!totalAttemptsOutput) return;
     totalAttemptsOutput.textContent = new Intl.NumberFormat("ru-RU").format(Number(result.total_attempts) || 0);
   }

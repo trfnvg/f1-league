@@ -43,6 +43,48 @@ class ArcadeLibraryTests(TestCase):
         from .models import ArcadeAttempt
         self.assertIsNone(ArcadeAttempt.objects.get(pk=response.json()["attempt_id"]).competition_id)
 
+    def test_single_board_switches_at_deadline_and_when_paused(self):
+        DoodleRecord.objects.create(user=self.user, best_score=900, total_attempts=20)
+        attempt = DoodleAttempt.objects.create(user=self.user, competition=self.contest, score=200)
+        DoodleAttempt.objects.filter(pk=attempt.pk).update(
+            started_at=self.now-timedelta(minutes=5), finished_at=self.now-timedelta(minutes=4))
+        page = reverse("league:arcade_game", args=["doodle_jump"])
+        endpoint = reverse("league:doodle_leaderboard")
+        response = self.client.get(page)
+        self.assertContains(response, "Зачёт этапа · R1 · Library GP")
+        self.assertNotContains(response, 'class="arcade-history"')
+        data = self.client.get(endpoint).json()
+        self.assertEqual(data["records"][0]["score"], 200)
+        self.assertEqual(data["total_attempts"], 1)
+        self.assertEqual(data["record"], 900)  # Personal all-time best remains intact.
+        self.settings.public_enabled = False
+        self.settings.save(update_fields=["public_enabled"])
+        self.assertEqual(self.client.get(endpoint).json()["board_scope"], "global")
+        self.settings.public_enabled = True
+        self.settings.save(update_fields=["public_enabled"])
+        self.event.deadline = self.now-timedelta(minutes=1)
+        self.event.save(update_fields=["deadline"])
+        data = self.client.get(endpoint).json()
+        self.assertEqual(data["board_title"], "Глобальный рейтинг")
+        self.assertEqual(data["records"][0]["score"], 900)
+        self.assertEqual(data["total_attempts"], 20)
+        self.assertNotContains(self.client.get(page), 'class="arcade-history"')
+
+    def test_flappy_board_uses_competition_only_for_selected_game(self):
+        from .models import ArcadeAttempt
+        self.settings.active_game = "flappy"
+        self.settings.save(update_fields=["active_game"])
+        self.contest.game_key = "flappy"
+        self.contest.save(update_fields=["game_key"])
+        ArcadeRecord.objects.create(user=self.user, best_score=80, total_attempts=12)
+        attempt = ArcadeAttempt.objects.create(user=self.user, competition=self.contest, score=15)
+        ArcadeAttempt.objects.filter(pk=attempt.pk).update(finished_at=self.now)
+        response = self.client.get(reverse("league:arcade_game", args=["flappy"]))
+        self.assertContains(response, "Зачёт этапа · R1 · Library GP")
+        self.assertNotContains(response, 'class="arcade-history"')
+        self.assertEqual(self.client.get(reverse("league:arcade_leaderboard")).json()["records"][0]["score"], 15)
+        self.assertEqual(self.client.get(reverse("league:doodle_leaderboard")).json()["board_scope"], "global")
+
     def test_deadline_freezes_standings_but_global_play_continues(self):
         attempt = DoodleAttempt.objects.create(user=self.user, competition=self.contest, score=200)
         DoodleAttempt.objects.filter(pk=attempt.pk).update(started_at=self.now-timedelta(minutes=5), finished_at=self.now-timedelta(minutes=4))

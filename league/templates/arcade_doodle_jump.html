@@ -149,10 +149,10 @@
   <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
     <div class="doodle-leaderboard-heading">
       <div>
-        <p class="doodle-kicker"><span></span> WILD GP · ALL-TIME</p>
-        <h2 id="doodle-leaderboard-title">Глобальный рейтинг</h2>
+        <p class="doodle-kicker"><span></span> COWBOY GP</p>
+        <h2 id="doodle-leaderboard-title">{{ leaderboard_title }}</h2>
       </div>
-      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> завершённых заездов</span>
+      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> попыток</span>
     </div>
     <ol class="doodle-leaderboard-list" id="doodle-leaderboard-list">
       {% for record in doodle_records %}
@@ -170,7 +170,6 @@
   </section>
 
   <form hidden id="doodle-csrf-form">{% csrf_token %}</form>
-  {% include "arcade_competition_history.html" %}
   {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 
   {% if arcade_admin_preview %}<p class="doodle-footnote">Закрытый прототип: страница доступна только аккаунтам администраторов. Игра пока не влияет на таблицу лиги и бонусное колесо.</p>{% endif %}
@@ -178,6 +177,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/doodle-jump.js' %}?v=scenery-performance-v50" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=single-board-v51" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
