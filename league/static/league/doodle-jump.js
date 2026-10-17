@@ -40,6 +40,7 @@
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   let rasterCache = new WeakMap();
+  let sceneryCache = new WeakMap();
   let viewportKey = "";
   const held = { left: false, right: false };
   const sprites = [];
@@ -658,12 +659,16 @@
       const top = Math.floor(y * dpr) / dpr;
       const middle = Math.ceil((y + tileHeight) * dpr) / dpr;
       const bottom = Math.ceil((y + cycle) * dpr) / dpr;
-      ctx.drawImage(art.space, 0, top, width, middle - top + 1 / dpr);
-      ctx.save();
-      ctx.translate(0, bottom);
-      ctx.scale(1, -1);
-      ctx.drawImage(art.space, 0, 0, width, bottom - middle + 1 / dpr);
-      ctx.restore();
+      if (middle >= 0 && top < height) {
+        ctx.drawImage(art.space, 0, top, width, middle - top + 1 / dpr);
+      }
+      if (bottom >= 0 && middle < height) {
+        ctx.save();
+        ctx.translate(0, bottom);
+        ctx.scale(1, -1);
+        ctx.drawImage(art.space, 0, 0, width, bottom - middle + 1 / dpr);
+        ctx.restore();
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -741,6 +746,28 @@
     }
   }
 
+  // Repeated transparent cloud art is much wider than its on-screen size.
+  // Scale once per viewport at full backing-store resolution, not every frame.
+  // Keep this separate from animated sprite caches and retain original assets.
+  function drawCloud(x, y, w, h) {
+    if (y + h < 0 || y > height || x + w < 0 || x > width) return;
+    let sizes = sceneryCache.get(art.cloud);
+    if (!sizes) { sizes = new Map(); sceneryCache.set(art.cloud, sizes); }
+    const pw = Math.max(1, Math.ceil(w * dpr));
+    const ph = Math.max(1, Math.ceil(h * dpr));
+    const key = `${pw}:${ph}`;
+    let texture = sizes.get(key);
+    if (!texture) {
+      texture = document.createElement("canvas");
+      texture.width = pw; texture.height = ph;
+      const painter = texture.getContext("2d");
+      painter.imageSmoothingEnabled = false;
+      painter.drawImage(art.cloud, 0, 0, pw, ph);
+      sizes.set(key, texture);
+    }
+    ctx.drawImage(texture, x, y, w, h);
+  }
+
   function drawBackdrop() {
     if (summit) { drawSummitBackdrop(); return; }
     if (antarctica) { drawAntarctica(); return; }
@@ -775,7 +802,7 @@
         const x = (i % 2 ? width - cloudWidth * .72 : -cloudWidth * .28)
           + Math.sin(elapsed * .12 + i) * width * .015;
         ctx.globalAlpha = cloudsAlpha * (.3 + (i % 3) * .12);
-        ctx.drawImage(art.cloud, x, y, cloudWidth, cloudHeight);
+        drawCloud(x, y, cloudWidth, cloudHeight);
       }
     }
     drawSpaceDecor(climb, intoSpace);
@@ -958,9 +985,11 @@
     // Blend upright images directly: no giant offscreen texture on iPhones.
     for (let y = offset - cycle * 2; y < height; y += cycle) {
       ctx.globalAlpha = 1;
-      ctx.drawImage(source, 0, sourceOverlap, source.naturalWidth, source.naturalHeight - sourceOverlap,
-        0, y + overlap, width, cycle + 1 / dpr);
-      ctx.drawImage(winterSeamCache, 0, y, width, overlap);
+      if (y + overlap + cycle >= 0 && y + overlap < height) {
+        ctx.drawImage(source, 0, sourceOverlap, source.naturalWidth, source.naturalHeight - sourceOverlap,
+          0, y + overlap, width, cycle + 1 / dpr);
+      }
+      if (y + overlap >= 0 && y < height) ctx.drawImage(winterSeamCache, 0, y, width, overlap);
     }
     ctx.globalAlpha = .65;
     ctx.fillStyle = "#f0f8ff";
@@ -1487,7 +1516,7 @@
       for (let i = 0; i < 4; i += 1) {
         const w = width * .4, h = w * art.cloud.naturalHeight / art.cloud.naturalWidth, cycle = height + h * 2;
         const y = ((i / 4 * cycle + climb * .13) % cycle) - h;
-        ctx.drawImage(art.cloud, i % 2 ? width - w * .8 : -w * .2, y, w, h);
+        drawCloud(i % 2 ? width - w * .8 : -w * .2, y, w, h);
       }
       ctx.restore();
     }
@@ -3898,6 +3927,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
     rasterCache = new WeakMap();
+    sceneryCache = new WeakMap();
     if (!artReady) {
       // The HTML poster remains visible until the first complete game frame.
       return;
