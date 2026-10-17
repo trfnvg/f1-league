@@ -1350,13 +1350,7 @@
           boss.hp = Math.max(0, boss.hp - 1); boss.hits = 10 - boss.hp; boss.shots = [];
           invulnerableTimer = Math.max(invulnerableTimer, .65);
           if (boss.hp === 0) {
-            effects = []; somersault = null; rocketTimer = 0;
-            boss.heroFromX = player.x; boss.heroFromY = player.y;
-            const land = platforms.filter(p => !p.broken && p.y <= player.y - player.height / 2)
-              .reduce((best, p) => !best || Math.abs(p.x - player.x) + Math.abs(p.y - player.y) < Math.abs(best.x - player.x) + Math.abs(best.y - player.y) ? p : best, null);
-            boss.heroLandX = land?.x ?? width / 2;
-            boss.heroLandY = (land?.y ?? cameraY + height * .09) + player.height / 2;
-            player.vx = player.vy = 0; sidPhase("victory");
+            beginSidVictory();
           } else sidPhase("hit");
           updateHud(); return;
         }
@@ -1497,6 +1491,31 @@
       }
       ctx.restore();
     }
+  }
+
+  function beginSidVictory() {
+    const boss = sidBoss;
+    if (!boss) return;
+    effects = []; somersault = null; rocketTimer = 0;
+    boss.heroFromX = player.x; boss.heroFromY = player.y;
+    const land = platforms.filter(p => !p.broken && p.y <= player.y - player.height / 2)
+      .reduce((best, p) => !best || Math.abs(p.x - player.x) + Math.abs(p.y - player.y) < Math.abs(best.x - player.x) + Math.abs(best.y - player.y) ? p : best, null);
+    boss.heroLandX = land?.x ?? width / 2;
+    boss.heroLandY = (land?.y ?? cameraY + height * .09) + player.height / 2;
+    player.vx = player.vy = 0;
+    sidPhase("victory");
+  }
+
+  async function startSidVictoryTest() {
+    if (!adminSandbox && mode === "running" && !adminBossTestMode) return;
+    await startSidBossTest();
+    if (!adminBossTestMode || !sidBoss) return;
+    if (!await preparePreview(["summit"])) return;
+    if (!sidBoss || !adminBossTestMode) return;
+    sidBoss.hp = 0; sidBoss.hits = 10; sidBoss.shots = [];
+    beginSidVictory();
+    draw();
+    if (bossTestStatus) bossTestStatus.textContent = "Победа над Сидом → высокогорный паддок · тест без записи результата";
   }
 
   async function startSidBossTest() {
@@ -3868,8 +3887,12 @@
     height = width * bounds.height / bounds.width;
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
-    const maxDpr = logicalViewportWidth === 390 ? 3 : 2;
-    dpr = bounds.width / width * Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
+    const mobileViewport = logicalViewportWidth === 390;
+    const maxDpr = mobileViewport ? 3 : 2;
+    // Large desktop displays often report DPR=1. Supersample at 2x there so
+    // fine face/hat detail survives subpixel movement and rotation at 900px.
+    const minDpr = mobileViewport ? 1 : 2;
+    dpr = bounds.width / width * Math.min(maxDpr, Math.max(minDpr, window.devicePixelRatio || 1));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -4034,6 +4057,7 @@
   document.getElementById("doodle-antarctica-arrival-test")?.addEventListener("click", () => startAntarcticaPreview(true));
   document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
   document.getElementById("doodle-sid-boss-test")?.addEventListener("click", startSidBossTest);
+  document.getElementById("doodle-sid-victory-test")?.addEventListener("click", startSidVictoryTest);
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }

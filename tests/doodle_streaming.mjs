@@ -116,6 +116,7 @@ async function harness(mobile, failStartup = false) {
     async (url) => { calls.push(url); return { ok: true, json: async () => ({ attempt_id: "one" }) }; }, (a) => { api = a; });
   await until(() => api.state().artReady || api.state().assetLoadFailed);
   return { api, requests, blocked, failures, calls, canvas, events,
+    setPixelRatio(value){window.devicePixelRatio=value;api.resize();},
     resize(w, h) { bounds = { ...bounds, width: w, height: h }; api.resize(); } };
 }
 
@@ -124,6 +125,11 @@ for (const mobile of [true, false]) {
   assert.equal(h.requests.size, 12, "Only startup artwork should load before playing");
   assert.equal(a.art.space, undefined);
   assert.equal(a.art.antarctica, undefined);
+  if(!mobile){
+    h.setPixelRatio(1);
+    assert.equal(h.canvas.width,2000,"A standard-density desktop should render at 2x CSS width");
+    h.setPixelRatio(2);
+  }
   const bytes = (await Promise.all([...h.requests.keys()].map(async (src) => (await fs.stat(src)).size))).reduce((sum, n) => sum + n, 0);
   console.log(`${mobile ? "Mobile" : "Desktop"}: startup ${h.requests.size}/${Object.keys(dataset).length} files, ${(bytes / 1048576).toFixed(2)} MiB`);
   a.startGame(true, { adminTest: true });
@@ -505,6 +511,14 @@ await coldSid.events.get("doodle-sid-boss-test:click")();
 assert.equal(coldSid.api.state().sidBoss.hp,10);assert.equal(coldSid.api.state().adminBossTestMode,true);
 assert.deepEqual(coldSid.calls,[]);
 console.log("Cold Sid preview loads its artwork without recording a real attempt");
+await coldSid.events.get("doodle-sid-victory-test:click")();
+assert.equal(coldSid.api.state().sidBoss.phase,"victory");
+assert.equal(coldSid.api.state().sidBoss.hp,0);
+assert.equal(coldSid.api.state().sidBoss.hits,10);
+coldSid.api.updateSidBoss(6.81);
+assert.equal(coldSid.api.state().summit,true,"Victory preview must continue into the next biome");
+assert.deepEqual(coldSid.calls,[],"Post-Sid preview must not save a public score or attempt");
+console.log("Admin post-Sid cinematic and next-biome preview passed");
 const failed = await harness(true, true);
 assert.equal(failed.api.state().artReady, false);
 assert.equal(failed.requests.get(dataset.backgroundJourneySrc), 3);
