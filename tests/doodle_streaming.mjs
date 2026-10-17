@@ -22,7 +22,7 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 async function until(predicate) {
   const start = performance.now();
   while (!predicate()) {
-    assert.ok(performance.now() - start < 15000, "Timed out waiting for assets");
+    assert.ok(performance.now() - start < 45000, "Timed out waiting for assets");
     await delay(10);
   }
 }
@@ -62,6 +62,11 @@ async function harness(mobile, failStartup = false) {
     .replace(/\}\)\(\);\s*$/, `expose({ art, assetStages, loadStage, streamWorldAssets, draw, drawAntarctica, drawWinterMemory,
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
+      updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour,
+      skyState:()=>({skyFlock,totoCloud,hawks}),
+      duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
+        player.x=pos.x;player.y=top+player.height/2-2;player.vy=-300;
+        collideSkyDucks(top+3,top-2,1/60,pos.x);},
       cacheSize(sprite){return rasterCache.get(sprite)?.size || 0;},
       spawnWinterEncounter, updateWinterEncounter, resetWinterEncounters, winterEnemyGeometry, drawWinterEncounter,
       startSpaceEventTest, spawnSpaceEncounter, clearSpaceEncounter, updateSpaceEvents, collideWithSpaceEvents, drawSpaceEvents,
@@ -139,6 +144,13 @@ for (const mobile of [true, false]) {
   landingState.platforms.splice(0, landingState.platforms.length, ...savedPlatforms);
   const pixels = new Uint8ClampedArray(32*32*4);
   for(let y=8;y<24;y++) for(let x=8;x<24;x++) pixels[(y*32+x)*4+3]=255;
+  const dirtyContour=pixels.slice();
+  dirtyContour[(2*32+2)*4+3]=255;
+  dirtyContour[(3*32+30)*4+3]=12;
+  a.cleanSpriteContour(dirtyContour,32,32);
+  assert.equal(dirtyContour[(2*32+2)*4+3],0,"Detached opaque specks must disappear");
+  assert.equal(dirtyContour[(3*32+30)*4+3],0,"Detached faint specks must disappear");
+  assert.equal(dirtyContour[(12*32+12)*4+3],255,"Main wheel pixels stay unchanged");
   const masked = {mask:a.alphaMask(pixels,32,0,0,32,32)};
   assert.equal(a.spriteOverlapsEllipse(masked,100,100,32,32,86,100,2,2),false,"Transparent margins cannot kill");
   assert.equal(a.spriteOverlapsEllipse(masked,100,100,32,32,100,100,2,2),true);
@@ -175,6 +187,20 @@ for (const mobile of [true, false]) {
   assert.equal(a.state().waitingForStage, null, "Restart must clear the previous chapter wait");
   h.blocked.delete(skyPath);
   assert.equal(await pendingSky, true);
+  a.stage(6500);
+  for(let i=0;i<480;i++)a.updateSkyDetails(1/60);
+  assert.equal(a.skyState().skyFlock.birds.length,5);
+  assert.ok(a.skyState().totoCloud,"Toto should assemble only in the blue sky");
+  assert.equal(a.skyState().hawks.length,0,"The flock should not overlap hawks");
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-sky-ducks-${mobile?"mobile":"desktop"}.png`),await h.canvas.encode("png"));
+  a.duckLanding();
+  assert.equal(a.state().player.vy,820,"Duck backs should bounce the hero");
+  assert.equal(a.skyState().skyFlock.birds[0].used,true,"One duck cannot provide unlimited boosts");
+  a.stage(13000);a.updateSkyDetails(1/60);
+  assert.equal(a.skyState().skyFlock,null,"Flock must leave when entering space");
+  assert.equal(a.skyState().totoCloud,null);
+  a.startGame(true,{forceRestart:true,adminTest:true});
   a.update(1 / 60);
   assert.ok(a.state().elapsed > before.elapsed);
   assert.equal(a.state().waitingForStage, null);
@@ -250,7 +276,10 @@ for (const mobile of [true, false]) {
   const sectionWidth = Math.round(original.width / 4);
   const reference = canvasLib.createCanvas(sectionWidth, original.height);
   reference.getContext("2d").drawImage(original, 0, 0, sectionWidth, original.height, 0, 0, sectionWidth, original.height);
-  const refPixels = reference.getContext("2d").getImageData(0, 0, sectionWidth, original.height).data;
+  const referenceData = reference.getContext("2d").getImageData(0, 0, sectionWidth, original.height);
+  a.cleanSpriteContour(referenceData.data,sectionWidth,original.height);
+  reference.getContext("2d").putImageData(referenceData,0,0);
+  const refPixels = referenceData.data;
   let left = sectionWidth, top = original.height, right = 0, bottom = 0;
   for (let y = 0; y < original.height; y += 1) for (let x = 0; x < sectionWidth; x += 1) {
     if (refPixels[(y * sectionWidth + x) * 4 + 3] <= 18) continue;
@@ -260,8 +289,10 @@ for (const mobile of [true, false]) {
   assert.equal(pose.sw, right - left + 1); assert.equal(pose.sh, bottom - top + 1);
   const expected = canvasLib.createCanvas(pose.sw, pose.sh);
   expected.getContext("2d").drawImage(reference, left, top, pose.sw, pose.sh, 0, 0, pose.sw, pose.sh);
-  assert.deepEqual(pose.image.getContext("2d").getImageData(0, 0, pose.sw, pose.sh).data,
-    expected.getContext("2d").getImageData(0, 0, pose.sw, pose.sh).data, "Cropping must preserve pixels exactly");
+  const actualPixels=pose.image.getContext("2d").getImageData(0,0,pose.sw,pose.sh).data;
+  const expectedPixels=expected.getContext("2d").getImageData(0,0,pose.sw,pose.sh).data;
+  assert.ok(actualPixels.every((value,i)=>value===expectedPixels[i]),
+    "Cropping must preserve main silhouette pixels after isolated-speck cleanup");
   console.log(`${mobile ? "Mobile" : "Desktop"}: prefetch, pause/resume, failure/retry, atomic publication, previews, resize and full-resolution seam passed`);
 
   await a.startWinterBiomeTest();

@@ -104,6 +104,10 @@
   let enemies = [];
   let hazards = [];
   let hawks = [];
+  let skyFlock = null;
+  let totoCloud = null;
+  let skyFlockWait = 4;
+  let totoCloudWait = 7;
   let hawkSpawnWait = 2 + Math.random() * 2;
   let spaceBoss = null;
   let spaceEncounter = null;
@@ -423,7 +427,49 @@
     });
   }
 
-  function splitSpriteSheet(sheet, columns, boundaries = null, needsMask = true) {
+  function cleanSpriteContour(data, w, h) {
+    // Generated sheets can contain isolated specks or fragments of the next
+    // cell. Retain the main connected silhouette before cropping AND masking.
+    const labels = new Uint32Array(w * h), queue = new Uint32Array(w * h);
+    let label = 0, largest = 0, largestSize = 0;
+    for (let p = 0; p < labels.length; p += 1) {
+      if (labels[p] || data[p * 4 + 3] <= 18) continue;
+      label += 1;
+      let head = 0, tail = 1;
+      queue[0] = p; labels[p] = label;
+      while (head < tail) {
+        const at = queue[head++], x = at % w, y = Math.floor(at / w);
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            const nx = x + dx, ny = y + dy;
+            if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+            const next = ny * w + nx;
+            if (labels[next] || data[next * 4 + 3] <= 18) continue;
+            labels[next] = label; queue[tail++] = next;
+          }
+        }
+      }
+      if (tail > largestSize) { largestSize = tail; largest = label; }
+    }
+    for (let p = 0; p < labels.length; p += 1) {
+      if (labels[p] === largest && largest) continue;
+      // Keep the source's translucent one-pixel antialiasing edge only when
+      // directly adjoining the main silhouette, never another opaque island.
+      const alpha = data[p * 4 + 3];
+      let edge = false;
+      if (alpha > 0 && alpha <= 18 && largest) {
+        const x = p % w, y = Math.floor(p / w);
+        for (let dy = -1; dy <= 1 && !edge; dy += 1)
+          for (let dx = -1; dx <= 1; dx += 1) {
+            const nx = x + dx, ny = y + dy;
+            if (nx >= 0 && nx < w && ny >= 0 && ny < h && labels[ny * w + nx] === largest) edge = true;
+          }
+      }
+      if (!edge) data[p * 4 + 3] = 0;
+    }
+  }
+
+  function splitSpriteSheet(sheet, columns, boundaries = null, needsMask = true, cleanContour = false) {
     if (!sheet || !columns) return [];
     const frameHeight = sheet.naturalHeight;
     const frames = [];
@@ -440,7 +486,13 @@
       tileCtx.imageSmoothingEnabled = false;
       tileCtx.drawImage(sheet, startX, 0,
         endX - startX, frameHeight, 0, 0, frameWidth, frameHeight);
-      const pixels = tileCtx.getImageData(0, 0, frameWidth, frameHeight).data;
+      let pixels;
+      if (cleanContour) {
+        const imageData = tileCtx.getImageData(0, 0, frameWidth, frameHeight);
+        pixels = imageData.data;
+        cleanSpriteContour(pixels, frameWidth, frameHeight);
+        tileCtx.putImageData(imageData, 0, 0);
+      } else pixels = tileCtx.getImageData(0, 0, frameWidth, frameHeight).data;
       let minX = frameWidth;
       let minY = frameHeight;
       let maxX = -1;
@@ -464,7 +516,7 @@
       cropped.width = sw;
       cropped.height = sh;
       cropped.getContext("2d").drawImage(tile, minX, minY, sw, sh, 0, 0, sw, sh);
-      frames.push({ image: cropped, sx: 0, sy: 0, sw, sh, mask, sourceY: minY });
+      frames.push({ image: cropped, sx: 0, sy: 0, sw, sh, mask, sourceX: minX, sourceY: minY });
     }
     return frames;
   }
@@ -728,6 +780,7 @@
     }
     drawSpaceDecor(climb, intoSpace);
     ctx.globalAlpha = 1;
+    drawTotoCloud();
   }
 
   function worldToScreen(worldY) {
@@ -1892,6 +1945,8 @@
     hazards = [];
     hawks = [];
     hawkSpawnWait = 2 + Math.random() * 2;
+    skyFlock = null; totoCloud = null;
+    skyFlockWait = 4; totoCloudWait = 7;
     spaceBoss = null;
     bossShots = [];
     guaranteedSpaceBossSpawned = false;
@@ -2589,6 +2644,106 @@
     drawSprite(hazard.spriteIndex, hazard.x, hazard.y, hazard.size);
   }
 
+  function updateSkyDetails(dt) {
+    if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
+      skyFlock = null;
+      totoCloud = null;
+      return;
+    }
+    totoCloudWait -= dt;
+    if (!totoCloud && totoCloudWait <= 0 && art.totoCloud) {
+      totoCloud = { age: 0, x: width * (.25 + Math.random() * .5), y: height * .24 };
+      totoCloudWait = 30 + Math.random() * 15;
+    }
+    if (totoCloud) {
+      totoCloud.age += dt;
+      if (totoCloud.age > 10) totoCloud = null;
+    }
+    skyFlockWait -= dt;
+    if (!skyFlock && skyFlockWait <= 0 && art.duckFrames) {
+      const direction = Math.random() < .5 ? -1 : 1;
+      skyFlock = { age: 0, x: direction > 0 ? -65 : width + 65,
+        y: cameraY + height * .78, direction, birds: [63, 16, 1, 44, 81].map(number => ({ number, used: false })) };
+      hawks = [];
+      skyFlockWait = 20 + Math.random() * 10;
+    }
+    if (skyFlock) {
+      skyFlock.age += dt;
+      skyFlock.x += skyFlock.direction * 65 * dt;
+      const tail = skyFlock.x - skyFlock.direction * 170;
+      if ((skyFlock.direction > 0 ? tail > width + 65 : tail < -65)
+        || skyFlock.y < cameraY - 100) skyFlock = null;
+    }
+  }
+
+  function skyDuckPosition(index) {
+    const flock = skyFlock;
+    const rank = Math.ceil(index / 2);
+    const catchup = index === 4 ? 35 * (1 - clamp((flock.age - 2) / 2, 0, 1)) : 0;
+    return { x: flock.x - flock.direction * (rank * 49 + catchup),
+      y: flock.y + (index % 2 ? rank * 24 : -rank * 24) };
+  }
+
+  function collideSkyDucks(previousFeet, currentFeet, dt, previousX) {
+    if (!skyFlock || player.vy >= 0 || rocketTimer > 0) return;
+    for (let i = 0; i < skyFlock.birds.length; i += 1) {
+      const bird = skyFlock.birds[i];
+      if (bird.used) continue;
+      const pos = skyDuckPosition(i), top = pos.y + 7;
+      if (previousFeet < top || currentFeet > top) continue;
+      const t = (previousFeet - top) / Math.max(.001, previousFeet - currentFeet);
+      const dx = Math.abs(player.x - previousX) > width / 2 ? 0 : player.x - previousX;
+      const contactX = player.x - dx * (1 - t);
+      const birdX = pos.x - skyFlock.direction * 65 * dt * (1 - t);
+      if (Math.abs(contactX - birdX) > 18 + player.width * .22) continue;
+      player.y = top + player.height / 2;
+      player.vy = 820;
+      bird.used = true;
+      somersault = null;
+      openingJump = false;
+      break;
+    }
+  }
+
+  function drawTotoCloud() {
+    if (!totoCloud || !art.totoCloud || forgottenPaddock || portalTransition || cameraY >= spaceFade.start) return;
+    const age = totoCloud.age;
+    const alpha = Math.min(clamp(age / 2, 0, 1), clamp((10 - age) / 3, 0, 1)) * .48;
+    const w = width * .53, h = spriteSize(art.totoCloud, w);
+    const y = totoCloud.y + age * 3;
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.drawImage(rasterSprite(art.totoCloud, w, h), totoCloud.x - w / 2 + age * 2, y, w, h);
+    ctx.restore();
+  }
+
+  function drawSkyDucks() {
+    if (!skyFlock || !art.duckFrames || forgottenPaddock || portalTransition || cameraY >= spaceFade.start) return;
+    for (let i = 0; i < skyFlock.birds.length; i += 1) {
+      const pos = skyDuckPosition(i), bird = skyFlock.birds[i];
+      const pose = art.duckFrames[Math.floor(skyFlock.age * 9 + i) % 4];
+      // All poses share the sheet's body anchor, not the cropped wing bounds.
+      // This keeps the torso and landing surface still while wings flap.
+      const scale = 46 / art.duckCellWidth;
+      const w = pose.sw * scale, h = pose.sh * scale, y = worldToScreen(pos.y);
+      if (pos.x < -55 || pos.x > width + 55 || y < -55 || y > height + 55) continue;
+      ctx.save(); ctx.translate(pos.x, y);
+      if (i === 4 && skyFlock.age > 2 && skyFlock.age < 4) {
+        ctx.fillStyle = "#e9e6c4"; ctx.globalAlpha = .65;
+        for (let n = 0; n < 3; n += 1) ctx.fillRect(-skyFlock.direction * (28 + n * 7), 0, 4, 2);
+        ctx.globalAlpha = 1;
+      }
+      ctx.save(); ctx.scale(skyFlock.direction, 1);
+      ctx.drawImage(rasterSprite(pose, w, h),
+        (pose.sourceX - art.duckCellWidth * .5) * scale,
+        (pose.sourceY - art.duckBodyY) * scale, w, h); ctx.restore();
+      // Labels are drawn after mirroring so they read correctly both ways.
+      ctx.fillStyle = "#f4e9c8"; ctx.fillRect(-8, -3, 13, 9);
+      ctx.fillStyle = "#293746"; ctx.textAlign = "center";
+      ctx.font = "bold 7px monospace"; ctx.fillText(String(bird.number), -1.5, 4);
+      ctx.restore();
+    }
+  }
+
   function updateHawks(dt) {
     if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
       if (forgottenPaddock || cameraY >= spaceFade.start) hawks = [];
@@ -2596,6 +2751,7 @@
     }
     if (!art.hawkFrames || !art.hawkFrames.length) return false;
 
+    if (skyFlock) return false;
     hawkSpawnWait -= dt;
     if (hawkSpawnWait <= 0) {
       const size = 82 * visualScale();
@@ -3298,6 +3454,7 @@
     if (updateSidBoss(dt)) return;
     if (updateSpaceEvents(dt)) { somersault = null; return; }
     if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
+    updateSkyDetails(dt);
     const direction = Number(held.right) - Number(held.left);
     const previousPlayerX = player.x;
     const targetVx = direction * Math.min(440, width * .62) + (winterWind > 0 ? winterWindDirection * 100 : 0);
@@ -3347,6 +3504,7 @@
     collideWithSpaceBoss(previousFeet, currentFeet);
     collideWithEnemy(previousFeet, currentFeet, dt);
     if (mode !== "running") return;
+    collideSkyDucks(previousFeet, currentFeet, dt, previousPlayerX);
 
     if (player.vy < 0) {
       const platform = landingPlatform(previousFeet, currentFeet, previousPlayerX, player.x);
@@ -3506,6 +3664,7 @@
       if (!hazard.dead) drawHazard(hazard);
     }
     drawHawks();
+    drawSkyDucks();
     drawSpaceBoss();
     drawSpaceEvents();
     drawBabyKimi();
@@ -3994,6 +4153,9 @@
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
       ["hawkSheetSrc", (sheet) => ({ hawkFrames: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
+      ["totoCloudSrc", (sheet) => ({ totoCloud: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
+      ["duckSheetSrc", (sheet) => ({ duckFrames: checkedFrames(splitSpriteSheet(sheet, 4), 4),
+        duckCellWidth: sheet.naturalWidth / 4, duckBodyY: sheet.naturalHeight * .61 })],
     ];
     if (name === "space") return [
       ["backgroundSpaceSrc", (sheet) => ({ space: sheet })],
@@ -4043,11 +4205,11 @@
     ["rocketSrc", (sheet) => ({ rocketRide: bakeSprite(checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0], 768) })],
     ["rocketEmptySrc", (sheet) => ({ powerupFrames: { rocket: bakeSprite(checkedFrames(splitSpriteSheet(sheet, 1), 1)[0], 384) } })],
     ["wheelCompoundsSrc", (sheet) => {
-      const frames = checkedFrames(splitSpriteSheet(sheet, 3), 3).map((pose) => bakeSprite(pose));
+      const frames = checkedFrames(splitSpriteSheet(sheet, 3, null, true, true), 3).map((pose) => bakeSprite(pose));
       return { wheelFrames: { soft: frames[0], medium: frames[1], hard: frames[2] } };
     }],
     ["marshalSrc", (sheet) => ({ marshal: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] })],
-    ["enemyVariantsSrc", (sheet) => ({ enemyVariants: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
+    ["enemyVariantsSrc", (sheet) => ({ enemyVariants: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
     ["introScaffoldSrc", (sheet) => ({ introScaffold: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
     ["introDriverSrc", (sheet) => ({ introDriver: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
     ["introHeroSrc", (sheet) => ({ introHeroFrames: checkedFrames(splitSpriteSheet(sheet, 3, null, false), 3) })],
