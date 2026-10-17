@@ -74,9 +74,25 @@ def board(user, game):
     rows = [{"username": r.user.get_full_name().strip() or r.user.username, "score": r.best_score,
              "attempts": r.total_attempts, "rank": i, "is_current_user": user.is_authenticated and r.user_id == user.pk}
             for i, r in enumerate(records[:10], 1)]
-    return {"records": rows, "record": own.best_score if own else 0, "attempts": own.total_attempts if own else 0,
+    data = {"records": rows, "record": own.best_score if own else 0, "attempts": own.total_attempts if own else 0,
             "rank": next((r["rank"] for r in rows if r["is_current_user"]), None),
             "total_attempts": Record.objects.filter(user__is_staff=False).aggregate(total=Sum("total_attempts"))["total"] or 0}
+    data.update(board_title="Глобальный рейтинг", board_scope="global",
+                board_record=data["record"], board_attempts=data["attempts"])
+    settings, contest = selected_contest()
+    now = timezone.now()
+    if (contest and contest.game_key == game and settings.public_enabled
+            and not contest.frozen_at and contest.opened_at <= now < contest.event.deadline):
+        rows, total = contest_rows(contest)
+        own_row = next((row for row in rows if user.is_authenticated and row["user_id"] == user.pk), None)
+        data.update(records=[{**row, "is_current_user": user.is_authenticated and row["user_id"] == user.pk}
+                             for row in rows[:10]], total_attempts=total,
+                    rank=own_row["rank"] if own_row else None,
+                    board_record=own_row["score"] if own_row else 0,
+                    board_attempts=own_row["attempts"] if own_row else 0,
+                    board_scope="competition",
+                    board_title=f"Зачёт этапа · R{contest.event.round_number} · {contest.event.name}")
+    return data
 
 
 def history(game, user):
@@ -115,10 +131,11 @@ def game(request, game_key):
     admin_test = request.user.is_staff and request.GET.get("admin_test") == "1"
     context = {"game": GAMES[game_key], "arcade_game_key": game_key, "arcade_scoring_open": True,
         "arcade_admin_preview": admin_test, "arcade_test_mode": admin_test, "arcade_library_mode": True,
-        "arcade_settings_admin_url": reverse("league:arcade_control"), "contest_history": history(game_key, request.user),
+        "arcade_settings_admin_url": reverse("league:arcade_control"), "leaderboard_title": data["board_title"],
         "competitive_now": bool(is_current and settings.public_enabled and timezone.now() < contest.event.deadline),
         "arcade_records": data["records"], "arcade_total_attempts": data["total_attempts"],
         "arcade_own_record": {"best_score": data["record"], "total_attempts": data["attempts"]}, "arcade_own_rank": data["rank"],
+        "board_own_score": data["board_record"], "board_own_attempts": data["board_attempts"],
         "doodle_records": data["records"], "doodle_total_attempts": data["total_attempts"]}
     suffix = "?admin_test=1" if admin_test else ""
     for key, name in [("doodle_attempt_start_url", "doodle_attempt_start"), ("doodle_attempt_finish_url", "doodle_attempt_finish"), ("doodle_leaderboard_url", "doodle_leaderboard")]:
