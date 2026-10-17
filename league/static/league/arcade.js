@@ -175,7 +175,6 @@
   }
 
   async function startGame() {
-    await enterGameFullscreen();
     if (deadlineClosed || (Number.isFinite(closeAt) && Date.now() >= closeAt)) {
       closeGameAtDeadline();
       return;
@@ -649,6 +648,7 @@
     if (document.fullscreenElement || document.webkitFullscreenElement) exit?.call(document);
     leaveGameFullscreen();
   });
+  document.getElementById("arcade-enter-fullscreen")?.addEventListener("click", enterGameFullscreen);
   document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement) leaveGameFullscreen(); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") leaveGameFullscreen(); });
   startButton.addEventListener("click", () => { void startGame(); });

@@ -9,7 +9,7 @@
 
 {% block content %}
 <section class="arcade-page" aria-labelledby="arcade-title">
-  <nav class="arcade-game-nav"><a href="{% url 'league:arcade' %}">← Все аркады</a><span>{% if competitive_now %}Идёт зачёт Гран-при{% else %}Свободная игра · глобальные рекорды{% endif %}</span></nav>
+  <nav class="arcade-game-nav"><a href="{% url 'league:arcade' %}">← Все аркады</a><span>{% if competitive_now %}Идёт зачёт Гран-при{% else %}Свободная игра · глобальные рекорды{% endif %}</span><button id="arcade-enter-fullscreen" class="btn btn-outline-secondary btn-sm" type="button">На весь экран ↗</button></nav>
   <header class="arcade-heading">
     <div>
       <div class="arcade-kicker"><span></span> 16-BIT RACE MODE</div>
@@ -60,7 +60,7 @@
           <span class="arcade-overlay-mark" id="arcade-overlay-mark">PLAYER 1 · GRID</span>
           <h2 id="arcade-overlay-title">Готов к выезду?</h2>
           <p id="arcade-overlay-copy">Пролетай между воротами и не задень трассу. Каждый чистый пролёт — +1 к рекорду.</p>
-          <button class="arcade-start" id="arcade-start" type="button">Играть на весь экран <span aria-hidden="true">→</span></button>
+          <button class="arcade-start" id="arcade-start" type="button">Играть <span aria-hidden="true">→</span></button>
         </div>
       </div>
       <div class="arcade-banana-speech" id="arcade-banana-speech" role="status" aria-live="polite" hidden>
@@ -126,4 +126,4 @@
 {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 </section>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/arcade.js' %}?v=library-v2" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/arcade.js' %}?v=library-v3" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endblock %}

@@ -28,6 +28,11 @@ class ArcadeLibraryTests(TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, "Аркады")
         self.assertContains(self.client.get(reverse("league:arcade")), "Library GP")
+        response=self.client.get(reverse("league:arcade"))
+        self.assertEqual([card["key"] for card in response.context["games"]],["doodle_jump","flappy"])
+        flappy=self.client.get(reverse("league:arcade_game",args=["flappy"]))
+        self.assertContains(flappy,'id="arcade-enter-fullscreen"')
+        self.assertNotContains(flappy,"Играть на весь экран")
 
     def test_new_attempt_binds_only_current_game(self):
         for name, Model, competitive in [("doodle_attempt_start", DoodleAttempt, True)]:
