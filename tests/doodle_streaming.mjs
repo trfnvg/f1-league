@@ -64,6 +64,7 @@ async function harness(mobile, failStartup = false) {
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
       updateHawks, spriteTopAtX, spriteSize, updatePortal,
+      spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -76,7 +77,7 @@ async function harness(mobile, failStartup = false) {
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
-        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY}),
+        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -596,3 +597,48 @@ for(let i=0;i<120;i++)arrivalApi.update(1/60);
 assert.equal(arrivalApi.state().mode,'running','The first arrival jump must remain playable');
 assert.ok(arrivalApi.state().platforms.length>=4);
 console.log('Mobile zoom keeps world bounds fixed; portal has a safe landing ladder and a held fade');
+
+for (const mobile of [true,false]) {
+  const h = await harness(mobile), a = h.api;
+  assert.equal(a.art.summitCommentator,undefined,'Commentator art must stay out of startup downloads');
+  await h.events.get('doodle-commentator-test:click')();
+  assert.equal(a.state().summit,true);
+  const npc=a.state().summitCommentator, p=a.state().player;
+  assert.equal(npc.phase,'boast');
+  assert.equal(a.art.summitCommentator.length,4);
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-commentator-idle-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  p.x=npc.x;
+  p.vy=300;
+  const pose=a.art.summitCommentator[1], nh=a.spriteSize(pose,npc.w);
+  const top=a.spriteTopAtX(pose,npc.x,npc.y+nh/2,npc.w,nh,npc.x);
+  a.updateSummitCommentator(0,top-3,top+3,p.x);
+  assert.equal(npc.phase,'boast','Jumping upwards cannot trigger the shout');
+  p.x=npc.x+npc.w; p.vy=-300;
+  a.updateSummitCommentator(0,top+5,top-5,p.x);
+  assert.equal(npc.phase,'boast','A near miss must not trigger the shout');
+  p.x=npc.x; p.y=top+p.height/2-4; p.vy=-300;
+  a.updateSummitCommentator(0,top+5,top-4,p.x);
+  assert.equal(npc.phase,'shout');
+  assert.equal(p.vy,810,'The racer gets a safe upward bounce');
+  assert.equal(p.y,top+p.height/2,'Feet snap to the visible silhouette');
+  assert.equal(npc.support.broken,false,'The remaining route stays usable');
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-commentator-shout-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  a.updateSummitCommentator(.81,top+5,top-4,p.x);
+  assert.equal(npc.phase,'fall');
+  p.vy=-200;
+  a.updateSummitCommentator(.25,top+5,top-4,p.x);
+  assert.equal(p.vy,-200,'The falling bath cannot be farmed for repeated bounces');
+  const fallingY=npc.y;
+  a.draw();
+  assert.ok(fallingY<npc.support.y);
+  for(let i=0;i<120;i++)a.updateSummitCommentator(1/60,0,0,p.x);
+  assert.equal(a.state().summitCommentator,null,'Fall completes below the camera, without a sudden visible timeout');
+  assert.deepEqual(h.calls,[],'Admin encounter preview does not save attempts or scores');
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().summitCommentator,null,'Restart clears the encounter');
+  a.spawnSummitCommentator();
+  assert.equal(a.state().summitCommentator,null,'Encounter only belongs to the summit biome');
+  console.log(`${mobile?'Mobile':'Desktop'}: summit commentator staged art, top-only trigger, bounce, shout, fall, cleanup and sandbox passed`);
+}
