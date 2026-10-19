@@ -40,7 +40,7 @@
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
   // Physical screen geometry is independent of page/pinch zoom. Keep the
-  // mobile world viewport stable, and fit that same view inside CSS bounds.
+  // mobile world viewport stable, and cover CSS bounds with the same uniform scale.
   const mobileWorldAspect = clamp((window.screen?.height || 844) / (window.screen?.width || 390), 1.4, 2.5);
   let rasterCache = new WeakMap();
   let sceneryCache = new WeakMap();
@@ -73,6 +73,7 @@
   let summitEntryY = 0;
   let summitCommentator = null;
   let summitCommentatorNextY = 0;
+  let summitPlatformIndex = 0;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -1515,6 +1516,7 @@
     sidBossCleared = true; sidBoss = null; summit = true; antarctica = false;
     resetWinterEncounters();
     summitEntryY = cameraY; bossBonus += 500;
+    summitPlatformIndex = 0;
     summitCommentator = null;
     summitCommentatorNextY = cameraY + height + 160;
     platforms = []; enemies = []; hazards = []; hawks = []; powerups = []; marshals = []; effects = [];
@@ -1544,6 +1546,87 @@
       }
       ctx.restore();
     }
+  }
+
+  function decorateSummitPlatform(platform) {
+    const step = summitPlatformIndex++ % 18;
+    platform.kind = "normal";
+    platform.width = platform.hitboxWidth = platform.spriteWidth = 89.7 * visualScale();
+    platform.height = 9;
+    if (step >= 8 && step <= 11) {
+      platform.summitKind = "purple";
+      platform.kind = "normal";
+    } else if (step === 5 || step === 15) {
+      platform.summitKind = "cable";
+      platform.kind = "moving";
+      platform.range = Math.min(35, width * .08);
+      platform.width = platform.hitboxWidth = platform.spriteWidth = 100;
+    } else if (step === 2 || step === 13) {
+      platform.kind = "normal";
+      platform.goat = { phase: 0, kicked: false, cooldown: 0 };
+    }
+  }
+
+  function goatPose(platform) {
+    const t = platform.goat.phase;
+    return art.summitGoat[t < 2.2 ? 0 : t < 2.8 ? 1 : t < 3.3 ? 2 : 3];
+  }
+
+  function updateSummitGoats(dt, previousFeet, currentFeet, previousX) {
+    if (!summit) return;
+    for (const platform of platforms) {
+      const goat = platform.goat;
+      if (!goat || platform.broken || platform.y < cameraY - 90 || platform.y > cameraY + height + 90) continue;
+      goat.phase = (goat.phase + dt) % 4;
+      goat.cooldown = Math.max(0, goat.cooldown - dt);
+      if (goat.kicked && goat.cooldown === 0) goat.kicked = false;
+      if (goat.kicked || goat.cooldown > 0) continue;
+      const frame = goatPose(platform), w = 48, h = spriteSize(frame, w);
+      const hop = goat.phase >= 2.8 && goat.phase < 3.3 ? Math.sin((goat.phase - 2.8) / .5 * Math.PI) * 9 : 0;
+      const goatY = platform.y + h / 2 + hop;
+      const top = spriteTopAtX(frame, platform.x, goatY, w, h, player.x);
+      if (player.vy < 0 && previousFeet >= top && currentFeet <= top
+        && Math.abs(player.x - previousX) < width / 2 && Math.abs(player.x - platform.x) < 22) {
+        player.y = top + player.height / 2; player.vy = 850;
+        openingJump = false; somersault = null;
+        goat.kicked = true; goat.cooldown = 1.2;
+      } else if (goat.phase >= 2.8 && goat.phase < 3.3 && invulnerableTimer <= 0
+        && spriteOverlapsEllipse(frame, platform.x, goatY, w, h,
+          player.x, player.y, player.width * .3, player.height * .35)) {
+        // A readable nudge, not a surprise instant death. It cannot repeat every frame.
+        player.vx += (player.x < platform.x ? -1 : 1) * 150;
+        goat.cooldown = 1.5;
+      }
+    }
+  }
+
+  function drawSummitPlatform(platform) {
+    const y = worldToScreen(platform.y), w = platform.spriteWidth;
+    if (y < -100 || y > height + 110) return;
+    const purple = platform.summitKind === "purple", cable = platform.summitKind === "cable";
+    ctx.save();
+    if (cable) {
+      const frame = art.summitCableCar, h = spriteSize(frame, w);
+      ctx.strokeStyle = "#465565"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, y - h * .28); ctx.lineTo(width, y - h * .28); ctx.stroke();
+      // The roof is 36% down the trimmed sprite; its plane matches the physics.
+      ctx.drawImage(rasterSprite(frame, w, h), platform.x - w / 2, y - h * .36, w, h);
+      ctx.restore();
+      return;
+    }
+    ctx.fillStyle = purple ? "#563b82" : "#485967";
+    ctx.fillRect(platform.x - w / 2, y, w, 9);
+    ctx.fillStyle = purple ? "#c3a1f5" : "#b4c9c9";
+    ctx.fillRect(platform.x - w / 2, y, w, 3);
+    ctx.fillStyle = purple ? "#9474bd" : "#768e98";
+    for (let i = 6; i < w - 4; i += 15) ctx.fillRect(platform.x - w / 2 + i, y + 5, 7, 2);
+    const goat = platform.goat;
+    if (goat && art.summitGoat) {
+      const pose = goat.kicked ? art.summitGoat[3] : goatPose(platform), gw = 48, gh = spriteSize(pose, gw);
+      const hop = !goat.kicked && goat.phase >= 2.8 && goat.phase < 3.3 ? Math.sin((goat.phase - 2.8) / .5 * Math.PI) * 9 : 0;
+      ctx.drawImage(rasterSprite(pose, gw, gh), platform.x - gw / 2, y - gh - hop, gw, gh);
+    }
+    ctx.restore();
   }
 
   function spawnSummitCommentator(y = cameraY + height + 120) {
@@ -1629,9 +1712,15 @@
     ctx.restore();
     const shout = npc.phase !== "boast";
     if (npc.phase === "fall" && npc.timer > 1.1) return;
-    const lines = shout ? ["БАН БАН БАН"] : ["Я САМЫЙ ЛУЧШИЙ", "КОММЕНТАТОР ФОРМУЛЫ 1!"];
     ctx.save(); ctx.font = `bold ${shout ? 13 : 10}px monospace`; ctx.textAlign = "center";
-    const bubbleW = Math.min(width - 24, Math.max(...lines.map(line => ctx.measureText(line).width)) + 24);
+    // Text layout changes only when the phrase or logical viewport changes.
+    // Avoid measuring/allocating the same two lines on every animation frame.
+    if (!npc.speech || npc.speech.shout !== shout || npc.speech.width !== width) {
+      const lines = shout ? ["БАН БАН БАН"] : ["Я САМЫЙ ЛУЧШИЙ", "КОММЕНТАТОР ФОРМУЛЫ 1!"];
+      npc.speech = {shout, width, lines,
+        bubbleW: Math.min(width - 24, Math.max(...lines.map(line => ctx.measureText(line).width)) + 24)};
+    }
+    const {lines, bubbleW} = npc.speech;
     const bubbleH = lines.length * 15 + 16;
     const bubbleX = clamp(npc.x - bubbleW / 2, 12, width - bubbleW - 12);
     const bubbleY = feet - h - bubbleH - 10;
@@ -2170,7 +2259,7 @@
     let lastX = width * .5;
     let previousPlatform = platforms[0];
     while (nextY < height + 320) {
-      const gap = platformGap();
+      const gap = summit ? 105 + Math.random() * 15 : platformGap();
       nextY += gap;
       lastX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(nextY, lastX, selectPlatformKind());
@@ -2203,6 +2292,7 @@
       const y = worldTop + gap;
       const nextX = choosePlatformX(lastX, gap);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
+      if (summit) decorateSummitPlatform(nextPlatform);
       addPowerupBetween(lastPlatform, nextPlatform);
       if (y >= nextMarshalY && nextPlatform.kind === "normal") {
         marshals.push({ platform: nextPlatform, collected: false });
@@ -2211,7 +2301,7 @@
       worldTop = y;
     }
 
-    if (elapsed >= arrivalUntil && !spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
+    if (!summit && elapsed >= arrivalUntil && !spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
       && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
@@ -2224,7 +2314,7 @@
         dead: false,
       });
     }
-    if (antarctica || summit) hazards = [];
+    if (antarctica || summit) hazards.length = 0;
     const hazardSpacing = !forgottenPaddock && cameraY < spaceFade.start ? 560 : 430;
     if (elapsed >= arrivalUntil && !antarctica && !summit && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > hazardSpacing)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
@@ -3708,6 +3798,7 @@
     updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running") return;
     updateSummitCommentator(dt, previousFeet, currentFeet, previousPlayerX);
+    updateSummitGoats(dt, previousFeet, currentFeet, previousPlayerX);
     collideSidShots(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running" || sidBoss?.phase === "victory") return;
     collideWithSpaceEvents(previousFeet, currentFeet, dt);
@@ -3724,7 +3815,7 @@
         // Snap the sprite's feet to the exact contact plane; otherwise one frame of
         // downward travel makes the character visibly sink into the platform.
         player.y = platform.y + player.height / 2;
-        player.vy = platform.kind === "spring" ? 930 : 720;
+        player.vy = platform.kind === "spring" ? 930 : platform.summitKind === "purple" ? 780 : 720;
         if (softBootJumps > 0) { player.vy = Math.max(player.vy, 930); softBootJumps -= 1; }
         if (antarctica && platform.frozenUntil > elapsed) winterSlide = 1.1;
         openingJump = false;
@@ -3858,7 +3949,9 @@
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
       if (platform.commentator) {
         drawCommentatorPlatform(platform);
-      } else if (antarctica || summit) {
+      } else if (summit) {
+        drawSummitPlatform(platform);
+      } else if (antarctica) {
         drawIcePlatform(platform);
       } else if (garagePlatform) {
         drawFrame(garagePlatform, platform.x, platform.y, platform.spriteWidth, "platform");
@@ -4086,12 +4179,19 @@
     width = logicalViewportWidth;
     const mobileViewport = logicalViewportWidth === 390;
     height = mobileViewport ? width * mobileWorldAspect : width * bounds.height / bounds.width;
-    const displayScale = Math.min(bounds.width / width, bounds.height / height);
+    // Cover the mobile viewport without stretching or exposing extra world at zoom-out.
+    // Desktop keeps its deliberately bounded playfield. Crop only excess scenery.
+    const displayScale = mobileViewport
+      ? Math.max(bounds.width / width, bounds.height / height)
+      : Math.min(bounds.width / width, bounds.height / height);
     canvas.style.width = `${width * displayScale}px`;
     canvas.style.height = `${height * displayScale}px`;
     canvas.style.left = "50%";
-    canvas.style.top = "50%";
-    canvas.style.transform = "translate(-50%, -50%)";
+    // Browser chrome may shorten a phone viewport: keep the floor/start pad
+    // visible and crop only the distant area above, never the player's footing.
+    canvas.style.top = mobileViewport ? "auto" : "50%";
+    canvas.style.bottom = mobileViewport ? "0" : "auto";
+    canvas.style.transform = mobileViewport ? "translateX(-50%)" : "translate(-50%, -50%)";
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
     const maxDpr = mobileViewport ? 3 : 2;
@@ -4379,6 +4479,8 @@
     if (name === "summit") return [
       ["summitBackgroundSrc", (sheet) => ({ summit: sheet })],
       ["summitCommentatorSrc", (sheet) => ({ summitCommentator: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
+      ["summitGoatSrc", (sheet) => ({ summitGoat: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
+      ["summitCableCarSrc", single("summitCableCar")],
     ];
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
