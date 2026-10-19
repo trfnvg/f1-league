@@ -65,6 +65,7 @@ async function harness(mobile, failStartup = false) {
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
       updateHawks, spriteTopAtX, spriteSize, updatePortal,
       spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
+      decorateSummitPlatform, updateSummitGoats, extendWorld,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -573,11 +574,15 @@ for (const mobile of [true, false]) {
 const safeArrival = await harness(true), arrivalApi = safeArrival.api;
 arrivalApi.startGame(true,{adminTest:true});
 const originalView = {width:arrivalApi.state().width,height:arrivalApi.state().height};
-for (const bounds of [[195,844],[780,1688],[390,1200],[390,844]]) {
+for (const bounds of [[195,844],[780,1688],[390,1200],[390,650],[390,844]]) {
   safeArrival.resize(...bounds);
   assert.equal(arrivalApi.state().height, originalView.height,
     'Mobile browser zoom must not reveal more world height');
   assert.equal(arrivalApi.state().width, originalView.width);
+  assert.ok(parseFloat(safeArrival.canvas.style.width) >= bounds[0] - .01,
+    'Mobile canvas must cover the full width without side strips');
+  assert.ok(parseFloat(safeArrival.canvas.style.height) >= bounds[1] - .01);
+  assert.equal(safeArrival.canvas.style.bottom,'0','Mobile cropping must retain the floor and start platform');
 }
 await arrivalApi.loadStage('garage');
 arrivalApi.stage(60000,5000);
@@ -606,6 +611,7 @@ for (const mobile of [true,false]) {
   const npc=a.state().summitCommentator, p=a.state().player;
   assert.equal(npc.phase,'boast');
   assert.equal(a.art.summitCommentator.length,4);
+  assert.equal(a.art.summitGoat.length,4);
   a.draw();
   if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-commentator-idle-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
   p.x=npc.x;
@@ -636,6 +642,32 @@ for (const mobile of [true,false]) {
   for(let i=0;i<120;i++)a.updateSummitCommentator(1/60,0,0,p.x);
   assert.equal(a.state().summitCommentator,null,'Fall completes below the camera, without a sudden visible timeout');
   assert.deepEqual(h.calls,[],'Admin encounter preview does not save attempts or scores');
+  // Exercise a full generated summit pattern and actual roof/chain landings.
+  const route = [];
+  for(let i=0;i<18;i++) {
+    const platform={x:100,originX:100,y:a.state().cameraY+100+i*110,phase:0,broken:false};
+    a.decorateSummitPlatform(platform); route.push(platform);
+  }
+  assert.equal(route.filter(p=>p.summitKind==='purple').length,4);
+  assert.equal(route.filter(p=>p.summitKind==='cable').length,2);
+  assert.equal(route.filter(p=>p.goat).length,2);
+  const cable=route.find(p=>p.summitKind==='cable');
+  cable.y=a.state().cameraY+200;
+  a.state().platforms.splice(0,a.state().platforms.length,cable);
+  assert.equal(a.landingPlatform(cable.y+10,cable.y-10,100,100),cable);
+  const goatPlatform=route.find(p=>p.goat);
+  goatPlatform.y=a.state().cameraY+300;
+  a.state().platforms.push(goatPlatform);
+  const goatFrame=a.art.summitGoat[0],gh=a.spriteSize(goatFrame,48);
+  const goatTop=a.spriteTopAtX(goatFrame,100,goatPlatform.y+gh/2,48,gh,100);
+  p.x=100;p.y=goatTop+p.height/2-3;p.vy=-200;
+  a.updateSummitGoats(0,goatTop+5,goatTop-3,100);
+  assert.equal(p.vy,850,'Landing on the goat provides an upward bounce');
+  assert.equal(goatPlatform.goat.kicked,true);
+  a.updateSummitGoats(1.3,0,0,100);
+  assert.equal(goatPlatform.goat.kicked,false,'Goat recovers instead of disappearing');
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-summit-route-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
   a.startGame(true,{forceRestart:true,adminTest:true});
   assert.equal(a.state().summitCommentator,null,'Restart clears the encounter');
   a.spawnSummitCommentator();
