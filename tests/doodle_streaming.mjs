@@ -63,7 +63,7 @@ async function harness(mobile, failStartup = false) {
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
-      updateHawks, spriteTopAtX, spriteSize,
+      updateHawks, spriteTopAtX, spriteSize, updatePortal,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -74,7 +74,7 @@ async function harness(mobile, failStartup = false) {
       startSpaceEventTest, spawnSpaceEncounter, clearSpaceEncounter, updateSpaceEvents, collideWithSpaceEvents, drawSpaceEvents,
       startSidBossTest, beginSidBoss, updateSidBoss, collideSidShots, drawSidBoss, enterSummit, drawSummitBackdrop,
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
-        antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY,
+        antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
         spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
@@ -568,3 +568,31 @@ for (const mobile of [true, false]) {
   assert.equal(a.state().mode,'over','Side contacts remain harmful');
   console.log(`${mobile?'Mobile':'Desktop'}: 20% faster controls, mirrored hawk landings and harmful side contacts passed`);
 }
+
+const safeArrival = await harness(true), arrivalApi = safeArrival.api;
+arrivalApi.startGame(true,{adminTest:true});
+const originalView = {width:arrivalApi.state().width,height:arrivalApi.state().height};
+for (const bounds of [[195,844],[780,1688],[390,1200],[390,844]]) {
+  safeArrival.resize(...bounds);
+  assert.equal(arrivalApi.state().height, originalView.height,
+    'Mobile browser zoom must not reveal more world height');
+  assert.equal(arrivalApi.state().width, originalView.width);
+}
+await arrivalApi.loadStage('garage');
+arrivalApi.stage(60000,5000);
+arrivalApi.portal();
+arrivalApi.updatePortal(3);
+const arrived = arrivalApi.state();
+const arrivalPad = arrived.platforms[0];
+assert.equal(arrived.forgottenPaddock,true);
+assert.equal(arrivalPad.kind,'normal');
+assert.ok(arrivalPad.hitboxWidth>=arrived.width*.5,'Arrival has a broad safe pad');
+assert.equal(arrived.player.y,arrivalPad.y+arrived.player.height/2);
+assert.equal(arrived.player.vy,0,'No blind jump during blackout');
+const arrivalY=arrived.player.y;
+for(let i=0;i<25;i++)arrivalApi.update(1/60);
+assert.equal(arrivalApi.state().player.y,arrivalY,'Stay on the pad until the fade clears');
+for(let i=0;i<120;i++)arrivalApi.update(1/60);
+assert.equal(arrivalApi.state().mode,'running','The first arrival jump must remain playable');
+assert.ok(arrivalApi.state().platforms.length>=4);
+console.log('Mobile zoom keeps world bounds fixed; portal has a safe landing ladder and a held fade');

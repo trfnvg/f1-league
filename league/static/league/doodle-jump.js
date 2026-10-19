@@ -39,6 +39,9 @@
   let adminBossTestMode = false;
   let freeFlight = false;
   const logicalViewportWidth = window.matchMedia("(max-width: 760px), (hover: none) and (pointer: coarse)").matches ? 390 : 600;
+  // Physical screen geometry is independent of page/pinch zoom. Keep the
+  // mobile world viewport stable, and fit that same view inside CSS bounds.
+  const mobileWorldAspect = clamp((window.screen?.height || 844) / (window.screen?.width || 390), 1.4, 2.5);
   let rasterCache = new WeakMap();
   let sceneryCache = new WeakMap();
   let viewportKey = "";
@@ -839,10 +842,27 @@
       arrivalUntil = elapsed + 4;
       hazards = [];
       enemies = [];
+      hawks = []; skyFlock = null; totoCloud = null;
+      powerups = []; marshals = []; effects = [];
       invulnerableTimer = 3;
-      // Keep world positions, score and landing planes unchanged.
+      // A fresh, reachable landing ladder replaces the old space platforms.
+      // Hold the racer on its broad starting pad while the fade clears.
+      platforms = [];
+      const landingY = cameraY + height * .24;
+      const pad = addPlatform(landingY, width / 2, "normal");
+      pad.width = pad.hitboxWidth = pad.spriteWidth = width * .58;
+      let y = landingY, x = width / 2;
+      while (y < cameraY + height + 420) {
+        y += 115;
+        x = choosePlatformX(x, 115);
+        addPlatform(y, x, "normal");
+      }
+      worldTop = y;
+      player.x = width / 2;
+      player.y = landingY + player.height / 2;
       player.vx = 0;
-      player.vy = 720;
+      player.vy = 0;
+      openingJump = true;
       updateHud();
     }
     return true;
@@ -2074,7 +2094,7 @@
       worldTop = y;
     }
 
-    if (!spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
+    if (elapsed >= arrivalUntil && !spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
       && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
@@ -2088,7 +2108,8 @@
       });
     }
     if (antarctica || summit) hazards = [];
-    if (!antarctica && !summit && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > 430)) {
+    const hazardSpacing = !forgottenPaddock && cameraY < spaceFade.start ? 560 : 430;
+    if (elapsed >= arrivalUntil && !antarctica && !summit && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > hazardSpacing)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -3519,6 +3540,7 @@
     }
     if (!forgottenPaddock && !portalTransition && runScore() >= 5000) beginPortal();
     if (updatePortal(dt)) return;
+    if (forgottenPaddock && !antarctica && elapsed < arrivalUntil - 3.4) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
     if (antarctica && !sidBossCleared && !sidBoss && runScore() >= 10000) beginSidBoss();
@@ -3941,15 +3963,21 @@
     // Keep horizontal world geometry stable; reveal more/less vertical scenery
     // to fill the viewport with one uniform scale, never stretching sprites.
     width = logicalViewportWidth;
-    height = width * bounds.height / bounds.width;
+    const mobileViewport = logicalViewportWidth === 390;
+    height = mobileViewport ? width * mobileWorldAspect : width * bounds.height / bounds.width;
+    const displayScale = Math.min(bounds.width / width, bounds.height / height);
+    canvas.style.width = `${width * displayScale}px`;
+    canvas.style.height = `${height * displayScale}px`;
+    canvas.style.left = "50%";
+    canvas.style.top = "50%";
+    canvas.style.transform = "translate(-50%, -50%)";
     // Render above CSS resolution on high-density screens while keeping fill
     // rate bounded: mobile gets extra sprite detail, desktop stays economical.
-    const mobileViewport = logicalViewportWidth === 390;
     const maxDpr = mobileViewport ? 3 : 2;
     // Large desktop displays often report DPR=1. Supersample at 2x there so
     // fine face/hat detail survives subpixel movement and rotation at 900px.
     const minDpr = mobileViewport ? 1 : 2;
-    dpr = bounds.width / width * Math.min(maxDpr, Math.max(minDpr, window.devicePixelRatio || 1));
+    dpr = displayScale * Math.min(maxDpr, Math.max(minDpr, window.devicePixelRatio || 1));
     canvas.width = Math.round(width * dpr);
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
