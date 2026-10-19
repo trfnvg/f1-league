@@ -71,6 +71,8 @@
   let sidBossCleared = false;
   let summit = false;
   let summitEntryY = 0;
+  let summitCommentator = null;
+  let summitCommentatorNextY = 0;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -1513,6 +1515,8 @@
     sidBossCleared = true; sidBoss = null; summit = true; antarctica = false;
     resetWinterEncounters();
     summitEntryY = cameraY; bossBonus += 500;
+    summitCommentator = null;
+    summitCommentatorNextY = cameraY + height + 160;
     platforms = []; enemies = []; hazards = []; hawks = []; powerups = []; marshals = []; effects = [];
     player.x = width / 2; player.y = cameraY + height * .35; player.vy = 720;
     openingJump = false; invulnerableTimer = 3;
@@ -1540,6 +1544,105 @@
       }
       ctx.restore();
     }
+  }
+
+  function spawnSummitCommentator(y = cameraY + height + 120) {
+    if (!summit || !art.summitCommentator || summitCommentator) return;
+    const x = width * (.35 + Math.random() * .3);
+    const w = Math.min(170, width * .36);
+    const support = addPlatform(y, x, "normal");
+    support.width = support.hitboxWidth = support.spriteWidth = w * 1.1;
+    support.commentator = true;
+    summitCommentator = {x, y, w, support, phase:"boast", timer:0, age:0, vy:0,
+      direction:x < width / 2 ? -1 : 1};
+    // At most one encounter, with the next one placed further up the world.
+    summitCommentatorNextY = y + 2400 + Math.random() * 900;
+  }
+
+  function updateSummitCommentator(dt, previousFeet, currentFeet, previousPlayerX) {
+    if (!summit) { summitCommentator = null; return; }
+    if (!summitCommentator && cameraY + height + 180 >= summitCommentatorNextY) spawnSummitCommentator();
+    const npc = summitCommentator;
+    if (!npc) return;
+    npc.age += dt; npc.timer += dt;
+    if (npc.phase === "boast" && player.vy < 0 && previousFeet > currentFeet) {
+      const pose = art.summitCommentator[1];
+      const h = spriteSize(pose, npc.w);
+      const oldX = Math.abs(player.x - previousPlayerX) > width / 2 ? player.x : previousPlayerX;
+      const steps = Math.max(1, Math.ceil((previousFeet - currentFeet + Math.abs(player.x - oldX)) / 3));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps, x = oldX + (player.x - oldX) * t;
+        if (Math.abs(x - npc.x) > npc.w * .43) continue;
+        const top = spriteTopAtX(pose, npc.x, npc.y + h / 2, npc.w, h, x);
+        const feet = previousFeet + (currentFeet - previousFeet) * t;
+        if (top <= npc.y + h * .15 || previousFeet < top || feet > top) continue;
+        player.y = top + player.height / 2;
+        player.vy = 810;
+        openingJump = false; somersault = null;
+        npc.phase = "shout"; npc.timer = 0;
+        break;
+      }
+    } else if (npc.phase === "shout" && npc.timer >= .8) {
+      npc.phase = "fall"; npc.timer = 0; npc.vy = -35;
+    } else if (npc.phase === "fall") {
+      npc.vy -= 410 * dt;
+      npc.y += npc.vy * dt;
+      npc.x += npc.direction * 20 * dt;
+    }
+    // No timeout while visible: it leaves by falling or scrolling below view.
+    if (npc.y + spriteSize(art.summitCommentator[1], npc.w) < cameraY - 100) summitCommentator = null;
+  }
+
+  function drawCommentatorPlatform(platform) {
+    const y = worldToScreen(platform.y), w = platform.spriteWidth;
+    if (y < -20 || y > height + 40) return;
+    ctx.save();
+    ctx.fillStyle = "#34404c"; ctx.fillRect(platform.x - w / 2, y, w, 10);
+    ctx.fillStyle = "#9aabb9"; ctx.fillRect(platform.x - w / 2, y, w, 3);
+    ctx.fillStyle = "#b6a36c";
+    for (let i = 8; i < w - 4; i += 18) ctx.fillRect(platform.x - w / 2 + i, y + 4, 7, 3);
+    ctx.strokeStyle = "#34404c"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(platform.x - w * .42, y + 10);
+    ctx.lineTo(platform.x, y + 27); ctx.lineTo(platform.x + w * .42, y + 10); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSummitCommentator() {
+    const npc = summitCommentator;
+    if (!summit || !npc) return;
+    const index = npc.phase === "fall" ? 3 : npc.phase === "shout" ? 2
+      : Math.floor(npc.age * 2) % 5 === 0 ? 0 : 1;
+    const pose = art.summitCommentator[index], h = spriteSize(pose, npc.w);
+    const feet = worldToScreen(npc.y);
+    if (feet < -h - 130 || feet > height + h + 130) return;
+    const angle = npc.phase === "fall" ? npc.direction * Math.min(.55, npc.timer * .4)
+      : npc.phase === "shout" ? Math.sin(npc.timer * 24) * .018 : 0;
+    ctx.save(); ctx.translate(npc.x, feet); ctx.rotate(angle);
+    ctx.drawImage(rasterSprite(pose, npc.w, h), -npc.w / 2, -h, npc.w, h);
+    // A few foam bubbles follow the bath, without frame-dependent allocations.
+    ctx.fillStyle = "#edf8ff";
+    for (let i = 0; i < 5; i++) {
+      const age = (npc.age * .5 + i / 5) % 1;
+      ctx.globalAlpha = (1 - age) * .75;
+      ctx.fillRect((i - 2) * npc.w * .15, -h * .58 - age * 15, 3, 3);
+    }
+    ctx.restore();
+    const shout = npc.phase !== "boast";
+    if (npc.phase === "fall" && npc.timer > 1.1) return;
+    const lines = shout ? ["БАН БАН БАН"] : ["Я САМЫЙ ЛУЧШИЙ", "КОММЕНТАТОР ФОРМУЛЫ 1!"];
+    ctx.save(); ctx.font = `bold ${shout ? 13 : 10}px monospace`; ctx.textAlign = "center";
+    const bubbleW = Math.min(width - 24, Math.max(...lines.map(line => ctx.measureText(line).width)) + 24);
+    const bubbleH = lines.length * 15 + 16;
+    const bubbleX = clamp(npc.x - bubbleW / 2, 12, width - bubbleW - 12);
+    const bubbleY = feet - h - bubbleH - 10;
+    ctx.fillStyle = shout ? "#fff0d2" : "#e9eff2";
+    ctx.strokeStyle = "#273847"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 6); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(npc.x - 4, bubbleY + bubbleH);
+    ctx.lineTo(npc.x + 2, bubbleY + bubbleH + 7); ctx.lineTo(npc.x + 7, bubbleY + bubbleH); ctx.fill();
+    ctx.fillStyle = "#1e2b36";
+    lines.forEach((line, i) => ctx.fillText(line, bubbleX + bubbleW / 2, bubbleY + 18 + i * 15));
+    ctx.restore();
   }
 
   function beginSidVictory() {
@@ -1576,6 +1679,19 @@
     peakY = startY + 10000 * 11;
     beginSidBoss(); draw();
     if (bossTestStatus) bossTestStatus.textContent = "Сид · 10 попаданий · тест без сохранения результата";
+  }
+
+  async function startCommentatorTest() {
+    if (!adminSandbox && mode === "running" && !adminBossTestMode) return;
+    await startSidBossTest();
+    if (!adminBossTestMode || !sidBoss || !await preparePreview(["summit"])) return;
+    if (!adminBossTestMode || !sidBoss) return;
+    sidBoss.hp = 0;
+    if (!enterSummit()) return;
+    enemies = []; hazards = [];
+    spawnSummitCommentator(cameraY + height * .4);
+    draw();
+    if (bossTestStatus) bossTestStatus.textContent = "Комментатор · прыгни сверху на ванну · тест без сохранения результата";
   }
 
   function sceneEase(age, start, end) {
@@ -1983,6 +2099,7 @@
   }
 
   function buildGame() {
+    summitCommentator = null; summitCommentatorNextY = 0;
     sidBoss = null;
     sidBossCleared = false;
     summit = false;
@@ -3590,6 +3707,7 @@
 
     updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running") return;
+    updateSummitCommentator(dt, previousFeet, currentFeet, previousPlayerX);
     collideSidShots(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running" || sidBoss?.phase === "victory") return;
     collideWithSpaceEvents(previousFeet, currentFeet, dt);
@@ -3738,7 +3856,9 @@
       if (platform.broken) continue;
       if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
-      if (antarctica || summit) {
+      if (platform.commentator) {
+        drawCommentatorPlatform(platform);
+      } else if (antarctica || summit) {
         drawIcePlatform(platform);
       } else if (garagePlatform) {
         drawFrame(garagePlatform, platform.x, platform.y, platform.spriteWidth, "platform");
@@ -3761,6 +3881,7 @@
     drawSpaceBoss();
     drawSpaceEvents();
     drawBabyKimi();
+    drawSummitCommentator();
     drawWinterEncounter();
     drawSidBoss();
     if (art.marshal) {
@@ -4144,6 +4265,7 @@
   document.getElementById("doodle-winter-biome-test")?.addEventListener("click", startWinterBiomeTest);
   document.getElementById("doodle-sid-boss-test")?.addEventListener("click", startSidBossTest);
   document.getElementById("doodle-sid-victory-test")?.addEventListener("click", startSidVictoryTest);
+  document.getElementById("doodle-commentator-test")?.addEventListener("click", startCommentatorTest);
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }
@@ -4254,7 +4376,10 @@
 
   function stageAssets(name) {
     const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
-    if (name === "summit") return [["summitBackgroundSrc", (sheet) => ({ summit: sheet })]];
+    if (name === "summit") return [
+      ["summitBackgroundSrc", (sheet) => ({ summit: sheet })],
+      ["summitCommentatorSrc", (sheet) => ({ summitCommentator: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
+    ];
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
       ["hawkSheetSrc", (sheet) => ({ hawkFrames: checkedFrames(splitSpriteSheet(sheet, 4), 4) })],
