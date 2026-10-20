@@ -102,6 +102,7 @@
   let best = Number.isFinite(numericBest) && numericBest > 0 ? numericBest : 0;
   let width = 1;
   let height = 1;
+  let visibleWorldHeight = 1;
   let dpr = 1;
   let mode = "ready";
   let intro = null;
@@ -1287,15 +1288,19 @@
     ctx.restore();
   }
 
+  function sidArenaHeight() { return Math.min(height, visibleWorldHeight); }
+
   function sidBossGeometry() {
+    const arenaH = sidArenaHeight();
     return { x: width * .5 + Math.sin(sidBoss.age * .5) * Math.min(22, width * .04),
-      feet: cameraY + height - Math.min(215, height * .32), h: Math.min(112, height * .21) };
+      feet: cameraY + arenaH - Math.min(215, arenaH * .32), h: Math.min(112, arenaH * .21) };
   }
 
   function buildSidArena(previousHeight = null) {
+    const arenaH = sidArenaHeight();
     const oldY = player.y;
     platforms = [];
-    const floorY = cameraY + height * .09, gap = Math.min(112, height * .19);
+    const floorY = cameraY + arenaH * .09, gap = Math.min(112, arenaH * .19);
     const tiles = Math.ceil(width / 68);
     for (let i = 0; i < tiles; i += 1) {
       const p = addPlatform(floorY, (i + .5) * width / tiles, "normal");
@@ -1303,18 +1308,18 @@
       p.spriteWidth = width / tiles + 12;
     }
     for (let row = 1; row <= 3; row += 1) {
-      if (floorY + row * gap + player.height >= cameraY + height - Math.min(72, height * .18)) break;
+      if (floorY + row * gap + player.height >= cameraY + arenaH - Math.min(72, arenaH * .18)) break;
       for (const lane of [.18, .5, .82]) addPlatform(floorY + row * gap, width * lane, "normal");
     }
     worldTop = cameraY + height;
-    if (previousHeight) player.y = cameraY + (oldY - cameraY) / previousHeight * height;
+    if (previousHeight) player.y = cameraY + (oldY - cameraY) / previousHeight * arenaH;
     player.y = clamp(player.y, floorY + player.height / 2,
-      cameraY + height - Math.min(72, height * .18) - player.height / 2);
+      cameraY + arenaH - Math.min(72, arenaH * .18) - player.height / 2);
     if (previousHeight && sidBoss) {
       for (const shot of sidBoss.shots) {
-        for (const key of ["y", "fromY", "targetY"]) if (shot[key] !== undefined) shot[key] = cameraY + (shot[key] - cameraY) / previousHeight * height;
+        for (const key of ["y", "fromY", "targetY"]) if (shot[key] !== undefined) shot[key] = cameraY + (shot[key] - cameraY) / previousHeight * arenaH;
       }
-      for (const key of ["heroFromY", "heroLandY"]) if (sidBoss[key] !== undefined) sidBoss[key] = cameraY + (sidBoss[key] - cameraY) / previousHeight * height;
+      for (const key of ["heroFromY", "heroLandY"]) if (sidBoss[key] !== undefined) sidBoss[key] = cameraY + (sidBoss[key] - cameraY) / previousHeight * arenaH;
     }
   }
 
@@ -1326,7 +1331,7 @@
     freeFlight = false;
     if (flightButton) { flightButton.setAttribute("aria-pressed", "false"); flightButton.textContent = "Свободный полёт: выкл."; }
     sidBoss = { hp: 10, age: 0, phase: "intro", timer: 0, round: 0, shots: [], lanes: [], hits: 0 };
-    player.y = cameraY + height * .35; player.vy = 720;
+    player.y = cameraY + sidArenaHeight() * .35; player.vy = 720;
     openingJump = false; somersault = null;
     invulnerableTimer = Math.max(invulnerableTimer, 2);
     buildSidArena();
@@ -1358,7 +1363,7 @@
       fromY: b.feet + b.h * .55, targetX, targetY: b.feet - 30,
       age: 0, vy: -(83 + Math.min(28, sidBoss.hits * 3)), reflected: false });
     const otherX = targetX < width / 2 ? width * .84 : width * .16;
-    sidBoss.shots.push({ kind: "crushed", x: otherX, y: cameraY + height + 35,
+    sidBoss.shots.push({ kind: "crushed", x: otherX, y: cameraY + sidArenaHeight() + 35,
       age: 0, vy: -112, reflected: false });
   }
 
@@ -1374,14 +1379,14 @@
       const landX = sceneMix(boss.heroFromX, boss.heroLandX, landing);
       const landY = sceneMix(boss.heroFromY, boss.heroLandY, landing) + Math.sin(landing * Math.PI) * 12;
       player.x = sceneMix(landX, width / 2, t);
-      player.y = sceneMix(landY, cameraY + height * .9, t);
+      player.y = sceneMix(landY, cameraY + sidArenaHeight() * .9, t);
       if (boss.timer >= 6.8 && stageReady("summit")) enterSummit();
       return true;
     }
     if (boss.phase === "intro" && boss.timer >= 1.8) beginSidIceWarning();
     else if (boss.phase === "ice-warning" && boss.timer >= Math.max(.95, 1.25 - boss.hits * .025)) {
       for (const lane of boss.lanes) boss.shots.push({ kind: "ice", x: (lane + .5) * width / 4,
-        y: cameraY + height + 35, age: 0, vy: -(100 + boss.hits * 2) });
+        y: cameraY + sidArenaHeight() + 35, age: 0, vy: -(100 + boss.hits * 2) });
       sidPhase("ice");
     } else if (boss.phase === "ice" && boss.timer >= 1.7) {
       boss.canLane = clamp(player.x, 50, width - 50); sidPhase("can-warning");
@@ -1450,6 +1455,7 @@
   function drawSidBoss() {
     const boss = sidBoss;
     if (!boss) return;
+    const arenaH = sidArenaHeight(), arenaTop = height - arenaH;
     const b = sidBossGeometry(), victory = boss.phase === "victory", age = boss.timer;
     const pose = boss.phase === "ice-warning" || boss.phase === "ice" ? 1
       : boss.phase === "can-warning" ? 2 : boss.phase === "can" && age < .6 ? 3 : 0;
@@ -1466,9 +1472,9 @@
         fridgeH * fridge.sw / fridge.sh, "center", fridgeH);
     }
     drawStoryActor(sprite, b.x + shake + (victory ? Math.sin(age * 2.5) * 18 * fly : 0),
-      worldToScreen(b.feet) - fly * (height * .55 + b.h), b.h,
+      worldToScreen(b.feet) - fly * (arenaH * .55 + b.h), b.h,
       victory ? Math.sin(age * 7) * .035 : Math.sin(boss.age * 2) * .015, 1 / squash, squash);
-    const roofY = Math.min(72, height * .18);
+    const roofY = arenaTop + Math.min(72, arenaH * .18);
     ctx.save();
     // Roof shards are deliberately small code-native ice facets, not a large
     // offscreen texture; the fall/open animation stays sharp at any DPR.
@@ -1502,7 +1508,7 @@
     }
     ctx.save(); ctx.font = "bold 11px monospace"; ctx.fillStyle = "#eaf8ff";
     ctx.strokeStyle = "#162d49"; ctx.lineWidth = 3; ctx.textAlign = "left";
-    const hudY = Math.min(98, height * .15);
+    const hudY = arenaTop + Math.min(98, arenaH * .15);
     const title = victory ? "СИД ПОБЕЖДЁН · 10/10" : `СИД · ${boss.hits}/10`;
     ctx.strokeText(title, 14, hudY); ctx.fillText(title, 14, hudY);
     for (let i = 0; i < 10; i += 1) { ctx.fillStyle = i < boss.hp ? "#e59e66" : "#7594a7"; ctx.fillRect(14 + i * 13, hudY + 7, 10, 4); }
@@ -1511,8 +1517,8 @@
       : boss.phase === "can-warning" || boss.phase === "can" ? "ЦЕЛУЮ БАНКУ — ОТБЕЙ СВЕРХУ" : "10 БАНОК ОТКРОЮТ ПРОХОД";
     ctx.strokeText(hint, width / 2, height - 9); ctx.fillStyle = "#f4df9f"; ctx.fillText(hint, width / 2, height - 9); ctx.restore();
     if (victory && age > 4.3) {
-      const size = Math.min(width * .19, height * .14) * sceneEase(age, 4.3, 5.2);
-      drawStoryPortal(width / 2, height * .18, size, age, art.summit);
+      const size = Math.min(width * .19, arenaH * .14) * sceneEase(age, 4.3, 5.2);
+      drawStoryPortal(width / 2, arenaTop + arenaH * .18, size, age, art.summit);
       drawCinemaFrame("ПРОХОД ОТКРЫТ", "Высокогорный паддок", sceneEase(age, 4.4, 5));
     }
   }
@@ -1625,6 +1631,7 @@
   }
 
   function summitEnemyPose(mob) {
+    if (mob.type === "drone" && mob.phase === "defeated") return art.summitDroneBroken;
     const frames = mob.type === "marmot" ? art.summitMarmot : art.summitDrone;
     return frames[mob.phase === "warning" ? 1 : mob.phase === "attack" || mob.phase === "open" ? 2
       : mob.phase === "defeated" || mob.phase === "retreat" ? 3 : 0];
@@ -1644,6 +1651,7 @@
         if (visible) go("idle");
       } else if (mob.phase === "defeated") {
         mob.timer += dt; mob.y -= (80 + mob.timer * 160) * dt;
+        if (mob.type === "drone") mob.x += mob.direction * 22 * dt;
       } else if (mob.phase === "retreat") {
         mob.timer += dt; mob.x += mob.direction * 70 * dt; mob.y += 35 * dt;
       } else if (visible) {
@@ -1705,10 +1713,18 @@
       const sy = worldToScreen(mob.y);
       if (sy > -mob.h && sy < height + mob.h) {
         const pose = summitEnemyPose(mob);
+        const drawH = mob.type === "drone" && mob.phase === "defeated" ? spriteSize(pose, mob.w) : mob.h;
         ctx.save(); ctx.translate(mob.x, sy);
         if (mob.type === "marmot" && mob.direction > 0) ctx.scale(-1, 1);
-        if (mob.phase === "defeated") ctx.rotate(Math.min(.7, mob.timer * .5));
-        ctx.drawImage(rasterSprite(pose, mob.w, mob.h), -mob.w / 2, -mob.h / 2, mob.w, mob.h);
+        if (mob.phase === "defeated") ctx.rotate(mob.type === "drone" ? mob.direction * mob.timer * 2 : Math.min(.7, mob.timer * .5));
+        ctx.drawImage(rasterSprite(pose, mob.w, drawH), -mob.w / 2, -drawH / 2, mob.w, drawH);
+        if (mob.type === "drone" && mob.phase === "defeated" && mob.timer < .8) {
+          ctx.fillStyle = "#f7cd76";
+          for (let i = 0; i < 5; i++) {
+            const a = i * Math.PI * 2 / 5, r = 8 + mob.timer * 30;
+            ctx.fillRect(Math.cos(a) * r, Math.sin(a) * r, 3, 2);
+          }
+        }
         if (mob.type === "drone" && mob.phase === "warning" && Math.floor(mob.timer * 8) % 2 === 0) {
           ctx.fillStyle = "#ffda76"; ctx.fillRect(-mob.w * .3, -mob.h * .1, 5, 3);
           ctx.fillRect(mob.w * .3 - 5, -mob.h * .1, 5, 3);
@@ -3977,7 +3993,8 @@
     if (kimiBoost > 0) player.vy = 1400;
     player.y += player.vy * dt;
     if (sidBoss) {
-      const ceiling = cameraY + height - Math.min(72, height * .18) - player.height / 2;
+      const arenaH = sidArenaHeight();
+      const ceiling = cameraY + arenaH - Math.min(72, arenaH * .18) - player.height / 2;
       if (player.y > ceiling) { player.y = ceiling; player.vy = Math.min(0, player.vy); }
     }
     const currentFeet = player.y - player.height / 2;
@@ -4379,6 +4396,7 @@
     viewportKey = nextViewportKey;
     const previousWidth = width;
     const previousHeight = height;
+    const previousArenaHeight = sidArenaHeight();
     // Keep horizontal world geometry stable; reveal more/less vertical scenery
     // to fill the viewport with one uniform scale, never stretching sprites.
     width = logicalViewportWidth;
@@ -4389,6 +4407,7 @@
     const displayScale = mobileViewport
       ? Math.max(bounds.width / width, bounds.height / height)
       : Math.min(bounds.width / width, bounds.height / height);
+    visibleWorldHeight = Math.min(height, bounds.height / displayScale);
     canvas.style.width = `${width * displayScale}px`;
     canvas.style.height = `${height * displayScale}px`;
     canvas.style.left = "50%";
@@ -4448,7 +4467,7 @@
       enemies.forEach((enemy) => { enemy.x *= scaleX; enemy.baseX *= scaleX; enemy.y *= scaleY; });
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
-      if (sidBoss && previousHeight !== height) buildSidArena(previousHeight);
+      if (sidBoss && previousArenaHeight !== sidArenaHeight()) buildSidArena(previousArenaHeight);
       draw();
     } else {
       buildGame();
@@ -4690,6 +4709,7 @@
       ["summitCableCarSrc", single("summitCableCar")],
       ["summitMarmotSrc", sheet => ({summitMarmot:summitEnemyFrames(sheet)})],
       ["summitDroneSrc", sheet => ({summitDrone:summitEnemyFrames(sheet)})],
+      ["summitDroneBrokenSrc", single("summitDroneBroken")],
     ];
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],

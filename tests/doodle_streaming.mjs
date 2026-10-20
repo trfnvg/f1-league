@@ -67,6 +67,7 @@ async function harness(mobile, failStartup = false) {
       spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
       decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
+      sidArenaHeight, sidBossGeometry, summitEnemyPose,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -80,7 +81,7 @@ async function harness(mobile, failStartup = false) {
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
         spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator,
-        summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY}),
+        summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY, visibleWorldHeight}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -757,4 +758,47 @@ for (const mobile of [true,false]) {
   assert.equal(a.state().summitEncounter,null);assert.equal(a.state().summitShots.length,0);
   assert.equal(a.spawnSummitEnemy('drone'),false,'Summit enemies cannot spawn in other biomes');
   console.log(`${mobile?'Mobile':'Desktop'}: summit enemies warnings, one-shot attacks, shield/swept contact, stomp and sandbox cleanup passed`);
+}
+
+for (const mobile of [true,false]) {
+  const h=await harness(mobile),a=h.api;
+  await a.startSidBossTest();
+  const viewports=mobile?[[390,650],[390,560],[430,740],[844,390],[390,844]]:[[1000,800],[900,1000]];
+  for(const [w,ht]of viewports){
+    h.resize(w,ht);
+    const b=a.sidBossGeometry(),state=a.state(),arenaH=a.sidArenaHeight();
+    assert.equal(arenaH,state.visibleWorldHeight);
+    assert.ok(b.feet+b.h<=state.cameraY+arenaH-10,'Entire Sid sprite must fit below visible top');
+    assert.ok(b.feet>state.cameraY+arenaH*.4,'Sid remains above the player arena');
+    assert.ok(state.player.y+state.player.height/2<=state.cameraY+arenaH,
+      'Resize must keep the player inside the visible arena');
+    a.draw();
+    if(process.env.DOODLE_PREVIEW_DIR && mobile && ht===650){
+      const image=canvasLib.createCanvas(390,650),painter=image.getContext('2d');
+      const scale=390/state.width;
+      const srcHeight=650/(scale*parseFloat(h.canvas.style.width)/390)*h.canvas.width/state.width;
+      // In this viewport canvas CSS width is 390: emulate its bottom-aligned CSS crop.
+      painter.drawImage(h.canvas,0,h.canvas.height-srcHeight,h.canvas.width,srcHeight,0,0,390,650);
+      await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,'doodle-sid-visible-mobile.png'),await image.encode('png'));
+    }
+  }
+  await h.events.get('doodle-drone-test:click')();
+  const mob=a.state().summitEncounter,p=a.state().player,pose=a.art.summitDrone[0];
+  p.x=mob.x;
+  const top=a.spriteTopAtX(pose,mob.x,mob.y,mob.w,mob.h,p.x);
+  p.y=top+p.height/2-3;p.vy=-250;
+  a.updateSummitEnemies(0,top+5,top-3,p.x);
+  assert.equal(mob.phase,'defeated');assert.equal(p.vy,830);
+  assert.equal(a.summitEnemyPose(mob),a.art.summitDroneBroken,'Stomp switches to the broken, stopped-rotor sprite');
+  const oldY=mob.y,oldX=mob.x;
+  a.updateSummitEnemies(.3,0,0,p.x);
+  assert.ok(mob.y<oldY,'Broken drone falls under gravity');
+  assert.notEqual(mob.x,oldX,'Broken drone drifts while falling');
+  assert.equal(a.state().summitShots.length,0,'Destroyed drone cannot fire');
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-drone-broken-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  for(let i=0;i<150&&a.state().summitEncounter===mob;i++)a.updateSummitEnemies(1/60,0,0,p.x);
+  assert.notEqual(a.state().summitEncounter,mob,'Wreck is removed only after falling offscreen');
+  assert.deepEqual(h.calls,[]);
+  console.log(`${mobile?'Mobile':'Desktop'}: visible Sid arena and stomped drone wreck animation passed`);
 }
