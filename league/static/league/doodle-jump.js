@@ -2247,7 +2247,7 @@
     forgottenPaddock = true;
     peakY = player.y = startY + 8000 * 11;
     player.x = width / 2;
-    cameraY = player.y - height * .42;
+    cameraY = player.y - cameraTrackingOffset();
     openingJump = false;
     freeFlight = false;
     if (flightButton) { flightButton.setAttribute("aria-pressed", "false"); flightButton.textContent = "Свободный полёт: выкл."; }
@@ -2906,7 +2906,7 @@
     player.vx = 0;
     player.vy = 720;
     peakY = player.y;
-    cameraY = Math.max(spaceFade.end + 240, player.y - height * .42);
+    cameraY = Math.max(spaceFade.end + 240, player.y - cameraTrackingOffset());
     openingJump = false;
     forgottenPaddock = false;
     portalTransition = null;
@@ -3379,18 +3379,28 @@
     const supportY = player.y - player.height / 2 - 18;
     // A bridge immediately below the feet catches even an already falling hero.
     // From it, ordinary jumps can reach the stationary refuge ladder.
-    const bridge = addPlatform(supportY, (player.x + targetX) / 2, "normal");
-    bridge.bossBridge = true;
-    bridge.width = bridge.hitboxWidth = bridge.spriteWidth = Math.abs(player.x - targetX) + 80;
-    boss.safeTopY = supportY - 110;
+    const bridgeX = (player.x + targetX) / 2;
+    let bridge = platforms.find(p => p.bossBridge && !p.broken && p.y <= supportY && p.y >= supportY - 65
+      && Math.abs(player.x - p.x) <= p.hitboxWidth / 2 && Math.abs(targetX - p.x) <= p.hitboxWidth / 2);
+    if (!bridge) {
+      bridge = addPlatform(supportY, bridgeX, "normal");
+      bridge.bossBridge = true;
+      bridge.width = bridge.hitboxWidth = bridge.spriteWidth = Math.abs(player.x - targetX) + 80;
+    }
+    boss.safeTopY = Math.floor(bridge.y / 150) * 150;
     extendBossRefuge(boss);
   }
 
   function extendBossRefuge(boss) {
     if (boss.phase !== "warning" && boss.phase !== "volley") return;
     const x = (boss.safeLane + .5) * width / 4;
-    while (boss.safeTopY < cameraY + height + 120) {
-      boss.safeTopY += 110;
+    while (boss.safeTopY < cameraY + visibleWorldHeight + 150) {
+      boss.safeTopY += 150;
+      // Fixed world rows survive repeated warnings without stacking ladders.
+      // Reuse ordinary footholds too when they already cover the refuge lane.
+      if (platforms.some(p => !p.broken && p.kind !== "break" && p.kind !== "moving"
+        && Math.abs(p.y - boss.safeTopY) < 25
+        && Math.abs(p.x - x) < p.hitboxWidth / 2 - 8)) continue;
       const platform = addPlatform(boss.safeTopY, x, "normal");
       platform.width = platform.hitboxWidth = platform.spriteWidth = Math.min(100, width / 4 - 12);
       platform.bossSafe = true;
@@ -3648,7 +3658,7 @@
     startGame(true, { forceRestart: true, adminTest: true });
     peakY = player.y = startY + 2000 * 11;
     player.x = width / 2; player.vy = 720;
-    cameraY = player.y - height * .42; openingJump = false;
+    cameraY = player.y - cameraTrackingOffset(); openingJump = false;
     platforms = []; enemies = []; hazards = []; powerups = []; marshals = [];
     let y = player.y - player.height / 2 - 8, x = player.x;
     addPlatform(y, x, "normal");
@@ -4010,6 +4020,15 @@
     return false;
   }
 
+  function cameraTrackingOffset() {
+    return logicalViewportWidth === 390 ? visibleWorldHeight * .38 : height * .42;
+  }
+
+  function followPlayerCamera(dt) {
+    const target = Math.max(cameraY, player.y - cameraTrackingOffset());
+    cameraY += (target - cameraY) * (1 - Math.exp(-(logicalViewportWidth === 390 ? 12 : 8) * dt));
+  }
+
   function update(dt) {
     if (!streamWorldAssets()) return;
     elapsed += dt;
@@ -4190,8 +4209,7 @@
       somersault = null;
     }
     if (!openingJump && !sidBoss) {
-      const targetCameraY = Math.max(cameraY, player.y - height * .42);
-      cameraY += (targetCameraY - cameraY) * (1 - Math.exp(-8 * dt));
+      followPlayerCamera(dt);
     }
     if (updateHawks(dt, previousFeet, currentFeet, previousPlayerX)) return;
     updateSpaceBoss(dt);
