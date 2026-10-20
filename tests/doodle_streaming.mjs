@@ -65,7 +65,7 @@ async function harness(mobile, failStartup = false) {
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
       updateHawks, spriteTopAtX, spriteSize, updatePortal,
       spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
-      decorateSummitPlatform, updateSummitGoats, extendWorld,
+      decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -78,7 +78,8 @@ async function harness(mobile, failStartup = false) {
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
-        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator}),
+        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator,
+        summitEntryY, summitGoatNextY, summitCommentatorNextY}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -642,15 +643,32 @@ for (const mobile of [true,false]) {
   for(let i=0;i<120;i++)a.updateSummitCommentator(1/60,0,0,p.x);
   assert.equal(a.state().summitCommentator,null,'Fall completes below the camera, without a sudden visible timeout');
   assert.deepEqual(h.calls,[],'Admin encounter preview does not save attempts or scores');
-  // Exercise a full generated summit pattern and actual roof/chain landings.
+  assert.ok(a.state().summitCommentatorNextY-npc.support.y>=11000,
+    'Bath repeats only after a large climb');
+  // Sample a long climb, not only one local platform pattern.
   const route = [];
-  for(let i=0;i<18;i++) {
-    const platform={x:100,originX:100,y:a.state().cameraY+100+i*110,phase:0,broken:false};
+  for(let i=0;i<180;i++) {
+    const platform={x:100,originX:100,y:a.state().cameraY+100+i*160,phase:0,broken:false};
     a.decorateSummitPlatform(platform); route.push(platform);
   }
-  assert.equal(route.filter(p=>p.summitKind==='purple').length,4);
-  assert.equal(route.filter(p=>p.summitKind==='cable').length,2);
-  assert.equal(route.filter(p=>p.goat).length,2);
+  assert.equal(route.filter(p=>p.summitKind==='purple').length,40);
+  assert.equal(route.filter(p=>p.summitKind==='cable').length,20);
+  const goats=route.filter(p=>p.goat);
+  assert.ok(goats.length>=2 && goats.length<=5,'Goats must be rare over 180 platforms');
+  for(let i=1;i<goats.length;i++)assert.ok(goats[i].y-goats[i-1].y>=6500);
+  assert.ok(route.filter(p=>p.kind==='break').length>=15,'Fragile footholds add difficulty');
+  assert.ok(route.filter(p=>p.kind==='moving').length>=40);
+  assert.ok(route.at(-1).hitboxWidth<route[0].hitboxWidth,'Platforms narrow progressively');
+  for(let i=0;i<100;i++){
+    const gap=a.summitPlatformGap();
+    assert.ok(gap>=142&&gap<=177);
+    assert.ok(gap<720*720/(2*1240),'Gap is below the normal jump apex');
+    const from=a.state().width*(.14+Math.random()*.72);
+    const to=a.choosePlatformX(from,gap,32);
+    const flight=(720+Math.sqrt(720*720-2*1240*gap))/1240;
+    // Conservative speed excludes the extra 20% control speed. Reserve both movers.
+    assert.ok(Math.abs(to-from)+32<=Math.min(440,a.state().width*.62)*flight*.72+.01);
+  }
   const cable=route.find(p=>p.summitKind==='cable');
   cable.y=a.state().cameraY+200;
   a.state().platforms.splice(0,a.state().platforms.length,cable);
