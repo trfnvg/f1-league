@@ -76,6 +76,10 @@
   let summitPlatformIndex = 0;
   let summitGoatNextY = 0;
   let summitRareLastY = -Infinity;
+  let summitEncounter = null;
+  let summitShots = [];
+  let summitEnemyNextY = 0;
+  let summitEnemyLastType = "drone";
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -1521,6 +1525,9 @@
     summitPlatformIndex = 0;
     summitGoatNextY = cameraY + height + 3000;
     summitRareLastY = -Infinity;
+    summitEncounter = null; summitShots.length = 0;
+    summitEnemyNextY = cameraY + height + 1000;
+    summitEnemyLastType = Math.random() < .5 ? "drone" : "marmot";
     summitCommentator = null;
     summitCommentatorNextY = cameraY + height + 5000;
     platforms = []; enemies = []; hazards = []; hawks = []; powerups = []; marshals = []; effects = [];
@@ -1583,6 +1590,148 @@
     const difficulty = clamp((worldTop - summitEntryY) / 6000, 0, 1);
     // Normal jump apex is 209 units: even the hardest gap leaves >30 units.
     return 142 + difficulty * 15 + Math.random() * 20;
+  }
+
+  function summitEnemyFrames(sheet) {
+    const poses = checkedFrames(splitSpriteSheet(sheet, 4, null, false, true), 4);
+    const w = Math.max(...poses.map(p => p.sw)), h = Math.max(...poses.map(p => p.sh));
+    return poses.map(p => {
+      const tile = document.createElement("canvas"); tile.width = w; tile.height = h;
+      const painter = tile.getContext("2d");
+      painter.imageSmoothingEnabled = false;
+      painter.drawImage(p.image, Math.round((w - p.sw) / 2), h - p.sh);
+      const pixels = painter.getImageData(0, 0, w, h).data;
+      return {image:tile, sx:0, sy:0, sw:w, sh:h, mask:alphaMask(pixels, w, 0, 0, w, h)};
+    });
+  }
+
+  function spawnSummitEnemy(type = null) {
+    if (!summit || summitEncounter || summitShots.length || !art.summitMarmot || !art.summitDrone) return false;
+    if (summitCommentator && summitCommentator.y > cameraY - 100) return false;
+    const y = cameraY + height + 100;
+    if (platforms.some(p => p.goat && Math.abs(p.y - y) < 650)) return false;
+    type = type || (summitEnemyLastType === "drone" ? "marmot" : "drone");
+    const support = type === "marmot" ? platforms.find(p => !p.broken && !p.goat && !p.commentator
+      && p.kind === "normal" && !p.summitKind && p.y >= y && p.y <= y + 350) : null;
+    if (type === "marmot" && !support) return false;
+    const w = type === "marmot" ? 64 : 76;
+    const frame = type === "marmot" ? art.summitMarmot[0] : art.summitDrone[0];
+    const h = spriteSize(frame, w);
+    summitEncounter = {type, support, x:support?.x ?? width * (player.x < width / 2 ? .72 : .28),
+      y:support ? support.y + h / 2 : y, w, h, phase:"arriving", timer:0,
+      direction:player.x < width / 2 ? -1 : 1, age:0};
+    summitEnemyLastType = type;
+    return true;
+  }
+
+  function summitEnemyPose(mob) {
+    const frames = mob.type === "marmot" ? art.summitMarmot : art.summitDrone;
+    return frames[mob.phase === "warning" ? 1 : mob.phase === "attack" || mob.phase === "open" ? 2
+      : mob.phase === "defeated" || mob.phase === "retreat" ? 3 : 0];
+  }
+
+  function updateSummitEnemies(dt, previousFeet, currentFeet, previousX = player.x) {
+    if (!summit) { summitEncounter = null; summitShots.length = 0; return; }
+    if (!summitEncounter && !summitShots.length && cameraY + height >= summitEnemyNextY) spawnSummitEnemy();
+    const mob = summitEncounter;
+    if (mob) {
+      const oldY = mob.y, oldX = mob.x;
+      mob.age += dt;
+      const sy = worldToScreen(mob.y), visible = sy > mob.h / 2 + 20 && sy < height - mob.h / 2;
+      const go = phase => { mob.phase = phase; mob.timer = 0; };
+      if (mob.phase === "arriving") {
+        if (mob.type === "drone") mob.y -= 28 * dt;
+        if (visible) go("idle");
+      } else if (mob.phase === "defeated") {
+        mob.timer += dt; mob.y -= (80 + mob.timer * 160) * dt;
+      } else if (mob.phase === "retreat") {
+        mob.timer += dt; mob.x += mob.direction * 70 * dt; mob.y += 35 * dt;
+      } else if (visible) {
+        mob.timer += dt;
+        if (mob.phase === "idle") {
+          if (mob.type === "drone") mob.x += clamp(player.x - mob.x, -50, 50) * dt;
+          if (mob.timer >= .9) { mob.direction = player.x < mob.x ? -1 : 1; go("warning"); }
+        } else if (mob.phase === "warning" && mob.timer >= 1.3) {
+          // Aim freezes during the warning. Only one projectile per encounter.
+          summitShots.push({type:mob.type === "marmot" ? "snow" : "nut", x:mob.x + (mob.type === "marmot" ? mob.direction * 22 : 0),
+            y:mob.y - mob.h * (mob.type === "marmot" ? .04 : .38), vx:mob.type === "marmot" ? mob.direction * 120 : 0,
+            vy:mob.type === "marmot" ? -8 : -130, age:0});
+          go("attack");
+        } else if (mob.phase === "attack" && mob.timer >= .5) go(mob.type === "drone" ? "retreat" : "open");
+      }
+      if (mob.phase !== "defeated" && mob.phase !== "retreat") {
+        // Use the resting head silhouette, not the raised warning flag, as a foothold.
+        const frame = mob.type === "marmot" ? art.summitMarmot[0] : art.summitDrone[0];
+        const feetX = mob.type === "marmot" && mob.direction > 0 ? mob.x * 2 - player.x : player.x;
+        const top = spriteTopAtX(frame, mob.x, mob.y, mob.w, mob.h, feetX);
+        const oldTop = spriteTopAtX(frame, oldX, oldY, mob.w, mob.h, feetX);
+        const landX = Math.abs(player.x - previousX) > width / 2 ? player.x : previousX;
+        const t = clamp((previousFeet - oldTop) / Math.max(.001, previousFeet - currentFeet + top - oldTop), 0, 1);
+        const crossingX = landX + (player.x - landX) * t;
+        if (player.vy < 0 && Math.abs(crossingX - mob.x) < mob.w * .3
+          && crossedLandingSurface(previousFeet, currentFeet, oldTop, top, crossingX, mob.x, mob.w * .6, player.width * .3)) {
+          player.y = top + player.height / 2; player.vy = 830;
+          openingJump = false; somersault = null; frags += 1; go("defeated");
+        }
+      }
+      if (mob.y + mob.h / 2 < cameraY - 60 || mob.x < -mob.w || mob.x > width + mob.w) {
+        summitEncounter = null;
+        summitEnemyNextY = cameraY + height + 1500 + Math.random() * 900;
+      }
+    }
+    let kept = 0;
+    for (const shot of summitShots) {
+      const oldX = shot.x, oldY = shot.y;
+      shot.age += dt; shot.x += shot.vx * dt;
+      if (shot.type === "nut") shot.vy = Math.max(-220, shot.vy - 35 * dt);
+      shot.y += shot.vy * dt;
+      if (shot.y < cameraY - 70 || shot.x < -50 || shot.x > width + 50) continue;
+      const px = Math.abs(player.x - previousX) > width / 2 ? player.x : previousX;
+      const ox = oldX - px, oy = oldY - previousFeet - player.height / 2;
+      const dx = shot.x - oldX - (player.x - px), dy = shot.y - oldY - (player.y - previousFeet - player.height / 2);
+      const t = clamp(-(ox * dx + oy * dy) / Math.max(.001, dx * dx + dy * dy), 0, 1);
+      const hit = ((ox + dx * t) / (6 + player.width * .27)) ** 2
+        + ((oy + dy * t) / (6 + player.height * .33)) ** 2 < 1;
+      if (hit) { if (invulnerableTimer <= 0) { endGame(); return; } continue; }
+      summitShots[kept++] = shot;
+    }
+    summitShots.length = kept;
+  }
+
+  function drawSummitEnemies() {
+    if (!summit) return;
+    const mob = summitEncounter;
+    if (mob) {
+      const sy = worldToScreen(mob.y);
+      if (sy > -mob.h && sy < height + mob.h) {
+        const pose = summitEnemyPose(mob);
+        ctx.save(); ctx.translate(mob.x, sy);
+        if (mob.type === "marmot" && mob.direction > 0) ctx.scale(-1, 1);
+        if (mob.phase === "defeated") ctx.rotate(Math.min(.7, mob.timer * .5));
+        ctx.drawImage(rasterSprite(pose, mob.w, mob.h), -mob.w / 2, -mob.h / 2, mob.w, mob.h);
+        if (mob.type === "drone" && mob.phase === "warning" && Math.floor(mob.timer * 8) % 2 === 0) {
+          ctx.fillStyle = "#ffda76"; ctx.fillRect(-mob.w * .3, -mob.h * .1, 5, 3);
+          ctx.fillRect(mob.w * .3 - 5, -mob.h * .1, 5, 3);
+        }
+        ctx.restore();
+      }
+    }
+    for (const shot of summitShots) {
+      const y = worldToScreen(shot.y);
+      if (y < -15 || y > height + 15) continue;
+      ctx.save(); ctx.translate(shot.x, y);
+      if (shot.type === "snow") {
+        ctx.fillStyle = "#b5d2e7"; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#f6fbff"; ctx.fillRect(-5, -5, 8, 7); ctx.fillRect(-2, -7, 5, 3);
+      } else {
+        ctx.rotate(shot.age * 2); ctx.fillStyle = "#bfbdad"; ctx.strokeStyle = "#424954"; ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3; ctx.lineTo(Math.cos(a) * 9, Math.sin(a) * 9); }
+        ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#303c49";
+        ctx.fillRect(-3, -3, 6, 6);
+      }
+      ctx.restore();
+    }
   }
 
   function goatPose(platform) {
@@ -1814,6 +1963,21 @@
     spawnSummitCommentator(cameraY + height * .4);
     draw();
     if (bossTestStatus) bossTestStatus.textContent = "Комментатор · прыгни сверху на ванну · тест без сохранения результата";
+  }
+
+  async function startSummitEnemyTest(type) {
+    await startCommentatorTest();
+    if (!summit || !adminBossTestMode) return;
+    summitCommentator = null;
+    summitEncounter = null; summitShots.length = 0;
+    platforms = platforms.filter(p => !p.commentator);
+    const support = addPlatform(cameraY + height + 160, width * .65, "normal");
+    support.width = support.hitboxWidth = support.spriteWidth = 65;
+    if (!spawnSummitEnemy(type)) return;
+    summitEncounter.y = cameraY + height * .72;
+    if (summitEncounter.support) summitEncounter.support.y = summitEncounter.y - summitEncounter.h / 2;
+    draw();
+    if (bossTestStatus) bossTestStatus.textContent = `${type === "marmot" ? "Сурок · жёлтый флаг и снежок" : "Дрон · предупреждение и сброс гайки"} · тест без сохранения результата`;
   }
 
   function sceneEase(age, start, end) {
@@ -2223,6 +2387,7 @@
   function buildGame() {
     summitCommentator = null; summitCommentatorNextY = 0;
     summitPlatformIndex = 0; summitGoatNextY = 0; summitRareLastY = -Infinity;
+    summitEncounter = null; summitShots.length = 0; summitEnemyNextY = 0;
     sidBoss = null;
     sidBossCleared = false;
     summit = false;
@@ -3836,6 +4001,8 @@
     if (mode !== "running") return;
     updateSummitCommentator(dt, previousFeet, currentFeet, previousPlayerX);
     updateSummitGoats(dt, previousFeet, currentFeet, previousPlayerX);
+    updateSummitEnemies(dt, previousFeet, currentFeet, previousPlayerX);
+    if (mode !== "running") return;
     collideSidShots(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running" || sidBoss?.phase === "victory") return;
     collideWithSpaceEvents(previousFeet, currentFeet, dt);
@@ -4012,6 +4179,7 @@
     drawSpaceEvents();
     drawBabyKimi();
     drawSummitCommentator();
+    drawSummitEnemies();
     drawWinterEncounter();
     drawSidBoss();
     if (art.marshal) {
@@ -4403,6 +4571,8 @@
   document.getElementById("doodle-sid-boss-test")?.addEventListener("click", startSidBossTest);
   document.getElementById("doodle-sid-victory-test")?.addEventListener("click", startSidVictoryTest);
   document.getElementById("doodle-commentator-test")?.addEventListener("click", startCommentatorTest);
+  document.getElementById("doodle-marmot-test")?.addEventListener("click", () => startSummitEnemyTest("marmot"));
+  document.getElementById("doodle-drone-test")?.addEventListener("click", () => startSummitEnemyTest("drone"));
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }
@@ -4518,6 +4688,8 @@
       ["summitCommentatorSrc", (sheet) => ({ summitCommentator: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
       ["summitGoatSrc", (sheet) => ({ summitGoat: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
       ["summitCableCarSrc", single("summitCableCar")],
+      ["summitMarmotSrc", sheet => ({summitMarmot:summitEnemyFrames(sheet)})],
+      ["summitDroneSrc", sheet => ({summitDrone:summitEnemyFrames(sheet)})],
     ];
     if (name === "sky") return [
       ["backgroundCloudSrc", (sheet) => ({ cloud: sheet })],
