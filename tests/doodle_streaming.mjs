@@ -990,7 +990,9 @@ for(const mobile of [true,false]) {
   a.updateBathBoss(1/60);
   assert.equal(b.phase,'ride','A real descending jump boards the cabin');
   for(let i=0;i<241;i++)a.updateBathBoss(1/60);
-  assert.equal(b.phase,'intro');assert.ok(a.state().platforms.length>=8);
+  assert.equal(b.phase,'intro');
+  assert.equal(a.state().platforms.filter(p=>p.y>a.bathGeometry().floor+1).length,2);
+  assert.equal(b.bubbles.length,0,'No permanent bubble ladder');
   if(mobile){
     for(const [w,ht] of [[390,560],[844,390],[390,650]]){
       h.resize(w,ht);const view=a.bathGeometry();
@@ -1008,14 +1010,25 @@ for(const mobile of [true,false]) {
         'Each volley leaves its announced safe lane free of BAN plates');
     }
     assert.equal(b.phase,'open','Every attack cycle opens an attack window');
+    assert.equal(b.bubbles.length,1,'Exactly one counterattack spring per window');
     for(let i=0;i<55;i++){a.bossShield();a.update(1/60);}
     g=a.bathGeometry();
+    assert.ok(g.x-g.w/2>=0&&g.x+g.w/2<=a.state().width,'Whole tub remains inside the arena');
     if(process.env.DOODLE_PREVIEW_DIR&&[1,4,7].includes(hit)){
       a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-phase-${b.tier}-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
     }
-    const medalY=g.y-g.h*.08;
-    p.x=g.x;p.vx=0;p.y=medalY+p.height/2+3;p.vy=-300;
-    a.updateBathBoss(1/60);
+    if(hit===1){
+      const spring=b.bubbles[0];
+      p.x=spring.x;p.vx=0;p.y=spring.y+15+p.height/2+3;p.vy=-300;
+      a.updateBathBoss(1/60);
+      assert.equal(spring.cooldown,Infinity,'Counterattack bubble is consumed, never recharges');
+      assert.equal(p.vy,650);
+      for(let i=0;i<120&&b.hp===8;i++)a.updateBathBoss(1/60);
+    }else{
+      const medalY=g.y-g.h*.08;
+      p.x=g.x;p.vx=0;p.y=medalY+p.height/2+3;p.vy=-300;
+      a.updateBathBoss(1/60);
+    }
     assert.equal(b.hp,8-hit,'One actual descending medal impact removes exactly one life');
     const hp=b.hp;a.updateBathBoss(0);assert.equal(b.hp,hp,'A hit cannot repeat outside the open phase');
     assert.equal(b.tier,hit>=6?3:hit>=3?2:1);
@@ -1043,8 +1056,13 @@ for(const mobile of [true,false]) {
   fight.phase='warning';fight.timer=0;fight.lane=0;fight.bubbles=[];
   hero.x=a.state().width*.5;hero.y=gg.floor+100;hero.vy=0;
   fight.shots=[{kind:'ban',x:hero.x,y:hero.y+135/60,vy:-135,age:1}];
-  a.expireShield();a.updateBathBoss(1/60);
-  assert.equal(a.state().mode,'over','BAN plates cause a real lethal contact without a shield');
+  for(let hit=0;hit<3;hit++){
+    fight.shots=[{kind:'ban',x:hero.x,y:hero.y+135/60,vy:-135,age:1}];
+    a.expireShield();a.updateBathBoss(1/60);
+    assert.equal(fight.lives,2-hit);
+    if(hit<2)assert.equal(a.state().mode,'running','An arena mistake is recoverable');
+  }
+  assert.equal(a.state().mode,'over','Third unshielded contact ends the run');
   assert.deepEqual(h.calls,[]);
   console.log(`${mobile?'Mobile':'Desktop'}: bath cabin boarding, eight real hits, three phases, resize, locked score, eagle finale and restart passed`);
 }

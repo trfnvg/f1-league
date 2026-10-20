@@ -1,0 +1,13 @@
+# Bath arena revision
+
+The 13,000-point encounter now takes place in a separate alpine bathhouse. Two low ledges replace the four-step ladder. Floor/ledge bounce is 430 units/s (about 75 units of rise); the boarding jump stays unchanged. A single one-use bubble appears only during each five-second counterattack window. It launches at 650 units/s and reaches the lowered medal. After a hit the hero falls back to the arena, rather than chaining jumps above the boss.
+
+Eight boss HP; phases at five and two remaining HP. Phase one drops one telegraphed plate; phase two chains two plates and coats a ledge in slippery foam; phase three chains three plates and adds a low foam sweep with a directional warning. Plates finish crossing the arena before the next tell. Each cycle reserves one plate-free lane. Counterattack clears remaining projectiles. Three unshielded hits end the run; damage grants 1.6 seconds of grace. The original 800-point reward and eagle finale remain.
+
+Visuals: independent backdrop, ivory/brass ledges, bounded side steam, boss kept inside screen edges. Art stays full resolution and lazy loads in the bath stage; startup still loads 12 assets. The world backdrop is skipped during the arena. Native Canvas regression tests cover both viewport sizes, real bubble-to-medal trajectories, single-use springs, all eight hits, resize, damage grace, finale and admin isolation. Physical-device frame rate is not measured by this suite.
+
+Generated with the built-in imagegen tool. Asset: `league/static/league/images/doodle-jump/bath-arena-v2.png`.
+
+Prompt:
+
+Use case: stylized-concept. Production background asset for a premium pixel-art vertical platformer boss arena, portrait 1024x1536. A lavish abandoned alpine thermal bath and motorsport commentary tribunal inside an immense art-deco mountain observatory. Restrained midnight teal stone, aged brass, ivory ceramic, warm amber sconces. Symmetrical tall room, distant snowy mountains through a huge arched window, imposing round brass clock-like architectural halo high in room, side pipes and hanging chains at far edges. Beautiful carefully clustered crisp 16-bit pixel art, detailed but calm low-contrast centre to read animated characters. Lower 12 percent is a continuous horizontal ivory-and-dark-teal tiled bathhouse floor, upper room open empty playing area. Deep layered architecture, cinematic lighting, tiny steam vents at sides. NO characters, NO bathtubs, NO floating platforms, NO bubbles, NO HUD, NO letters, NO text. Straight-on 2D sideview, no perspective ground grid. Entire frame finished artwork, no borders. This is the background of a comic bathtub boss arena, sophisticated retro game art.

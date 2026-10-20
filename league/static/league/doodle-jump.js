@@ -4049,11 +4049,11 @@
 
   function bathGeometry() {
     const b = bathBoss, ah = sidArenaHeight(), floor = cameraY + ah * .1;
-    const gap = Math.min(110, ah * .17), w = Math.min(190, width * .46, ah * .34);
+    const gap = Math.min(60, ah * .12), w = Math.min(190, width * .46, ah * .34);
     const h = spriteSize(art.bathBossPoses[0], w);
     const open = b && ["open","hit","break"].includes(b.phase);
-    const targetY=open ? floor+gap*2+Math.min(125,ah*.2)+h*.08 : cameraY+ah-h*.68-55;
-    return {ah, floor, gap, w, h, x: width*.5 + (b?.tier > 1 ? Math.sin(b.age*.7)*width*.16 : 0),
+    const targetY=open ? floor+gap+100+h*.08 : cameraY+ah-h*.68-55;
+    return {ah, floor, gap, w, h, x: open ? clamp(b.attackX ?? width*.5,w/2+12,width-w/2-12) : width*.5 + (b?.tier > 1 ? Math.sin(b.age*.7)*width*.16 : 0),
       targetY, y:b?.visualY ?? targetY};
   }
 
@@ -4065,16 +4065,23 @@
       const p=addPlatform(g.floor,(i+.5)*width/tiles,"normal");
       p.width=p.hitboxWidth=p.spriteWidth=width/tiles+2;
     }
-    for(let row=1;row<=2;row++)for(const lane of [.2,.8])addPlatform(g.floor+row*g.gap,width*lane,"normal");
+    for(const lane of [.22,.78]){
+      const p=addPlatform(g.floor+g.gap,width*lane,"normal");
+      p.width=p.hitboxWidth=p.spriteWidth=Math.min(74,width*.18);
+    }
     if(oldHeight)player.y=cameraY+(oldY-cameraY)/oldHeight*g.ah;
     player.y=clamp(player.y,g.floor+player.height/2,cameraY+g.ah-player.height);
-    bathBoss.bubbles=Array.from({length:4},(_,i)=>({x:width*(i%2?.58:.42),
-      y:g.floor+g.gap*(.55+i*.65),cooldown:0}));
+    // Resize preserves whether the single counterattack spring was spent.
+    if(bathBoss.phase==="open"&&bathBoss.bubbles.length){
+      bathBoss.attackX=clamp(bathBoss.attackX,g.w/2+12,width-g.w/2-12);
+      bathBoss.bubbles[0].x=bathBoss.attackX;
+      bathBoss.bubbles[0].y=g.floor+g.gap+12;
+    }else bathBoss.bubbles=[];
   }
 
   function beginBathJourney() {
     if(!summit || bathBoss || bathBossCleared || !art.bathBossPoses) return false;
-    bathBoss={phase:"boarding",tier:1,hp:8,timer:0,age:0,shots:[],bubbles:[],
+    bathBoss={phase:"boarding",tier:1,hp:8,lives:3,timer:0,age:0,shots:[],bubbles:[],
       cabinX:width*.65,cabinY:player.y+90,entryScore:runScore(),lastLane:-1};
     rocketTimer=0;kimiBoost=0;freeFlight=false;somersault=null;
     summitEncounter=null;summitCommentator=null;summitShots=[];
@@ -4090,9 +4097,18 @@
 
   function beginBathWarning() {
     const b=bathBoss;
-    b.safeLane=Math.floor(Math.random()*3);
-    b.remaining=b.tier===1?1:3;
+    b.bubbles=[];
+    const occupied=clamp(Math.floor(player.x/(width/3)),0,2);
+    b.safeLane=(occupied+1+Math.floor(Math.random()*2))%3;
+    b.remaining=b.tier;
     nextBathWarning();
+  }
+
+  function openBathCounter() {
+    const b=bathBoss,g=bathGeometry();
+    b.shots=[];b.attackX=clamp(width*(b.safeLane+.5)/3,g.w/2+12,width-g.w/2-12);
+    b.bubbles=[{x:b.attackX,y:g.floor+g.gap+12,cooldown:0}];
+    bathState("open");
   }
 
   function nextBathWarning() {
@@ -4104,8 +4120,8 @@
   function hitBathMedal() {
     const b=bathBoss;
     if(!b||b.phase!=="open"||b.hp<=0)return false;
-    b.hp--;player.vy=800;somersault=null;invulnerableTimer=.85;
-    b.shots=[];
+    b.hp--;player.vy=260;somersault=null;invulnerableTimer=1.2;
+    b.shots=[];b.bubbles=[];
     if(!b.hp){bathBossCleared=true;bossBonus+=800;bathState("victory");}
     else {
       const tier=b.hp<=2?3:b.hp<=5?2:1;
@@ -4125,7 +4141,7 @@
     const feet=player.y-player.height/2;
     if(player.vy<0){
       const p=landingPlatform(oldFeet,feet,oldX,player.x);
-      if(p){player.y=p.y+player.height/2;player.vy=720;
+      if(p){player.y=p.y+player.height/2;player.vy=bathBoss.phase==="boarding"?720:430;
         if(p.foamUntil>elapsed)bathBoss.slip=.8;}
     }
     return {oldX,oldFeet,feet};
@@ -4169,22 +4185,26 @@
     b.visualY=g.y+(g.targetY-g.y)*(1-Math.exp(-6*dt));
     if(b.phase==="intro"&&b.timer>=2)beginBathWarning();
     else if(b.phase==="warning"&&b.timer>=1.15){
-      b.shots.push({kind:"ban",x:width*(b.lane+.5)/3,y:cameraY+g.ah+30,oldY:cameraY+g.ah+30,vy:-135,age:0});
+      // A stamped plate drops through the entire arena before the next tell.
+      b.shots.push({kind:"ban",x:width*(b.lane+.5)/3,y:cameraY+g.ah+30,oldY:cameraY+g.ah+30,vy:-240,age:0});
       if(b.tier===3)b.shots.push({kind:"foam",x:b.lane===0?-35:width+35,y:g.floor+12,
         vx:b.lane===0?95:-95,age:0});
-      if(b.tier>=2){const p=platforms.filter(p=>p.y>g.floor+10)[b.lane];if(p)p.foamUntil=elapsed+5;}
+      if(b.tier>=2){
+        const ledges=platforms.filter(p=>p.y>g.floor+10);
+        const p=ledges.reduce((best,p)=>!best||Math.abs(p.x-width*(b.lane+.5)/3)<Math.abs(best.x-width*(b.lane+.5)/3)?p:best,null);
+        if(p)p.foamUntil=elapsed+5;
+      }
       bathState("attack");
-    } else if(b.phase==="attack"&&b.timer>=1.25){
-      if(--b.remaining>0)nextBathWarning();else bathState("open");
-    } else if(b.phase==="open"&&b.timer>=5.5)beginBathWarning();
-    else if(b.phase==="hit"&&b.timer>=.85)beginBathWarning();
-    else if(b.phase==="break"&&b.timer>=1.8)beginBathWarning();
+    } else if(b.phase==="attack"&&b.timer>=(g.ah+70)/240){
+      if(--b.remaining>0)nextBathWarning();else openBathCounter();
+    } else if(b.phase==="open"&&b.timer>=5)beginBathWarning();
+    else if(b.phase==="hit"&&b.timer>=1.4)beginBathWarning();
+    else if(b.phase==="break"&&b.timer>=2.2)beginBathWarning();
     const m=bathPlayerPhysics(dt);
     for(const bubble of b.bubbles){
-      bubble.cooldown=Math.max(0,bubble.cooldown-dt);
-      if(!bubble.cooldown&&player.vy<0&&movingLanding(m.oldFeet,m.feet,bubble.y+15,bubble.y+15,
+      if(b.phase==="open"&&!bubble.cooldown&&player.vy<0&&movingLanding(m.oldFeet,m.feet,bubble.y+15,bubble.y+15,
         m.oldX,bubble.x,bubble.x,38)){
-        player.y=bubble.y+15+player.height/2;player.vy=800;bubble.cooldown=1.5;protectBounce();
+        player.y=bubble.y+15+player.height/2;player.vy=650;bubble.cooldown=Infinity;protectBounce();
       }
     }
     const medalY=g.y-g.h*.08;
@@ -4203,7 +4223,10 @@
         const t=i/steps;
         if(spriteOverlapsEllipse(frame,sceneMix(oldX,shot.x,t),sceneMix(oldY,shot.y,t),w,h,
           sceneMix(m.oldX,player.x,t),sceneMix(m.oldFeet+player.height/2,player.y,t),player.width*.27,player.height*.33)){
-          endGame();return true;
+          shot.dead=true;b.lives--;invulnerableTimer=1.6;
+          player.vy=Math.max(player.vy,230);
+          if(b.lives<=0){endGame();return true;}
+          break;
         }
       }
     }
@@ -4220,6 +4243,7 @@
   function drawBathHero(x=player.x,y=player.y) {
     const frame=currentHeroSprite(),h=player.height,w=h*frame.sw/frame.sh;
     ctx.save();ctx.translate(x,worldToScreen(y));ctx.scale(facing,1);
+    if(invulnerableTimer>0&&Math.floor(bathBoss.age*12)%2)ctx.globalAlpha=.55;
     ctx.drawImage(rasterSprite(frame,w,h),-w/2,-h/2,w,h);ctx.restore();
   }
 
@@ -4249,14 +4273,32 @@
     if(b.phase==="complete"){
       drawBathMountains();return;
     }
-    // Side gantries frame the arena without blocking the centre on phones.
-    ctx.fillStyle="#273c50";ctx.fillRect(0,top,12,g.ah);ctx.fillRect(width-12,top,12,g.ah);
-    for(const p of platforms){drawSummitPlatform(p);if(p.foamUntil>elapsed)bathDrawSprite(art.bathBossProps[5],p.x,p.y+5,p.spriteWidth);}
+    // One cached scene, no frame-by-frame gradients or full-screen particles.
+    ctx.drawImage(art.bathArena,0,top,width,g.ah);
+    // Small side-vent steam loops: bounded work, kept out of the combat lane.
+    ctx.save();ctx.fillStyle="#d6e6df";
+    for(const side of [0,1])for(let i=0;i<4;i++){
+      const t=(b.age*.22+i*.25)%1;
+      ctx.globalAlpha=(1-t)*.13;
+      ctx.beginPath();ctx.ellipse(side?width-12:12,worldToScreen(g.floor)-t*85,5+t*9,4+t*6,0,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+    for(const p of platforms){
+      const y=worldToScreen(p.y),w=p.hitboxWidth;
+      ctx.fillStyle="#183539";ctx.fillRect(p.x-w/2,y,w,13);
+      ctx.fillStyle="#dbcaa3";ctx.fillRect(p.x-w/2,y,w,4);
+      ctx.fillStyle="#94734a";ctx.fillRect(p.x-w/2+4,y+7,w-8,2);
+      if(p.foamUntil>elapsed)bathDrawSprite(art.bathBossProps[5],p.x,p.y+5,p.spriteWidth);
+    }
     if(b.phase==="eagle"&&b.timer>2)drawBathMountains(sceneEase(b.timer,2,5));
     if(b.phase==="warning"){
       const x=width*b.lane/3;
       ctx.fillStyle="rgba(200,51,47,.16)";ctx.fillRect(x+6,top+75,width/3-12,g.ah-75);
       ctx.fillStyle="#ffb7a0";ctx.font="bold 16px monospace";ctx.textAlign="center";ctx.fillText("БАН ↓",x+width/6,top+95);
+      if(b.tier===3){
+        ctx.fillStyle="#bce9e0";
+        ctx.fillText(b.lane===0?"ПЕНА →":"← ПЕНА",b.lane===0?55:width-55,worldToScreen(g.floor)-25);
+      }
     }
     const victory=["victory","eagle"].includes(b.phase);
     if(!victory){
@@ -4290,12 +4332,14 @@
       bathDrawSprite(art.bathEagle[Math.floor(b.age*7)%4],x,y,115);
       drawBathHero();
     }else drawBathHero();
-    ctx.textAlign="center";ctx.font="bold 12px monospace";ctx.fillStyle="#101c2b";ctx.fillRect(width/2-130,top+10,260,48);
+    ctx.textAlign="center";ctx.font="bold 12px monospace";ctx.fillStyle="#101c2b";ctx.fillRect(width/2-130,top+10,260,60);
     ctx.fillStyle="#f8e3b2";ctx.fillText(victory?"БАННЫЙ СУДЬЯ ПОБЕЖДЁН":"БАННЫЙ СУДЬЯ · ФАЗА "+b.tier,width/2,top+27);
     for(let i=0;i<8;i++){ctx.fillStyle=i<b.hp?"#e7bb5b":"#435365";ctx.fillRect(width/2-76+i*20,top+36,13,9);}
+    ctx.font="bold 10px monospace";ctx.fillStyle="#bfe5db";
+    ctx.fillText("ЗАЩИТА "+ "◆".repeat(Math.max(0,b.lives))+"◇".repeat(3-Math.max(0,b.lives)),width/2,top+63);
     ctx.font="bold 11px monospace";ctx.fillStyle="#fff1cf";
-    const phrase=b.phase==="open"?"УСТАЛ! ПРЫГНИ НА МЕДАЛЬ":b.phase==="warning"?(b.tier===1?"Я САМЫЙ ЛУЧШИЙ!":"БАН БАН БАН!")
-      :b.phase==="break"?"КРЕПЛЕНИЕ НЕ ВЫДЕРЖАЛО!":b.phase==="eagle"?"КУРС — К ГОРНОМУ ПЕРЕВАЛУ":b.phase==="victory"?"БАН БАН Б…":"ПУЗЫРИ ПОМОГУТ ПОДНЯТЬСЯ";
+    const phrase=b.phase==="open"?"ПУЗЫРЬ → МЕДАЛЬ · ОДИН ШАНС":b.phase==="warning"?(b.tier===1?"Я САМЫЙ ЛУЧШИЙ!":"БАН БАН БАН!")
+      :b.phase==="break"?"КРЕПЛЕНИЕ НЕ ВЫДЕРЖАЛО!":b.phase==="eagle"?"КУРС — К ГОРНОМУ ПЕРЕВАЛУ":b.phase==="victory"?"БАН БАН Б…":"УКЛОНЯЙСЯ · ЖДИ КОНТРАТАКУ";
     ctx.fillText(phrase,width/2,height-18,width-24);
   }
 
@@ -4533,8 +4577,11 @@
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (mode === "intro" && intro) { drawIntro(); return; }
+    if (bathBoss) {
+      if(["boarding","ride"].includes(bathBoss.phase))drawBackdrop();
+      drawBathBoss();return;
+    }
     drawBackdrop();
-    if (bathBoss) { drawBathBoss(); return; }
     if (antarcticaScene) { drawAntarcticaScene(); return; }
     if (antarcticaArrival) { drawAntarcticaArrival(); return; }
 
@@ -5092,6 +5139,7 @@
   function stageAssets(name) {
     const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
     if (name === "bath") return [
+      ["bathArenaSrc", sheet => ({bathArena:sheet})],
       ["bathBossPosesSrc", sheet => ({bathBossPoses:splitBathGrid(sheet,4,3)})],
       ["bathBossPropsSrc", sheet => ({bathBossProps:splitBathGrid(sheet,3,3)})],
       ["hawkSheetSrc", sheet => ({bathEagle:checkedFrames(splitSpriteSheet(sheet,4),4)})],
