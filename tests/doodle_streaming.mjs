@@ -68,6 +68,7 @@ async function harness(mobile, failStartup = false) {
       decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
       sidArenaHeight, sidBossGeometry, summitEnemyPose,
+      setBossWarning, extendBossRefuge, updateSpaceBoss,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -80,7 +81,7 @@ async function harness(mobile, failStartup = false) {
       state:()=>({artReady, assetLoadFailed, mode, elapsed, score:runScore(), waitingForStage, antarctica, antarcticaScene,
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
-        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator,
+        spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator, hazards, bossShots,
         summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY, visibleWorldHeight}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
@@ -106,6 +107,11 @@ async function harness(mobile, failStartup = false) {
         d.x=player.x;d.y=player.y;player.vy=0;invulnerableTimer=shield?2:0;
         const feet=player.y-player.height/2;collideWithSpaceEvents(feet,feet,1/60);},
       forceBoss(){peakY=startY+3500*11;updateSpaceBoss(1/60);},
+      seedSpaceObjects(){
+        const enemy={x:width*.1,baseX:width*.1,y:cameraY+height*.8,variant:0,phase:0,dead:false};
+        const hazard={x:width*.9,y:cameraY+height*.8,spriteIndex:6,size:30,speed:90,dead:false};
+        enemies.push(enemy);hazards.push(hazard);return {enemy,hazard};
+      },
       portal(){beginPortal();},
       setSpaceAge(age){spaceEncounter.age=age;},
       peakScore(n){peakY=startY+(n-frags*30-marshalBonus-bossBonus)*11;},
@@ -438,8 +444,9 @@ for (const mobile of [true, false]) {
   await a.startSpaceEventTest("pitstop");
   const servicePlatform = a.state().spaceEncounter.platform;
   assert.ok(servicePlatform?.spaceService);
-  a.forceBoss();assert.equal(a.state().spaceEncounter,null);assert.equal(servicePlatform.spaceService,undefined);
-  assert.equal(a.spawnSpaceEncounter("alonso"),false,"No space events during Toto fight");
+  const existingEvent=a.state().spaceEncounter;
+  a.forceBoss();assert.equal(a.state().spaceEncounter,existingEvent);assert.equal(servicePlatform.spaceService,existingEvent);
+  assert.equal(a.spawnSpaceEncounter("alonso"),false,"No additional space events during Toto fight");
   await a.startSpaceEventTest("pitstop");a.spaceLanding();a.updateSpaceEvents(.76);
   const portalPlatform=a.state().spaceEncounter.platform;
   a.portal();assert.equal(a.state().spaceEncounter,null);assert.equal(portalPlatform.spaceService,undefined);
@@ -801,4 +808,58 @@ for (const mobile of [true,false]) {
   assert.notEqual(a.state().summitEncounter,mob,'Wreck is removed only after falling offscreen');
   assert.deepEqual(h.calls,[]);
   console.log(`${mobile?'Mobile':'Desktop'}: visible Sid arena and stomped drone wreck animation passed`);
+}
+
+for(const mobile of [true,false]) {
+  const h=await harness(mobile),a=h.api;
+  await a.startSpaceEventTest('carbon');
+  a.clearSpaceEncounter();
+  const existing=a.seedSpaceObjects();
+  assert.equal(a.spawnSpaceEncounter('carbon'),true);
+  const carbon=a.state().spaceEncounter;
+  assert.ok(a.state().enemies.includes(existing.enemy),'Starting carbon preserves enemies');
+  assert.ok(a.state().hazards.includes(existing.hazard),'Starting carbon preserves falling items');
+  a.bossShield();
+  a.forceBoss();
+  assert.equal(a.state().spaceEncounter,carbon,'Toto must not erase an active carbon shower');
+  assert.ok(a.state().enemies.includes(existing.enemy));
+  assert.ok(a.state().hazards.includes(existing.hazard));
+  const initialDebrisY=carbon.debris[0].y;
+  a.updateSpaceEvents(1/60);
+  assert.ok(carbon.debris[0].y<initialDebrisY,'Existing carbon keeps moving while Toto is present');
+  a.update(1/60);
+  assert.ok(a.state().enemies.includes(existing.enemy),'Per-frame boss updates must preserve visible enemies');
+  assert.ok(a.state().hazards.includes(existing.hazard),'Per-frame event updates must preserve falling items');
+  a.setSpaceAge(12);a.updateSpaceEvents(0);
+  assert.equal(a.state().spaceEncounter,carbon,'Visible carbon cannot disappear on its old eleven-second timeout');
+  const boss=a.state().spaceBoss,p=a.state().player;
+  for(const x of [a.state().width*.03,a.state().width*.5,a.state().width*.97]){
+    p.x=x;p.y=a.state().cameraY+a.state().height*.42;p.vy=-400;
+    a.setBossWarning(boss);
+    const laneX=(boss.safeLane+.5)*a.state().width/4;
+    const bridge=a.state().platforms.filter(platform=>platform.bossBridge).at(-1);
+    assert.ok(Math.abs(p.x-bridge.x)<=bridge.hitboxWidth/2,'Entry bridge catches the current position');
+    assert.ok(Math.abs(laneX-bridge.x)<=bridge.hitboxWidth/2,'Entry bridge reaches the refuge lane');
+    assert.ok(a.landingPlatform(bridge.y+4,bridge.y-4,bridge.x,bridge.x),'Bridge is a real landing surface');
+    const refuge=a.state().platforms.filter(platform=>platform.bossSafe&&Math.abs(platform.x-laneX)<.01)
+      .sort((a,b)=>a.y-b.y);
+    assert.ok(refuge.length>=3);
+    assert.ok(refuge.every(platform=>platform.kind==='normal'&&!platform.broken));
+    assert.ok(refuge.at(-1).y>=a.state().cameraY+a.state().height);
+    for(const platform of refuge){
+      assert.ok(platform.hitboxWidth<=a.state().width/4-12,'Footholds remain within the safe lane');
+    }
+    a.updateSpaceBoss(1.11);
+    const shots=a.state().bossShots;
+    assert.equal(shots.length,3);
+    assert.ok(shots.every(shot=>Math.abs(shot.x-laneX)>a.state().width/8),'No wheel enters the refuge lane');
+    a.state().bossShots.length=0;
+  }
+  const oldTop=boss.safeTopY;
+  a.cameraAt(a.state().cameraY+1000);boss.phase='volley';a.extendBossRefuge(boss);
+  assert.ok(boss.safeTopY>oldTop,'Safe footholds extend as the camera rises');
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-toto-refuge-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  assert.deepEqual(h.calls,[]);
+  console.log(`${mobile?'Mobile':'Desktop'}: preserved space objects/events, carbon lifetime and Toto safe-lane footholds passed`);
 }

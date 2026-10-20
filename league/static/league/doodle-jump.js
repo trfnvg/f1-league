@@ -2519,7 +2519,7 @@
       worldTop = y;
     }
 
-    if (!summit && elapsed >= arrivalUntil && !spaceEncounter && (!antarctica || (!winterEncounter && !winterProjectiles.length))
+    if (!summit && elapsed >= arrivalUntil && !spaceEncounter && !spaceBoss && (!antarctica || (!winterEncounter && !winterProjectiles.length))
       && (!enemies.length || worldTop - enemies[enemies.length - 1].y > (antarctica ? 370 : 490))) {
       const enemyX = width * (.18 + Math.random() * .64);
       enemies.push({
@@ -2534,7 +2534,7 @@
     }
     if (antarctica || summit) hazards.length = 0;
     const hazardSpacing = !forgottenPaddock && cameraY < spaceFade.start ? 560 : 430;
-    if (elapsed >= arrivalUntil && !antarctica && !summit && !spaceEncounter && (!hazards.length || worldTop - hazards[hazards.length - 1].y > hazardSpacing)) {
+    if (elapsed >= arrivalUntil && !antarctica && !summit && !spaceEncounter && !spaceBoss && (!hazards.length || worldTop - hazards[hazards.length - 1].y > hazardSpacing)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -3239,14 +3239,13 @@
 
   function updateHawks(dt, previousFeet = player.y - player.height / 2 - player.vy * dt,
     currentFeet = player.y - player.height / 2, previousPlayerX = player.x - player.vx * dt) {
-    if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
-      if (forgottenPaddock || cameraY >= spaceFade.start) hawks = [];
-      return false;
-    }
+    if (forgottenPaddock) { hawks = []; return false; }
+    const spawnHere = cameraY >= skyFade.end && cameraY < spaceFade.start;
+    if (!spawnHere && !hawks.length) return false;
     if (!art.hawkFrames || !art.hawkFrames.length) return false;
 
-    hawkSpawnWait -= dt;
-    if (hawkSpawnWait <= 0) {
+    if (spawnHere) hawkSpawnWait -= dt;
+    if (spawnHere && hawkSpawnWait <= 0) {
       const size = 82 * visualScale();
       const direction = Math.random() < .5 ? 1 : -1;
       const screenY = height * (.32 + Math.random() * .4);
@@ -3347,6 +3346,26 @@
     // Keep the safe lane close enough to reach during the warning on touch.
     const lane = clamp(Math.floor(player.x / (width / 4)), 0, 3);
     boss.safeLane = clamp(lane + (Math.random() < .5 ? -1 : 1), 0, 3);
+    const targetX = (boss.safeLane + .5) * width / 4;
+    const supportY = player.y - player.height / 2 - 18;
+    // A bridge immediately below the feet catches even an already falling hero.
+    // From it, ordinary jumps can reach the stationary refuge ladder.
+    const bridge = addPlatform(supportY, (player.x + targetX) / 2, "normal");
+    bridge.bossBridge = true;
+    bridge.width = bridge.hitboxWidth = bridge.spriteWidth = Math.abs(player.x - targetX) + 80;
+    boss.safeTopY = supportY - 110;
+    extendBossRefuge(boss);
+  }
+
+  function extendBossRefuge(boss) {
+    if (boss.phase !== "warning" && boss.phase !== "volley") return;
+    const x = (boss.safeLane + .5) * width / 4;
+    while (boss.safeTopY < cameraY + height + 120) {
+      boss.safeTopY += 110;
+      const platform = addPlatform(boss.safeTopY, x, "normal");
+      platform.width = platform.hitboxWidth = platform.spriteWidth = Math.min(100, width / 4 - 12);
+      platform.bossSafe = true;
+    }
   }
 
   function openBossTarget(boss) {
@@ -3432,7 +3451,6 @@
       event.y = player.y + 210;
     }
     spaceEncounter = event;
-    enemies = []; hazards = []; hawks = [];
     return true;
   }
 
@@ -3448,7 +3466,7 @@
   }
 
   function updateSpaceEvents(dt) {
-    if (!inSpaceChapter() || spaceBoss) {
+    if (!inSpaceChapter()) {
       if (spaceEncounter || spacePitHold) clearSpaceEncounter();
       return false;
     }
@@ -3480,13 +3498,15 @@
       }
       return true;
     }
-    if (event.age > 11 || (event.type !== "carbon" && event.y < cameraY - 180)) clearSpaceEncounter();
+    if (event.type === "carbon") {
+      if (event.debris.every(item => item.dead || item.y < cameraY - 100)) clearSpaceEncounter();
+    } else if (event.age > 11 || event.y < cameraY - 180) clearSpaceEncounter();
     return false;
   }
 
   function collideWithSpaceEvents(previousFeet, currentFeet, dt) {
     const event = spaceEncounter;
-    if (!event || !inSpaceChapter() || spaceBoss) return;
+    if (!event || !inSpaceChapter()) return;
     if (event.type === "pitstop" && rocketTimer <= 0) {
       const deck = spacePitDeck(event);
       if (deck.y > cameraY + 4 && player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet,
@@ -3501,7 +3521,6 @@
           if (softBootJumps > 0) softBootJumps -= 1;
         }
         somersault = null;
-        hazards = []; enemies = [];
       }
     } else if (event.type === "alonso") {
       const frame = art.spaceAlonso[0], drawWidth = 150, drawHeight = spriteSize(frame, drawWidth);
@@ -3544,7 +3563,7 @@
 
   function drawSpaceEvents() {
     const event = spaceEncounter;
-    if (!event || !inSpaceChapter() || spaceBoss) return;
+    if (!event || !inSpaceChapter()) return;
     let label = "", labelX = event.x, labelY = worldToScreen(event.y) - 55;
     if (event.type === "carbon") {
       // Draw continuously from spawn above the viewport: hiding the sprites
@@ -3618,18 +3637,15 @@
       if (guaranteedSpaceBossSpawned && score > 4500) bossWait -= dt;
       if (firstEncounter || (guaranteedSpaceBossSpawned && score > 4500 && bossWait <= 0)) {
         guaranteedSpaceBossSpawned = true;
-        if (spaceEncounter) clearSpaceEncounter();
         spaceBoss = { age: 0, timer: 0, phase: "arrival", hp: 3, round: 0,
-          x: width / 2, screenY: 170, safeLane: 1, landingY: 0 };
-        // The boss encounter supplies its own hazards with readable safe lanes.
-        enemies = [];
-        hazards = [];
-        hawks = [];
+          x: width / 2, screenY: spaceBossScreenY(), safeLane: 1, landingY: 0 };
+        // Existing world objects and events finish naturally during the fight.
         bossShots = [];
       }
     }
     if (spaceBoss) {
       const boss = spaceBoss;
+      extendBossRefuge(boss);
       boss.age += dt;
       boss.timer += dt;
       if (boss.phase === "descending") {
@@ -3645,7 +3661,7 @@
       } else if (boss.phase === "open" || boss.phase === "hit" || boss.phase === "defeated") {
         boss.screenY = worldToScreen(boss.landingY) + spriteSize(art.spaceBoss, 100) / 2;
       } else {
-        boss.screenY += (170 - boss.screenY) * Math.min(1, dt * 4);
+        boss.screenY += (spaceBossScreenY() - boss.screenY) * Math.min(1, dt * 4);
         boss.x += (width * (.5 + Math.sin(boss.age * .7) * .25) - boss.x) * Math.min(1, dt * 2);
       }
       if (boss.phase === "arrival" && boss.timer >= 1.2) setBossWarning(boss);
@@ -3654,7 +3670,7 @@
         boss.timer = 0;
         for (let lane = 0; lane < 4; lane += 1) {
           if (lane === boss.safeLane) continue;
-          const screenY = 165;
+          const screenY = spaceBossScreenY() - 5;
           bossShots.push({ x: (lane + .5) * width / 4, screenY,
             y: cameraY + height - screenY, speed: 175 });
         }
@@ -3693,6 +3709,10 @@
     bossShots.length = kept;
   }
 
+  function spaceBossScreenY() {
+    return height - visibleWorldHeight + Math.min(170, visibleWorldHeight * .28);
+  }
+
   function drawSpaceBoss() {
     for (const shot of bossShots) drawFrame(art.bossWheel, shot.x, shot.y, 36);
     if (!spaceBoss || !art.spaceBoss) return;
@@ -3704,11 +3724,12 @@
       for (let lane = 0; lane < 4; lane += 1) {
         const safe = lane === boss.safeLane;
         ctx.fillStyle = safe ? "rgba(129,209,168,.1)" : "rgba(222,110,99,.13)";
-        ctx.fillRect(lane * width / 4 + 4, 165, width / 4 - 8, height - 165);
+        const top = spaceBossScreenY() - 5;
+        ctx.fillRect(lane * width / 4 + 4, top, width / 4 - 8, height - top);
         ctx.fillStyle = safe ? "#a5e6c5" : "#ffc28c";
         ctx.font = "bold 13px monospace";
         ctx.textAlign = "center";
-        ctx.fillText(safe ? "↓" : "!", (lane + .5) * width / 4, 190);
+        ctx.fillText(safe ? "↓" : "!", (lane + .5) * width / 4, top + 25);
       }
     }
     const leaving = boss.phase === "leaving" || boss.phase === "defeated";
@@ -4132,8 +4153,6 @@
     if (mode !== "running") return;
     updateMarshals();
     extendWorld();
-    if (spaceEncounter) { enemies = []; hazards = []; hawks = []; }
-    if (spaceBoss) { enemies = []; hazards = []; hawks = []; }
     pruneWorldObjects(platforms, 160, "broken");
     pruneWorldObjects(enemies, 130, "dead");
     pruneWorldObjects(hazards, 180, "dead");
