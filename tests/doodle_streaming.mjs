@@ -68,7 +68,7 @@ async function harness(mobile, failStartup = false) {
       decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
       sidArenaHeight, sidBossGeometry, summitEnemyPose,
-      setBossWarning, extendBossRefuge, updateSpaceBoss,
+      setBossWarning, extendBossRefuge, updateSpaceBoss, followPlayerCamera,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -936,10 +936,44 @@ for(const mobile of [true,false]) {
     a.state().bossShots.length=0;
   }
   const oldTop=boss.safeTopY;
+  const safeCount=a.state().platforms.filter(p=>p.bossSafe||p.bossBridge).length;
+  const originalRandom=Math.random;
+  try {
+    Math.random=()=>.9;
+    // Same warning repeated at the same location must not add another ladder.
+    a.setBossWarning(boss);
+    const stableCount=a.state().platforms.filter(p=>p.bossSafe||p.bossBridge).length;
+    for(let i=0;i<12;i++)a.setBossWarning(boss);
+    assert.equal(a.state().platforms.filter(p=>p.bossSafe||p.bossBridge).length,stableCount,
+      'Repeated warnings reuse refuge platforms instead of piling up');
+    assert.ok(stableCount<=safeCount+Math.ceil(a.state().height/150)+2);
+    const laneX=(boss.safeLane+.5)*a.state().width/4;
+    const rows=a.state().platforms.filter(p=>p.bossSafe&&Math.abs(p.x-laneX)<1).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<rows.length;i++)assert.ok(rows[i].y-rows[i-1].y>=125,'Refuge platforms have breathing room');
+  } finally { Math.random=originalRandom; }
   a.cameraAt(a.state().cameraY+1000);boss.phase='volley';a.extendBossRefuge(boss);
   assert.ok(boss.safeTopY>oldTop,'Safe footholds extend as the camera rises');
   a.draw();
   if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-toto-refuge-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
   assert.deepEqual(h.calls,[]);
   console.log(`${mobile?'Mobile':'Desktop'}: preserved space objects/events, carbon lifetime and Toto safe-lane footholds passed`);
+}
+
+for(const mobile of [true,false]) {
+  const h=await harness(mobile),a=h.api;
+  a.startGame(true,{adminTest:true});
+  for(const [w,ht] of mobile?[[390,844],[390,650],[430,740]]:[[1000,800]]) {
+    h.resize(w,ht);
+    a.cameraAt(1000);
+    const p=a.state().player;p.y=2000;
+    for(let i=0;i<90;i++)a.followPlayerCamera(1/60);
+    let s=a.state();
+    const positionFromTop=1-(p.y-s.cameraY)/s.visibleWorldHeight;
+    assert.ok(mobile?positionFromTop>.60&&positionFromTop<.64:Math.abs(positionFromTop-.58)<.01,
+      'Mobile hero stays slightly below the visible centre; desktop framing remains stable');
+    for(let i=0;i<60;i++){p.y+=400/60;a.followPlayerCamera(1/60);}
+    s=a.state();
+    if(mobile)assert.ok(1-(p.y-s.cameraY)/s.visibleWorldHeight>.54,'Camera catches ascent before the hero rises above centre');
+  }
+  console.log(`${mobile?'Mobile':'Desktop'}: camera framing in full and cropped viewports passed`);
 }
