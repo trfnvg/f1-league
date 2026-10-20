@@ -52,7 +52,7 @@ async function harness(mobile, failStartup = false) {
       queueMicrotask(deliver);
     }, get naturalWidth() { return this.native?.width || 0; }, get naturalHeight() { return this.native?.height || 0; } };
   }
-  const document = { getElementById: get, querySelector: () => element("csrf"), body: element("body"), hidden: false,
+  const document = { getElementById: get, querySelector: (selector) => selector === '.doodle-scoreboard' ? {offsetHeight:84} : element("csrf"), body: element("body"), hidden: false,
     createElement: (tag) => tag === "canvas" ? canvasLib.createCanvas(1, 1) : element(tag),
     addEventListener(type, handler) { events.set(`document:${type}`, handler); } };
   const window = { matchMedia: () => ({ matches: mobile }), devicePixelRatio: mobile ? 3 : 2,
@@ -991,26 +991,38 @@ for(const mobile of [true,false]) {
   assert.equal(b.phase,'ride','A real descending jump boards the cabin');
   for(let i=0;i<241;i++)a.updateBathBoss(1/60);
   assert.equal(b.phase,'intro');
-  assert.equal(a.state().platforms.filter(p=>p.y>a.bathGeometry().floor+1).length,2);
+  assert.equal(a.state().platforms.filter(p=>p.y>a.bathGeometry().floor+1).length,4);
   assert.equal(b.bubbles.length,0,'No permanent bubble ladder');
   if(mobile){
     for(const [w,ht] of [[390,560],[844,390],[390,650]]){
       h.resize(w,ht);const view=a.bathGeometry();
       assert.ok(view.y+view.h/2<=a.state().cameraY+view.ah,'Boss fits after mobile orientation changes');
+      const scale=parseFloat(h.canvas.style.width)/a.state().width;
+      assert.ok((view.hudTop-(a.state().height-view.ah))*scale>=84,
+        'Boss HP stays below the actual 84px score/notch overlay, including landscape');
+      assert.ok(view.hudTop+60*view.hudScale<a.state().height,'All eight HP pips remain in the visible canvas');
     }
   }
   let g=a.bathGeometry();
   assert.ok(g.y+g.h/2<=a.state().cameraY+g.ah,'Boss fits in the visible mobile arena');
   assert.ok(a.state().platforms.every(p=>p.y>=a.state().cameraY));
   const lockedScore=a.state().score;
+  let wavePreview=false;
   for(let hit=1;hit<=8;hit++) {
     for(let i=0;i<1300&&b.phase!=='open';i++){
       a.bossShield();a.update(1/60);
-      if(b.phase==='attack')assert.ok(b.shots.filter(s=>s.kind==='ban').every(s=>Math.floor(s.x/(a.state().width/3))!==b.safeLane),
-        'Each volley leaves its announced safe lane free of BAN plates');
+      if(b.phase==='attack'){
+        assert.ok(b.shots.length>0,'Every wave contains actual hostile bubbles');
+        assert.ok(b.shots.every(s=>s.kind==='bubble'&&Math.abs(s.y-b.waveGap)>=68&&Math.abs(s.vx)>=120),
+          'Horizontal curtain preserves its announced vertical opening');
+        if(!wavePreview&&b.timer>.8&&process.env.DOODLE_PREVIEW_DIR){
+          a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-wave-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+          wavePreview=true;
+        }
+      }
     }
     assert.equal(b.phase,'open','Every attack cycle opens an attack window');
-    assert.equal(b.bubbles.length,1,'Exactly one counterattack spring per window');
+    assert.equal(b.bubbles.length,0,'Platforms provide ascent; bubbles are enemies');
     for(let i=0;i<55;i++){a.bossShield();a.update(1/60);}
     g=a.bathGeometry();
     assert.ok(g.x-g.w/2>=0&&g.x+g.w/2<=a.state().width,'Whole tub remains inside the arena');
@@ -1018,11 +1030,11 @@ for(const mobile of [true,false]) {
       a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-phase-${b.tier}-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
     }
     if(hit===1){
-      const spring=b.bubbles[0];
-      p.x=spring.x;p.vx=0;p.y=spring.y+15+p.height/2+3;p.vy=-300;
+      const launch=a.state().platforms.filter(q=>q.y>g.floor+1)[2];
+      p.x=launch.x;p.vx=0;p.y=launch.y+p.height/2+3;p.vy=-300;
       a.updateBathBoss(1/60);
-      assert.equal(spring.cooldown,Infinity,'Counterattack bubble is consumed, never recharges');
-      assert.equal(p.vy,650);
+      assert.equal(p.vy,720,'Regular full-height platform jump is restored');
+      p.x=g.x;
       for(let i=0;i<120&&b.hp===8;i++)a.updateBathBoss(1/60);
     }else{
       const medalY=g.y-g.h*.08;
@@ -1055,9 +1067,8 @@ for(const mobile of [true,false]) {
   const fight=a.state().bathBoss,hero=a.state().player,gg=a.bathGeometry();
   fight.phase='warning';fight.timer=0;fight.lane=0;fight.bubbles=[];
   hero.x=a.state().width*.5;hero.y=gg.floor+100;hero.vy=0;
-  fight.shots=[{kind:'ban',x:hero.x,y:hero.y+135/60,vy:-135,age:1}];
   for(let hit=0;hit<3;hit++){
-    fight.shots=[{kind:'ban',x:hero.x,y:hero.y+135/60,vy:-135,age:1}];
+    fight.shots=[{kind:'bubble',x:hero.x-2,y:hero.y,vx:120,age:1}];
     a.expireShield();a.updateBathBoss(1/60);
     assert.equal(fight.lives,2-hit);
     if(hit<2)assert.equal(a.state().mode,'running','An arena mistake is recoverable');
