@@ -4274,20 +4274,25 @@
       drawBathMountains();return;
     }
     // One cached scene, no frame-by-frame gradients or full-screen particles.
-    ctx.drawImage(art.bathArena,0,top,width,g.ah);
-    // Small side-vent steam loops: bounded work, kept out of the combat lane.
-    ctx.save();ctx.fillStyle="#d6e6df";
+    // The painted curb sits at 85% of the source; align it with the 90% landing plane.
+    ctx.drawImage(art.bathArena,0,top,width,g.ah*(.9/.85));
+    // Sparse wind-blown snow at the edges of the exposed mountain deck.
+    ctx.save();ctx.fillStyle="#eff8ff";
     for(const side of [0,1])for(let i=0;i<4;i++){
       const t=(b.age*.22+i*.25)%1;
-      ctx.globalAlpha=(1-t)*.13;
-      ctx.beginPath();ctx.ellipse(side?width-12:12,worldToScreen(g.floor)-t*85,5+t*9,4+t*6,0,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=Math.sin(t*Math.PI)*.45;
+      ctx.fillRect((side?width-28:8)+t*18,worldToScreen(g.floor)-35-t*110,3,2);
     }
     ctx.restore();
     for(const p of platforms){
       const y=worldToScreen(p.y),w=p.hitboxWidth;
-      ctx.fillStyle="#183539";ctx.fillRect(p.x-w/2,y,w,13);
-      ctx.fillStyle="#dbcaa3";ctx.fillRect(p.x-w/2,y,w,4);
-      ctx.fillStyle="#94734a";ctx.fillRect(p.x-w/2+4,y+7,w-8,2);
+      if(p.y>g.floor+1)drawSummitPlatform(p);
+      else{
+        ctx.fillStyle="#263849";ctx.fillRect(p.x-w/2,y,w,13);
+        ctx.fillStyle="#dce8ee";ctx.fillRect(p.x-w/2,y,w,4);
+        ctx.fillStyle="#c94243";ctx.fillRect(p.x-w/2,y,w*.45,4);
+        ctx.fillStyle="#647b8c";ctx.fillRect(p.x-w/2+4,y+8,w-8,2);
+      }
       if(p.foamUntil>elapsed)bathDrawSprite(art.bathBossProps[5],p.x,p.y+5,p.spriteWidth);
     }
     if(b.phase==="eagle"&&b.timer>2)drawBathMountains(sceneEase(b.timer,2,5));
@@ -4307,7 +4312,7 @@
       for(let i=0;i<3;i++){
         const anchorX=width*(.3+i*.2),rimX=g.x+(i-1)*g.w*.38;
         if(i<brackets){
-          ctx.strokeStyle="#a38a55";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(anchorX,top+80);
+          ctx.strokeStyle="#6d8293";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(anchorX,top+80);
           ctx.lineTo(rimX,worldToScreen(g.y+g.h*.05));ctx.stroke();
           ctx.strokeStyle="#263747";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(anchorX+2,top+80);
           ctx.lineTo(rimX+2,worldToScreen(g.y+g.h*.05));ctx.stroke();
@@ -4333,7 +4338,8 @@
       drawBathHero();
     }else drawBathHero();
     ctx.textAlign="center";ctx.font="bold 12px monospace";ctx.fillStyle="#101c2b";ctx.fillRect(width/2-130,top+10,260,60);
-    ctx.fillStyle="#f8e3b2";ctx.fillText(victory?"БАННЫЙ СУДЬЯ ПОБЕЖДЁН":"БАННЫЙ СУДЬЯ · ФАЗА "+b.tier,width/2,top+27);
+    ctx.fillStyle="#e34d4d";ctx.fillRect(width/2-130,top+10,3,60);
+    ctx.fillStyle="#edf5fa";ctx.fillText(victory?"БАННЫЙ СУДЬЯ ПОБЕЖДЁН":"БАННЫЙ СУДЬЯ · ФАЗА "+b.tier,width/2,top+27);
     for(let i=0;i<8;i++){ctx.fillStyle=i<b.hp?"#e7bb5b":"#435365";ctx.fillRect(width/2-76+i*20,top+36,13,9);}
     ctx.font="bold 10px monospace";ctx.fillStyle="#bfe5db";
     ctx.fillText("ЗАЩИТА "+ "◆".repeat(Math.max(0,b.lives))+"◇".repeat(3-Math.max(0,b.lives)),width/2,top+63);
