@@ -63,7 +63,7 @@ async function harness(mobile, failStartup = false) {
       startGame, startTotoBossTest, startAntarcticaPreview, startWinterBiomeTest, update, resize, endGame,
       rasterSprite, landingPlatform, alphaMask, spriteOverlapsEllipse, sweptHazardContact,
       updateSkyDetails, drawSkyDucks, drawTotoCloud, cleanSpriteContour, drawCloud,
-      updateHawks, spriteTopAtX, spriteSize, updatePortal,
+      updateHawks, spriteTopAtX, spriteSize, spriteLanding, movingLanding, collideWithEnemy, updatePortal,
       spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
       decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
@@ -576,10 +576,66 @@ for (const mobile of [true, false]) {
     assert.ok(p.y>=top+p.height/2-2,'Landing must not sink into the bird');
   }
   const hawk=a.skyState().hawks[0];
+  a.expireShield();
   p.x=hawk.x; p.y=hawk.y; p.vy=0;
   a.updateHawks(0,p.y-p.height/2,p.y-p.height/2,p.x);
   assert.equal(a.state().mode,'over','Side contacts remain harmful');
   console.log(`${mobile?'Mobile':'Desktop'}: 20% faster controls, mirrored hawk landings and harmful side contacts passed`);
+}
+
+for (const mobile of [true, false]) {
+  const {api:a} = await harness(mobile);
+  a.startGame(true,{adminTest:true});
+  const p=a.state().player;
+  await a.loadStage('sky');
+  // Real opaque contours, including both mirrored directions and fast descents.
+  for (const frame of [...a.art.enemyVariants,...a.art.hawkFrames]) {
+    const w=60,h=a.spriteSize(frame,w);
+    for (const mirror of [-1,1]) for (const offset of [-.3,0,.3]) {
+      const x=180, y=600;
+      p.x=x+offset*w; p.vy=-900;
+      const top=a.spriteTopAtX(frame,x,y,w,h,x+offset*w*mirror);
+      if (!Number.isFinite(top)) continue;
+      assert.notEqual(a.spriteLanding(frame,x,y,w,h,x-3,y+2,top+20,top-12,p.x-4,mirror),null,
+        'Moving enemy contours must catch descending feet, including edge landings');
+      p.vy=300;
+      assert.equal(a.spriteLanding(frame,x,y,w,h,x,y,top-15,top+5,p.x,mirror),null,
+        'Upward movement is not a stomp');
+    }
+  }
+  const empty={mask:{columns:2,rows:2,bits:new Uint8Array(4),topRows:new Uint8Array([2,2])}};
+  p.vy=-500;p.x=180;
+  assert.equal(a.spriteTopAtX(empty,180,600,60,60,180),-Infinity);
+  assert.equal(a.spriteLanding(empty,180,600,60,60,180,600,650,550,180),null,
+    'Transparent sprite columns must never act as surfaces');
+  p.x=205;
+  assert.ok(a.movingLanding(620,580,600,600,155,180,180,20),
+    'Contact uses x at crossing, not only final x');
+  p.x=180;p.vy=-500;
+  assert.equal(a.spriteLanding(null,180,600,60,60,180,600,600,580,180),null,
+    'An impact from below the top stays a side impact');
+  for (let variant=0;variant<a.art.enemyVariants.length;variant++) {
+    const enemy={x:180,previousX:178,y:600,phase:0,variant};
+    a.state().enemies.splice(0,a.state().enemies.length,enemy);
+    const frame=a.art.enemyVariants[variant], w=72*.68, h=a.spriteSize(frame,w);
+    // Start well above every hat and cross the whole enemy in one step.
+    p.x=180;p.vy=-1800;p.y=600+p.height/2;
+    a.expireShield();
+    a.collideWithEnemy(600+h,600,1/60,178);
+    assert.ok(enemy.dead,'Every wheel variant must be stompable on a fast descent');
+    assert.equal(p.vy,810);
+    assert.equal(a.state().mode,'running');
+    assert.ok(a.state().invulnerableTimer>0,'Stomp shields against stale same-step collisions');
+  }
+  const target={x:180,previousX:180,y:600,phase:0,variant:0};
+  const adjacent={x:180,previousX:180,y:600+p.height/2,phase:0,type:'piranha'};
+  p.x=180;p.y=600+p.height/2;p.vy=-900;
+  a.state().enemies.splice(0,a.state().enemies.length,adjacent,target);
+  a.expireShield();
+  a.collideWithEnemy(630,600,1/60,180);
+  assert.ok(target.dead,'A side contact earlier in the array cannot cancel a valid stomp');
+  assert.equal(a.state().mode,'running');
+  console.log(`${mobile?'Mobile':'Desktop'}: contour edges, moving targets, fast descents, transparent gaps and upward contacts passed`);
 }
 
 const safeArrival = await harness(true), arrivalApi = safeArrival.api;
@@ -668,7 +724,8 @@ for (const mobile of [true,false]) {
   for(let i=1;i<goats.length;i++)assert.ok(goats[i].y-goats[i-1].y>=6500);
   assert.ok(route.filter(p=>p.kind==='break').length>=15,'Fragile footholds add difficulty');
   assert.ok(route.filter(p=>p.kind==='moving').length>=40);
-  assert.ok(route.at(-1).hitboxWidth<route[0].hitboxWidth,'Platforms narrow progressively');
+  const plainRoute=route.filter(p=>!p.goat && !p.summitKind);
+  assert.ok(plainRoute.at(-1).hitboxWidth<plainRoute[0].hitboxWidth,'Ordinary platforms narrow progressively');
   for(let i=0;i<100;i++){
     const gap=a.summitPlatformGap();
     assert.ok(gap>=142&&gap<=177);

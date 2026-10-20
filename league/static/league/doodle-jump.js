@@ -335,8 +335,8 @@
   }
 
   // Read sprite alpha once at load and retain a compact silhouette. Runtime
-  // collision checks touch only these 32x32 bits after a cheap bounds check.
-  function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 32, rows = 32) {
+  // collision checks touch only nearby cells of this 64x64 mask.
+  function alphaMask(pixels, stride, x, y, spriteWidth, spriteHeight, columns = 64, rows = 64) {
     const bits = new Uint8Array(columns * rows);
     const topRows = new Uint8Array(columns);
     topRows.fill(rows);
@@ -1135,8 +1135,8 @@
 
       const active = mob.phase !== "arriving" && mob.phase !== "defeated";
       const canBounce = active && (mob.type !== "steward" || mob.phase === "open");
-      if (canBounce && player.vy < 0 && crossedLandingSurface(previousFeet, currentFeet,
-        previousY + body.ry, mob.y + body.ry, player.x, mob.x, body.rx * 2, player.width * .44)) {
+      if (canBounce && player.vy < 0 && movingLanding(previousFeet, currentFeet,
+        previousY + body.ry, mob.y + body.ry, previousPlayerX, mob.x, mob.x, body.rx * 2)) {
         player.y = mob.y + body.ry + player.height / 2;
         player.vy = 830;
         somersault = null;
@@ -1427,8 +1427,8 @@
       } else shot.y += shot.vy * dt;
       if (shot.y + geometry.h / 2 < cameraY - 40 || shot.age > 10) continue;
       if (shot.kind === "can" && shot.age >= .65 && player.vy < 0
-        && crossedLandingSurface(previousFeet, currentFeet, oldY + geometry.h / 2, shot.y + geometry.h / 2,
-          player.x, shot.x, Math.max(28, geometry.w), player.width * .44)) {
+        && movingLanding(previousFeet, currentFeet, oldY + geometry.h / 2, shot.y + geometry.h / 2,
+          previousPlayerX, oldX, shot.x, Math.max(28, geometry.w))) {
         player.y = shot.y + geometry.h / 2 + player.height / 2;
         player.vy = 760; shot.reflected = true;
         openingJump = false; somersault = null;
@@ -1670,15 +1670,11 @@
       if (mob.phase !== "defeated" && mob.phase !== "retreat") {
         // Use the resting head silhouette, not the raised warning flag, as a foothold.
         const frame = mob.type === "marmot" ? art.summitMarmot[0] : art.summitDrone[0];
-        const feetX = mob.type === "marmot" && mob.direction > 0 ? mob.x * 2 - player.x : player.x;
-        const top = spriteTopAtX(frame, mob.x, mob.y, mob.w, mob.h, feetX);
-        const oldTop = spriteTopAtX(frame, oldX, oldY, mob.w, mob.h, feetX);
-        const landX = Math.abs(player.x - previousX) > width / 2 ? player.x : previousX;
-        const t = clamp((previousFeet - oldTop) / Math.max(.001, previousFeet - currentFeet + top - oldTop), 0, 1);
-        const crossingX = landX + (player.x - landX) * t;
-        if (player.vy < 0 && Math.abs(crossingX - mob.x) < mob.w * .3
-          && crossedLandingSurface(previousFeet, currentFeet, oldTop, top, crossingX, mob.x, mob.w * .6, player.width * .3)) {
+        const top = spriteLanding(frame, mob.x, mob.y, mob.w, mob.h, oldX, oldY,
+          previousFeet, currentFeet, previousX, mob.type === "marmot" && mob.direction > 0 ? -1 : 1);
+        if (top !== null) {
           player.y = top + player.height / 2; player.vy = 830;
+          protectBounce();
           openingJump = false; somersault = null; frags += 1; go("defeated");
         }
       }
@@ -1767,10 +1763,11 @@
       const frame = goatPose(platform), w = 48, h = spriteSize(frame, w);
       const hop = goat.phase >= 2.8 && goat.phase < 3.3 ? Math.sin((goat.phase - 2.8) / .5 * Math.PI) * 9 : 0;
       const goatY = platform.y + h / 2 + hop;
-      const top = spriteTopAtX(frame, platform.x, goatY, w, h, player.x);
-      if (player.vy < 0 && previousFeet >= top && currentFeet <= top
-        && Math.abs(player.x - previousX) < width / 2 && Math.abs(player.x - platform.x) < 22) {
+      const top = spriteLanding(frame, platform.x, goatY, w, h, platform.previousX ?? platform.x, goatY,
+        previousFeet, currentFeet, previousX);
+      if (top !== null) {
         player.y = top + player.height / 2; player.vy = 850;
+        protectBounce();
         openingJump = false; somersault = null;
         goat.kicked = true; goat.cooldown = 1.2;
       } else if (goat.phase >= 2.8 && goat.phase < 3.3 && invulnerableTimer <= 0
@@ -2991,9 +2988,13 @@
 
   function spriteTopAtX(sprite, x, y, objectWidth, objectHeight, targetX) {
     const mask = sprite && sprite.mask;
-    if (!mask || !objectWidth || !objectHeight) return y + objectHeight / 2;
+    if (!objectWidth || !objectHeight) return -Infinity;
     const left = x - objectWidth / 2;
-    const halfPlayerWidth = player ? player.width * .22 : 0;
+    // Landing reach must cover the harmful torso width as well: otherwise a
+    // boot at the edge can miss while the wider damage ellipse kills the run.
+    const halfPlayerWidth = player ? player.width * .32 : 0;
+    if (targetX + halfPlayerWidth < left || targetX - halfPlayerWidth > left + objectWidth) return -Infinity;
+    if (!mask) return y + objectHeight / 2;
     const firstColumn = clamp(Math.floor((targetX - halfPlayerWidth - left) / objectWidth * mask.columns), 0, mask.columns - 1);
     const lastColumn = clamp(Math.floor((targetX + halfPlayerWidth - left) / objectWidth * mask.columns), 0, mask.columns - 1);
     let topRow = mask.rows;
@@ -3001,7 +3002,32 @@
       const columnTop = mask.topRows ? mask.topRows[column] : mask.rows;
       if (columnTop < topRow) topRow = columnTop;
     }
-    return y + objectHeight / 2 - topRow / mask.rows * objectHeight;
+    return topRow === mask.rows ? -Infinity : y + objectHeight / 2 - topRow / mask.rows * objectHeight;
+  }
+
+  // Follow both objects through the physics step. A foot may cross a curved
+  // silhouette before the final x coordinate reaches a lower part of its edge.
+  function spriteLanding(sprite, x, y, w, h, oldX, oldY, previousFeet, currentFeet, previousX, mirror = 1) {
+    if (player.vy >= 0 || currentFeet >= previousFeet) return null;
+    if (Math.abs(player.x - previousX) > width / 2) previousX = player.x;
+    const travel = Math.abs(player.x - previousX) + Math.abs(x - oldX)
+      + Math.abs(currentFeet - previousFeet) + Math.abs(y - oldY);
+    const steps = Math.max(1, Math.ceil(travel / 2));
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps, cx = oldX + (x - oldX) * t, cy = oldY + (y - oldY) * t;
+      const fx = previousX + (player.x - previousX) * t;
+      const top = spriteTopAtX(sprite, cx, cy, w, h, cx + (fx - cx) * mirror);
+      const feet = previousFeet + (currentFeet - previousFeet) * t;
+      if (Number.isFinite(top) && previousFeet - oldY >= top - cy - 3 && feet <= top + 2) {
+        return top + y - cy;
+      }
+    }
+    return null;
+  }
+
+  function protectBounce() {
+    // Other collision passes still hold the pre-bounce trajectory this step.
+    invulnerableTimer = Math.max(invulnerableTimer, .12);
   }
 
   function sweptHazardContact(hitbox, previousHazardY, previousX, previousY) {
@@ -3274,24 +3300,14 @@
       // before testing harmful side contacts. Interpolate the moving bird too.
       const startX = Math.abs(player.x - previousPlayerX) > width / 2 ? player.x : previousPlayerX;
       let bounced = false;
-      if (player.vy < 0 && previousFeet > currentFeet) {
-        const samples = Math.max(1, Math.ceil((previousFeet - currentFeet
-          + Math.abs(hawk.x - previousX) + Math.abs(player.x - startX)) / 3));
-        for (let i = 0; i <= samples; i += 1) {
-          const t = i / samples;
-          const birdX = previousX + (hawk.x - previousX) * t;
-          const feetX = startX + (player.x - startX) * t;
-          if (Math.abs(feetX - birdX) > hawk.size * .46) continue;
-          const maskX = birdX + (feetX - birdX) * hawk.direction;
-          const top = spriteTopAtX(frame, birdX, hawk.y, hawk.size, hawkHeight, maskX);
-          const feet = previousFeet + (currentFeet - previousFeet) * t;
-          if (top <= hawk.y - hawkHeight * .45 || previousFeet < top || feet > top) continue;
-          player.y = top + player.height / 2;
-          player.vy = 810;
-          openingJump = false;
-          bounced = true;
-          break;
-        }
+      const top = spriteLanding(frame, hawk.x, hawk.y, hawk.size, hawkHeight,
+        previousX, hawk.y, previousFeet, currentFeet, startX, hawk.direction);
+      if (top !== null) {
+        player.y = top + player.height / 2;
+        player.vy = 810;
+        protectBounce();
+        openingJump = false;
+        bounced = true;
       }
       if (bounced) { hawks[kept++] = hawk; continue; }
       const travel = Math.abs(hawk.x - previousX) + Math.abs(player.vx * dt) + Math.abs(player.vy * dt);
@@ -3382,11 +3398,11 @@
     boss.landingY = supportY + 115;
   }
 
-  function collideWithSpaceBoss(previousFeet, currentFeet) {
+  function collideWithSpaceBoss(previousFeet, currentFeet, previousX = player.x) {
     const boss = spaceBoss;
     if (!boss || boss.phase !== "open" || rocketTimer > 0 || player.vy >= 0) return false;
-    if (!crossedLandingSurface(previousFeet, currentFeet, boss.landingY, boss.landingY,
-      player.x, boss.x, 78, player.width * .44)) return false;
+    if (!movingLanding(previousFeet, currentFeet, boss.landingY, boss.landingY,
+      previousX, boss.x, boss.x, 78)) return false;
     player.y = boss.landingY + player.height / 2;
     player.vy = 720;
     openingJump = false;
@@ -3504,7 +3520,7 @@
     return false;
   }
 
-  function collideWithSpaceEvents(previousFeet, currentFeet, dt) {
+  function collideWithSpaceEvents(previousFeet, currentFeet, dt, previousX = player.x) {
     const event = spaceEncounter;
     if (!event || !inSpaceChapter()) return;
     if (event.type === "pitstop" && rocketTimer <= 0) {
@@ -3539,10 +3555,11 @@
         if (item.dead || item.y < cameraY - 80) continue;
         const sprite = art.spaceCarbon[item.index], w = item.index < 2 ? 72 : 26, h = spriteSize(sprite, w);
         if (item.index < 2 && player.vy < 0) {
-          const top = spriteTopAtX(sprite, item.x, item.y, w, h, player.x);
-          const previousTop = spriteTopAtX(sprite, item.x, item.y - item.vy * dt, w, h, player.x);
-          if (crossedLandingSurface(previousFeet, currentFeet, previousTop, top, player.x, item.x, w * .78, player.width * .44)) {
+          const top = spriteLanding(sprite, item.x, item.y, w, h, item.x, item.y - item.vy * dt,
+            previousFeet, currentFeet, previousX);
+          if (top !== null) {
             player.y = top + player.height / 2; player.vy = 850;
+            protectBounce();
             openingJump = false; somersault = null; item.dead = true;
             continue;
           }
@@ -3795,6 +3812,15 @@
       && Math.abs(feetX - targetX) <= (targetWidth + feetWidth) / 2;
   }
 
+  function movingLanding(previousFeet, currentFeet, previousTop, currentTop, previousX, oldX, x, targetWidth) {
+    if (Math.abs(player.x - previousX) > width / 2) previousX = player.x;
+    const before = previousFeet - previousTop, after = currentFeet - currentTop;
+    if (before < -3 || after > 2 || after >= before) return false;
+    const t = clamp(before / (before - after), 0, 1);
+    return Math.abs(previousX + (player.x - previousX) * t - oldX - (x - oldX) * t)
+      <= targetWidth / 2 + player.width * .32;
+  }
+
   function nextEnemyVariant() {
     const count = art.enemyVariants ? art.enemyVariants.length : 1;
     if (count < 2) return 0;
@@ -3824,17 +3850,18 @@
     ctx.restore();
   }
 
-  function collideWithPiranha(enemy, previousFeet, currentFeet, dt) {
+  function collideWithPiranha(enemy, previousFeet, currentFeet, dt, previousX = player.x) {
     const body = piranhaGeometry(enemy), previous = piranhaGeometry(enemy, elapsed - dt);
     const horizontal = Math.abs(player.x - body.x);
     const top = body.y + body.ry;
-    const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previous.y + previous.ry, top,
-      player.x, body.x, body.rx * 1.7, player.width * .35);
+    const crossedTop = movingLanding(previousFeet, currentFeet, previous.y + previous.ry, top,
+      previousX, enemy.previousX ?? body.x, body.x, body.rx * 2);
     if (player.vy < 0 && crossedTop) {
       enemy.dead = true;
       frags += 1;
       player.y = top + player.height / 2;
       player.vy = 810;
+      protectBounce();
       somersault = null; openingJump = false;
       effects.push({ index: 10, x: body.x, y: top, age: 0, duration: .32, size: 42 });
       return true;
@@ -3842,7 +3869,7 @@
     // Only the fish's body is solid. Wing motion never expands the hitbox.
     const dx = horizontal / (body.rx + player.width * .29);
     const dy = (player.y - body.y) / (body.ry + player.height * .34);
-    if (invulnerableTimer <= 0 && dx * dx + dy * dy < 1) { endGame(); return true; }
+    if (invulnerableTimer <= 0 && dx * dx + dy * dy < 1) return "hit";
     return false;
   }
 
@@ -3917,29 +3944,32 @@
     }
   }
 
-  function collideWithEnemy(previousFeet, currentFeet, dt) {
+  function collideWithEnemy(previousFeet, currentFeet, dt, previousX = player.x) {
+    let harmfulContact = false;
     for (const enemy of enemies) {
       if (enemy.dead) continue;
       if (enemy.type === "piranha") {
-        if (collideWithPiranha(enemy, previousFeet, currentFeet, dt)) return true;
+        const contact = collideWithPiranha(enemy, previousFeet, currentFeet, dt, previousX);
+        if (contact === true) return true;
+        if (contact === "hit") harmfulContact = true;
         continue;
       }
       const targetEnemyWidth = enemyWidth();
       const frame = enemyFrame(enemy);
       const enemyHeight = spriteSize(frame, targetEnemyWidth);
       const enemyY = enemy.y + Math.sin(elapsed * 4 + enemy.phase) * 4;
-      const horizontalReach = targetEnemyWidth / 2 + player.width * .31;
+      const horizontalReach = targetEnemyWidth / 2 + player.width * .31 + Math.abs(player.x - previousX) + Math.abs(enemy.x - (enemy.previousX ?? enemy.x));
       const verticalReach = enemyHeight / 2 + player.height / 2 + Math.abs(player.vy) * dt + 4;
       if (Math.abs(player.x - enemy.x) > horizontalReach || Math.abs(player.y - enemyY) > verticalReach) continue;
 
       let enemyTop = enemyY + enemyHeight / 2;
       let crossedTop = false;
       if (player.vy < 0) {
-        enemyTop = spriteTopAtX(frame, enemy.x, enemyY, targetEnemyWidth, enemyHeight, player.x);
         const previousEnemyY = enemy.y + Math.sin((elapsed - dt) * 4 + enemy.phase) * 4;
-        const previousTop = spriteTopAtX(frame, enemy.x, previousEnemyY, targetEnemyWidth, enemyHeight, player.x);
-        crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousTop, enemyTop,
-          player.x, enemy.x, targetEnemyWidth, player.width * .44);
+        const landing = spriteLanding(frame, enemy.x, enemyY, targetEnemyWidth, enemyHeight,
+          enemy.previousX ?? enemy.x, previousEnemyY, previousFeet, currentFeet, previousX);
+        crossedTop = landing !== null;
+        if (crossedTop) enemyTop = landing;
       }
       const targetRx = player.width * .31;
       const targetRy = player.height * .37;
@@ -3950,6 +3980,7 @@
         frags += 1;
         player.y = enemyTop + player.height / 2;
         player.vy = 810;
+        protectBounce();
         somersault = null;
         openingJump = false;
         effects.push({ index: 7, x: enemy.x, y: enemyTop, age: 0, duration: .42, size: 42 * visualScale() });
@@ -3958,10 +3989,11 @@
         return true;
       }
       if (overlaps && invulnerableTimer <= 0) {
-        endGame();
-        return true;
+        harmfulContact = true;
       }
     }
+    // Array/spawn order must not turn a valid stomp into an adjacent side hit.
+    if (harmfulContact && invulnerableTimer <= 0) { endGame(); return true; }
     return false;
   }
 
@@ -4030,6 +4062,7 @@
     }
 
     for (const enemy of enemies) {
+      enemy.previousX = enemy.x;
       const fish = enemy.type === "piranha";
       enemy.x = Math.max(38, Math.min(width - 38,
         enemy.baseX + Math.sin(elapsed * (fish ? .85 : 1.25) + enemy.phase) * Math.min(fish ? 90 : 54, width * (fish ? .21 : .14))));
@@ -4043,10 +4076,10 @@
     if (mode !== "running") return;
     collideSidShots(dt, previousFeet, currentFeet, previousPlayerX);
     if (mode !== "running" || sidBoss?.phase === "victory") return;
-    collideWithSpaceEvents(previousFeet, currentFeet, dt);
+    collideWithSpaceEvents(previousFeet, currentFeet, dt, previousPlayerX);
     if (mode !== "running" || spacePitHold) return;
-    collideWithSpaceBoss(previousFeet, currentFeet);
-    collideWithEnemy(previousFeet, currentFeet, dt);
+    collideWithSpaceBoss(previousFeet, currentFeet, previousPlayerX);
+    collideWithEnemy(previousFeet, currentFeet, dt, previousPlayerX);
     if (mode !== "running") return;
     collideSkyDucks(previousFeet, currentFeet, dt, previousPlayerX);
 
@@ -4103,14 +4136,13 @@
       // Feet crossing the surface is sufficient: requiring torso overlap as
       // well misses shallow landings and lets a fast descent tunnel through.
       if (hazard.bouncy && player.vy < 0) {
-        const hazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height, player.x);
-        const previousHazardTop = spriteTopAtX(hitbox.sprite, hitbox.x, previousHazardY, hitbox.width, hitbox.height, player.x);
-        const crossedTop = crossedLandingSurface(previousFeet, currentFeet, previousHazardTop, hazardTop,
-          player.x, hitbox.x, hitbox.width, player.width * .44);
-        if (crossedTop) {
+        const hazardTop = spriteLanding(hitbox.sprite, hitbox.x, hitbox.y, hitbox.width, hitbox.height,
+          hitbox.x, previousHazardY, previousFeet, currentFeet, previousPlayerX);
+        if (hazardTop !== null) {
           hazard.dead = true;
           player.y = hazardTop + player.height / 2;
           player.vy = 880;
+          protectBounce();
           somersault = null;
           openingJump = false;
           effects.push({ index: 10, x: player.x, y: hazardTop, age: 0, duration: .34, size: 48 * visualScale() });
