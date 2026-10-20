@@ -69,6 +69,7 @@ async function harness(mobile, failStartup = false) {
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
       sidArenaHeight, sidBossGeometry, summitEnemyPose,
       setBossWarning, extendBossRefuge, updateSpaceBoss, followPlayerCamera,
+      startBathBossTest, beginBathJourney, updateBathBoss, bathGeometry, buildBathArena,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -82,7 +83,8 @@ async function harness(mobile, failStartup = false) {
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
         spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator, hazards, bossShots,
-        summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY, visibleWorldHeight}),
+        summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY, visibleWorldHeight,
+        bathBoss,bathBossCleared}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -976,4 +978,73 @@ for(const mobile of [true,false]) {
     if(mobile)assert.ok(1-(p.y-s.cameraY)/s.visibleWorldHeight>.54,'Camera catches ascent before the hero rises above centre');
   }
   console.log(`${mobile?'Mobile':'Desktop'}: camera framing in full and cropped viewports passed`);
+}
+
+for(const mobile of [true,false]) {
+  const h=await harness(mobile),a=h.api;
+  await a.startBathBossTest();
+  const b=a.state().bathBoss,p=a.state().player;
+  assert.ok(b);assert.equal(b.phase,'boarding');assert.equal(b.hp,8);
+  assert.equal(a.art.bathBossPoses.length,12);assert.equal(a.art.bathBossProps.length,9);
+  p.x=b.cabinX;p.y=b.cabinY+p.height/2+3;p.vy=-300;
+  a.updateBathBoss(1/60);
+  assert.equal(b.phase,'ride','A real descending jump boards the cabin');
+  for(let i=0;i<241;i++)a.updateBathBoss(1/60);
+  assert.equal(b.phase,'intro');assert.ok(a.state().platforms.length>=8);
+  if(mobile){
+    for(const [w,ht] of [[390,560],[844,390],[390,650]]){
+      h.resize(w,ht);const view=a.bathGeometry();
+      assert.ok(view.y+view.h/2<=a.state().cameraY+view.ah,'Boss fits after mobile orientation changes');
+    }
+  }
+  let g=a.bathGeometry();
+  assert.ok(g.y+g.h/2<=a.state().cameraY+g.ah,'Boss fits in the visible mobile arena');
+  assert.ok(a.state().platforms.every(p=>p.y>=a.state().cameraY));
+  const lockedScore=a.state().score;
+  for(let hit=1;hit<=8;hit++) {
+    for(let i=0;i<1300&&b.phase!=='open';i++){
+      a.bossShield();a.update(1/60);
+      if(b.phase==='attack')assert.ok(b.shots.filter(s=>s.kind==='ban').every(s=>Math.floor(s.x/(a.state().width/3))!==b.safeLane),
+        'Each volley leaves its announced safe lane free of BAN plates');
+    }
+    assert.equal(b.phase,'open','Every attack cycle opens an attack window');
+    for(let i=0;i<55;i++){a.bossShield();a.update(1/60);}
+    g=a.bathGeometry();
+    if(process.env.DOODLE_PREVIEW_DIR&&[1,4,7].includes(hit)){
+      a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-phase-${b.tier}-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+    }
+    const medalY=g.y-g.h*.08;
+    p.x=g.x;p.vx=0;p.y=medalY+p.height/2+3;p.vy=-300;
+    a.updateBathBoss(1/60);
+    assert.equal(b.hp,8-hit,'One actual descending medal impact removes exactly one life');
+    const hp=b.hp;a.updateBathBoss(0);assert.equal(b.hp,hp,'A hit cannot repeat outside the open phase');
+    assert.equal(b.tier,hit>=6?3:hit>=3?2:1);
+    if(hit<8)assert.equal(a.state().score,lockedScore,'Arena does not farm height points');
+  }
+  assert.equal(b.phase,'victory');assert.equal(a.state().bathBossCleared,true);
+  assert.equal(a.state().score,lockedScore+800);
+  for(let i=0;i<182;i++)a.updateBathBoss(1/60);
+  assert.equal(b.phase,'eagle');
+  for(let i=0;i<150;i++)a.updateBathBoss(1/60);
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-eagle-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  for(let i=0;i<250;i++)a.updateBathBoss(1/60);
+  assert.equal(b.phase,'complete');assert.equal(a.state().mode,'over');
+  assert.deepEqual(h.calls,[],'Admin boss and ending tests never write attempts or scores');
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().bathBoss,null);assert.equal(a.state().bathBossCleared,false);
+  await h.events.get('doodle-commentator-test:click')();
+  a.peakScore(12999);a.update(0);
+  assert.equal(a.state().bathBoss,null,'The cabin gate must not trigger before 13000');
+  a.peakScore(13000);a.update(0);
+  assert.equal(a.state().bathBoss.phase,'boarding','The gate opens automatically at 13000 in the summit');
+  a.state().bathBoss.phase='intro';a.buildBathArena();
+  const fight=a.state().bathBoss,hero=a.state().player,gg=a.bathGeometry();
+  fight.phase='warning';fight.timer=0;fight.lane=0;fight.bubbles=[];
+  hero.x=a.state().width*.5;hero.y=gg.floor+100;hero.vy=0;
+  fight.shots=[{kind:'ban',x:hero.x,y:hero.y+135/60,vy:-135,age:1}];
+  a.expireShield();a.updateBathBoss(1/60);
+  assert.equal(a.state().mode,'over','BAN plates cause a real lethal contact without a shield');
+  assert.deepEqual(h.calls,[]);
+  console.log(`${mobile?'Mobile':'Desktop'}: bath cabin boarding, eight real hits, three phases, resize, locked score, eagle finale and restart passed`);
 }

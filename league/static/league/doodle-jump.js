@@ -80,6 +80,8 @@
   let summitShots = [];
   let summitEnemyNextY = 0;
   let summitEnemyLastType = "drone";
+  let bathBoss = null;
+  let bathBossCleared = false;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -204,7 +206,7 @@
   // Download only the current chapter. Each chapter is published atomically:
   // simulation never encounters partially prepared sprites or collision masks.
   const assetStages = new Map();
-  const stageNames = { sky: "Облака", space: "Космос", garage: "Забытый паддок", winter: "Антарктида", summit: "Высокогорный паддок" };
+  const stageNames = { sky: "Облака", space: "Космос", garage: "Забытый паддок", winter: "Антарктида", summit: "Высокогорный паддок", bath: "Банный судья" };
   const yieldAssetWork = () => new Promise((resolve) => {
     if (window.requestIdleCallback) window.requestIdleCallback(resolve, { timeout: 250 });
     else setTimeout(resolve, 0);
@@ -247,7 +249,11 @@
 
   function streamWorldAssets() {
     waitingForStage = null;
-    if (summit) return stageReady("summit");
+    if (summit) {
+      if (runScore() >= 12500 || bathBoss) loadStage("bath");
+      if ((runScore() >= 13000 || bathBoss) && !stageReady("bath")) return false;
+      return stageReady("summit");
+    }
     if (antarctica || antarcticaScene || antarcticaArrival) {
       if (runScore() >= 9700) loadStage("summit");
       return stageReady("winter");
@@ -2402,6 +2408,7 @@
   }
 
   function buildGame() {
+    bathBoss = null; bathBossCleared = false;
     summitCommentator = null; summitCommentatorNextY = 0;
     summitPlatformIndex = 0; summitGoatNextY = 0; summitRareLastY = -Infinity;
     summitEncounter = null; summitShots.length = 0; summitEnemyNextY = 0;
@@ -4020,6 +4027,288 @@
     return false;
   }
 
+  function splitBathGrid(sheet, columns, rows) {
+    const w = sheet.naturalWidth / columns, h = sheet.naturalHeight / rows;
+    const packed = document.createElement("canvas");
+    packed.width = Math.round(w * columns * rows); packed.height = Math.round(h);
+    const painter = packed.getContext("2d");
+    for (let row = 0; row < rows; row++) for (let col = 0; col < columns; col++) {
+      painter.drawImage(sheet, col*w, row*h, w, h, (row*columns+col)*w, 0, w, h);
+    }
+    packed.naturalWidth = packed.width; packed.naturalHeight = packed.height;
+    const frames=checkedFrames(splitSpriteSheet(packed, columns*rows, null, true, true), columns*rows);
+    if(columns!==4)return frames;
+    const cw=Math.max(...frames.map(f=>f.sw)),ch=Math.max(...frames.map(f=>f.sh));
+    return frames.map(f=>{
+      const tile=document.createElement("canvas");tile.width=cw;tile.height=ch;
+      const painter=tile.getContext("2d");painter.imageSmoothingEnabled=false;
+      painter.drawImage(f.image,Math.round((cw-f.sw)/2),ch-f.sh);
+      return {image:tile,sx:0,sy:0,sw:cw,sh:ch};
+    });
+  }
+
+  function bathGeometry() {
+    const b = bathBoss, ah = sidArenaHeight(), floor = cameraY + ah * .1;
+    const gap = Math.min(110, ah * .17), w = Math.min(190, width * .46, ah * .34);
+    const h = spriteSize(art.bathBossPoses[0], w);
+    const open = b && ["open","hit","break"].includes(b.phase);
+    const targetY=open ? floor+gap*2+Math.min(125,ah*.2)+h*.08 : cameraY+ah-h*.68-55;
+    return {ah, floor, gap, w, h, x: width*.5 + (b?.tier > 1 ? Math.sin(b.age*.7)*width*.16 : 0),
+      targetY, y:b?.visualY ?? targetY};
+  }
+
+  function buildBathArena(oldHeight = null) {
+    const g = bathGeometry(), oldY = player.y;
+    platforms = [];
+    const tiles = Math.ceil(width/65);
+    for(let i=0;i<tiles;i++) {
+      const p=addPlatform(g.floor,(i+.5)*width/tiles,"normal");
+      p.width=p.hitboxWidth=p.spriteWidth=width/tiles+2;
+    }
+    for(let row=1;row<=2;row++)for(const lane of [.2,.8])addPlatform(g.floor+row*g.gap,width*lane,"normal");
+    if(oldHeight)player.y=cameraY+(oldY-cameraY)/oldHeight*g.ah;
+    player.y=clamp(player.y,g.floor+player.height/2,cameraY+g.ah-player.height);
+    bathBoss.bubbles=Array.from({length:4},(_,i)=>({x:width*(i%2?.58:.42),
+      y:g.floor+g.gap*(.55+i*.65),cooldown:0}));
+  }
+
+  function beginBathJourney() {
+    if(!summit || bathBoss || bathBossCleared || !art.bathBossPoses) return false;
+    bathBoss={phase:"boarding",tier:1,hp:8,timer:0,age:0,shots:[],bubbles:[],
+      cabinX:width*.65,cabinY:player.y+90,entryScore:runScore(),lastLane:-1};
+    rocketTimer=0;kimiBoost=0;freeFlight=false;somersault=null;
+    summitEncounter=null;summitCommentator=null;summitShots=[];
+    enemies=[];hazards=[];hawks=[];powerups=[];effects=[];marshals=[];
+    const ground=player.y-player.height/2;
+    platforms=[];
+    const p=addPlatform(ground,width/2,"normal");p.width=p.hitboxWidth=p.spriteWidth=width*.85;
+    player.vy=720;openingJump=false;invulnerableTimer=2;
+    return true;
+  }
+
+  function bathState(phase) {bathBoss.phase=phase;bathBoss.timer=0;}
+
+  function beginBathWarning() {
+    const b=bathBoss;
+    b.safeLane=Math.floor(Math.random()*3);
+    b.remaining=b.tier===1?1:3;
+    nextBathWarning();
+  }
+
+  function nextBathWarning() {
+    const b=bathBoss, lanes=[0,1,2].filter(l=>l!==b.safeLane&&l!==b.lastLane);
+    b.lane=lanes[Math.floor(Math.random()*lanes.length)];b.lastLane=b.lane;
+    bathState("warning");
+  }
+
+  function hitBathMedal() {
+    const b=bathBoss;
+    if(!b||b.phase!=="open"||b.hp<=0)return false;
+    b.hp--;player.vy=800;somersault=null;invulnerableTimer=.85;
+    b.shots=[];
+    if(!b.hp){bathBossCleared=true;bossBonus+=800;bathState("victory");}
+    else {
+      const tier=b.hp<=2?3:b.hp<=5?2:1;
+      const changed=tier!==b.tier;b.tier=tier;bathState(changed?"break":"hit");
+    }
+    return true;
+  }
+
+  function bathPlayerPhysics(dt) {
+    const oldX=player.x, oldFeet=player.y-player.height/2;
+    const direction=Number(held.right)-Number(held.left);
+    player.vx+=(direction*Math.min(440,width*.62)*1.2-player.vx)*Math.min(1,(bathBoss.slip>0?2:10)*dt);
+    player.x=clamp(player.x+player.vx*dt,player.width/2,width-player.width/2);
+    player.vy-=1240*dt;player.y+=player.vy*dt;
+    const ceiling=cameraY+sidArenaHeight()-player.height/2-8;
+    if(player.y>ceiling){player.y=ceiling;player.vy=Math.min(player.vy,0);}
+    const feet=player.y-player.height/2;
+    if(player.vy<0){
+      const p=landingPlatform(oldFeet,feet,oldX,player.x);
+      if(p){player.y=p.y+player.height/2;player.vy=720;
+        if(p.foamUntil>elapsed)bathBoss.slip=.8;}
+    }
+    return {oldX,oldFeet,feet};
+  }
+
+  function updateBathBoss(dt) {
+    const b=bathBoss;if(!b)return false;
+    b.age+=dt;b.timer+=dt;b.slip=Math.max(0,(b.slip||0)-dt);
+    invulnerableTimer=Math.max(0,invulnerableTimer-dt);
+    if(b.phase==="boarding") {
+      const m=bathPlayerPhysics(dt);
+      const roof=b.cabinY;
+      if(player.vy<0&&movingLanding(m.oldFeet,m.feet,roof,roof,m.oldX,b.cabinX,b.cabinX,78)) {
+        bathState("ride");b.fromX=player.x;b.fromY=player.y;
+      }
+      return true;
+    }
+    if(b.phase==="ride") {
+      const t=sceneEase(b.timer,0,4);
+      player.x=sceneMix(b.fromX,width+150,t);player.y=b.cabinY+player.height/2;
+      player.vx=player.vy=0;
+      if(b.timer>=4){player.x=width/2;player.y=cameraY+sidArenaHeight()*.18;
+        buildBathArena();bathState("intro");player.vy=0;invulnerableTimer=2;}
+      return true;
+    }
+    if(["victory","eagle","complete"].includes(b.phase)) {
+      invulnerableTimer=1;player.vx=player.vy=0;
+      if(b.phase==="victory") {
+        const g=bathGeometry();player.x=width/2;player.y=g.floor+player.height/2;
+        if(b.timer>3){bathState("eagle");b.heroFromY=player.y;}
+      } else if(b.phase==="eagle") {
+        const lift=sceneEase(b.timer,1.6,5.5);
+        player.x=width*.5+width*.75*lift;player.y=b.heroFromY+sidArenaHeight()*.9*lift;
+        if(b.timer>=6.5){bathState("complete");endGame();
+          kicker.textContent="БАННЫЙ СУДЬЯ ПОБЕЖДЁН";title.textContent="Курс — в горы!";
+          copy.textContent=`Счёт — ${finalScore}. Орёл доставил Рассела к перевалу. Горный подъём появится в следующем обновлении.`;}
+      }
+      return true;
+    }
+    const g=bathGeometry();
+    b.visualY=g.y+(g.targetY-g.y)*(1-Math.exp(-6*dt));
+    if(b.phase==="intro"&&b.timer>=2)beginBathWarning();
+    else if(b.phase==="warning"&&b.timer>=1.15){
+      b.shots.push({kind:"ban",x:width*(b.lane+.5)/3,y:cameraY+g.ah+30,oldY:cameraY+g.ah+30,vy:-135,age:0});
+      if(b.tier===3)b.shots.push({kind:"foam",x:b.lane===0?-35:width+35,y:g.floor+12,
+        vx:b.lane===0?95:-95,age:0});
+      if(b.tier>=2){const p=platforms.filter(p=>p.y>g.floor+10)[b.lane];if(p)p.foamUntil=elapsed+5;}
+      bathState("attack");
+    } else if(b.phase==="attack"&&b.timer>=1.25){
+      if(--b.remaining>0)nextBathWarning();else bathState("open");
+    } else if(b.phase==="open"&&b.timer>=5.5)beginBathWarning();
+    else if(b.phase==="hit"&&b.timer>=.85)beginBathWarning();
+    else if(b.phase==="break"&&b.timer>=1.8)beginBathWarning();
+    const m=bathPlayerPhysics(dt);
+    for(const bubble of b.bubbles){
+      bubble.cooldown=Math.max(0,bubble.cooldown-dt);
+      if(!bubble.cooldown&&player.vy<0&&movingLanding(m.oldFeet,m.feet,bubble.y+15,bubble.y+15,
+        m.oldX,bubble.x,bubble.x,38)){
+        player.y=bubble.y+15+player.height/2;player.vy=800;bubble.cooldown=1.5;protectBounce();
+      }
+    }
+    const medalY=g.y-g.h*.08;
+    if(b.phase==="open"&&b.timer>.6&&player.vy<0&&movingLanding(m.oldFeet,m.feet,medalY,medalY,
+      m.oldX,g.x,g.x,48)){
+      player.y=medalY+player.height/2;hitBathMedal();
+    }
+    for(const shot of b.shots){
+      const oldX=shot.x,oldY=shot.y;shot.age+=dt;
+      shot.x+=(shot.vx||0)*dt;shot.y+=(shot.vy||0)*dt;
+      if(shot.y<g.floor-35||shot.x< -70||shot.x>width+70){shot.dead=true;continue;}
+      if(invulnerableTimer>0)continue;
+      const frame=art.bathBossProps[shot.kind==="ban"?3:5],w=shot.kind==="ban"?52:70,h=spriteSize(frame,w);
+      const steps=Math.max(1,Math.ceil((Math.abs(shot.y-oldY)+Math.abs(player.y-m.oldFeet-player.height/2)+Math.abs(player.x-m.oldX))/4));
+      for(let i=0;i<=steps;i++){
+        const t=i/steps;
+        if(spriteOverlapsEllipse(frame,sceneMix(oldX,shot.x,t),sceneMix(oldY,shot.y,t),w,h,
+          sceneMix(m.oldX,player.x,t),sceneMix(m.oldFeet+player.height/2,player.y,t),player.width*.27,player.height*.33)){
+          endGame();return true;
+        }
+      }
+    }
+    b.shots=b.shots.filter(s=>!s.dead);
+    if(player.y+player.height/2<cameraY)endGame();
+    return true;
+  }
+
+  function bathDrawSprite(frame,x,y,w,angle=0) {
+    const h=spriteSize(frame,w);ctx.save();ctx.translate(x,worldToScreen(y));ctx.rotate(angle);
+    ctx.drawImage(rasterSprite(frame,w,h),-w/2,-h/2,w,h);ctx.restore();
+  }
+
+  function drawBathHero(x=player.x,y=player.y) {
+    const frame=currentHeroSprite(),h=player.height,w=h*frame.sw/frame.sh;
+    ctx.save();ctx.translate(x,worldToScreen(y));ctx.scale(facing,1);
+    ctx.drawImage(rasterSprite(frame,w,h),-w/2,-h/2,w,h);ctx.restore();
+  }
+
+  function drawBathMountains(alpha=1) {
+    const source=art.summit,ah=sidArenaHeight();
+    const sh=Math.min(source.naturalHeight*.46,source.naturalWidth*ah/width),sw=sh*width/ah;
+    ctx.save();ctx.globalAlpha=alpha;
+    ctx.drawImage(source,(source.naturalWidth-sw)/2,source.naturalHeight*.22,sw,sh,0,height-ah,width,ah);
+    ctx.restore();
+  }
+
+  function drawBathBoss() {
+    const b=bathBoss,g=bathGeometry(),top=height-g.ah;
+    if(b.phase==="boarding"||b.phase==="ride"){
+      for(const p of platforms)drawSummitPlatform(p);
+      const t=b.phase==="ride"?sceneEase(b.timer,0,4):0;
+      const x=sceneMix(b.cabinX,width+150,t),w=110,h=spriteSize(art.summitCableCar,w);
+      ctx.strokeStyle="#283c50";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(0,worldToScreen(b.cabinY)-h*.5);
+      ctx.lineTo(width,worldToScreen(b.cabinY)-h*.5);ctx.stroke();
+      // Door/cabin sits behind the actor, roof provides a reliable boarding plane.
+      bathDrawSprite(art.summitCableCar,x,b.cabinY-h*.14,w);
+      drawBathHero(b.phase==="ride"?x:player.x,b.phase==="ride"?b.cabinY-h*.05:player.y);
+      ctx.fillStyle="#fff0c3";ctx.font="bold 12px monospace";ctx.textAlign="center";
+      ctx.fillText(b.phase==="ride"?"СЛЕДУЮЩАЯ ОСТАНОВКА — БАННЫЙ СУДЬЯ":"ПРЫГНИ НА КАБИНКУ",width/2,top+45,width-24);
+      return;
+    }
+    if(b.phase==="complete"){
+      drawBathMountains();return;
+    }
+    // Side gantries frame the arena without blocking the centre on phones.
+    ctx.fillStyle="#273c50";ctx.fillRect(0,top,12,g.ah);ctx.fillRect(width-12,top,12,g.ah);
+    for(const p of platforms){drawSummitPlatform(p);if(p.foamUntil>elapsed)bathDrawSprite(art.bathBossProps[5],p.x,p.y+5,p.spriteWidth);}
+    if(b.phase==="eagle"&&b.timer>2)drawBathMountains(sceneEase(b.timer,2,5));
+    if(b.phase==="warning"){
+      const x=width*b.lane/3;
+      ctx.fillStyle="rgba(200,51,47,.16)";ctx.fillRect(x+6,top+75,width/3-12,g.ah-75);
+      ctx.fillStyle="#ffb7a0";ctx.font="bold 16px monospace";ctx.textAlign="center";ctx.fillText("БАН ↓",x+width/6,top+95);
+    }
+    const victory=["victory","eagle"].includes(b.phase);
+    if(!victory){
+      for(const bubble of b.bubbles)if(bubble.cooldown<.25)bathDrawSprite(art.bathBossProps[bubble.cooldown>0?2:0],bubble.x,bubble.y,40);
+      const brackets=b.tier===1?3:b.tier===2?2:1;
+      for(let i=0;i<3;i++){
+        const anchorX=width*(.3+i*.2),rimX=g.x+(i-1)*g.w*.38;
+        if(i<brackets){
+          ctx.strokeStyle="#a38a55";ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(anchorX,top+80);
+          ctx.lineTo(rimX,worldToScreen(g.y+g.h*.05));ctx.stroke();
+          ctx.strokeStyle="#263747";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(anchorX+2,top+80);
+          ctx.lineTo(rimX+2,worldToScreen(g.y+g.h*.05));ctx.stroke();
+        }
+        bathDrawSprite(art.bathBossProps[i<brackets?7:8],anchorX,cameraY+g.ah-70,42);
+      }
+    }
+    let pose=b.phase==="warning"?(b.tier===1?1:4):b.phase==="attack"?(b.tier===1?2:5)
+      :b.phase==="open"?3:b.phase==="hit"?7:b.phase==="break"?9:0;
+    if(b.tier===3&&b.phase==="attack")pose=8;
+    const fall=b.phase==="victory"?Math.max(0,b.timer-.6):0;
+    if(b.phase!=="eagle")bathDrawSprite(art.bathBossPoses[victory?10:pose],g.x,g.y-fall*fall*160,g.w,
+      b.tier>1?Math.sin(b.age*2)*.045:0);
+    if(b.phase==="open"){
+      bathDrawSprite(art.bathBossProps[6],g.x,g.y-g.h*.08,28);
+      ctx.strokeStyle="#ffe4a1";ctx.lineWidth=2;ctx.beginPath();ctx.arc(g.x,worldToScreen(g.y-g.h*.08),21,0,Math.PI*2);ctx.stroke();
+    }
+    for(const shot of b.shots)bathDrawSprite(art.bathBossProps[shot.kind==="ban"?3:5],shot.x,shot.y,shot.kind==="ban"?52:70);
+    if(b.phase==="eagle"){
+      const approach=sceneEase(b.timer,0,1.6),x=b.timer<1.6?sceneMix(-90,player.x,approach):player.x;
+      const y=b.timer<1.6?sceneMix(cameraY+g.ah*.7,player.y+38,approach):player.y+38;
+      bathDrawSprite(art.bathEagle[Math.floor(b.age*7)%4],x,y,115);
+      drawBathHero();
+    }else drawBathHero();
+    ctx.textAlign="center";ctx.font="bold 12px monospace";ctx.fillStyle="#101c2b";ctx.fillRect(width/2-130,top+10,260,48);
+    ctx.fillStyle="#f8e3b2";ctx.fillText(victory?"БАННЫЙ СУДЬЯ ПОБЕЖДЁН":"БАННЫЙ СУДЬЯ · ФАЗА "+b.tier,width/2,top+27);
+    for(let i=0;i<8;i++){ctx.fillStyle=i<b.hp?"#e7bb5b":"#435365";ctx.fillRect(width/2-76+i*20,top+36,13,9);}
+    ctx.font="bold 11px monospace";ctx.fillStyle="#fff1cf";
+    const phrase=b.phase==="open"?"УСТАЛ! ПРЫГНИ НА МЕДАЛЬ":b.phase==="warning"?(b.tier===1?"Я САМЫЙ ЛУЧШИЙ!":"БАН БАН БАН!")
+      :b.phase==="break"?"КРЕПЛЕНИЕ НЕ ВЫДЕРЖАЛО!":b.phase==="eagle"?"КУРС — К ГОРНОМУ ПЕРЕВАЛУ":b.phase==="victory"?"БАН БАН Б…":"ПУЗЫРИ ПОМОГУТ ПОДНЯТЬСЯ";
+    ctx.fillText(phrase,width/2,height-18,width-24);
+  }
+
+  async function startBathBossTest(finale=false) {
+    if(!adminSandbox&&mode==="running"&&!adminBossTestMode)return;
+    await startCommentatorTest();
+    if(!summit||!adminBossTestMode||!await preparePreview(["bath"]))return;
+    peakY=startY+13000*11-frags*330-marshalBonus*11-bossBonus*11;
+    bathBoss=null;bathBossCleared=false;beginBathJourney();
+    if(finale){bathBoss.hp=0;bathBossCleared=true;buildBathArena();bathState("victory");}
+    draw();if(bossTestStatus)bossTestStatus.textContent="Банный судья · 8 жизней · тест без сохранения результата";
+  }
+
   function cameraTrackingOffset() {
     return logicalViewportWidth === 390 ? visibleWorldHeight * .38 : height * .42;
   }
@@ -4032,6 +4321,8 @@
   function update(dt) {
     if (!streamWorldAssets()) return;
     elapsed += dt;
+    if (summit && !bathBoss && !bathBossCleared && runScore() >= 13000) beginBathJourney();
+    if (bathBoss && updateBathBoss(dt)) { updateHud(); return; }
     if (forgottenPaddock && !antarctica && !summit && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
     if (antarcticaScene) {
       antarcticaScene.age += dt;
@@ -4243,6 +4534,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (mode === "intro" && intro) { drawIntro(); return; }
     drawBackdrop();
+    if (bathBoss) { drawBathBoss(); return; }
     if (antarcticaScene) { drawAntarcticaScene(); return; }
     if (antarcticaArrival) { drawAntarcticaArrival(); return; }
 
@@ -4550,6 +4842,19 @@
       hazards.forEach((hazard) => { hazard.x *= scaleX; hazard.y *= scaleY; hazard.size *= scaleX; hazard.speed *= scaleY; });
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
       if (sidBoss && previousArenaHeight !== sidArenaHeight()) buildSidArena(previousArenaHeight);
+      if (bathBoss && previousArenaHeight !== sidArenaHeight()) {
+        if(!["boarding","ride","eagle","complete"].includes(bathBoss.phase))buildBathArena(previousArenaHeight);
+        else {
+          const ratio=sidArenaHeight()/previousArenaHeight;
+          player.y=cameraY+(player.y-cameraY)*ratio;
+          for(const key of ["cabinY","fromY","heroFromY"])if(bathBoss[key]!==undefined)
+            bathBoss[key]=cameraY+(bathBoss[key]-cameraY)*ratio;
+          if(bathBoss.phase==="boarding"||bathBoss.phase==="ride")
+            for(const p of platforms)p.y=cameraY+(p.y-cameraY)*ratio;
+        }
+        for(const shot of bathBoss.shots)shot.y=cameraY+(shot.y-cameraY)/previousArenaHeight*sidArenaHeight();
+        if(bathBoss.visualY!==undefined)bathBoss.visualY=cameraY+(bathBoss.visualY-cameraY)/previousArenaHeight*sidArenaHeight();
+      }
       draw();
     } else {
       buildGame();
@@ -4674,6 +4979,8 @@
   document.getElementById("doodle-commentator-test")?.addEventListener("click", startCommentatorTest);
   document.getElementById("doodle-marmot-test")?.addEventListener("click", () => startSummitEnemyTest("marmot"));
   document.getElementById("doodle-drone-test")?.addEventListener("click", () => startSummitEnemyTest("drone"));
+  document.getElementById("doodle-bath-boss-test")?.addEventListener("click", () => startBathBossTest());
+  document.getElementById("doodle-bath-finale-test")?.addEventListener("click", () => startBathBossTest(true));
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }
@@ -4784,6 +5091,11 @@
 
   function stageAssets(name) {
     const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
+    if (name === "bath") return [
+      ["bathBossPosesSrc", sheet => ({bathBossPoses:splitBathGrid(sheet,4,3)})],
+      ["bathBossPropsSrc", sheet => ({bathBossProps:splitBathGrid(sheet,3,3)})],
+      ["hawkSheetSrc", sheet => ({bathEagle:checkedFrames(splitSpriteSheet(sheet,4),4)})],
+    ];
     if (name === "summit") return [
       ["summitPlatformsSrc", sheet => ({summitPlatforms:summitPlatformFrames(sheet)})],
       ["summitBackgroundSrc", (sheet) => ({ summit: sheet })],
