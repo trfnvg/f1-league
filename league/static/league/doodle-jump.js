@@ -1569,7 +1569,7 @@
     const step = summitPlatformIndex++ % 18;
     const difficulty = clamp((platform.y - summitEntryY) / 6000, 0, 1);
     platform.kind = "normal";
-    platform.width = platform.hitboxWidth = platform.spriteWidth = 55 - difficulty * 8;
+    platform.width = platform.hitboxWidth = platform.spriteWidth = 89.7 * visualScale() - difficulty * 3;
     platform.height = 9;
     if (step >= 8 && step <= 11) {
       platform.summitKind = "purple";
@@ -1589,13 +1589,27 @@
     } else if (step === 1 || step === 6 || step === 14) {
       platform.kind = "moving";
       platform.range = 16;
+    } else if (step === 16) {
+      platform.kind = "spring";
+      platform.spriteWidth = 52;
+      platform.width = platform.hitboxWidth = 20;
     }
+    platform.spriteIndex = platform.kind === "moving" ? 1 : platform.kind === "break" ? 2 : platform.kind === "spring" ? 3 : 0;
   }
 
   function summitPlatformGap() {
-    const difficulty = clamp((worldTop - summitEntryY) / 6000, 0, 1);
-    // Normal jump apex is 209 units: even the hardest gap leaves >30 units.
-    return 142 + difficulty * 15 + Math.random() * 20;
+    return platformGap();
+  }
+
+  function summitPlatformFrames(sheet) {
+    const rowHeight = sheet.naturalHeight / 4;
+    const packed = document.createElement("canvas");
+    packed.width = sheet.naturalWidth * 4; packed.height = rowHeight;
+    const painter = packed.getContext("2d");
+    for (let i = 0; i < 4; i++) painter.drawImage(sheet, 0, i * rowHeight, sheet.naturalWidth, rowHeight,
+      i * sheet.naturalWidth, 0, sheet.naturalWidth, rowHeight);
+    packed.naturalWidth = packed.width; packed.naturalHeight = packed.height;
+    return checkedFrames(splitSpriteSheet(packed, 4, null, false, true), 4);
   }
 
   function summitEnemyFrames(sheet) {
@@ -1667,7 +1681,7 @@
           go("attack");
         } else if (mob.phase === "attack" && mob.timer >= .5) go(mob.type === "drone" ? "retreat" : "open");
       }
-      if (mob.phase !== "defeated" && mob.phase !== "retreat") {
+      if (mob.phase !== "defeated") {
         // Use the resting head silhouette, not the raised warning flag, as a foothold.
         const frame = mob.type === "marmot" ? art.summitMarmot[0] : art.summitDrone[0];
         const top = spriteLanding(frame, mob.x, mob.y, mob.w, mob.h, oldX, oldY,
@@ -1794,21 +1808,11 @@
       ctx.restore();
       return;
     }
-    const fragile = platform.kind === "break";
-    ctx.fillStyle = purple ? "#563b82" : fragile ? "#79583c" : "#485967";
-    ctx.fillRect(platform.x - w / 2, y, w, 9);
-    ctx.fillStyle = purple ? "#c3a1f5" : fragile ? "#d3ac76" : "#b4c9c9";
-    ctx.fillRect(platform.x - w / 2, y, w, 3);
-    ctx.fillStyle = purple ? "#9474bd" : "#768e98";
-    for (let i = 6; i < w - 4; i += 15) ctx.fillRect(platform.x - w / 2 + i, y + 5, 7, 2);
-    if (fragile) {
-      ctx.strokeStyle = "#392e2a"; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(platform.x + 3, y); ctx.lineTo(platform.x - 3, y + 4);
-      ctx.lineTo(platform.x + 2, y + 9); ctx.stroke();
-    } else if (platform.kind === "moving") {
-      ctx.fillStyle = "#d2b16f";
-      ctx.fillRect(platform.x - w / 2 + 2, y + 3, 4, 5);
-      ctx.fillRect(platform.x + w / 2 - 6, y + 3, 4, 5);
+    const frame = art.summitPlatforms[platform.spriteIndex || 0], h = spriteSize(frame, w);
+    ctx.drawImage(rasterSprite(frame, w, h), platform.x - w / 2, y, w, h);
+    if (purple) {
+      ctx.fillStyle = "#b593e8";
+      ctx.fillRect(platform.x - platform.hitboxWidth / 2, y, platform.hitboxWidth, 2);
     }
     const goat = platform.goat;
     if (goat && art.summitGoat) {
@@ -2508,6 +2512,13 @@
       const nextX = choosePlatformX(lastX, gap, summit ? (lastPlatform?.kind === "moving" ? lastPlatform.range : 0) + 16 : 0);
       const nextPlatform = addPlatform(y, nextX, selectPlatformKind());
       if (summit) decorateSummitPlatform(nextPlatform);
+      if (summit && summitPlatformIndex % 3 === 0) {
+        const sideX = nextX < width / 2 ? width * .78 : width * .22;
+        if (Math.abs(sideX - nextX) > 85) {
+          const side = addPlatform(y - 35, sideX, "normal");
+          side.summitSide = true;
+        }
+      }
       addPowerupBetween(lastPlatform, nextPlatform);
       if (y >= nextMarshalY && nextPlatform.kind === "normal") {
         marshals.push({ platform: nextPlatform, collected: false });
@@ -2529,9 +2540,11 @@
         dead: false,
       });
     }
-    if (antarctica || summit) hazards.length = 0;
+    if (antarctica && !summit) hazards.length = 0;
     const hazardSpacing = !forgottenPaddock && cameraY < spaceFade.start ? 560 : 430;
-    if (elapsed >= arrivalUntil && !antarctica && !summit && !spaceEncounter && !spaceBoss && (!hazards.length || worldTop - hazards[hazards.length - 1].y > hazardSpacing)) {
+    if (elapsed >= arrivalUntil && (summit || !antarctica) && !spaceEncounter && !spaceBoss
+      && (!hazards.length || worldTop - hazards[hazards.length - 1].y > (summit ? 720 : hazardSpacing))
+      && (!summit || hazards.length < 3)) {
       const spriteIndex = Math.random() < .68 ? 5 : 6;
       const compoundRoll = Math.random();
       const compound = spriteIndex === 5
@@ -2540,7 +2553,7 @@
       hazards.push({
         x: width * (.13 + Math.random() * .74),
         y: worldTop + 90,
-        speed: 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
+        speed: summit ? 100 + Math.random() * 35 : 100 + Math.random() * 48 + Math.min(75, cameraY * .012),
         spriteIndex,
         bouncy: spriteIndex === 5,
         // Sprite alpha masks are used for collision, not a generic bounding box.
@@ -4754,6 +4767,7 @@
   function stageAssets(name) {
     const single = (key) => (sheet) => ({ [key]: checkedFrames(splitSpriteSheet(sheet, 1), 1)[0] });
     if (name === "summit") return [
+      ["summitPlatformsSrc", sheet => ({summitPlatforms:summitPlatformFrames(sheet)})],
       ["summitBackgroundSrc", (sheet) => ({ summit: sheet })],
       ["summitCommentatorSrc", (sheet) => ({ summitCommentator: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],
       ["summitGoatSrc", (sheet) => ({ summitGoat: checkedFrames(splitSpriteSheet(sheet, 4, null, true, true), 4) })],

@@ -728,7 +728,7 @@ for (const mobile of [true,false]) {
   assert.ok(plainRoute.at(-1).hitboxWidth<plainRoute[0].hitboxWidth,'Ordinary platforms narrow progressively');
   for(let i=0;i<100;i++){
     const gap=a.summitPlatformGap();
-    assert.ok(gap>=142&&gap<=177);
+    assert.ok(gap>=108&&gap<=146,'Summit uses the regular platform rhythm');
     assert.ok(gap<720*720/(2*1240),'Gap is below the normal jump apex');
     const from=a.state().width*(.14+Math.random()*.72);
     const to=a.choosePlatformX(from,gap,32);
@@ -848,6 +848,7 @@ for (const mobile of [true,false]) {
   }
   await h.events.get('doodle-drone-test:click')();
   const mob=a.state().summitEncounter,p=a.state().player,pose=a.art.summitDrone[0];
+  mob.phase='retreat';
   p.x=mob.x;
   const top=a.spriteTopAtX(pose,mob.x,mob.y,mob.w,mob.h,p.x);
   p.y=top+p.height/2-3;p.vy=-250;
@@ -865,6 +866,28 @@ for (const mobile of [true,false]) {
   assert.notEqual(a.state().summitEncounter,mob,'Wreck is removed only after falling offscreen');
   assert.deepEqual(h.calls,[]);
   console.log(`${mobile?'Mobile':'Desktop'}: visible Sid arena and stomped drone wreck animation passed`);
+}
+
+for(const mobile of [true,false]) {
+  const h=await harness(mobile),a=h.api;
+  await h.events.get('doodle-commentator-test:click')();
+  a.extendWorld();
+  const s=a.state();
+  assert.equal(a.art.summitPlatforms.length,4,'All four new platform sprites load with the summit');
+  for(const f of a.art.summitPlatforms)assert.ok(f.sw/f.sh>2,'Platform cutouts exclude transparent gutters');
+  assert.ok(s.platforms.some(p=>p.summitSide),'Summit offers side footholds as alternative routes');
+  const main=s.platforms.filter(p=>!p.summitSide&&!p.commentator).sort((a,b)=>a.y-b.y);
+  for(let i=1;i<main.length;i++)assert.ok(main[i].y-main[i-1].y<=146.01,'Main route has regular gaps');
+  assert.ok(s.hazards.length>0,'Falling objects appear in the final biome');
+  const first=s.hazards[0];
+  assert.ok(first.y>s.cameraY+s.height,'Falling objects start above the screen');
+  assert.ok(first.speed>=100&&first.speed<=135,'Summit fall speed leaves time to react');
+  a.extendWorld();
+  assert.ok(a.state().hazards.includes(first),'World generation must not erase active summit hazards');
+  a.draw();
+  if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-summit-platforms-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+  assert.deepEqual(h.calls,[]);
+  console.log(`${mobile?'Mobile':'Desktop'}: new summit art, regular route, side footholds and falling objects passed`);
 }
 
 for(const mobile of [true,false]) {
