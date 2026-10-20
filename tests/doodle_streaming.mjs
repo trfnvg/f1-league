@@ -66,6 +66,7 @@ async function harness(mobile, failStartup = false) {
       updateHawks, spriteTopAtX, spriteSize, updatePortal,
       spawnSummitCommentator, updateSummitCommentator, drawSummitCommentator,
       decorateSummitPlatform, updateSummitGoats, extendWorld, summitPlatformGap, choosePlatformX,
+      spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -79,7 +80,7 @@ async function harness(mobile, failStartup = false) {
         antarcticaArrival, spaceBoss, adminBossTestMode, winterSeamCache, player, cameraY, forgottenPaddock,
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
         spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator,
-        summitEntryY, summitGoatNextY, summitCommentatorNextY}),
+        summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -108,6 +109,7 @@ async function harness(mobile, failStartup = false) {
       setSpaceAge(age){spaceEncounter.age=age;},
       peakScore(n){peakY=startY+(n-frags*30-marshalBonus-bossBonus)*11;},
       bossShield(){invulnerableTimer=100;},
+      expireShield(){invulnerableTimer=0;},
       reflectSidCan(){const shot={kind:"can",x:width*.5,y:cameraY+height*.4,age:1,vy:-90,reflected:false};sidBoss.shots=[shot];
         const top=shot.y+17;player.x=shot.x;player.y=top+player.height/2-2;player.vy=-300;
         collideSidShots(0,top+3,top-2);return shot;},
@@ -691,4 +693,68 @@ for (const mobile of [true,false]) {
   a.spawnSummitCommentator();
   assert.equal(a.state().summitCommentator,null,'Encounter only belongs to the summit biome');
   console.log(`${mobile?'Mobile':'Desktop'}: summit commentator staged art, top-only trigger, bounce, shout, fall, cleanup and sandbox passed`);
+}
+
+for (const mobile of [true,false]) {
+  const h=await harness(mobile), a=h.api;
+  assert.equal(a.art.summitMarmot,undefined);
+  assert.equal(a.art.summitDrone,undefined);
+  for (const type of ['marmot','drone']) {
+    await h.events.get(`doodle-${type}-test:click`)();
+    const mob=a.state().summitEncounter,p=a.state().player;
+    assert.equal(mob.type,type);assert.equal(mob.phase,'arriving');
+    assert.equal(a.art.summitMarmot.length,4);assert.equal(a.art.summitDrone.length,4);
+    assert.equal(a.spawnSummitEnemy(type),false,'Only one attacker can exist');
+    p.x=15;p.y=a.state().cameraY+70;p.vy=0;
+    const tick=dt=>a.updateSummitEnemies(dt,p.y-p.height/2,p.y-p.height/2,p.x);
+    const originalY=mob.y;
+    mob.y=a.state().cameraY+a.state().height+300;
+    tick(2);
+    assert.equal(mob.phase,'arriving','Offscreen enemies do not begin attack timers');
+    assert.equal(a.state().summitShots.length,0);
+    mob.y=originalY;tick(0);tick(.91);
+    assert.equal(mob.phase,'warning');
+    const warningX=mob.x;
+    tick(1.2);assert.equal(a.state().summitShots.length,0,'Warning must precede the shot');
+    assert.equal(mob.x,warningX,'Drone stops tracking during its warning');
+    a.draw();
+    if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-summit-${type}-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
+    tick(.11);assert.equal(a.state().summitShots.length,1);
+    assert.equal(a.state().summitShots[0].type,type==='marmot'?'snow':'nut');
+    tick(.51);assert.equal(mob.phase,type==='drone'?'retreat':'open');
+    tick(.1);assert.equal(a.state().summitShots.length,1,'No burst of surprise projectiles');
+    a.draw();
+    // Test swept contact at high relative speed, with and without a shield.
+    const shot=a.state().summitShots[0];
+    shot.x=p.x;shot.y=p.y;shot.vx=0;shot.vy=0;
+    tick(0);
+    assert.equal(a.state().mode,'running','Entry shield absorbs projectile contact');
+    assert.equal(a.state().summitShots.length,0);
+    a.expireShield();
+    const pp=a.state().player;
+    a.state().summitShots.push({type:'nut',x:pp.x,y:pp.y+30,vx:0,vy:-400,age:0});
+    a.updateSummitEnemies(.15,pp.y-pp.height/2,pp.y-pp.height/2,pp.x);
+    assert.equal(a.state().mode,'over','Fast projectile contact cannot tunnel through the player');
+    assert.deepEqual(h.calls,[]);
+  }
+  await h.events.get('doodle-marmot-test:click')();
+  const mob=a.state().summitEncounter,p=a.state().player;
+  mob.direction=-1;
+  const pose=a.art.summitMarmot[0];
+  p.x=mob.x;
+  const top=a.spriteTopAtX(pose,mob.x,mob.y,mob.w,mob.h,p.x);
+  p.y=top+p.height/2-3;p.vy=-250;
+  a.updateSummitEnemies(0,top+5,top-3,p.x);
+  assert.equal(mob.phase,'defeated');assert.equal(p.vy,830);
+  assert.equal(a.state().summitShots.length,0,'Stomping before the warning cancels the attack');
+  a.updateSummitEnemies(2,0,0,p.x);
+  assert.ok(mob.y<top,'Defeated marmot falls visibly');
+  assert.equal(a.spawnSummitEnemy(),true);
+  assert.equal(a.state().summitEncounter.type,'drone','Natural encounters alternate enemy types');
+  assert.ok(a.state().summitEncounter.y>a.state().cameraY+a.state().height,
+    'Natural enemies begin above the viewport, never beside the player');
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().summitEncounter,null);assert.equal(a.state().summitShots.length,0);
+  assert.equal(a.spawnSummitEnemy('drone'),false,'Summit enemies cannot spawn in other biomes');
+  console.log(`${mobile?'Mobile':'Desktop'}: summit enemies warnings, one-shot attacks, shield/swept contact, stomp and sandbox cleanup passed`);
 }
