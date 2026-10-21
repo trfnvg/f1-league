@@ -16,9 +16,9 @@ device-pixel-ratio changes are part of this optimization.
   portal at 5000. Includes platforms and Kimi.
 - Antarctica: prefetched in the forgotten paddock at score 6500; required at
   7900, before the cutscene at 8000. Includes both cutscenes, piranhas and the
-  Iceman/Ferrari strategist/FIA snowman encounters. Their three animation
+  Iceman/FIA snowman encounters. Their two animation
   sheets and Sid's boss animation/props are never requested at startup
-  (12 of 41 images load initially).
+  (12 images load initially).
 - Summit: a separate background prefetched after 9700 points in Antarctica or
   at Sid's arena entry. Victory waits for it to be ready before transitioning.
 

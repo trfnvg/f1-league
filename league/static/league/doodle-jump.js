@@ -1077,7 +1077,8 @@
 
   function spawnWinterEncounter(kind = null) {
     if (!antarctica || antarcticaArrival || winterEncounter || sidBoss) return false;
-    const kinds = ["iceman", "strategist", "steward"];
+    const kinds = ["iceman", "steward"];
+    if(kind&&!kinds.includes(kind))return false;
     winterEnemyIndex = winterEnemyIndex < 0 ? Math.floor(Math.random() * kinds.length) : (winterEnemyIndex + 1) % kinds.length;
     const type = kind || kinds[winterEnemyIndex];
     // Queue the encounter above the entire viewport and existing fish. It
@@ -1085,7 +1086,7 @@
     const spawnY = enemies.reduce((top, enemy) => enemy.dead ? top : Math.max(top, enemy.y + 250), cameraY + height + 100);
     winterEncounter = { type, age: 0, phase: "arriving", phaseAge: 0, round: 0,
       x: width * (player.x < width / 2 ? .74 : .26), y: spawnY,
-      direction: player.x < width / 2 ? -1 : 1, target: null };
+      direction: player.x < width / 2 ? -1 : 1 };
     return true;
   }
 
@@ -1127,19 +1128,11 @@
       }
       if (mob.phase === "idle" && mob.phaseAge >= 1.1) {
         mob.direction = player.x < mob.x ? -1 : 1;
-        if (mob.type === "strategist") {
-          // A normal, reachable platform, never the only spring or a broken one.
-          const candidates = platforms.filter((p) => !p.broken && p.kind === "normal"
-            && p.y > cameraY + 50 && p.y < cameraY + height * .8 && p.y > player.y - 80);
-          mob.target = candidates.reduce((best, p) => !best || Math.abs(p.y - player.y - 160) < Math.abs(best.y - player.y - 160) ? p : best, null);
-        }
         go("warning");
       } else if (mob.phase === "warning" && mob.phaseAge >= 1.6) {
         go("attack");
         mob.round += 1;
-        if (mob.type === "strategist") {
-          if (mob.target && !mob.target.broken) mob.target.frozenUntil = elapsed + 7;
-        } else if (mob.type === "iceman") {
+        if (mob.type === "iceman") {
           winterProjectiles.push({ type: "gust", x: mob.x + mob.direction * 34, y: mob.y + 8,
             vx: mob.direction * 115, vy: 0, age: 0 });
         } else {
@@ -1218,19 +1211,14 @@
         if (mob.phase === "defeated") ctx.rotate(Math.min(1.2, mob.phaseAge * .5));
         ctx.drawImage(rasterSprite(sprite, w, h), -w * anchor, -h / 2, w, h);
         ctx.restore();
-        let label = mob.type === "iceman" ? "LEAVE ME ALONE" : mob.type === "strategist"
-          ? (mob.phase === "attack" || mob.phase === "open" ? "STAY OUT" : "BOX BOX")
+        let label = mob.type === "iceman" ? "LEAVE ME ALONE"
           : mob.phase === "open" ? "ПРЫГАЙ СВЕРХУ!" : "FIA · +5 SEC";
         if (mob.phase === "defeated") label = "+30";
         ctx.save(); ctx.textAlign = "center"; ctx.font = "bold 10px monospace";
         ctx.strokeStyle = "#f2faff"; ctx.lineWidth = 3; ctx.lineJoin = "round";
-        ctx.fillStyle = mob.type === "strategist" ? "#a32c35" : "#21385a";
+        ctx.fillStyle = "#21385a";
         const x = clamp(mob.x, 85, width - 85), y = sy - h / 2 - 10;
         ctx.strokeText(label, x, y); ctx.fillText(label, x, y); ctx.restore();
-        if (mob.type === "strategist" && mob.phase === "warning" && mob.target && !mob.target.broken) {
-          ctx.save(); ctx.setLineDash([4, 5]); ctx.strokeStyle = "rgba(190,55,64,.65)"; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.moveTo(mob.x, sy + h * .3); ctx.lineTo(mob.target.x, worldToScreen(mob.target.y)); ctx.stroke(); ctx.restore();
-        }
       }
     }
     for (const shot of winterProjectiles) {
@@ -5257,7 +5245,7 @@
   for (const kind of ["carbon", "satellite", "pitstop", "alonso"]) {
     document.getElementById(`doodle-space-${kind}-test`)?.addEventListener("click", () => startSpaceEventTest(kind));
   }
-  for (const kind of ["iceman", "strategist", "steward"]) {
+  for (const kind of ["iceman", "steward"]) {
     document.getElementById(`doodle-winter-${kind}-test`)?.addEventListener("click", async () => {
       await startWinterBiomeTest();
       if (!antarctica || !adminBossTestMode || mode !== "running") return;
@@ -5413,7 +5401,6 @@
       ["winterPlatformsSrc", (sheet) => ({ winterPlatforms: checkedFrames(splitSpriteSheet(sheet, 4, null, false), 4) })],
       ["winterPortraitSrc", (sheet) => ({ winterPortrait: checkedFrames(splitSpriteSheet(sheet, 1, null, false), 1)[0] })],
       ["winterIcemanSrc", (sheet) => ({ winterIceman: checkedFrames(splitSpriteSheet(sheet, 4, [0, .237, .491, .79, 1], false), 4) })],
-      ["winterStrategistSrc", (sheet) => ({ winterStrategist: checkedFrames(splitSpriteSheet(sheet, 4, [0, .217, .499, .794, 1], false), 4) })],
       ["winterStewardSrc", (sheet) => ({ winterSteward: checkedFrames(splitSpriteSheet(sheet, 4, [0, .242, .489, .795, 1], false), 4) })],
       ["sidBossAttackSrc", (sheet) => ({ sidBossAttack: checkedFrames(splitSpriteSheet(sheet, 4, [0, .248, .474, .741, 1], false), 4) })],
       ["sidBossFinaleSrc", (sheet) => ({ sidBossFinale: checkedFrames(splitSpriteSheet(sheet, 4, [0, .233, .462, .707, 1], false), 4) })],
