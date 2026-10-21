@@ -69,7 +69,7 @@ async function harness(mobile, failStartup = false) {
       spawnSummitEnemy, updateSummitEnemies, drawSummitEnemies,
       sidArenaHeight, sidBossGeometry, summitEnemyPose,
       setBossWarning, extendBossRefuge, updateSpaceBoss, followPlayerCamera,
-      startBathBossTest, beginBathJourney, updateBathBoss, bathGeometry, buildBathArena,
+      startBathBossTest, beginBathJourney, updateBathBoss, bathGeometry, buildBathArena, nextBathWarning, releaseBathAttack,
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -1012,9 +1012,9 @@ for(const mobile of [true,false]) {
     for(let i=0;i<1300&&b.phase!=='open';i++){
       a.bossShield();a.update(1/60);
       if(b.phase==='attack'){
-        assert.ok(b.shots.length>0,'Every wave contains actual hostile bubbles');
-        assert.ok(b.shots.every(s=>s.kind==='bubble'&&Math.abs(s.y-b.waveGap)>=68&&Math.abs(s.vx)>=120),
-          'Horizontal curtain preserves its announced vertical opening');
+        assert.ok(b.shots.length<=6,'Attack objects stay bounded');
+        if(b.attack==='snake')assert.ok(b.shots.every(s=>s.kind==='snow'&&s.y===b.waveGap),
+          'One horizontal snake keeps fixed height, no vertical curtain');
         if(!wavePreview&&b.timer>.8&&process.env.DOODLE_PREVIEW_DIR){
           a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-wave-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
           wavePreview=true;
@@ -1065,10 +1065,37 @@ for(const mobile of [true,false]) {
   assert.equal(a.state().bathBoss.phase,'boarding','The gate opens automatically at 13000 in the summit');
   a.state().bathBoss.phase='intro';a.buildBathArena();
   const fight=a.state().bathBoss,hero=a.state().player,gg=a.bathGeometry();
+  const attackNames=['snake','ban','fan','slam'];
+  for(let index=0;index<4;index++){
+    fight.tier=3;fight.attackIndex=index;fight.lastAttack=null;fight.remaining=1;fight.safeLane=1;
+    a.nextBathWarning();
+    assert.equal(fight.attack,attackNames[index]);
+    const targets=JSON.stringify(fight.targets),aim=JSON.stringify(fight.aim);
+    hero.x=a.state().width*.85;
+    for(let i=0;i<89;i++){a.bossShield();a.updateBathBoss(1/60);}
+    assert.equal(fight.phase,'warning','Full 1.5 second warning before harm');
+    assert.equal(JSON.stringify(fight.targets),targets);assert.equal(JSON.stringify(fight.aim),aim);
+    a.bossShield();a.updateBathBoss(.02);
+    assert.equal(fight.phase,'attack');
+    if(index===0){
+      assert.equal(fight.shots.length,6);assert.equal(fight.shots.filter(s=>s.head).length,1);
+      const ledge=a.state().platforms.find(q=>q.y>gg.floor+1);
+      hero.x=ledge.x;hero.y=ledge.y+hero.height/2+3;hero.vx=0;hero.vy=-300;
+      a.updateBathBoss(1/60);
+      assert.equal(hero.vy,0,'Release steering to wait safely on a platform during snake');
+      const restingY=hero.y;a.updateBathBoss(.1);assert.equal(hero.y,restingY);
+    }
+    if(index===1)assert.equal(fight.shots.length,2);
+    if(index===2)assert.equal(fight.shots.length,3);
+    for(let i=0;i<750&&fight.phase==='attack';i++){a.bossShield();a.updateBathBoss(1/60);}
+    assert.equal(fight.phase,'open',`All hazards leave before counterattack: ${fight.attack} ${JSON.stringify(fight.shots)}`);
+    assert.equal(fight.shots.length,0);
+    assert.ok(hero.vy!==0||!fight.perched,'Waiting releases when snake finishes');
+  }
   fight.phase='warning';fight.timer=0;fight.lane=0;fight.bubbles=[];
   hero.x=a.state().width*.5;hero.y=gg.floor+100;hero.vy=0;
   for(let hit=0;hit<3;hit++){
-    fight.shots=[{kind:'bubble',x:hero.x-2,y:hero.y,vx:120,age:1}];
+    fight.shots=[{kind:'snow',x:hero.x-2,y:hero.y,vx:120,age:1}];
     a.expireShield();a.updateBathBoss(1/60);
     assert.equal(fight.lives,2-hit);
     if(hit<2)assert.equal(a.state().mode,'running','An arena mistake is recoverable');

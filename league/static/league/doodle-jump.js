@@ -4064,6 +4064,7 @@
 
   function buildBathArena(oldHeight = null) {
     const g = bathGeometry(), oldY = player.y;
+    bathBoss.perched=null;
     platforms = [];
     const tiles = Math.ceil(width/65);
     for(let i=0;i<tiles;i++) {
@@ -4100,25 +4101,51 @@
     b.bubbles=[];
     const occupied=clamp(Math.floor(player.x/(width/3)),0,2);
     b.safeLane=(occupied+1+Math.floor(Math.random()*2))%3;
-    b.remaining=b.tier;
-    b.waveIndex=(b.waveIndex||0)+1;
+    b.remaining=b.tier===1?1:2;
     nextBathWarning();
   }
 
   function openBathCounter() {
     const b=bathBoss,g=bathGeometry();
-    b.shots=[];b.attackX=clamp(width*(b.safeLane+.5)/3,g.w/2+12,width-g.w/2-12);
+    b.shots=[];b.attackX=clamp(width*((b.safeLane??1)+.5)/3,g.w/2+12,width-g.w/2-12);
     b.bubbles=[];
     bathState("open");
   }
 
   function nextBathWarning() {
-    const b=bathBoss, lanes=[0,1,2].filter(l=>l!==b.safeLane&&l!==b.lastLane);
-    b.lane=lanes[Math.floor(Math.random()*lanes.length)];b.lastLane=b.lane;
-    const g=bathGeometry();
-    b.waveSide=(b.waveIndex+b.remaining)%2;
-    b.waveGap=g.floor+g.gap*([1.15,2.35,3.1][(b.waveIndex+b.remaining)%3]);
+    const b=bathBoss,g=bathGeometry();
+    const pool=b.tier===1?["snake","ban"]:b.tier===2?["snake","ban","fan"]:["snake","ban","fan","slam"];
+    b.attack=pool[(b.attackIndex||0)%pool.length];b.attackIndex=(b.attackIndex||0)+1;
+    if(b.attack===b.lastAttack)b.attack=pool[(pool.indexOf(b.attack)+1)%pool.length];
+    b.lastAttack=b.attack;b.shots=[];b.perched=null;
+    b.waveSide=b.attackIndex%2;
+    b.waveGap=g.floor+g.gap*2.5;
+    const ledges=platforms.filter(p=>p.y>g.floor+1);
+    const nearest=ledges.slice().sort((a,c)=>Math.abs(a.x-player.x)+Math.abs(a.y-player.y)-Math.abs(c.x-player.x)-Math.abs(c.y-player.y))[0];
+    b.safeX=nearest?.x||width/2;
+    // Fixed marks never follow the hero after the warning starts.
+    b.targets=[width*.3,width*.7].filter(x=>Math.abs(x-b.safeX)>50);
+    if(b.targets.length<2)b.targets.push(b.safeX<width/2?width*.9:width*.1);
+    b.origin={x:g.x,y:g.y};b.aim={x:player.x,y:player.y};
     bathState("warning");
+  }
+
+  function releaseBathAttack() {
+    const b=bathBoss,g=bathGeometry();
+    if(b.attack==="snake"){
+      const sign=b.waveSide?-1:1;
+      for(let i=0;i<6;i++)b.shots.push({kind:"snow",head:i===0,x:(sign>0?-30:width+30)-sign*i*24,
+        y:b.waveGap,vx:sign*125,age:0,entered:false,segment:i});
+    }else if(b.attack==="ban"){
+      for(const x of b.targets)b.shots.push({kind:"ban",x,y:cameraY+g.ah+28,vy:-180,age:0});
+    }else if(b.attack==="fan"){
+      const angle=Math.atan2(b.aim.y-b.origin.y,b.aim.x-b.origin.x);
+      for(const spread of [-.6,0,.6])b.shots.push({kind:"snow",x:b.origin.x,y:b.origin.y,
+        vx:Math.cos(angle+spread)*135,vy:Math.sin(angle+spread)*135,age:0});
+    }else{
+      b.slamFrom=g.y;b.slamReleased=false;
+    }
+    bathState("attack");
   }
 
   function hitBathMedal() {
@@ -4137,6 +4164,13 @@
   function bathPlayerPhysics(dt) {
     const oldX=player.x, oldFeet=player.y-player.height/2;
     const direction=Number(held.right)-Number(held.left);
+    // During the snake, releasing steering lets the hero wait on a ledge.
+    const canWait=bathBoss.attack==="snake"&&["warning","attack"].includes(bathBoss.phase);
+    if(bathBoss.perched){
+      const p=bathBoss.perched;
+      if(canWait&&!direction){player.y=p.y+player.height/2;player.vx=player.vy=0;return {oldX,oldFeet,feet:oldFeet};}
+      bathBoss.perched=null;player.vy=720;
+    }
     player.vx+=(direction*Math.min(440,width*.62)*1.2-player.vx)*Math.min(1,(bathBoss.slip>0?2:10)*dt);
     player.x=clamp(player.x+player.vx*dt,player.width/2,width-player.width/2);
     player.vy-=1240*dt;player.y+=player.vy*dt;
@@ -4146,6 +4180,7 @@
     if(player.vy<0){
       const p=landingPlatform(oldFeet,feet,oldX,player.x);
       if(p){player.y=p.y+player.height/2;player.vy=720;
+        if(canWait&&!direction){bathBoss.perched=p;player.vx=player.vy=0;}
         if(p.foamUntil>elapsed)bathBoss.slip=.8;}
     }
     return {oldX,oldFeet,feet};
@@ -4188,27 +4223,17 @@
     const g=bathGeometry();
     b.visualY=g.y+(g.targetY-g.y)*(1-Math.exp(-6*dt));
     if(b.phase==="intro"&&b.timer>=2)beginBathWarning();
-    else if(b.phase==="warning"&&b.timer>=1){
-      const speed=105+b.tier*15;
-      // A travelling curtain leaves a generous, telegraphed vertical opening.
-      // All bubbles share one horizontal velocity, so the opening never closes mid-pass.
-      for(let y=g.floor+18;y<cameraY+g.ah*.79;y+=42){
-        if(Math.abs(y-b.waveGap)<68)continue;
-        b.shots.push({kind:"bubble",x:b.waveSide?width+30:-30,y,
-          vx:b.waveSide?-speed:speed,age:0});
-      }
-      if(b.tier>=2){
-        const ledges=platforms.filter(p=>p.y>g.floor+10);
-        const p=ledges.reduce((best,p)=>!best||Math.abs(p.x-width*(b.lane+.5)/3)<Math.abs(best.x-width*(b.lane+.5)/3)?p:best,null);
-        if(p)p.foamUntil=elapsed+5;
-      }
-      bathState("attack");
-    } else if(b.phase==="attack"&&b.timer>=(width+85)/(105+b.tier*15)){
+    else if(b.phase==="warning"&&b.timer>=1.5)releaseBathAttack();
+    else if(b.phase==="attack"&&b.shots.length===0&&b.timer>1.1){
       if(--b.remaining>0)nextBathWarning();else openBathCounter();
-    } else if(b.phase==="open"&&b.timer>=4.5)beginBathWarning();
-    else if(b.phase==="hit"&&b.timer>=1.4)beginBathWarning();
+    } else if(b.phase==="open"&&b.timer>=4)beginBathWarning();
+    else if(b.phase==="hit"&&b.timer>=(b.tier===3?1:1.4))beginBathWarning();
     else if(b.phase==="break"&&b.timer>=2.2)beginBathWarning();
     const m=bathPlayerPhysics(dt);
+    if(b.attack==="slam"&&b.phase==="attack"&&!b.slamReleased&&b.timer>=.7){
+      b.slamReleased=true;
+      for(const sign of [-1,1])b.shots.push({kind:"shock",x:width/2,y:g.floor+13,vx:sign*170,age:0});
+    }
     const medalY=g.y-g.h*.08;
     if(b.phase==="open"&&b.timer>.6&&player.vy<0&&movingLanding(m.oldFeet,m.feet,medalY,medalY,
       m.oldX,g.x,g.x,48)){
@@ -4217,7 +4242,9 @@
     for(const shot of b.shots){
       const oldX=shot.x,oldY=shot.y;shot.age+=dt;
       shot.x+=(shot.vx||0)*dt;shot.y+=(shot.vy||0)*dt;
-      if(shot.y<g.floor-35||shot.x< -70||shot.x>width+70){shot.dead=true;continue;}
+      if(shot.x>=-30&&shot.x<=width+30)shot.entered=true;
+      const waitingSnake=shot.segment!==undefined&&!shot.entered;
+      if(!waitingSnake&&(shot.y<g.floor-35||shot.y>cameraY+g.ah+70||shot.x< -70||shot.x>width+70)){shot.dead=true;continue;}
       if(invulnerableTimer>0)continue;
       const frame=art.bathBossProps[shot.kind==="bubble"?0:shot.kind==="ban"?3:5],w=shot.kind==="bubble"?32:shot.kind==="ban"?52:70,h=spriteSize(frame,w);
       const steps=Math.max(1,Math.ceil((Math.abs(shot.x-oldX)+Math.abs(shot.y-oldY)+Math.abs(player.y-m.oldFeet-player.height/2)+Math.abs(player.x-m.oldX))/4));
@@ -4225,8 +4252,8 @@
         const t=i/steps;
         const sx=sceneMix(oldX,shot.x,t),sy=sceneMix(oldY,shot.y,t);
         const px=sceneMix(m.oldX,player.x,t),py=sceneMix(m.oldFeet+player.height/2,player.y,t);
-        const contact=shot.kind==="bubble"
-          ? ((sx-px)/(12+player.width*.27))**2+((sy-py)/(12+player.height*.33))**2<1
+        const contact=["snow","shock","bubble"].includes(shot.kind)
+          ? ((sx-px)/((shot.kind==="shock"?24:10)+player.width*.27))**2+((sy-py)/((shot.kind==="shock"?9:10)+player.height*.33))**2<1
           : spriteOverlapsEllipse(frame,sx,sy,w,h,px,py,player.width*.27,player.height*.33);
         if(contact){
           shot.dead=true;b.lives--;invulnerableTimer=1.6;
@@ -4303,13 +4330,19 @@
     }
     if(b.phase==="eagle"&&b.timer>2)drawBathMountains(sceneEase(b.timer,2,5));
     if(b.phase==="warning"){
-      const edge=b.waveSide?width-12:12,opening=worldToScreen(b.waveGap);
-      ctx.fillStyle="rgba(228,90,139,.45)";
-      ctx.fillRect(edge-5,top+g.ah*.21,10,Math.max(0,opening-68-(top+g.ah*.21)));
-      ctx.fillRect(edge-5,opening+68,10,Math.max(0,worldToScreen(g.floor)-opening-68));
-      ctx.strokeStyle="#a8f2db";ctx.lineWidth=2;ctx.strokeRect(edge-7,opening-60,14,120);
-      ctx.fillStyle="#d4fff0";ctx.font="bold 16px monospace";ctx.textAlign="center";
-      ctx.fillText(b.waveSide?"←":"→",b.waveSide?width-32:32,opening+5);
+      ctx.fillStyle="#e7f6ff";ctx.strokeStyle="#e7f6ff";ctx.font="bold 14px monospace";ctx.textAlign="center";
+      if(b.attack==="snake")ctx.fillText(b.waveSide?"← ЗМЕЯ":"ЗМЕЯ →",b.waveSide?width-50:50,worldToScreen(b.waveGap)+5);
+      if(b.attack==="ban")for(const x of b.targets){
+        ctx.fillStyle="rgba(237,109,104,.16)";ctx.fillRect(x-24,top+g.ah*.3,48,g.ah*.6);
+        ctx.fillStyle="#ffb3a1";ctx.fillText("БАН ↓",x,top+g.ah*.32);
+      }
+      if(b.attack==="fan"){
+        ctx.beginPath();ctx.arc(b.aim.x,worldToScreen(b.aim.y),22,0,Math.PI*2);ctx.stroke();
+      }
+      if(b.attack==="slam"){
+        ctx.fillStyle="rgba(230,245,255,.3)";ctx.fillRect(0,worldToScreen(g.floor)-24,width,24);
+        ctx.fillStyle="#e7f6ff";ctx.fillText("УДАР — НАВЕРХ!",width/2,worldToScreen(g.floor)-30);
+      }
     }
     const victory=["victory","eagle"].includes(b.phase);
     if(!victory){
@@ -4329,14 +4362,30 @@
     let pose=b.phase==="warning"?(b.tier===1?1:4):b.phase==="attack"?(b.tier===1?2:5)
       :b.phase==="open"?3:b.phase==="hit"?7:b.phase==="break"?9:0;
     if(b.tier===3&&b.phase==="attack")pose=8;
+    if(b.phase==="warning")pose={snake:1,ban:4,fan:5,slam:9}[b.attack]??pose;
     const fall=b.phase==="victory"?Math.max(0,b.timer-.6):0;
-    if(b.phase!=="eagle")bathDrawSprite(art.bathBossPoses[victory?10:pose],g.x,g.y-fall*fall*160,g.w,
+    let bodyY=g.y,bodyX=g.x;
+    if(b.attack==="slam"&&b.phase==="warning")bodyY+=Math.sin(Math.min(1,b.timer/1.5)*Math.PI/2)*18;
+    if(b.attack==="slam"&&b.phase==="attack"){
+      bodyX=width/2;
+      bodyY=b.timer<.7?sceneMix(b.slamFrom,g.floor+g.h*.5,sceneEase(b.timer,0,.7))
+        :sceneMix(g.floor+g.h*.5,g.y,sceneEase(b.timer,1,2));
+    }
+    if(b.phase!=="eagle")bathDrawSprite(art.bathBossPoses[victory?10:pose],bodyX,bodyY-fall*fall*160,g.w,
       b.tier>1?Math.sin(b.age*2)*.045:0);
     if(b.phase==="open"){
       bathDrawSprite(art.bathBossProps[6],g.x,g.y-g.h*.08,28);
       ctx.strokeStyle="#ffe4a1";ctx.lineWidth=2;ctx.beginPath();ctx.arc(g.x,worldToScreen(g.y-g.h*.08),21,0,Math.PI*2);ctx.stroke();
     }
     for(const shot of b.shots){
+      if(shot.kind==="snow"||shot.kind==="shock"){
+        const x=Math.round(shot.x),y=Math.round(worldToScreen(shot.y)),r=shot.kind==="shock"?24:14;
+        ctx.fillStyle="#a4ccdf";ctx.fillRect(x-r,y-8,r*2,16);ctx.fillRect(x-r+5,y-13,r*2-10,26);
+        ctx.fillStyle="#f0faff";ctx.fillRect(x-r+4,y-9,r*2-8,14);
+        ctx.fillStyle="#ffffff";ctx.fillRect(x-r+6,y-9,7,4);
+        if(shot.head){const dir=shot.vx>0?1:-1;ctx.fillStyle="#173248";ctx.fillRect(x+dir*5-2,y-5,4,4);ctx.fillRect(x+dir*10-2,y+3,4,3);}
+        continue;
+      }
       const bubble=shot.kind==="bubble";
       bathDrawSprite(art.bathBossProps[bubble?0:shot.kind==="ban"?3:5],shot.x,shot.y,bubble?32:shot.kind==="ban"?52:70);
       if(bubble){ctx.strokeStyle="#df669c";ctx.lineWidth=2;ctx.beginPath();ctx.arc(shot.x,worldToScreen(shot.y),14,0,Math.PI*2);ctx.stroke();}
@@ -4356,7 +4405,7 @@
     ctx.fillText("ЗАЩИТА "+ "◆".repeat(Math.max(0,b.lives))+"◇".repeat(3-Math.max(0,b.lives)),0,53);
     ctx.restore();ctx.textAlign="center";
     ctx.font="bold 11px monospace";ctx.fillStyle="#fff1cf";
-    const phrase=b.phase==="open"?"АТАКУЙ МЕДАЛЬ СВЕРХУ!":b.phase==="warning"?"ВОЛНА! ИЩИ ПРОХОД ПО ВЫСОТЕ"
+    const phrase=b.phase==="open"?"АТАКУЙ МЕДАЛЬ СВЕРХУ!":b.phase==="warning"?({snake:"ВЫБЕРИ ОПОРУ · ОТПУСТИ УПРАВЛЕНИЕ",ban:"УЙДИ С ОТМЕЧЕННЫХ ПЛАТФОРМ",fan:"ЗАЛП! УЙДИ ОТ МЕТКИ",slam:"УДАР ВАННОЙ · ПРЫГАЙ ВЫШЕ"}[b.attack])
       :b.phase==="break"?"КРЕПЛЕНИЕ НЕ ВЫДЕРЖАЛО!":b.phase==="eagle"?"КУРС — К ГОРНОМУ ПЕРЕВАЛУ":b.phase==="victory"?"БАН БАН Б…":"УКЛОНЯЙСЯ · ЖДИ КОНТРАТАКУ";
     ctx.fillText(phrase,width/2,height-18,width-24);
   }
@@ -4919,6 +4968,8 @@
         }
         for(const shot of bathBoss.shots)shot.y=cameraY+(shot.y-cameraY)/previousArenaHeight*sidArenaHeight();
         if(bathBoss.waveGap!==undefined)bathBoss.waveGap=cameraY+(bathBoss.waveGap-cameraY)/previousArenaHeight*sidArenaHeight();
+        for(const point of [bathBoss.origin,bathBoss.aim])if(point)point.y=cameraY+(point.y-cameraY)/previousArenaHeight*sidArenaHeight();
+        if(bathBoss.slamFrom!==undefined)bathBoss.slamFrom=cameraY+(bathBoss.slamFrom-cameraY)/previousArenaHeight*sidArenaHeight();
         if(bathBoss.visualY!==undefined)bathBoss.visualY=cameraY+(bathBoss.visualY-cameraY)/previousArenaHeight*sidArenaHeight();
       }
       draw();
