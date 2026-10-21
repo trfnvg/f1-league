@@ -1248,7 +1248,8 @@
     const age = elapsed - winterMemoryStartedAt;
     const fade = sceneEase(age, 0, 2) * (1 - sceneEase(age, 18, 20));
     if (fade <= 0 || !art.winterPortrait) return;
-    const fontSize = Math.min(clamp(width / 35, 10, 12), Math.max(9, height * .035));
+    const viewHeight = Math.min(height, visibleWorldHeight), viewTop = height - viewHeight;
+    const fontSize = Math.min(clamp(width / 35, 10, 12), Math.max(9, viewHeight * .035));
     const lineHeight = Math.ceil(fontSize * 1.5);
     const maxWidth = Math.min(width * .86, 420);
     const key = `${maxWidth}:${fontSize}:semibold`;
@@ -1269,9 +1270,11 @@
       winterQuoteLayout = { key, lines };
     }
     const textHeight = winterQuoteLayout.lines.length * lineHeight;
-    const textTop = Math.max(16, height * .5 - textHeight);
-    const portraitTop = Math.min(Math.max(82, height * .12), height * .2);
-    const portraitHeight = Math.min(height * .28, 230, Math.max(0, textTop - portraitTop + 10));
+    // Mobile cover scaling crops the canvas from above. Anchor the memory to
+    // the visible area, keeping the portrait and quotation together below the HUD.
+    const textTop = viewTop + Math.max(16, viewHeight * .55 - textHeight);
+    const portraitTop = viewTop + Math.min(Math.max(82, viewHeight * .14), viewHeight * .22);
+    const portraitHeight = Math.min(viewHeight * .28, 230, Math.max(0, textTop - portraitTop + 10));
     if (!foreground && portraitHeight > 0) {
       const portraitWidth = portraitHeight * art.winterPortrait.sw / art.winterPortrait.sh;
       ctx.globalAlpha = fade * .55;

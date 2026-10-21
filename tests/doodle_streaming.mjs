@@ -278,6 +278,16 @@ for (const mobile of [true, false]) {
   assert.ok(lettering.length >= 3);
   assert.ok(lettering.every(({ font, color }) => parseFloat(font.match(/[\d.]+(?=px)/)[0]) <= 12 && color === "#27385f"));
   assert.ok(portraitAlphas.some(alpha=>Math.abs(alpha-.55)<1/255),"Russell portrait should be clearly visible at 55% opacity");
+  if(mobile){
+    h.resize(390,560);
+    let portraitBounds;
+    quotePainter.drawImage=(...args)=>{portraitBounds=args.slice(1);return portraitDraw(...args);};
+    a.drawWinterMemory(false);
+    const [,y,,portraitHeight]=portraitBounds,s=a.state();
+    assert.ok(y>=s.height-s.visibleWorldHeight+80,'Portrait remains below the visible top/HUD on a shortened phone viewport');
+    assert.ok(portraitHeight>80&&y+portraitHeight<s.height,'Portrait stays visible without losing its size');
+    h.resize(390,844);
+  }
   quotePainter.fill = originalFill; quotePainter.fillRect = originalRect; quotePainter.fillText = originalText;
   quotePainter.drawImage = portraitDraw;
   const painter = h.canvas.getContext("2d"), nativeDrawImage = painter.drawImage.bind(painter);
