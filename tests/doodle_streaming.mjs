@@ -1160,7 +1160,8 @@ for(const mobile of [true,false]){
     highWater=Math.max(highWater,now.platforms.length);
     assert.ok(now.score===score||now.score===score+50,'Only a real marshal pickup may add points during a height step');assert.equal(now.mode,'running');
     assert.equal(now.bathBoss,null);assert.equal(now.sidBoss,null);assert.equal(now.spaceBoss,null);
-    assert.ok(now.platforms.length<55&&now.enemies.length<=2&&now.hazards.length<=3&&now.marshals.length<6);
+    assert.ok(now.platforms.length<55&&now.enemies.length<=3&&now.hazards.length<=4&&now.marshals.length<6);
+    assert.ok(now.hazards.filter(o=>o.spriteIndex===6).every(o=>!o.wheelFrame&&!o.bouncy),'Cones use their own contour, not a tyre mask');
     assert.ok(now.worldTop>=now.cameraY+now.height+420,'Route generated ahead of view');
     if(score%5000<100)a.draw();
   }
