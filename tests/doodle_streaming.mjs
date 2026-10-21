@@ -92,7 +92,7 @@ async function harness(mobile, failStartup = false, production = false) {
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
       enemyCase(kind, phase="idle"){resetWinterEncounters();spawnWinterEncounter(kind);winterEncounter.y=cameraY+height*.65;winterEncounter.phase=phase;winterEncounter.phaseAge=0;winterEncounter.age=1;
-        if(kind==="strategist"){player.y=cameraY+height*.4;addPlatform(cameraY+height*.6,width*.5,"normal");}},
+        },
       cameraAt(y){cameraY=y;},
       tickEnemy(dt){elapsed+=dt;const feet=player.y-player.height/2;updateWinterEncounter(dt,feet,feet);},
       enemyLanding(){const b=winterEnemyGeometry();player.x=b.x;player.y=b.y+b.ry+player.height/2-2;player.vy=-300;
@@ -263,7 +263,7 @@ for (const mobile of [true, false]) {
   assert.equal(await a.loadStage("winter"), true);
   assert.equal(a.art.walkFrames.length, 8);
   assert.equal(a.art.piranhaFrames.length, 4);
-  for (const key of ["winterIceman", "winterStrategist", "winterSteward"]) assert.equal(a.art[key].length, 4);
+  for (const key of ["winterIceman", "winterSteward"]) assert.equal(a.art[key].length, 4);
   await a.startWinterBiomeTest();
   assert.equal(a.state().antarctica, true);
   assert.equal(a.state().adminBossTestMode, true);
@@ -363,15 +363,15 @@ for (const mobile of [true, false]) {
   a.resetWinterEncounters(); a.tickEnemy(7.9);
   assert.equal(a.state().winterEncounter,null,"No new enemies during initial winter grace period");
   a.tickEnemy(.2); assert.ok(a.state().winterEncounter,"Winter enemies must spawn without admin buttons");
-  for (const kind of ["iceman", "strategist", "steward"]) {
+  a.resetWinterEncounters();
+  assert.equal(a.spawnWinterEncounter("removed-enemy"),false,"Unsupported enemies cannot be summoned");
+  for (const kind of ["iceman", "steward"]) {
     a.enemyCase(kind);
     assert.equal(a.spawnWinterEncounter("steward"), false, "Only one encounter can be active");
     a.tickEnemy(1.2); assert.equal(a.state().winterEncounter.phase, "warning");
     assert.equal(a.state().winterProjectiles.length, 0, "No attack before warning finishes");
     a.tickEnemy(1.61); assert.equal(a.state().winterEncounter.phase, "attack");
-    if (kind === "strategist") {
-      assert.ok(a.state().platforms.some(p=>p.frozenUntil>0), "Ferrari strategist must really freeze a platform");
-    } else assert.equal(a.state().winterProjectiles.length, 1);
+    assert.equal(a.state().winterProjectiles.length, 1);
     a.draw();
     a.tickEnemy(.66); assert.equal(a.state().winterEncounter.phase, "open");
     a.enemyLanding();
@@ -400,7 +400,7 @@ for (const mobile of [true, false]) {
   assert.equal(a.state().winterEncounter,null);assert.equal(a.state().winterProjectiles.length,0);
   assert.equal(a.state().winterSlide,0);assert.equal(a.state().winterWind,0);
   assert.equal(a.spawnWinterEncounter("iceman"),false,"Winter encounters must not spawn in other biomes");
-  for (const kind of ["iceman", "strategist", "steward"]) {
+  for (const kind of ["iceman", "steward"]) {
     await h.events.get(`doodle-winter-${kind}-test:click`)();
     assert.equal(a.state().winterEncounter.type,kind);
     assert.equal(a.state().adminBossTestMode,true);

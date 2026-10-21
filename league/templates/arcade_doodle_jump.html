@@ -48,7 +48,6 @@
           <button id="doodle-bath-boss-test" type="button">13 000 · кабинка и Банный судья</button>
           <button id="doodle-bath-finale-test" type="button">После ванны · портал и бесконечный режим</button>
           <button id="doodle-winter-iceman-test" type="button">Зима · Айсмен</button>
-          <button id="doodle-winter-strategist-test" type="button">Зима · стратег Ferrari</button>
           <button id="doodle-winter-steward-test" type="button">Зима · снеговик FIA</button>
           <small id="doodle-boss-test-status" aria-live="polite">Тест не влияет на рекорды и число попыток</small>
           {% if request.GET.flight == '1' %}
@@ -107,7 +106,6 @@
           data-winter-platforms-src="{% static 'league/images/doodle-jump/winter-platforms-v1.png' %}"
           data-winter-portrait-src="{% static 'league/images/doodle-jump/winter-memory-portrait-v1.png' %}"
           data-winter-iceman-src="{% static 'league/images/doodle-jump/winter-iceman-v1.png' %}"
-          data-winter-strategist-src="{% static 'league/images/doodle-jump/winter-strategist-v1.png' %}"
           data-winter-steward-src="{% static 'league/images/doodle-jump/winter-steward-v1.png' %}"
           data-sid-boss-attack-src="{% static 'league/images/doodle-jump/sid-boss-attack-v1.png' %}"
           data-sid-boss-finale-src="{% static 'league/images/doodle-jump/sid-boss-finale-v1.png' %}"
@@ -195,6 +193,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'league/doodle-endless.js' %}?v=endless-balance-v2" defer></script>
-  <script src="{% static 'league/doodle-jump.js' %}?v=endless-balance-v70" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=winter-roster-v71" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}
