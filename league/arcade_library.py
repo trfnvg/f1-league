@@ -192,7 +192,7 @@ def attempt_finish(request, game_key="flappy"):
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id, score = payload.get("attempt_id"), payload.get("score")
-        if type(attempt_id) is not int or type(score) is not int or not 0 <= score <= (500 if game_key == "flappy" else 1000000):
+        if type(attempt_id) is not int or type(score) is not int or not 0 <= score <= (500 if game_key == "flappy" else 2_147_483_647):
             raise ValueError
     except (ValueError, TypeError, AttributeError):
         return JsonResponse({"error": "Некорректный результат."}, status=400)

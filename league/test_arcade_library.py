@@ -150,6 +150,22 @@ class ArcadeLibraryTests(TestCase):
             self.assertEqual(response.status_code,status)
         self.assertEqual(DoodleRecord.objects.get(user=self.user).best_score,100)
 
+    def test_endless_scores_share_the_same_attempt_and_record(self):
+        for score in [50000,100000,1000001]:
+            with self.subTest(score=score):
+                start=self.client.post(reverse("league:doodle_attempt_start")).json()
+                url=reverse("league:doodle_attempt_finish")
+                payload={"attempt_id":start["attempt_id"],"score":score}
+                finish=self.client.post(url,data=json.dumps(payload),content_type="application/json")
+                self.assertEqual(finish.status_code,200)
+                self.assertEqual(DoodleRecord.objects.get(user=self.user).best_score,score)
+                self.assertEqual(DoodleAttempt.objects.get(pk=start["attempt_id"]).score,score)
+                self.assertEqual(self.client.post(url,data=json.dumps(payload),content_type="application/json").status_code,409)
+        self.assertEqual(DoodleRecord.objects.get(user=self.user).total_attempts,3)
+        invalid=self.client.post(reverse("league:doodle_attempt_finish"),
+            data=json.dumps({"attempt_id":1,"score":2147483648}),content_type="application/json")
+        self.assertEqual(invalid.status_code,400)
+
     def test_free_play_cannot_take_wheel_from_event_winner(self):
         from .models import Prediction
         from .arcade_rewards import spin_event_wheel, ArcadeWheelError
