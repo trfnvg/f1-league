@@ -11,6 +11,7 @@ const canvasLib = require(process.env.CANVAS_MODULE || "@napi-rs/canvas");
 const root = fileURLToPath(new URL("../", import.meta.url));
 const template = await fs.readFile(path.join(root, "league/templates/arcade_doodle_jump.html"), "utf8");
 const originalSource = await fs.readFile(path.join(root, "league/static/league/doodle-jump.js"), "utf8");
+const endlessSource = await fs.readFile(path.join(root,"league/static/league/doodle-endless.js"),"utf8");
 assert.ok(template.indexOf('class="doodle-test-controls"') < template.indexOf('class="doodle-machine is-loading"'),
   "Admin testing controls must precede, not overlay, the game window");
 const dataset = {};
@@ -27,9 +28,9 @@ async function until(predicate) {
   }
 }
 
-async function harness(mobile, failStartup = false) {
+async function harness(mobile, failStartup = false, production = false) {
   let bounds = { left: 0, top: 0, width: mobile ? 390 : 1000, height: mobile ? 844 : 800 };
-  const elements = new Map(), events = new Map(), requests = new Map(), blocked = new Set(), failures = new Set(), calls = [];
+  const elements = new Map(), events = new Map(), requests = new Map(), blocked = new Set(), failures = new Set(), calls = [], payloads=[];
   if (failStartup) failures.add(dataset.backgroundJourneySrc);
   const element = (id) => ({ dataset: {}, style: {}, textContent: "", hidden: false,
     classList: { items: new Set(), add(...v) { v.forEach((x) => this.items.add(x)); }, remove(...v) { v.forEach((x) => this.items.delete(x)); }, contains(v) { return this.items.has(v); } },
@@ -37,7 +38,7 @@ async function harness(mobile, failStartup = false) {
     setAttribute() {}, focus() {}, replaceChildren() {}, append() {}, getBoundingClientRect() { return bounds; } });
   const get = (id) => { if (!elements.has(id)) elements.set(id, element(id)); return elements.get(id); };
   const canvas = Object.assign(canvasLib.createCanvas(1, 1), element("doodle-canvas"));
-  canvas.dataset = { ...dataset, adminFlight: "1", startUrl: "/start", finishUrl: "/finish" };
+  canvas.dataset = { ...dataset, adminFlight: production ? "0" : "1", startUrl: "/start", finishUrl: "/finish" };
   canvas.closest = () => get("machine");
   elements.set("doodle-canvas", canvas);
   function LoadedImage() {
@@ -70,6 +71,8 @@ async function harness(mobile, failStartup = false) {
       sidArenaHeight, sidBossGeometry, summitEnemyPose,
       setBossWarning, extendBossRefuge, updateSpaceBoss, followPlayerCamera,
       startBathBossTest, beginBathJourney, updateBathBoss, bathGeometry, buildBathArena, nextBathWarning, releaseBathAttack,
+      enterEndless,updateEndless,extendEndlessWorld,drawEndlessBackdrop,pruneWorldObjects,
+      productionRecord(){adminBossTestMode=false;attemptId=42;},
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -84,7 +87,7 @@ async function harness(mobile, failStartup = false) {
         winterEncounter, winterProjectiles, winterSlide, winterWind, platforms, enemies, invulnerableTimer,
         spaceEncounter, spacePitHold, softBootJumps, width, height, sidBoss, sidBossCleared, summit, peakY, summitCommentator, hazards, bossShots,
         summitEntryY, summitGoatNextY, summitCommentatorNextY, summitEncounter, summitShots, summitEnemyNextY, visibleWorldHeight,
-        bathBoss,bathBossCleared}),
+        bathBoss,bathBossCleared,endless,worldTop,marshals,powerups,effects,finalScore,attemptId}),
       stage(y, score=0, garage=false){cameraY=y;peakY=startY+score*11;forgottenPaddock=garage;},
       retry(name){assetStages.get(name).retryAt=0;},
       drawWinter(){antarctica=true;drawAntarctica();},
@@ -127,11 +130,12 @@ async function harness(mobile, failStartup = false) {
         const feet=player.y-player.height/2;collideSidShots(1/60,feet,feet);},
       sidPose(phase,timer){sidBoss.phase=phase;sidBoss.timer=timer;draw();},
     });})();`);
+  new Function("window",endlessSource)(window);
   new Function("document", "window", "Image", "localStorage", "requestAnimationFrame", "cancelAnimationFrame", "fetch", "expose", source)(
     document, window, LoadedImage, { getItem: () => null, setItem() {} }, () => 1, () => {},
-    async (url) => { calls.push(url); return { ok: true, json: async () => ({ attempt_id: "one" }) }; }, (a) => { api = a; });
+    async (url,options) => { calls.push(url);payloads.push(JSON.parse(options.body)); return { ok: true, json: async () => ({ attempt_id: "one" }) }; }, (a) => { api = a; });
   await until(() => api.state().artReady || api.state().assetLoadFailed);
-  return { api, requests, blocked, failures, calls, canvas, events,
+  return { api, requests, blocked, failures, calls, payloads, canvas, events, endlessModule:window.FastlapEndless,
     setPixelRatio(value){window.devicePixelRatio=value;api.resize();},
     resize(w, h) { bounds = { ...bounds, width: w, height: h }; api.resize(); } };
 }
@@ -1063,10 +1067,15 @@ for(const mobile of [true,false]) {
   for(let i=0;i<150;i++)a.updateBathBoss(1/60);
   a.draw();
   if(process.env.DOODLE_PREVIEW_DIR)await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-bath-eagle-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));
-  for(let i=0;i<250;i++)a.updateBathBoss(1/60);
-  assert.equal(b.phase,'complete');assert.equal(a.state().mode,'over');
+  for(let i=0;i<400;i++)a.updateBathBoss(1/60);
+  assert.ok(a.state().endless);assert.equal(a.state().mode,'running');
+  assert.equal(a.state().score,lockedScore+800,'Portal continues the same score without height or reward duplication');
+  assert.equal(a.state().bathBoss,null);
+  assert.equal(a.enterEndless(),false,'Victory portal enters only once');
   assert.deepEqual(h.calls,[],'Admin boss and ending tests never write attempts or scores');
   a.startGame(true,{forceRestart:true,adminTest:true});
+  assert.equal(a.state().endless,null);
+  assert.equal(a.enterEndless(),false,'Score alone cannot unlock endless mode');
   assert.equal(a.state().bathBoss,null);assert.equal(a.state().bathBossCleared,false);
   await h.events.get('doodle-commentator-test:click')();
   a.peakScore(12999);a.update(0);
@@ -1113,4 +1122,55 @@ for(const mobile of [true,false]) {
   assert.equal(a.state().mode,'over','Third unshielded contact ends the run');
   assert.deepEqual(h.calls,[]);
   console.log(`${mobile?'Mobile':'Desktop'}: bath cabin boarding, eight real hits, three phases, resize, locked score, eagle finale and restart passed`);
+}
+
+for(const mobile of [true,false]){
+  const h=await harness(mobile,false,true),a=h.api;
+  a.startGame(true,{forceRestart:true,adminTest:true});
+  a.peakScore(100000);assert.equal(a.enterEndless(),false,'Even 100000 points cannot bypass final boss victory');
+  await a.startBathBossTest(true);
+  for(let i=0;i<750&&!a.state().endless;i++)a.updateBathBoss(1/60);
+  assert.ok(a.state().endless);assert.equal(a.state().mode,'running');
+  const initial=a.state().score;
+  if(process.env.DOODLE_PREVIEW_DIR){a.draw();await fs.writeFile(path.join(process.env.DOODLE_PREVIEW_DIR,`doodle-endless-entry-${mobile?'mobile':'desktop'}.png`),await h.canvas.encode('png'));}
+  for(const stage of ['sky','space','garage','winter','summit'])assert.equal(await a.loadStage(stage),true);
+  // Exercise every ordered pair of worlds: no teleport or score change on switch.
+  const worlds=Object.keys(h.endlessModule.worlds);
+  for(const from of worlds)for(const to of worlds){
+    if(from===to)continue;
+    for(const destination of [from,to]){
+      const s=a.state(),e=s.endless;
+      e.transition=null;e.director.pendingWorld=destination;e.director.nextAt=s.score;
+      const before={x:s.player.x,y:s.player.y,score:s.score,platform:s.platforms[0]};
+      a.update(0);a.draw();
+      assert.equal(a.state().score,before.score);assert.equal(s.player.x,before.x);assert.equal(s.player.y,before.y);
+      assert.ok(s.platforms.includes(before.platform),'Transition preserves existing footholds');
+      assert.equal(e.director.world,destination);
+      a.updateEndless(1.6);
+    }
+  }
+  if(mobile){h.resize(390,560);a.draw();h.resize(390,844);}
+  const seen=new Set();let highWater=0;
+  for(let score=initial+100;score<=110000;score+=100){
+    a.peakScore(score);
+    const s=a.state();s.player.y=s.peakY;s.player.vy=720;
+    a.cameraAt(s.peakY-s.visibleWorldHeight*.38);
+    a.bossShield();a.update(0);a.updateEndless(1.6);
+    const now=a.state();seen.add(now.endless.director.world);
+    highWater=Math.max(highWater,now.platforms.length);
+    assert.ok(now.score===score||now.score===score+50,'Only a real marshal pickup may add points during a height step');assert.equal(now.mode,'running');
+    assert.equal(now.bathBoss,null);assert.equal(now.sidBoss,null);assert.equal(now.spaceBoss,null);
+    assert.ok(now.platforms.length<55&&now.enemies.length<=2&&now.hazards.length<=3&&now.marshals.length<6);
+    assert.ok(now.worldTop>=now.cameraY+now.height+420,'Route generated ahead of view');
+    if(score%5000<100)a.draw();
+  }
+  assert.ok(highWater>5);assert.ok(seen.size>=4);
+  a.productionRecord();
+  const expected=a.state().score;a.endGame();a.endGame();
+  await delay(0);
+  assert.equal(a.state().finalScore,expected);assert.equal(a.state().mode,'over');
+  assert.deepEqual(h.calls,['/finish'],'One original attempt finishes exactly once after endless death');
+  assert.deepEqual(h.payloads,[{attempt_id:42,score:expected}]);
+  a.startGame(true,{forceRestart:true,adminTest:true});assert.equal(a.state().endless,null);
+  console.log(`${mobile?'Mobile':'Desktop'}: all world pairs preserve geometry/score; simulated climb beyond 100000 keeps bounded objects; one final score save and reset passed`);
 }

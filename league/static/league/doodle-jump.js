@@ -82,6 +82,8 @@
   let summitEnemyLastType = "drone";
   let bathBoss = null;
   let bathBossCleared = false;
+  let endless = null;
+  let endlessFadeCanvas = null;
   const winterMemoryQuote = "Whenever anything is not going his way, he lashes out with unnecessary anger and borderline violence";
   let winterQuoteLayout = null;
   let portalTransition = null;
@@ -249,6 +251,12 @@
 
   function streamWorldAssets() {
     waitingForStage = null;
+    if(endless){
+      const stage=window.FastlapEndless.worlds[endless.director.world].stage;
+      const pending=window.FastlapEndless.worlds[endless.director.pendingWorld].stage;
+      if(pending&&runScore()>=endless.director.nextAt-250)loadStage(pending);
+      return !stage||stageReady(stage);
+    }
     if (summit) {
       if (runScore() >= 12500 || bathBoss) loadStage("bath");
       if ((runScore() >= 13000 || bathBoss) && !stageReady("bath")) return false;
@@ -788,6 +796,7 @@
   }
 
   function drawBackdrop() {
+    if(endless){drawEndlessBackdrop();return;}
     if (summit) { drawSummitBackdrop(); return; }
     if (antarctica) { drawAntarctica(); return; }
     if (forgottenPaddock) {
@@ -884,7 +893,7 @@
     return true;
   }
 
-  function drawForgottenPaddock() {
+  function drawForgottenPaddock(origin = 0) {
     ctx.fillStyle = "#080f16";
     ctx.fillRect(0, 0, width, height);
     if (art.garage) {
@@ -906,7 +915,7 @@
         }
       }
       const cycle = garageCache.height / dpr;
-      const offset = cameraY * .16 % cycle;
+      const offset = Math.max(0,cameraY-origin) * .16 % cycle;
       for (let y = offset - cycle; y < height; y += cycle) {
         const top = Math.floor(y * dpr) / dpr;
         const bottom = Math.ceil((y + cycle) * dpr) / dpr;
@@ -989,7 +998,7 @@
     updateHud();
   }
 
-  function drawAntarctica() {
+  function drawAntarctica(origin = antarcticaEntryY) {
     ctx.fillStyle = "#aabdd8";
     ctx.fillRect(0, 0, width, height);
     const source = art.antarctica;
@@ -997,7 +1006,7 @@
     const tileHeight = width * source.naturalHeight / source.naturalWidth;
     const overlap = tileHeight * .18;
     const cycle = tileHeight - overlap;
-    const offset = Math.max(0, cameraY - antarcticaEntryY) * .13 % cycle;
+    const offset = Math.max(0, cameraY - origin) * .13 % cycle;
     const sourceOverlap = source.naturalHeight * .18;
     const seamWidth = canvas.width;
     const seamHeight = Math.max(1, Math.ceil(overlap * dpr));
@@ -1091,6 +1100,7 @@
   }
 
   function updateWinterEncounter(dt, previousFeet, currentFeet, previousPlayerX = player.x) {
+    if(endless)return;
     if (!antarctica || antarcticaArrival || sidBoss) return;
     winterSlide = Math.max(0, winterSlide - dt);
     winterWind = Math.max(0, winterWind - dt);
@@ -1554,13 +1564,13 @@
     return true;
   }
 
-  function drawSummitBackdrop() {
+  function drawSummitBackdrop(origin = summitEntryY) {
     const source = art.summit;
     ctx.fillStyle = "#69a5de"; ctx.fillRect(0, 0, width, height);
     if (!source) return;
     const scale = Math.max(width / source.naturalWidth, height / source.naturalHeight) * 1.3;
     const sourceHeight = height / scale, sourceWidth = width / scale;
-    const climb = Math.max(0, cameraY - summitEntryY), progress = clamp(climb / 6000, 0, 1);
+    const climb = Math.max(0, cameraY - origin), progress = clamp(climb / 6000, 0, 1);
     const sy = (source.naturalHeight - sourceHeight) * (1 - progress);
     ctx.drawImage(source, (source.naturalWidth - sourceWidth) / 2, sy, sourceWidth, sourceHeight, 0, 0, width, height);
     if (art.cloud && climb > 3500) {
@@ -1661,6 +1671,7 @@
   }
 
   function updateSummitEnemies(dt, previousFeet, currentFeet, previousX = player.x) {
+    if(endless)return;
     if (!summit) { summitEncounter = null; summitShots.length = 0; return; }
     if (!summitEncounter && !summitShots.length && cameraY + height >= summitEnemyNextY) spawnSummitEnemy();
     const mob = summitEncounter;
@@ -1847,6 +1858,7 @@
   }
 
   function updateSummitCommentator(dt, previousFeet, currentFeet, previousPlayerX) {
+    if(endless)return;
     if (!summit) { summitCommentator = null; return; }
     if (!summitCommentator && cameraY + height + 180 >= summitCommentatorNextY) {
       const spawnY = cameraY + height + 120;
@@ -2411,6 +2423,7 @@
   }
 
   function buildGame() {
+    endless=null;endlessFadeCanvas=null;
     bathBoss = null; bathBossCleared = false;
     summitCommentator = null; summitCommentatorNextY = 0;
     summitPlatformIndex = 0; summitGoatNextY = 0; summitRareLastY = -Infinity;
@@ -2509,6 +2522,7 @@
   }
 
   function extendWorld() {
+    if(endless){extendEndlessWorld();return;}
     if (sidBoss) return;
     const targetWorldTop = cameraY + height + 420;
     while (worldTop < targetWorldTop) {
@@ -2598,7 +2612,7 @@
     const zoneIndex = cameraY < paddockEnd ? 0
       : cameraY < skyFade.end ? 1
         : cameraY < spaceFade.start ? 2 : 3;
-    const displayName = summit ? "Высокогорный паддок" : sidBoss ? "Сид · босс" : antarctica ? "Антарктида" : forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
+    const displayName = endless ? "∞ · "+window.FastlapEndless.worlds[endless.director.world].name : summit ? "Высокогорный паддок" : sidBoss ? "Сид · босс" : antarctica ? "Антарктида" : forgottenPaddock ? "Забытый паддок" : backgroundZoneNames[zoneIndex];
     if (levelNameNode.dataset.value !== displayName) {
       levelNameNode.dataset.value = displayName;
       levelNameNode.textContent = displayName;
@@ -3192,7 +3206,7 @@
   }
 
   function updateSkyDetails(dt) {
-    if (forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
+    if (endless ? endless.director.world!=="sky" : forgottenPaddock || cameraY < skyFade.end || cameraY >= spaceFade.start) {
       skyFlock = null;
       totoCloud = null;
       return;
@@ -3289,7 +3303,7 @@
   function updateHawks(dt, previousFeet = player.y - player.height / 2 - player.vy * dt,
     currentFeet = player.y - player.height / 2, previousPlayerX = player.x - player.vx * dt) {
     if (forgottenPaddock) { hawks = []; return false; }
-    const spawnHere = cameraY >= skyFade.end && cameraY < spaceFade.start;
+    const spawnHere = endless ? endless.director.world==="sky" : cameraY >= skyFade.end && cameraY < spaceFade.start;
     if (!spawnHere && !hawks.length) return false;
     if (!art.hawkFrames || !art.hawkFrames.length) return false;
 
@@ -3515,6 +3529,7 @@
   }
 
   function updateSpaceEvents(dt) {
+    if(endless)return false;
     if (!inSpaceChapter()) {
       if (spaceEncounter || spacePitHold) clearSpaceEncounter();
       return false;
@@ -3680,6 +3695,7 @@
   }
 
   function updateSpaceBoss(dt) {
+    if(endless)return;
     if (forgottenPaddock || cameraY < spaceFade.end || !art.spaceBoss || !art.bossWheel) return;
     if (!spaceBoss) {
       const score = runScore();
@@ -3907,6 +3923,7 @@
   }
 
   function updateBabyKimi(dt) {
+    if(endless)return false;
     kimiBoost = Math.max(0, kimiBoost - dt);
     if (!forgottenPaddock || antarctica || summit || !art.babyKimi) return false;
     if (!babyKimi) {
@@ -4209,7 +4226,7 @@
         buildBathArena();bathState("intro");player.vy=0;invulnerableTimer=2;}
       return true;
     }
-    if(["victory","eagle","complete"].includes(b.phase)) {
+    if(["victory","eagle","anomaly","complete"].includes(b.phase)) {
       invulnerableTimer=1;player.vx=player.vy=0;
       if(b.phase==="victory") {
         const g=bathGeometry();player.x=width/2;player.y=g.floor+player.height/2;
@@ -4217,10 +4234,8 @@
       } else if(b.phase==="eagle") {
         const lift=sceneEase(b.timer,1.6,5.5);
         player.x=width*.5+width*.75*lift;player.y=b.heroFromY+sidArenaHeight()*.9*lift;
-        if(b.timer>=6.5){bathState("complete");endGame();
-          kicker.textContent="БАННЫЙ СУДЬЯ ПОБЕЖДЁН";title.textContent="Курс — в горы!";
-          copy.textContent=`Счёт — ${finalScore}. Орёл доставил Рассела к перевалу. Горный подъём появится в следующем обновлении.`;}
-      }
+        if(b.timer>=6.5)bathState("anomaly");
+      }else if(b.phase==="anomaly"&&b.timer>=2.2)enterEndless();
       return true;
     }
     const g=bathGeometry();
@@ -4308,6 +4323,15 @@
     }
     if(b.phase==="complete"){
       drawBathMountains();return;
+    }
+    if(b.phase==="anomaly"){
+      drawBathMountains();
+      drawStoryPortal(width/2,top+g.ah*.48,Math.min(width*.23,g.ah*.22),b.timer,art.journey);
+      ctx.save();ctx.globalAlpha=1-sceneEase(b.timer,.8,2);
+      drawBathHero(width/2,cameraY+g.ah*.48);ctx.restore();
+      ctx.fillStyle="#e1f5ff";ctx.textAlign="center";ctx.font="bold 12px monospace";
+      ctx.fillText("ПРОСТРАНСТВЕННО-ВРЕМЕННАЯ АНОМАЛИЯ",width/2,top+g.ah*.75,width-24);
+      return;
     }
     // One cached scene, no frame-by-frame gradients or full-screen particles.
     // The painted curb sits at 85% of the source; align it with the 90% landing plane.
@@ -4427,6 +4451,122 @@
     return logicalViewportWidth === 390 ? visibleWorldHeight * .38 : height * .42;
   }
 
+  function setEndlessWorldFlags() {
+    const world=endless.director.world;
+    summit=world==="summit";antarctica=world==="winter";
+    forgottenPaddock=summit||antarctica||world==="garage";
+    antarcticaEntryY=endless.originY;summitEntryY=endless.originY;
+  }
+
+  function enterEndless() {
+    if(endless||!bathBossCleared||!bathBoss||bathBoss.hp!==0||bathBoss.phase!=="anomaly")return false;
+    const landingY=peakY-player.height/2;
+    endless={director:new window.FastlapEndless.Director(runScore()),originY:landingY,
+      enteredAt:elapsed,transition:null,lastPrimary:{x:width/2,y:landingY},
+      enemyAt:landingY+height*2,hazardAt:landingY+height*2.5};
+    bathBoss=null;sidBoss=null;spaceBoss=null;bossShots=[];
+    antarcticaScene=antarcticaArrival=portalTransition=null;
+    summitEncounter=summitCommentator=babyKimi=null;summitShots=[];
+    resetWinterEncounters();resetSpaceEncounters();
+    winterMemoryStartedAt=null;skyFlock=totoCloud=null;hawks=[];
+    enemies=[];hazards=[];powerups=[];effects=[];marshals=[];
+    rocketTimer=kimiBoost=0;somersault=null;openingJump=false;arrivalUntil=0;
+    player.x=width/2;player.y=peakY;player.vx=0;player.vy=720;
+    cameraY=player.y-cameraTrackingOffset();
+    worldTop=landingY;nextMarshalY=landingY+1800;
+    setEndlessWorldFlags();platforms=[];
+    const support=addPlatform(landingY,player.x,"normal");
+    support.width=support.hitboxWidth=support.spriteWidth=width*.6;
+    support.endlessWorld="desert";support.endlessPrimary=true;
+    invulnerableTimer=3;extendEndlessWorld();updateHud();return true;
+  }
+
+  function updateEndless(dt) {
+    if(endless.transition){
+      endless.transition.age+=dt;
+      if(endless.transition.age>=1.5){endless.transition=null;endlessFadeCanvas=null;}
+    }
+    const director=endless.director,score=runScore();
+    if(score<director.nextAt||endless.transition)return;
+    const stage=window.FastlapEndless.worlds[director.pendingWorld].stage;
+    // Keep playing the current world if a download is slow; never switch to partial art.
+    if(stage&&!assetStages.get(stage)?.ready){loadStage(stage);return;}
+    const from=director.advance(score);
+    endless.transition={from,age:0,fromOrigin:endless.originY};
+    endless.originY=cameraY;setEndlessWorldFlags();
+    updateHud();
+  }
+
+  function extendEndlessWorld() {
+    const director=endless.director,target=cameraY+height+420;
+    while(worldTop<target){
+      const plan=director.plan(endless.lastPrimary,width,runScore());
+      for(const node of [plan.extra,plan.primary])if(node){
+        const p=addPlatform(node.y,node.x,node.kind);
+        p.endlessWorld=node.world;p.endlessPrimary=node.primary;
+        p.range=12;
+        // Permanent anchors provide the complete route; moving/breaking/spring
+        // options have both incoming and outgoing reach reserved for their full motion.
+        if(node.primary){p.width=p.hitboxWidth=p.spriteWidth=78-plan.difficulty*12;}
+      }
+      const primary=platforms[platforms.length-1];
+      addPowerupBetween(endless.lastPrimary,primary);
+      if(primary.y>=nextMarshalY){marshals.push({platform:primary,collected:false});nextMarshalY=primary.y+2200;}
+      endless.lastPrimary={x:primary.x,y:primary.y};worldTop=primary.y;
+    }
+    const d=director.difficulty(runScore()),winter=director.world==="winter";
+    if(worldTop>=endless.enemyAt&&enemies.length<2){
+      const x=width*(Math.random()<.5?.16:.84);
+      enemies.push({type:winter?"piranha":"tire",variant:nextEnemyVariant(),x,baseX:x,
+        y:cameraY+height+130,phase:Math.random()*6,dead:false});
+      endless.enemyAt=worldTop+950-d*300+Math.random()*350;
+    }
+    if(!winter&&worldTop>=endless.hazardAt&&hazards.length<3){
+      const compound=["soft","medium","hard"][Math.floor(Math.random()*3)];
+      hazards.push({x:width*(endless.lastPrimary.x<width/2?.88:.12),y:cameraY+height+160,
+        speed:105+d*30,spriteIndex:5,bouncy:true,compound,
+        wheelFrame:art.wheelFrames?.[compound],dead:false,size:46.8*visualScale()});
+      endless.hazardAt=worldTop+900-d*300+Math.random()*300;
+    }
+  }
+
+  function drawEndlessScene(world,origin) {
+    const climb=Math.max(0,cameraY-origin);
+    if(world==="winter"){drawAntarctica(origin);return;}
+    if(world==="summit"){drawSummitBackdrop(origin);return;}
+    if(world==="garage"){drawForgottenPaddock(origin);return;}
+    ctx.fillStyle=skyGradient||"#6ba5d3";ctx.fillRect(0,0,width,height);
+    if(world==="space"){
+      drawSpaceBackdrop(spaceFade.start+climb,1);drawSpaceDecor(spaceFade.start+climb,1);return;
+    }
+    if(world==="desert"||world==="canyon"){
+      const source=art.journey;
+      const local=(world==="canyon"?skyFade.end*.55:0)+Math.min(skyFade.end*.4,climb*.025);
+      const view=backgroundView(local,source.naturalWidth,source.naturalHeight,width,height);
+      ctx.drawImage(source,0,view.y,source.naturalWidth,view.height,0,0,width,height);return;
+    }
+    for(let i=0;i<6;i++){
+      const w=width*(.4+i%3*.1),h=w*art.cloud.naturalHeight/art.cloud.naturalWidth,cycle=height+h*2;
+      const y=(i/6*cycle+climb*.12)%cycle-h;
+      drawCloud(i%2?width-w*.7:-w*.3,y,w,h);
+    }
+  }
+
+  function drawEndlessBackdrop() {
+    const transition=endless.transition;
+    if(transition&&(!endlessFadeCanvas||endlessFadeCanvas.width!==canvas.width||endlessFadeCanvas.height!==canvas.height)){
+      drawEndlessScene(transition.from,transition.fromOrigin);
+      endlessFadeCanvas=document.createElement("canvas");
+      endlessFadeCanvas.width=canvas.width;endlessFadeCanvas.height=canvas.height;
+      endlessFadeCanvas.getContext("2d").drawImage(canvas,0,0);
+    }
+    drawEndlessScene(endless.director.world,endless.originY);
+    if(transition){
+      ctx.save();ctx.globalAlpha=1-sceneEase(transition.age,0,1.5);
+      ctx.drawImage(endlessFadeCanvas,0,0,width,height);ctx.restore();
+    }
+  }
+
   function followPlayerCamera(dt) {
     const target = Math.max(cameraY, player.y - cameraTrackingOffset());
     cameraY += (target - cameraY) * (1 - Math.exp(-(logicalViewportWidth === 390 ? 12 : 8) * dt));
@@ -4435,9 +4575,10 @@
   function update(dt) {
     if (!streamWorldAssets()) return;
     elapsed += dt;
-    if (summit && !bathBoss && !bathBossCleared && runScore() >= 13000) beginBathJourney();
+    if (endless)updateEndless(dt);
+    if (!endless && summit && !bathBoss && !bathBossCleared && runScore() >= 13000) beginBathJourney();
     if (bathBoss && updateBathBoss(dt)) { updateHud(); return; }
-    if (forgottenPaddock && !antarctica && !summit && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
+    if (!endless && forgottenPaddock && !antarctica && !summit && !antarcticaScene && !portalTransition && runScore() >= 8000) beginAntarcticaScene();
     if (antarcticaScene) {
       antarcticaScene.age += dt;
       if (antarcticaScene.age >= controlSceneDuration) enterAntarctica();
@@ -4448,17 +4589,17 @@
       if (antarcticaArrival.age >= caveSceneDuration) finishAntarcticaArrival();
       return;
     }
-    if (antarctica && winterMemoryStartedAt === null && runScore() >= antarcticaEntryScore + 100) winterMemoryStartedAt = elapsed;
+    if (!endless && antarctica && winterMemoryStartedAt === null && runScore() >= antarcticaEntryScore + 100) winterMemoryStartedAt = elapsed;
     if (somersault) {
       somersault.age += dt;
       if (somersault.age >= .54) somersault = null;
     }
-    if (!forgottenPaddock && !portalTransition && runScore() >= 5000) beginPortal();
+    if (!endless && !forgottenPaddock && !portalTransition && runScore() >= 5000) beginPortal();
     if (updatePortal(dt)) return;
     if (forgottenPaddock && !antarctica && elapsed < arrivalUntil - 3.4) return;
     invulnerableTimer = Math.max(0, invulnerableTimer - dt);
     rocketTimer = Math.max(0, rocketTimer - dt);
-    if (antarctica && !sidBossCleared && !sidBoss && runScore() >= 10000) beginSidBoss();
+    if (!endless && antarctica && !sidBossCleared && !sidBoss && runScore() >= 10000) beginSidBoss();
     if (updateSidBoss(dt)) return;
     if (updateSpaceEvents(dt)) { somersault = null; return; }
     if (updateBabyKimi(dt)) { somersault = null; openingJump = false; return; }
@@ -4659,7 +4800,12 @@
       if (platform.broken) continue;
       if (platform.spaceService === spaceEncounter && spaceEncounter?.type === "pitstop") continue;
       const garagePlatform = forgottenPaddock && art.garagePlatforms && art.garagePlatforms[platform.spriteIndex];
-      if (platform.commentator) {
+      if(platform.endlessWorld){
+        if(platform.endlessWorld==="winter")drawIcePlatform(platform);
+        else if(platform.endlessWorld==="summit")drawSummitPlatform(platform);
+        else if(platform.endlessWorld==="garage")drawFrame(art.garagePlatforms[platform.spriteIndex],platform.x,platform.y,platform.spriteWidth,"platform");
+        else drawSprite(platform.spriteIndex,platform.x,platform.y,platform.spriteWidth,"platform",platform.height);
+      } else if (platform.commentator) {
         drawCommentatorPlatform(platform);
       } else if (summit) {
         drawSummitPlatform(platform);
@@ -4772,6 +4918,13 @@
     }
 
     if (mode === "running") {
+      if(endless&&elapsed-endless.enteredAt<5){
+        const top=height-visibleWorldHeight+visibleWorldHeight*.25;
+        ctx.save();ctx.textAlign="center";ctx.fillStyle="#e3f6ff";ctx.font="bold 13px monospace";
+        ctx.fillText("БЕСКОНЕЧНЫЙ РЕЖИМ",width/2,top,width-24);
+        ctx.font="11px system-ui";
+        ctx.fillText("Джордж, кажется, мы пошли на второй круг…",width/2,top+22,width-24);ctx.restore();
+      }
       if (kimiBoost > 0) {
         ctx.save();
         ctx.fillStyle = "#ffe4a0";
@@ -4960,7 +5113,7 @@
       powerups.forEach((powerup) => { powerup.x *= scaleX; powerup.y *= scaleY; powerup.size *= scaleX; });
       if (sidBoss && previousArenaHeight !== sidArenaHeight()) buildSidArena(previousArenaHeight);
       if (bathBoss && previousArenaHeight !== sidArenaHeight()) {
-        if(!["boarding","ride","eagle","complete"].includes(bathBoss.phase))buildBathArena(previousArenaHeight);
+        if(!["boarding","ride","eagle","anomaly","complete"].includes(bathBoss.phase))buildBathArena(previousArenaHeight);
         else {
           const ratio=sidArenaHeight()/previousArenaHeight;
           player.y=cameraY+(player.y-cameraY)*ratio;
