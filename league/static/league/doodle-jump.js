@@ -254,7 +254,7 @@
     if(endless){
       const stage=window.FastlapEndless.worlds[endless.director.world].stage;
       const pending=window.FastlapEndless.worlds[endless.director.pendingWorld].stage;
-      if(pending&&runScore()>=endless.director.nextAt-250)loadStage(pending);
+      if(pending)loadStage(pending);
       return !stage||stageReady(stage);
     }
     if (summit) {
@@ -4504,29 +4504,29 @@
       for(const node of [plan.extra,plan.primary])if(node){
         const p=addPlatform(node.y,node.x,node.kind);
         p.endlessWorld=node.world;p.endlessPrimary=node.primary;
-        p.range=12;
-        // Permanent anchors provide the complete route; moving/breaking/spring
-        // options have both incoming and outgoing reach reserved for their full motion.
-        if(node.primary){p.width=p.hitboxWidth=p.spriteWidth=78-plan.difficulty*12;}
+        p.range=node.range;
+        // The planner reserves both platforms' full movement on every route arc.
+        if(node.primary){p.width=p.hitboxWidth=p.spriteWidth=66-plan.difficulty*12;}
       }
       const primary=platforms[platforms.length-1];
       addPowerupBetween(endless.lastPrimary,primary);
       if(primary.y>=nextMarshalY){marshals.push({platform:primary,collected:false});nextMarshalY=primary.y+2200;}
-      endless.lastPrimary={x:primary.x,y:primary.y};worldTop=primary.y;
+      endless.lastPrimary={x:primary.originX,y:primary.y,range:primary.range,kind:primary.kind};worldTop=primary.y;
     }
     const d=director.difficulty(runScore()),winter=director.world==="winter";
-    if(worldTop>=endless.enemyAt&&enemies.length<2){
-      const x=width*(Math.random()<.5?.16:.84);
+    if(worldTop>=endless.enemyAt&&enemies.length<3){
+      const x=width*(Math.random()<.5?.25:.75);
       enemies.push({type:winter?"piranha":"tire",variant:nextEnemyVariant(),x,baseX:x,
         y:cameraY+height+130,phase:Math.random()*6,dead:false});
-      endless.enemyAt=worldTop+950-d*300+Math.random()*350;
+      endless.enemyAt=worldTop+650-d*200+Math.random()*200;
     }
-    if(!winter&&worldTop>=endless.hazardAt&&hazards.length<3){
+    if(!winter&&worldTop>=endless.hazardAt&&hazards.length<4){
       const compound=["soft","medium","hard"][Math.floor(Math.random()*3)];
-      hazards.push({x:width*(endless.lastPrimary.x<width/2?.88:.12),y:cameraY+height+160,
-        speed:105+d*30,spriteIndex:5,bouncy:true,compound,
-        wheelFrame:art.wheelFrames?.[compound],dead:false,size:46.8*visualScale()});
-      endless.hazardAt=worldTop+900-d*300+Math.random()*300;
+      const tyre=Math.random()<.7;
+      hazards.push({x:width*(endless.lastPrimary.x<width/2?.74:.26),y:cameraY+height+160,
+        speed:120+d*35,spriteIndex:tyre?5:6,bouncy:tyre,compound:tyre?compound:null,
+        wheelFrame:tyre?art.wheelFrames?.[compound]:null,dead:false,size:46.8*visualScale()});
+      endless.hazardAt=worldTop+650-d*180+Math.random()*200;
     }
   }
 
