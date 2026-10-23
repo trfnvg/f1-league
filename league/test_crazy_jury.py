@@ -141,7 +141,7 @@ class CrazyJuryTests(TestCase):
         self.assertContains(audit, "Завершено")
         self.assertContains(audit, "Исключён предикт")
 
-    def test_one_vote_only_and_voter_cannot_vote_for_own_prediction(self):
+    def test_one_ballot_can_change_and_voter_cannot_vote_for_own_prediction(self):
         with self.assertRaisesMessage(CrazyVoteError, "Нельзя голосовать за свой"):
             cast_crazy_prediction_vote(self.event, self.owner_a, self.prediction_a.id, now=self.now)
 
@@ -154,7 +154,8 @@ class CrazyJuryTests(TestCase):
         second_response = self.client.post(vote_url, {"target_prediction": self.prediction_b.id})
         self.assertEqual(second_response.status_code, 302)
         vote = CrazyPredictionVote.objects.get(event=self.event, voter=self.voter)
-        self.assertEqual(vote.target_prediction_id, self.prediction_a.id)
+        self.assertEqual(vote.target_prediction_id, self.prediction_b.id)
+        self.assertEqual(CrazyPredictionVote.objects.filter(event=self.event, voter=self.voter).count(), 1)
 
     def test_tied_vote_does_not_veto_but_unique_leader_does(self):
         voter_b = User.objects.create_user("voter-b", password="test")

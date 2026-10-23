@@ -792,7 +792,9 @@
             <h3 id="crazy-jury-results-title">Голоса за Crazy Prediction</h3>
             <p>{{ crazy_vote_total }} голосов · результаты открыты после завершения анонимного голосования</p>
           </div>
-          {% if vetoed_crazy_prediction_id %}
+          {% if event.crazy_vote_veto_cancelled_at %}
+            <div class="crazy-jury-excluded-summary is-tied"><small>ИТОГ</small><strong>Исключение отменено</strong><span>решение администратора · голоса сохранены</span></div>
+          {% elif vetoed_crazy_prediction_id %}
             {% for row in crazy_vote_results %}
               {% if row.is_excluded %}<div class="crazy-jury-excluded-summary"><small>ИСКЛЮЧЁН</small><strong>{{ row.prediction.user.username }}</strong><span>предикт №{{ row.number }}</span></div>{% endif %}
             {% endfor %}

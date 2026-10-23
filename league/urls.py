@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import arcade_library
+from . import jury_admin
 
 app_name = "league"
 
@@ -9,6 +10,7 @@ urlpatterns = [
     path("activity-feed/", views.activity_feed_updates, name="activity_feed"),
     path("events/<int:event_id>/crazy-vote/", views.cast_crazy_vote, name="crazy_prediction_vote"),
     path("paddock-jury/", views.paddock_jury_admin, name="paddock_jury_admin"),
+    path("paddock-jury/<int:event_id>/cancel/", jury_admin.cancel_exclusion, name="cancel_crazy_exclusion"),
     path("paddock-jury/<int:event_id>/close/", views.close_crazy_vote, name="close_crazy_vote"),
     path("arcade/", arcade_library.library, name="arcade"),
     path("arcade/control/", arcade_library.control, name="arcade_control"),

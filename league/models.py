@@ -106,6 +106,11 @@ class Event(models.Model):
         null=True,
         blank=True,
     )
+    crazy_vote_veto_cancelled_at = models.DateTimeField("Отмена исключения Paddock Jury", null=True, blank=True)
+    crazy_vote_veto_cancelled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="cancelled_crazy_exclusions", verbose_name="Кто отменил исключение",
+    )
     has_sprint = models.BooleanField("Есть спринт", default=False)
     cover_image = models.ImageField("Обложка", upload_to="event_covers/", blank=True, null=True, max_length=255)
 
@@ -326,6 +331,7 @@ class Prediction(models.Model):
 
 
 class CrazyPredictionVote(models.Model):
+    updated_at = models.DateTimeField("Последнее изменение голоса", null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="crazy_prediction_votes")
     voter = models.ForeignKey(User, on_delete=models.CASCADE, related_name="crazy_prediction_votes_cast")
     target_prediction = models.ForeignKey(
