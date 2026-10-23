@@ -544,6 +544,7 @@ def build_activity_feed(leaderboard, limit=10):
         )
         .filter(
             Q(status=Event.Status.SCORED)
+            | Q(crazy_vote_veto_cancelled_at__isnull=False)
             | Q(crazy_vote_closed_at__isnull=False)
             | Q(race_datetime__lte=now)
         )
@@ -551,6 +552,16 @@ def build_activity_feed(leaderboard, limit=10):
         .order_by("-round_number")
     )
     for jury_event in finalized_jury_events:
+        if jury_event.crazy_vote_veto_cancelled_at:
+            jury_news = {
+                "type": "crazy-veto",
+                "text": "Исключение Crazy Prediction на этапе отменено",
+                "meta": f"R{jury_event.round_number} · {jury_event.name} · Голоса сохранены · решение администратора",
+                "user_id": jury_event.crazy_vote_veto_cancelled_by_id,
+                "event_id": jury_event.id, "source_event_id": jury_event.id, "anchor": "",
+                "occurred_at": jury_event.crazy_vote_veto_cancelled_at,
+            }
+            break
         vetoed_prediction_id = vetoed_crazy_prediction_id(jury_event, now=now)
         if not vetoed_prediction_id:
             continue

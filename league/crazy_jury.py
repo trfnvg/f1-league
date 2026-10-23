@@ -12,6 +12,8 @@ class CrazyVoteError(ValueError):
 
 
 def crazy_vote_is_open(event, now=None):
+    if event and event.crazy_vote_veto_cancelled_at:
+        return False
     now = now or timezone.now()
     return bool(
         event
@@ -23,6 +25,8 @@ def crazy_vote_is_open(event, now=None):
 
 
 def crazy_vote_is_finished(event, now=None):
+    if event and event.crazy_vote_veto_cancelled_at:
+        return True
     now = now or timezone.now()
     return bool(
         event
@@ -55,6 +59,8 @@ def crazy_vote_candidates(event):
 
 def vetoed_crazy_prediction_id(event, now=None):
     """Return the unique top-voted prediction after the vote closes; ties do nothing."""
+    if event and event.crazy_vote_veto_cancelled_at:
+        return None
     now = now or timezone.now()
     if not crazy_vote_is_finished(event, now):
         return None
@@ -96,14 +102,35 @@ def cast_crazy_prediction_vote(event, voter, target_prediction_id, now=None):
         raise CrazyVoteError("Нельзя голосовать за свой Crazy Prediction.")
     if len(candidates) < 2:
         raise CrazyVoteError("Для голосования нужно хотя бы два Crazy Prediction.")
-    if CrazyPredictionVote.objects.filter(event=locked_event, voter=voter).exists():
-        raise CrazyVoteError("Ты уже отдал голос за этот этап. Изменить его нельзя.")
-
-    return CrazyPredictionVote.objects.create(
+    vote, _ = CrazyPredictionVote.objects.update_or_create(
         event=locked_event,
         voter=voter,
-        target_prediction=target,
+        defaults={"target_prediction": target, "updated_at": now},
     )
+    return vote
+
+
+@transaction.atomic
+def cancel_crazy_exclusion(event, actor, now=None):
+    """Cancel only this event's jury veto; keep ballots and audit score changes."""
+    from .models import Score
+    from .scoring import publish_event_scores
+
+    if not actor.is_active or not actor.is_staff:
+        raise CrazyVoteError("Отменить исключение может только администратор.")
+    now = now or timezone.now()
+    locked = Event.objects.select_for_update().get(pk=event.pk)
+    if locked.crazy_vote_veto_cancelled_at:
+        return False
+    if locked.deadline > now:
+        raise CrazyVoteError("Голосование по этому этапу ещё не началось.")
+    locked.crazy_vote_veto_cancelled_at = now
+    locked.crazy_vote_veto_cancelled_by = actor
+    locked.save(update_fields=("crazy_vote_veto_cancelled_at", "crazy_vote_veto_cancelled_by"))
+    if locked.status == Event.Status.SCORED or Score.objects.filter(event=locked).exists():
+        # Any failed recalculation rolls the cancellation back in the same transaction.
+        publish_event_scores(locked, actor)
+    return True
 
 
 def crazy_jury_context(event, user, now=None):
@@ -138,5 +165,5 @@ def crazy_jury_context(event, user, now=None):
         "has_enough_candidates": has_enough_candidates,
         "candidates": candidates,
         "has_voted": previous_vote is not None,
-        "can_vote": eligible and is_open and has_enough_candidates and previous_vote is None,
+        "can_vote": eligible and is_open and has_enough_candidates,
     }

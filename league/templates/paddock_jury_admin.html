@@ -40,9 +40,19 @@
       {% endif %}
     </section>
 
+    {% if not jury_event.crazy_vote_veto_cancelled_at %}
+      <form method="post" action="{% url 'league:cancel_crazy_exclusion' event_id=jury_event.id %}" onsubmit="return confirm('Отменить исключение только на этом этапе? Голоса сохранятся, голосование завершится без исключения. Уже опубликованные очки и дуэли будут пересчитаны.');">
+        {% csrf_token %}
+        <button class="jury-admin-close-button" type="submit">Отменить исключение на этом этапе</button>
+      </form>
+    {% endif %}
+
     {% if vote_is_final %}
       <div class="jury-admin-outcome {% if vetoed_prediction_id %}has-veto{% endif %}">
-        {% if vetoed_prediction_id %}
+        {% if jury_event.crazy_vote_veto_cancelled_at %}
+          <strong>Исключение отменено администратором</strong>
+          <span>Все Crazy Prediction остаются в зачёте. Голоса сохранены. {{ jury_event.crazy_vote_veto_cancelled_at|date:"d.m.Y H:i" }} · {{ jury_event.crazy_vote_veto_cancelled_by.username|default:"Администратор" }}</span>
+        {% elif vetoed_prediction_id %}
           <strong>Исключён предикт №{% for row in candidate_rows %}{% if row.prediction.id == vetoed_prediction_id %}{{ row.number }}{% endif %}{% endfor %}</strong>
           <span>Уникальный лидер голосования; прогноз больше не принесёт очки за Crazy Prediction.</span>
         {% elif vote_total %}
@@ -69,7 +79,7 @@
             {% if row.votes %}
               <ul>
                 {% for vote in row.votes %}
-                  <li><strong>{{ vote.voter.username }}</strong><time datetime="{{ vote.created_at|date:'c' }}">{{ vote.created_at|date:"d.m · H:i" }}</time></li>
+                  <li><strong>{{ vote.voter.username }}</strong><time datetime="{{ vote.updated_at|default:vote.created_at|date:'c' }}">{{ vote.updated_at|default:vote.created_at|date:"d.m · H:i" }}</time></li>
                 {% endfor %}
               </ul>
             {% else %}

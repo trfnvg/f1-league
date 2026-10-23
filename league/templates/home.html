@@ -109,19 +109,19 @@
     {% else %}
       <form class="crazy-jury-form" method="post" action="{% url 'league:crazy_prediction_vote' event_id=crazy_jury.event.id %}">
         {% csrf_token %}
-        <fieldset class="crazy-jury-candidates" {% if crazy_jury.has_voted %}disabled{% endif %}>
+        <fieldset class="crazy-jury-candidates">
           <legend class="visually-hidden">Выбери один анонимный Crazy Prediction</legend>
           {% for candidate in crazy_jury.candidates %}
             <label class="crazy-jury-card{% if candidate.is_own %} is-own{% endif %}{% if candidate.is_selected %} is-selected{% endif %}">
-              <input type="radio" name="target_prediction" value="{{ candidate.id }}" {% if candidate.is_selected %}checked{% endif %} {% if candidate.is_own or crazy_jury.has_voted %}disabled{% else %}required{% endif %}>
+              <input type="radio" name="target_prediction" value="{{ candidate.id }}" {% if candidate.is_selected %}checked{% endif %} {% if candidate.is_own %}disabled{% else %}required{% endif %}>
               <span class="crazy-jury-card-top"><span>АНОНИМНЫЙ ПРЕДИКТ {{ candidate.number|stringformat:"02d" }}</span>{% if candidate.is_own %}<b>ТВОЙ · НЕЛЬЗЯ ВЫБРАТЬ</b>{% elif candidate.is_selected %}<b>ТВОЙ ВЫБОР</b>{% endif %}</span>
               <span class="crazy-jury-card-copy">{{ candidate.text }}</span>
             </label>
           {% endfor %}
         </fieldset>
         <div class="crazy-jury-footer">
-          <p>{% if crazy_jury.has_voted %}<strong>Голос принят.</strong> Изменить его нельзя; итоги откроются после старта гонки.{% else %}Один голос на игрока. Голосование закроется перед стартом гонки; при равенстве прогнозы останутся в зачёте.{% endif %}</p>
-          {% if crazy_jury.can_vote %}<button class="crazy-jury-submit" type="submit">Отдать голос <span aria-hidden="true">→</span></button>{% endif %}
+          <p>{% if crazy_jury.has_voted %}<strong>Голос принят.</strong> Пока голосование открыто, можно выбрать другой прогноз и изменить голос.{% else %}Один действующий голос на игрока. Его можно менять до завершения голосования; при равенстве исключения не будет.{% endif %}</p>
+          {% if crazy_jury.can_vote %}<button class="crazy-jury-submit" type="submit">{% if crazy_jury.has_voted %}Изменить голос{% else %}Отдать голос{% endif %} <span aria-hidden="true">→</span></button>{% endif %}
         </div>
       </form>
     {% endif %}
