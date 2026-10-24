@@ -22,6 +22,12 @@ GAMES = {
     "doodle_jump": {"title": "Cowboy GP", "subtitle": "Рассел на Диком Западе · Doodle Jump", "cover": "league/images/arcade-doodle-cover-v1.png", "description": "Прыгай через каньоны, облака и космос. Каждый забег — новая высота."},
 }
 
+# Unreleased games are deliberately outside GAMES: they cannot be published,
+# acquire attempts via models_for(), or affect an existing competition/wheel.
+PREVIEW_GAMES = {
+    "tetris": {"title": "Pit Stack", "subtitle": "F1-тетрис · закрытый тест", "cover": "league/images/tetris-pit-garage-v1.png"},
+}
+
 
 def models_for(game):
     return (DoodleAttempt, DoodleRecord) if game == "doodle_jump" else (ArcadeAttempt, ArcadeRecord)
@@ -128,6 +134,10 @@ def library(request):
 
 @require_GET
 def game(request, game_key):
+    if game_key in PREVIEW_GAMES:
+        if not request.user.is_authenticated or not request.user.is_active or not request.user.is_staff:
+            raise Http404
+        return render(request, "arcade_tetris.html", {"game": PREVIEW_GAMES[game_key]})
     if game_key not in GAMES:
         raise Http404
     settings, contest = selected_contest()
@@ -259,6 +269,7 @@ def control(request):
                 messages.success(request, "Соревнование открыто до дедлайна выбранного этапа.")
         return redirect("league:arcade_control")
     return render(request, "arcade_library_control.html", {"settings": settings, "events": events, "games": GAMES.items(),
+        "preview_games": PREVIEW_GAMES.items(),
         "arcade_wheel_sectors": list(rewards.WHEEL_SECTORS), "driver_choices": DRIVER_CHOICES})
 
 
