@@ -32,6 +32,19 @@ assert.equal(TYPES.length,7);
   assert.equal(game.lockDelay,220);
 }
 for(const type of TYPES) assert.equal(SHAPES[type].flat().filter(Boolean).length,4);
+for(let index=0;index<TYPES.length;index++)for(let turns=0;turns<4;turns++) {
+  const game=new Game(()=>index/7+.001);game.start();
+  for(let y=17;y<20;y++)for(let x=0;x<10;x++)if((x+y)%3!==0)game.board[y][x]='J';
+  for(let i=0;i<turns;i++)game.turn();
+  if(turns%2)game.move(-1);else game.move(1);
+  const before=JSON.stringify({board:game.board,piece:game.piece,score:game.score,elapsed:game.elapsed});
+  const landing=game.landing();
+  assert.ok(game.fits(landing));assert.equal(game.fits({...landing,y:landing.y+1}),false);
+  assert.equal(JSON.stringify({board:game.board,piece:game.piece,score:game.score,elapsed:game.elapsed}),before,'Ghost projection is read-only');
+  const expected=JSON.stringify(cells(landing));game.drop();
+  assert.equal(JSON.stringify(game.lastLock.cells),expected,'Ghost exactly matches actual hard-drop landing');
+  assert.equal(game.lockSerial,1);
+}
 for(let index=0;index<7;index++){
   const game=new Game(()=>index/7+.001);game.start();
   assert.equal(game.piece.type,TYPES[index]); assert.equal(cells(game.piece).length,4);
@@ -51,6 +64,7 @@ for(let count=1;count<=4;count++){
   game.lock(); assert.equal(game.phase,'clearing');assert.equal(game.clearing.length,count);
   assert.equal(game.move(1),false);settle(game);
   assert.equal(game.lines,count);assert.equal(game.score,[0,40,100,300,1200][count]);
+  assert.equal(game.lastClearCells.length,count*10,'Visual snapshot retains cleared cells without changing score');
   assert.equal(game.board.flat().filter(Boolean).length,4-count);
   boardInvariant(game);
 }

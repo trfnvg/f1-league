@@ -3,7 +3,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-audio-v7">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-feedback-v9">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -30,6 +30,7 @@
     <div class="tetris-toolbar">
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
       <div class="tetris-toolbar-actions">
+        <button type="button" id="tetris-ghost" class="tetris-icon-button" aria-label="Скрыть контур приземления" aria-pressed="true" title="Контур приземления включён"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 14h8v8H8zM0 14h8v8H0zM16 14h8v8h-8zM8 6h8v8H8z" stroke-dasharray="2 2"/><path d="M12 1v3m-2-2 2 2 2-2"/></svg></button>
         <button type="button" id="tetris-pause" disabled>Пауза</button>
         <button type="button" id="tetris-fullscreen" aria-pressed="false">На весь экран</button>
         <div class="tetris-audio-control">
@@ -44,6 +45,8 @@
     <div class="tetris-deck" id="tetris-deck">
       <div class="tetris-board" id="tetris-board">
         <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — сброс, медленное движение вниз — ускорение. С клавиатуры: стрелки — движение и поворот, Enter — сброс, пробел — старт, пауза и продолжение; P — пауза."></canvas>
+        <canvas id="tetris-feedback" width="320" height="640" aria-hidden="true"></canvas>
+        <div class="tetris-track-lights" id="tetris-track-lights" aria-hidden="true"><div><i></i><i></i><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i></i><i></i></div></div>
         <div class="tetris-overlay" id="tetris-overlay">
           <div class="tetris-start-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="pit-stack-eyebrow" id="tetris-overlay-caption">ГОТОВНОСТЬ К СТАРТУ</p>
@@ -51,10 +54,9 @@
           <p id="tetris-overlay-text">Собирай линии.<br>Держи гоночный темп.</p>
           <button type="button" id="tetris-start">Начать заезд <span>↗</span></button>
         </div>
-        <div class="tetris-line-message" id="tetris-line-message" aria-hidden="true"></div>
       </div>
       <aside class="tetris-telemetry" aria-label="Телеметрия">
-        <div class="tetris-stat tetris-stat-score"><span>Очки</span><strong id="tetris-score">0</strong></div>
+        <div class="tetris-stat tetris-stat-score"><span>Очки</span><strong id="tetris-score">0</strong><div class="tetris-line-message" id="tetris-line-message" aria-hidden="true"></div></div>
         <div class="tetris-stat"><span>Линии</span><strong id="tetris-lines">0</strong></div>
         <div class="tetris-stat tetris-next"><span>Следующая</span><canvas id="tetris-next" width="128" height="112" aria-label="Следующая фигура"></canvas></div>
         <div class="tetris-circuit"><span>WORLD TOUR</span><strong id="tetris-venue">МОНАКО</strong><div class="tetris-route" aria-hidden="true"><i id="tetris-route-progress"></i></div></div>
@@ -66,9 +68,10 @@
 </main>
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-gp-art-v5" defer></script>
+<script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-feedback-v9" defer></script>
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-audio-v7" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=pit-stack-space-v8" defer></script>
+<script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-feedback-v9" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=pit-stack-feedback-v9" defer></script>
 {% endblock %}
