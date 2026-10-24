@@ -49,6 +49,7 @@ from .models import (
     UserProfile,
     WildcardSettings,
 )
+from .home_events import select_featured_event
 from .services import (
     build_achievements,
     build_activity_feed,
@@ -753,7 +754,7 @@ def home(request):
         key=lambda event: event.deadline,
         default=None,
     )
-    featured_event = next_event or (events[0] if events else None)
+    featured_event = select_featured_event(events, now)
     featured_is_upcoming = bool(
         featured_event
         and featured_event.status != Event.Status.SCORED

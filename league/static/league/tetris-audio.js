@@ -5,7 +5,7 @@
   window.PitStackAudio=class {
     constructor(media,button,volume) {
       this.media=media;this.button=button;this.volumeControl=volume;
-      this.enabled=true;this.volume=.28;this.active=false;this.blocked=false;
+      this.enabled=true;this.volume=.22;this.active=false;this.blocked=false;
       this.context=null;this.gain=null;this.request=0;this.pending=false;
       try {
         const saved=JSON.parse(localStorage.getItem(STORAGE));
@@ -54,7 +54,7 @@
       this.refresh();
     }
     setPace(pace) {
-      const rate=1+Math.min(12,Math.max(0,pace))*.018;
+      const rate=1+Math.min(12,Math.max(0,pace))*.004;
       if(this.media.playbackRate!==rate)this.media.playbackRate=rate;
     }
     refresh() {
