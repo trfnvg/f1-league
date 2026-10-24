@@ -63,16 +63,27 @@ fullscreen is unavailable. Board always stays 1:2; no stretched geometry.
 
 ## Graphics and performance
 
-World Tour: four original code-native vector panoramas depict a Riviera marina,
-desert circuit, night city and Alpine circuit, with kerbs, grandstands and a car.
+World Tour: ten original GPT-generated retro pixel-art Grand Prix panoramas depict
+Monaco, Las Vegas, Austin, Shanghai, Suzuka, Monza, Silverstone, Singapore, Spa
+and Abu Dhabi, with recognizable architecture, track environments and race cars.
 They sit outside an opaque near-black 10×20 board
 with a faint grid. All seven bright traditional tile colours have uncluttered
 faces with a narrow retro bevel, without rivets, racing stripes or textures.
 F1 styling stays outside the play surface: a red trim, small checkered flag,
 pit-wall score panels and start lights. Backgrounds advance every ten cleared
-lines, in shuffled sets of four, with no adjacent repeat even between sets.
-Two reusable SVG layers crossfade for 1.4 seconds; reduced-motion switches
-instantly. There are no image downloads or permanent scenery animation loops.
+lines, in shuffled sets of ten, with no adjacent repeat even between sets.
+The first load starts at Monaco to match the server-rendered, high-priority image.
+Two reusable image layers crossfade for 1.4 seconds; reduced-motion switches
+instantly. The next venue alone is prefetched. Images are asynchronously decoded
+before switching: failed loads retain the old art, and stale completions cannot
+override a more recent transition/reset. No permanent scenery animation loops.
+
+Assets: `league/static/league/images/tetris-gp/*-retro-v1.webp`. Generated using
+the built-in GPT image tool, one call per venue, with full prompts and source
+basenames in `docs/tetris-gp-art-manifest.json`. Original resolution is retained;
+WebP is lossless, with every decoded RGB pixel verified identical to source PNG.
+To reproduce packing from the saved source directory, run
+`python tools/pack_tetris_gp_art.py /path/to/generated_images/session`.
 
 The initial garage illustration was generated **with built-in GPT imagegen** and
 is retained only for the admin laboratory card at
@@ -97,6 +108,8 @@ Use case: stylized-concept. Asset type: production background illustration for a
 - `node tests/tetris_gestures.mjs`: taps in both directions, jitter, relative
   drag/reversal, fast/slow downward input, exactly-once hard-drop, axis lock,
   multitouch, cancel/pause/new-piece protection and bounded input work.
+- `node tests/tetris_scenery.mjs`: decode-before-show, single-next prefetch,
+  network failure retention/recovery, stale load completion protection and reset.
 - `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
   21 tests including access control, no mutations, no public links, rejected
   publication, removed UI and existing arcade regression tests.
@@ -106,7 +119,8 @@ Use case: stylized-concept. Asset type: production background illustration for a
   density, keyboard, trusted touch taps/drags/flick/cancel/multitouch and a
   finger held across spawning, pause/resume, inline/fullscreen/landscape geometry,
   no script exceptions. Also checks bounded scenery layers, shuffled tours without
-  adjacent repeats, an opaque play surface, and samples all
+  adjacent repeats across all ten venues, decoded full-resolution images, an
+  opaque play surface, and samples all
   seven rendered tile colours for at least 4.5:1 contrast against the field.
   Optional `TETRIS_PREVIEW_DIR` writes representative mixed-stack screenshots.
   Third-party fonts/Bootstrap are blocked for repeatability.

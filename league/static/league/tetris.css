@@ -15,7 +15,7 @@
 .tetris-scenery { position: absolute; inset: 0; z-index: -2; pointer-events: none; background: #172b3d; }
 .tetris-scenery > div { position: absolute; inset: 0; opacity: 0; transition: opacity 1.4s ease; }
 .tetris-scenery > div.is-visible { opacity: 1; }
-.tetris-scenery svg { width: 100%; height: 100%; display: block; }
+.tetris-scenery img { width: 100%; height: 100%; display: block; object-fit: cover; object-position: center; pointer-events: none; user-select: none; }
 .tetris-machine::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: -1; background: linear-gradient(#080e18b3,transparent 35%,#080e1866),linear-gradient(90deg,#070c1844,transparent 30%,transparent 70%,#070c1844); }
 .tetris-toolbar { background: #0b111cdd; margin: 0 -20px; padding: 0 20px; }
 .tetris-board { border-color: #8d9aa9; box-shadow: 0 0 0 4px #0a101bed,0 16px 45px #0009; }
@@ -74,6 +74,7 @@ body.tetris-fullscreen { overflow: hidden; }
   .tetris-toolbar { margin: 0 -10px; padding: 0 10px; }
   .tetris-circuit, .tetris-pace { padding: 7px; }
   .tetris-circuit strong, .tetris-pace strong { font-size: 8px; }
+  .tetris-circuit strong { font-size: 7px; }
   .pit-stack-heading h1 { font-size: 30px; }
   .pit-stack-private { font-size: 10px; text-align: left; margin-top: 10px; }
   .tetris-machine { padding: 0 10px 10px; border-radius: 10px; height: 650px; min-height: 490px; max-height: 90svh; grid-template-rows: 49px minmax(0,1fr); }
