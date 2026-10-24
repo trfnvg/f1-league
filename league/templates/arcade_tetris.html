@@ -2,7 +2,8 @@
 {% block title %}Pit Stack · F1-тетрис · Fastlap{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-tour-v4">
+<link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-gp-art-v5">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -13,7 +14,19 @@
   </header>
 
   <section class="tetris-machine" id="tetris-machine" aria-label="Pit Stack — тестовая игра">
-    <div class="tetris-scenery" id="tetris-scenery" aria-hidden="true"><div></div><div></div></div>
+    <div class="tetris-scenery" id="tetris-scenery" aria-hidden="true"
+      data-art-monaco="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}"
+      data-art-las-vegas="{% static 'league/images/tetris-gp/las-vegas-retro-v1.webp' %}"
+      data-art-austin="{% static 'league/images/tetris-gp/austin-retro-v1.webp' %}"
+      data-art-shanghai="{% static 'league/images/tetris-gp/shanghai-retro-v1.webp' %}"
+      data-art-suzuka="{% static 'league/images/tetris-gp/suzuka-retro-v1.webp' %}"
+      data-art-monza="{% static 'league/images/tetris-gp/monza-retro-v1.webp' %}"
+      data-art-silverstone="{% static 'league/images/tetris-gp/silverstone-retro-v1.webp' %}"
+      data-art-singapore="{% static 'league/images/tetris-gp/singapore-retro-v1.webp' %}"
+      data-art-spa="{% static 'league/images/tetris-gp/spa-retro-v1.webp' %}"
+      data-art-abu-dhabi="{% static 'league/images/tetris-gp/abu-dhabi-retro-v1.webp' %}">
+      <div class="is-visible"><img src="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" alt="" fetchpriority="high" decoding="async" draggable="false"></div><div></div>
+    </div>
     <div class="tetris-toolbar">
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
       <div class="tetris-toolbar-actions">
@@ -37,7 +50,7 @@
         <div class="tetris-stat tetris-stat-score"><span>Очки</span><strong id="tetris-score">0</strong></div>
         <div class="tetris-stat"><span>Линии</span><strong id="tetris-lines">0</strong></div>
         <div class="tetris-stat tetris-next"><span>Следующая</span><canvas id="tetris-next" width="128" height="112" aria-label="Следующая фигура"></canvas></div>
-        <div class="tetris-circuit"><span>WORLD TOUR</span><strong id="tetris-venue">RIVIERA</strong><div class="tetris-route" aria-hidden="true"><i id="tetris-route-progress"></i></div></div>
+        <div class="tetris-circuit"><span>WORLD TOUR</span><strong id="tetris-venue">МОНАКО</strong><div class="tetris-route" aria-hidden="true"><i id="tetris-route-progress"></i></div></div>
         <div class="tetris-pace"><span>Темп</span><strong id="tetris-pace">СТАРТ</strong><div aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
       </aside>
     </div>
@@ -46,8 +59,8 @@
 </main>
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-tour-v4" defer></script>
-<script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-tour-v4" defer></script>
-<script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-tour-v4" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=pit-stack-tour-v4" defer></script>
+<script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-gp-art-v5" defer></script>
+<script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
+<script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-gp-art-v5" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=pit-stack-gp-art-v5" defer></script>
 {% endblock %}

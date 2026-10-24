@@ -27,7 +27,7 @@ const server=http.createServer(async(req,res)=>{
   const target=path.resolve(root,'league/static',relative);
   if(!url.pathname.startsWith('/static/')||!target.startsWith(path.join(root,'league/static')+path.sep)){res.writeHead(404);res.end();return;}
   try {
-    const ext=path.extname(target),types={'.js':'text/javascript','.css':'text/css','.png':'image/png'};
+    const ext=path.extname(target),types={'.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp'};
     res.setHeader('Content-Type',types[ext]||'application/octet-stream');res.end(await fs.readFile(target));
   }catch {res.writeHead(404);res.end();}
 });
@@ -92,18 +92,28 @@ try {
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(()=>!!window.PitStack);
     await page.waitForFunction(()=>!!window.PitStackScenery);
-    assert.equal(await page.locator('#tetris-scenery .is-visible svg').count(),1);
-    const tour=await page.evaluate(()=>{
+    await page.waitForFunction(()=>{
+      const image=document.querySelector('#tetris-scenery .is-visible img');
+      return image?.complete && image.naturalWidth>=1500;
+    });
+    const tour=await page.evaluate(async()=>{
       const parent=document.createElement('div'),host=document.createElement('div'),label=document.createElement('span');
+      for(const attr of document.getElementById('tetris-scenery').attributes)
+        if(attr.name.startsWith('data-art-'))host.setAttribute(attr.name,attr.value);
       parent.append(host);host.append(document.createElement('div'),document.createElement('div'));
-      const scenery=new window.PitStackScenery(host,label,()=>.3),stages=[scenery.current];
-      scenery.update(9);const first=scenery.current;
-      for(let i=1;i<40;i++){scenery.update(i*10);stages.push(scenery.current);}
-      return {first,stages,layers:host.children.length,visible:host.querySelectorAll('.is-visible').length};
+      const scenery=new window.PitStackScenery(host,label,()=>.3);
+      await scenery.ready;
+      const stages=[scenery.current];await scenery.update(9);const first=scenery.current;
+      for(let i=1;i<40;i++){await scenery.update(i*10);stages.push(scenery.current);}
+      return {first,stages,layers:host.children.length,visible:host.querySelectorAll('.is-visible').length,
+        images:[...host.querySelectorAll('img')].map(image=>[image.naturalWidth,image.naturalHeight]),
+        svgs:host.querySelectorAll('svg').length};
     });
     assert.equal(tour.first,tour.stages[0]);assert.equal(tour.layers,2);assert.equal(tour.visible,1);
     for(let i=1;i<tour.stages.length;i++)assert.notEqual(tour.stages[i],tour.stages[i-1]);
-    for(let i=0;i<tour.stages.length;i+=4)assert.equal(new Set(tour.stages.slice(i,i+4)).size,4);
+    for(let i=0;i<tour.stages.length;i+=10)assert.equal(new Set(tour.stages.slice(i,i+10)).size,10);
+    assert.equal(tour.svgs,0,'Generated pixel art replaces old vector scenery');
+    assert.equal(tour.images.length,2);for(const [w,h] of tour.images)assert.ok(w>=1500&&h>=1000,'Original art resolution retained');
     assert.equal(await page.locator('.tetris-controls,.tetris-bottom,.tetris-rules,.tetris-key-hint,#tetris-level,#tetris-status').count(),0,
       'No bottom controls, descriptions, level or status text');
     await page.evaluate(()=>{
@@ -189,7 +199,7 @@ try {
     await page.locator('#tetris-fullscreen').click();
     metrics=await measure();assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
-    console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}clean UI, inline/fullscreen/landscape geometry, no backdrop and all seven tile contrasts >= 4.5:1 passed`);
+    console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}ten full-resolution art venues, inline/fullscreen/landscape geometry, opaque field and all seven tile contrasts >= 4.5:1 passed`);
     await context.close();
   }
   assert.deepEqual(errors,[],'No browser script errors');
