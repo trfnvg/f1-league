@@ -232,12 +232,23 @@
   }
   canvas.addEventListener('pointercancel',cancelPointer);
   canvas.addEventListener('lostpointercapture',cancelPointer);
-  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down',Space:'drop'};
+  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down',Enter:'drop',NumpadEnter:'drop'};
   document.addEventListener('keydown',e=>{
-    if(!machine.contains(document.activeElement) && !machine.classList.contains('is-fullscreen')) return;
+    const focused=document.activeElement;
     // Range arrows and focused toolbar buttons keep native keyboard controls.
-    if(document.activeElement?.matches('input,select,textarea,[contenteditable="true"]'))return;
-    if(e.code==='Space' && document.activeElement?.closest('button'))return;
+    if(focused?.matches('input,select,textarea,[contenteditable="true"]'))return;
+    if(e.code==='Space') {
+      if(focused?.closest('button,a,[role="button"]'))return;
+      const pageFocus=!focused || focused===document.body || focused===document.documentElement;
+      if(!pageFocus && !machine.contains(focused) && !machine.classList.contains('is-fullscreen'))return;
+      e.preventDefault();
+      if(e.repeat || countdown)return;
+      if(['ready','over'].includes(game.phase))start();
+      else togglePause();
+      return;
+    }
+    if(!machine.contains(focused) && !machine.classList.contains('is-fullscreen')) return;
+    if(['Enter','NumpadEnter'].includes(e.code) && focused?.closest('button,a,[role="button"]'))return;
     if(e.code==='Escape') {
       if(game.active) togglePause();
       if(machine.classList.contains('is-fullscreen') && !document.fullscreenElement) setFullscreen(false);
@@ -245,7 +256,6 @@
     }
     if(e.code==='KeyP') { e.preventDefault(); if(!e.repeat) togglePause(); return; }
     if(!bindings[e.code] || countdown) return;
-    // Let Enter/Space activate focused UI buttons when the board isn't running.
     if(!game.active) return;
     e.preventDefault();
     if(e.repeat || keys.has(e.code)) return;
