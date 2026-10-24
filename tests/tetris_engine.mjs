@@ -11,6 +11,26 @@ function boardInvariant(game){
   if(game.piece) assert.ok(game.fits(game.piece));
 }
 assert.equal(TYPES.length,7);
+{
+  const game=new Game(()=>5/7+.001);game.start();
+  const matrix=JSON.stringify(game.piece.matrix),serial=game.spawnSerial;
+  assert.equal(game.turn(),true);assert.notEqual(JSON.stringify(game.piece.matrix),matrix);
+  assert.equal(game.turn(-1),true);assert.equal(JSON.stringify(game.piece.matrix),matrix);
+  assert.equal(game.turn(0),false);game.drop();assert.equal(game.spawnSerial,serial+1);
+}
+{
+  const game=new Game(()=>0);game.start();
+  game.elapsed=44990;game.update(10);
+  assert.equal(game.pace,1);assert.equal(game.gravity,624);
+  game.pause();const elapsed=game.elapsed;
+  for(let i=0;i<100;i++)game.update(100);
+  assert.equal(game.elapsed,elapsed,'Pause must not increase difficulty');
+  game.start();assert.equal(game.elapsed,0);assert.equal(game.gravity,800);
+  game.level=999;game.update(100);
+  assert.equal(game.piece.y,0);assert.equal(game.fallClock,35);
+  game.update(100);assert.equal(game.piece.y,2);assert.equal(game.fallClock,5);
+  assert.equal(game.lockDelay,220);
+}
 for(const type of TYPES) assert.equal(SHAPES[type].flat().filter(Boolean).length,4);
 for(let index=0;index<7;index++){
   const game=new Game(()=>index/7+.001);game.start();
@@ -42,7 +62,7 @@ for(let count=1;count<=4;count++){
   const y=game.piece.y;game.pause();for(let i=0;i<100;i++)game.update(100);
   assert.equal(game.piece.y,y);assert.equal(game.drop(),false);assert.equal(game.move(1),false);
   game.pause();for(let i=0;i<10;i++)game.update(100);assert.ok(game.piece.y>y);
-  game.level=999;assert.equal(game.gravity,80);
+  game.level=999;assert.equal(game.gravity,65);
 }
 {
   const game=new Game(()=>3/7+.001);game.start();

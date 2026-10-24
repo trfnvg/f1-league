@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+const scope={};vm.runInNewContext(await fs.readFile(new URL('../league/static/league/tetris-gestures.js',import.meta.url),'utf8'),scope);
+const actions=[],gesture=new scope.PitStackGestures(action=>actions.push(action));
+const point=(x,y,time,id=1)=>({id,x,y,time});
+function begin(options={}){actions.length=0;gesture.cancel();gesture.begin({id:1,x:100,y:100,time:0,cellSize:24,piece:7,...options});}
+begin();gesture.end(point(101,102,100),7);assert.deepEqual(actions,['rotate']);
+begin({tapDirection:-1});gesture.end(point(100,100,120),7);assert.deepEqual(actions,['rotateCCW']);
+begin();gesture.end(point(100,100,500),7);assert.deepEqual(actions,[],'Long press is not a rotation');
+begin();gesture.move(point(90,100,30),7);gesture.move(point(100,100,60),7);gesture.end(point(100,100,80),7);
+assert.deepEqual(actions,[],'Dragging away and back does not become a tap');
+begin();gesture.move(point(145,100,100),7);gesture.move(point(99,100,220),7);gesture.end(point(99,100,250),7);
+assert.deepEqual(actions,['right','right','left','left']);
+begin();gesture.move(point(150,105,50),7);gesture.end(point(150,190,120),7);
+assert.deepEqual(actions,['right','right'],'Horizontal drag cannot also hard drop');
+begin();gesture.move(point(100,135,50),7);gesture.end(point(100,180,120),7);gesture.end(point(100,180,121),7);
+assert.deepEqual(actions,['drop'],'Exactly one hard drop per fast downward gesture');
+begin();gesture.move(point(100,160,150),7);gesture.end(point(100,240,240),7);
+assert.deepEqual(actions,['drop'],'Intentional 240 ms flick also qualifies');
+begin();gesture.move(point(100,145,300),7);gesture.end(point(100,190,600),7);
+assert.equal(actions.length,4);assert.ok(actions.every(action=>action==='down'),'Slow dragging is soft drop only');
+begin();gesture.move(point(100,145,300),7);gesture.end(point(100,240,320),7);
+assert.ok(actions.every(action=>action==='down'),'A soft drag cannot turn into a hard drop on release');
+begin();gesture.end(point(100,200,500),7);assert.ok(actions.every(action=>action==='down'));
+begin();gesture.end(point(100,40,100),7);assert.deepEqual(actions,[],'Up swipe does not add a hold rule');
+begin();gesture.move(point(120,120,80),7);gesture.end(point(120,120,100),7);assert.deepEqual(actions,[],'Ambiguous diagonal is not a tap');
+begin();gesture.cancel();gesture.end(point(100,180,100),7);assert.deepEqual(actions,[]);
+begin();gesture.end(point(100,180,100,2),7);assert.deepEqual(actions,[],'Other pointers cannot finish this gesture');
+gesture.end(point(100,100,120),7);assert.deepEqual(actions,['rotate']);
+begin();gesture.end(point(100,180,100),8);assert.deepEqual(actions,[],'A released finger must not drop the next piece');
+begin();gesture.end(point(100,180,100),-1);assert.deepEqual(actions,[],'Paused input is cancelled');
+begin();assert.equal(gesture.begin({id:2,x:100,y:100,time:20,cellSize:24,piece:7}),false);
+gesture.end(point(100,180,100),7);assert.deepEqual(actions,[],'Multitouch cancels pending actions');
+for(const cellSize of [12,18,24,32,48]){
+  begin({cellSize});const step=gesture.state.step;
+  gesture.end(point(100+step*2.1,100,200),7);assert.deepEqual(actions,['right','right']);
+}
+begin();gesture.end(point(100000,100,100),7);assert.equal(actions.length,10,'Offscreen events cannot cause unbounded work');
+console.log('Pit Stack gestures passed: CW/CCW taps, jitter, relative drags/reversal, soft drop, exactly-one flick drop, axis lock, cancelled/paused/next-piece/multitouch input, scale-aware thresholds and bounded event work.');
