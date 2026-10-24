@@ -43,7 +43,7 @@
     <audio id="tetris-soundtrack" src="{% static 'league/audio/pit-stack-grid-lights-v1.m4a' %}" preload="none" loop playsinline hidden></audio>
     <div class="tetris-deck" id="tetris-deck">
       <div class="tetris-board" id="tetris-board">
-        <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — сброс, медленное движение вниз — ускорение. С клавиатуры: стрелки, пробел, P."></canvas>
+        <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — сброс, медленное движение вниз — ускорение. С клавиатуры: стрелки — движение и поворот, Enter — сброс, пробел — старт, пауза и продолжение; P — пауза."></canvas>
         <div class="tetris-overlay" id="tetris-overlay">
           <div class="tetris-start-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="pit-stack-eyebrow" id="tetris-overlay-caption">ГОТОВНОСТЬ К СТАРТУ</p>
@@ -70,5 +70,5 @@
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-audio-v7" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=pit-stack-audio-v7" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=pit-stack-space-v8" defer></script>
 {% endblock %}

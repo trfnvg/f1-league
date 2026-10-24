@@ -115,7 +115,7 @@ async function checkTouch(page,context) {
   await touch('touchStart',[{x,y,id:1},{x:x+20,y:y+20,id:2}]);await touch('touchEnd',[]);
   assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix)),original,'Second finger cancels pending tap');
   await reset();const serial=await page.evaluate(()=>window.__game.spawnSerial);
-  await touch('touchStart',[{x,y,id:1}]);await page.keyboard.press('Space');await touch('touchEnd',[]);
+  await touch('touchStart',[{x,y,id:1}]);await page.keyboard.press('Enter');await touch('touchEnd',[]);
   assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serial+1,'Held finger must not affect next piece');
   assert.equal(await page.evaluate(()=>window.scrollY),initialScroll,'Gestures must not scroll the page');
   await cdp.detach();
@@ -164,7 +164,7 @@ try {
     });
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
-    await page.locator('#tetris-start').click();
+    await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game?.phase==='running');
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
     try {
@@ -190,15 +190,21 @@ try {
     assert.equal(await page.evaluate(()=>window.__game.piece.x),x);
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.evaluate(()=>window.__game.score),1);
-    await page.keyboard.press('Space');
+    await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(()=>window.__game.board.flat().filter(Boolean).length),4);
-    await page.locator('#tetris-pause').click();
+    const serialBeforePause=await page.evaluate(()=>window.__game.spawnSerial);
+    const scrollBeforePause=await page.evaluate(()=>window.scrollY);
+    await page.keyboard.down('Space');
+    await page.keyboard.down('Space');
+    await page.keyboard.up('Space');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'Music pauses with the game');
     assert.equal(await page.evaluate(()=>window.__game.paused),true);
+    assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause,'Space pauses without dropping');
+    assert.equal(await page.evaluate(()=>window.scrollY),scrollBeforePause,'Space does not scroll the page');
     const snapshot=await page.evaluate(()=>JSON.stringify(window.__game.piece));
     await page.waitForTimeout(900);
     assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece)),snapshot);
-    await page.locator('#tetris-start').click();
+    await page.keyboard.press('Space');
     assert.equal(await page.evaluate(()=>window.__game.paused),false);
     await checkMusic(page);
     if(mobile) await checkTouch(page,context);
@@ -267,6 +273,13 @@ try {
     metrics=await measure();assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}ten full-resolution art venues, inline/fullscreen/landscape geometry, opaque field and all seven tile contrasts >= 4.5:1 passed`);
+    await page.evaluate(()=>{
+      window.__game.paused=false;window.__game.finish();window.dispatchEvent(new Event('resize'));
+    });
+    await page.waitForFunction(()=>document.getElementById('tetris-overlay-title').textContent==='Финиш!');
+    await page.locator('#tetris-canvas').focus();await page.keyboard.press('Space');
+    await page.waitForFunction(()=>window.__game.phase==='running');
+    assert.equal(await page.evaluate(()=>window.__game.score),0,'Space restarts after game over');
     await page.locator('#tetris-sound').click();
     await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
     assert.equal(await page.locator('#tetris-sound').getAttribute('aria-pressed'),'false','Muted preference survives reload');
