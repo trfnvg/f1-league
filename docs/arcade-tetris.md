@@ -1,0 +1,83 @@
+# Pit Stack · admin-only F1 falling-block prototype
+
+## Access and scope
+
+Open **Аркады → Управление аркадами → Лаборатория · новые игры → Pit Stack**,
+or `/arcade/play/tetris/` as an active staff user. Anonymous/ordinary users receive
+404, including with `?admin_test=1`. The GET-only view checks staff before reading
+contests or building leaderboards. No schema changes.
+
+This is a playable **test**, not a third published competition. `PREVIEW_GAMES`
+is separate from `GAMES`: the public library, publication dropdown, attempts,
+records, current contest and winner's wheel are unchanged. Forging a publication
+POST with `active_game=tetris` is rejected. No score, attempt or local high-score
+is saved; reloading starts a fresh session. Future publication will need its own
+server-side attempt/scoring validation and ranking integration, not just moving
+the entry into GAMES (existing models_for defaults to Flappy).
+
+## Rules and controls
+
+The user's “original tennis rules” was interpreted as “original Tetris rules”.
+This prototype uses familiar classic falling-block rules, not an exact emulator
+of any one historical release: 10 columns × 20 visible rows, all seven four-cell
+shapes, uniform independent random pieces, one-piece preview, clockwise rotation
+with small horizontal wall adjustments only, 350 ms lock grace capped at ten
+movement/rotation resets. No ghost, hold, enemies or wheel bonuses.
+
+Full rows clear together after a 180 ms visual effect. 1/2/3/4 rows award
+40/100/300/1200 × the current one-based level; soft drop awards 1 per cell, hard
+drop 2. Every ten lines increases the level and gravity, down to an 80 ms minimum
+cell interval. New-piece obstruction or lock above the board ends the run.
+
+Arrows or physical A/D/W/S (also work with Russian keyboard layout), X to rotate,
+Space to hard drop, P to pause. Touch buttons support pointer capture and
+hold-to-repeat. Focus loss, hidden tab and leaving fullscreen pause safely;
+resume is explicit. iPhone-compatible fixed-viewport fallback when element
+fullscreen is unavailable. Board always stays 1:2; no stretched geometry.
+
+## Graphics and performance
+
+Classic-first redesign: the game uses **no background illustration**, including
+no image preload. Solid graphite surrounds an opaque near-black 10×20 board
+with a faint grid. All seven bright traditional tile colours have uncluttered
+faces with a narrow retro bevel, without rivets, racing stripes or textures.
+F1 styling stays outside the play surface: a red trim, small checkered flag,
+pit-wall score panels and start lights. Rules/physics are unchanged.
+
+The initial garage illustration was generated **with built-in GPT imagegen** and
+is retained only for the admin laboratory card at
+`league/static/league/images/tetris-pit-garage-v1.png` (original 1536×1024).
+It is not loaded by the game page. Code-native tiles are cached once for all
+seven colours, not scaled/cropped pieces from an AI sheet.
+Canvas respects device pixel density up to 3×. Idle and
+paused states render once, not continuously. Only changed game states redraw;
+no persistent particles or unbounded scene objects. Background and block art
+are not quality-reduced. On resize, canvas repaints synchronously to prevent a
+black frame, including when paused.
+
+### Final generation prompt
+
+Use case: stylized-concept. Asset type: production background illustration for an actual Formula 1 themed falling-block puzzle browser game. Create one beautiful premium retro 16-bit pixel-art Formula 1 pit garage interior, landscape 3:2. Calm charcoal navy metal garage, warm overhead workshop lights, turquoise tool cabinets, neatly stacked racing tyres and red-white kerbs at the bottom edges, partial red racing car nose low on the right, garage door opening onto a distant sunlit race circuit on the left. Centre 45 percent is a very dark quiet unbroken workshop wall with subtle panel seams, so a tall playable puzzle board can be overlaid on it. Keep all busy recognisable decorations towards outer left and right thirds; plenty of restrained dark negative space. Handcrafted crisp pixel clusters, controlled warm ivory, steel blue, muted racing red and small turquoise highlights, cinematic arcade mood, clean silhouettes, coherent retro videogame background, sharp detailed but not noisy. No letters, no words, no numbers, no game UI, no blocks or puzzle board drawn into image, no border, no logos, no watermark. Opaque image, landscape composition.
+
+## Verification
+
+- `node tests/tetris_engine.mjs`: rules, all seven pieces, rotation/walls,
+  all four line clear counts, score/levels, pause, soft/hard drop, lock delay,
+  restart and 150,000 seeded random mutation steps across 1,644 games.
+- `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
+  21 tests including access control, no mutations, no public links, rejected
+  publication and existing arcade regression tests.
+- `PYTHON_BIN=/path/to/venv/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs
+  node tests/tetris_browser.mjs`: real Django template rendered without a DB,
+  real headless Chromium, 1440×1000, 390×844 and 320×568 screens, 2×/3× backing
+  density, keyboard, touch, pause/resume, inline/fullscreen/landscape geometry,
+  no script exceptions. Also checks no illustrated background and samples all
+  seven rendered tile colours for at least 4.5:1 contrast against the field.
+  Optional `TETRIS_PREVIEW_DIR` writes representative mixed-stack screenshots.
+  Third-party fonts/Bootstrap are blocked for repeatability.
+- Django migration check: no changes required. Existing pending unrelated
+  changes remain unmodified and must not be bundled into a future commit.
+
+Browser integration runtime failed to initialise; standalone local Chromium
+was used for these UI checks. This is not a physical iPhone/WebKit or laptop
+FPS benchmark, and no live deployment is implied.

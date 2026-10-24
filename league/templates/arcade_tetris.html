@@ -1,0 +1,60 @@
+{% extends "base.html" %}{% load static %}
+{% block title %}Pit Stack · F1-тетрис · Fastlap{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-classic-v2">
+{% endblock %}
+{% block content %}
+<main class="pit-stack-page">
+  <header class="pit-stack-heading">
+    <div><a href="{% url 'league:arcade_control' %}">← Управление аркадами</a><p class="pit-stack-eyebrow">FASTLAP LAB · ИГРА 03</p><h1>Pit Stack <span>F1-тетрис</span></h1></div>
+    <p class="pit-stack-private">Закрытый тест · только администратор<br><span>Без зачёта, колеса и записи результатов</span></p>
+  </header>
+
+  <section class="tetris-machine" id="tetris-machine" aria-label="Pit Stack — тестовая игра">
+    <div class="tetris-toolbar">
+      <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
+      <div class="tetris-toolbar-actions">
+        <button type="button" id="tetris-pause" disabled>Пауза</button>
+        <button type="button" id="tetris-fullscreen" aria-pressed="false">На весь экран</button>
+      </div>
+    </div>
+    <div class="tetris-deck" id="tetris-deck">
+      <div class="tetris-board" id="tetris-board">
+        <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Игровое поле 10 на 20 клеток. Стрелки — движение, вверх — поворот, пробел — сброс, P — пауза."></canvas>
+        <div class="tetris-overlay" id="tetris-overlay">
+          <div class="tetris-start-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="pit-stack-eyebrow" id="tetris-overlay-caption">ГОТОВНОСТЬ К СТАРТУ</p>
+          <h2 id="tetris-overlay-title">Собери<br>свой темп.</h2>
+          <p id="tetris-overlay-text">Собирай линии.<br>Держи гоночный темп.</p>
+          <button type="button" id="tetris-start">Начать заезд <span>↗</span></button>
+        </div>
+        <div class="tetris-line-message" id="tetris-line-message" aria-hidden="true"></div>
+      </div>
+      <aside class="tetris-telemetry" aria-label="Телеметрия">
+        <div class="tetris-stat tetris-stat-score"><span>Очки</span><strong id="tetris-score">0</strong></div>
+        <div class="tetris-stat"><span>Уровень</span><strong id="tetris-level">01</strong></div>
+        <div class="tetris-stat"><span>Линии</span><strong id="tetris-lines">0</strong><div class="tetris-progress"><i id="tetris-progress"></i></div></div>
+        <div class="tetris-stat tetris-next"><span>Следующая</span><canvas id="tetris-next" width="128" height="112" aria-label="Следующая фигура"></canvas></div>
+        <p class="tetris-session-label">ADMIN<br>TEST DRIVE</p>
+      </aside>
+    </div>
+    <div class="tetris-bottom">
+      <div class="tetris-controls" role="group" aria-label="Управление игрой">
+        <button type="button" data-action="left" aria-label="Влево">◀</button>
+        <button type="button" data-action="right" aria-label="Вправо">▶</button>
+        <button type="button" data-action="rotate" aria-label="Повернуть фигуру">↻</button>
+        <button type="button" data-action="down" aria-label="Ускорить падение">▼</button>
+        <button type="button" data-action="drop" class="tetris-drop" aria-label="Сбросить фигуру вниз">СБРОС <span>⤓</span></button>
+      </div>
+      <p class="tetris-key-hint">← → движение · ↑ поворот · ↓ быстрее · пробел сброс · P пауза</p>
+      <p class="tetris-status" id="tetris-status" role="status" aria-live="polite">Тестовый заезд. Результат не сохраняется.</p>
+    </div>
+  </section>
+  <section class="tetris-rules" aria-label="Правила"><h2>Классическая механика. Гоночный ритм.</h2><p>Семь фигур, поле 10×20. Заполненная горизонтальная линия исчезает. Каждые 10 линий скорость растёт. За 1 / 2 / 3 / 4 линии: 40 / 100 / 300 / 1200 очков × уровень. Игра заканчивается, когда для новой фигуры нет места.</p><p>На телефоне: кнопки внизу можно удерживать для движения. При сворачивании страницы игра ставится на паузу.</p></section>
+  <noscript><p>Для запуска Pit Stack включи JavaScript в браузере.</p></noscript>
+</main>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-v1" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=pit-stack-classic-v2" defer></script>
+{% endblock %}
