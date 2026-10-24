@@ -27,13 +27,50 @@ const server=http.createServer(async(req,res)=>{
   const target=path.resolve(root,'league/static',relative);
   if(!url.pathname.startsWith('/static/')||!target.startsWith(path.join(root,'league/static')+path.sep)){res.writeHead(404);res.end();return;}
   try {
-    const ext=path.extname(target),types={'.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp'};
+    const ext=path.extname(target),types={'.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.m4a':'audio/mp4'};
     res.setHeader('Content-Type',types[ext]||'application/octet-stream');res.end(await fs.readFile(target));
   }catch {res.writeHead(404);res.end();}
 });
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true});
 const errors=[];
+async function checkMusic(page) {
+  const media=page.locator('#tetris-soundtrack'),sound=page.locator('#tetris-sound');
+  await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
+  await sound.click();assert.equal(await media.evaluate(m=>m.paused),true,'Mute stops decoding/playback');
+  assert.equal(await page.evaluate(()=>window.__game.paused),false,'Sound controls do not pause gameplay');
+  const x=await page.evaluate(()=>window.__game.piece.x);
+  await page.locator('#tetris-volume').focus();await page.keyboard.press('ArrowRight');
+  assert.equal(await page.locator('#tetris-volume').inputValue(),'29');
+  assert.equal(await page.evaluate(()=>window.__game.piece.x),x,'Volume arrows must not move the piece');
+  await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
+  assert.equal(await page.evaluate(()=>window.__sound.volume),.29);
+  await sound.focus();const serial=await page.evaluate(()=>window.__game.spawnSerial);
+  await page.keyboard.press('Space');assert.equal(await media.evaluate(m=>m.paused),true);
+  assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serial,'Space on sound button must not hard-drop');
+  await sound.click();await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
+  await page.evaluate(()=>{window.__game.elapsed=45000*6;window.__game.revision++;});
+  await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').playbackRate>1.1);
+  await media.evaluate(m=>{m.currentTime=m.duration-.12;});
+  await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').currentTime<1);
+  assert.equal(await media.evaluate(m=>m.paused),false,'Track loops across the end');
+  await page.evaluate(()=>{window.__game.elapsed=0;window.__game.revision++;window.dispatchEvent(new Event('blur'));});
+  assert.equal(await media.evaluate(m=>m.paused),true,'Background/focus loss stops the soundtrack');
+  assert.equal(await page.evaluate(()=>window.__game.paused),true);
+  await page.locator('#tetris-start').click();await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
+  const signal=await page.evaluate(async()=>{
+    const bytes=await(await fetch(document.getElementById('tetris-soundtrack').src)).arrayBuffer();
+    const decoded=await window.__sound.context.decodeAudioData(bytes);
+    let peak=0,squares=0;
+    for(let channel=0;channel<decoded.numberOfChannels;channel++)
+      for(const sample of decoded.getChannelData(channel)){peak=Math.max(peak,Math.abs(sample));squares+=sample*sample;}
+    return {seconds:decoded.duration,channels:decoded.numberOfChannels,peak,
+      rms:Math.sqrt(squares/(decoded.length*decoded.numberOfChannels))};
+  });
+  // AudioBuffer decoding may expose AAC priming/padding that media.duration trims.
+  assert.ok(Math.abs(signal.seconds-60)<.1,JSON.stringify(signal));assert.equal(signal.channels,2);
+  assert.ok(signal.peak<.99 && signal.rms>.05,'Real decoded music is audible and has clipping headroom');
+}
 async function checkTouch(page,context) {
   const cdp=await context.newCDPSession(page);
   await page.locator('#tetris-canvas').scrollIntoViewIfNeeded();
@@ -119,11 +156,31 @@ try {
     await page.evaluate(()=>{
       const start=window.PitStack.Game.prototype.start;
       window.PitStack.Game.prototype.start=function(){window.__game=this;return start.call(this);};
+      const play=window.PitStackAudio.prototype.setPlaying;
+      window.PitStackAudio.prototype.setPlaying=function(...args){
+        window.__sound=this;(window.__audioEvents??=[]).push({args,stack:new Error().stack});
+        return play.apply(this,args);
+      };
     });
+    assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
     await page.locator('#tetris-start').click();
     await page.waitForFunction(()=>window.__game?.phase==='running');
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
+    try {
+      await page.waitForFunction(()=>{
+        const media=document.getElementById('tetris-soundtrack');
+        return !media.paused && media.currentTime>0 && media.readyState>=2;
+      },null,{timeout:8000});
+    } catch(error) {
+      console.error('Audio diagnostics',await page.locator('#tetris-soundtrack').evaluate(media=>({
+        error:media.error?.message,code:media.error?.code,paused:media.paused,time:media.currentTime,
+        ready:media.readyState,network:media.networkState,context:window.__sound?.context?.state,blocked:window.__sound?.blocked,
+        phase:window.__game?.phase,pausedGame:window.__game?.paused,active:window.__sound?.active,events:window.__audioEvents,
+      })));
+      throw error;
+    }
+    assert.ok(await page.locator('#tetris-soundtrack').evaluate(media=>Math.abs(media.duration-60)<.1),'Real soundtrack is 60 seconds');
     assert.equal(await page.locator('#tetris-scenery .is-visible img').getAttribute('src'),titleArtwork,
       'Starting the game keeps the title-screen artwork');
     const x=await page.evaluate(()=>window.__game.piece.x);
@@ -136,12 +193,14 @@ try {
     await page.keyboard.press('Space');
     assert.equal(await page.evaluate(()=>window.__game.board.flat().filter(Boolean).length),4);
     await page.locator('#tetris-pause').click();
+    assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'Music pauses with the game');
     assert.equal(await page.evaluate(()=>window.__game.paused),true);
     const snapshot=await page.evaluate(()=>JSON.stringify(window.__game.piece));
     await page.waitForTimeout(900);
     assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece)),snapshot);
     await page.locator('#tetris-start').click();
     assert.equal(await page.evaluate(()=>window.__game.paused),false);
+    await checkMusic(page);
     if(mobile) await checkTouch(page,context);
     // Exercise every actual renderer tile, not just colour constants in source.
     // A representative mixed stack also makes the optional screenshot useful.
@@ -198,11 +257,21 @@ try {
     if(mobile) await checkTouch(page,context);
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>!document.body.classList.contains('tetris-fullscreen'));
+    // Chromium's native window can finish exiting fullscreen after the DOM event.
+    const windowSession=await context.newCDPSession(page);
+    const {windowId}=await windowSession.send('Browser.getWindowForTarget');
+    await windowSession.send('Browser.setWindowBounds',{windowId,bounds:{windowState:'normal'}});
+    await windowSession.detach();
     await page.setViewportSize({width:844,height:390});
     await page.locator('#tetris-fullscreen').click();
     metrics=await measure();assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}ten full-resolution art venues, inline/fullscreen/landscape geometry, opaque field and all seven tile contrasts >= 4.5:1 passed`);
+    await page.locator('#tetris-sound').click();
+    await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
+    assert.equal(await page.locator('#tetris-sound').getAttribute('aria-pressed'),'false','Muted preference survives reload');
+    assert.equal(await page.locator('#tetris-volume').inputValue(),'29','Volume survives reload');
+    assert.equal(await page.locator('#tetris-soundtrack').evaluate(m=>m.paused),true);
     await context.close();
   }
   assert.deepEqual(errors,[],'No browser script errors');

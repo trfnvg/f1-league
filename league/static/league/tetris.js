@@ -10,6 +10,7 @@
   const pauseButton = byId('pause'), startButton = byId('start'), fullscreenButton = byId('fullscreen');
   const game = new Game();
   const scenery = new window.PitStackScenery(byId('scenery'),byId('venue'));
+  const soundtrack = new window.PitStackAudio(byId('soundtrack'),byId('sound'),byId('volume'));
   let shownPace=-1;
   const palette = {I:'#3ee6ed',J:'#4c84ff',L:'#ff9d3b',O:'#ffdf4a',S:'#69db6a',T:'#b783ff',Z:'#ff6268'};
   const blockCache = new Map();
@@ -99,12 +100,14 @@
       if (shownOverlay !== mode) {
         shownOverlay = mode;
         if(mode === 'over') {
+          soundtrack.setPlaying(false);
           byId('overlay-caption').textContent = 'ЗАЕЗД ЗАВЕРШЁН';
           byId('overlay-title').textContent = 'Финиш!';
           byId('overlay-text').textContent = `${game.score.toLocaleString('ru-RU')} очков · ${game.lines} линий`;
           startButton.textContent = 'Новый заезд ↗';
           clearHeld();
         } else if(mode === 'paused') {
+          soundtrack.setPlaying(false);
           byId('overlay-caption').textContent = 'КРАСНЫЙ ФЛАГ';
           byId('overlay-title').textContent = 'Пауза';
           byId('overlay-text').textContent = 'Передохни. Гараж подождёт.';
@@ -134,6 +137,7 @@
     schedule();
   }
   function updatePace() {
+    soundtrack.setPace(game.pace);
     const pace=Math.min(4,Math.floor(game.pace/3));
     if(shownPace===pace) return;
     shownPace=pace;
@@ -172,11 +176,18 @@
   function togglePause() {
     if(countdown) return;
     clearHeld();
-    if(game.pause()) { lastTime=0; canvas.focus({preventScroll:true}); schedule(); }
+    if(game.pause()) {
+      soundtrack.setPlaying(!game.paused);
+      lastTime=0; canvas.focus({preventScroll:true}); schedule();
+    }
   }
   function start() {
     if(countdown) return;
     if(game.paused) { togglePause(); return; }
+    // Disabling a focused start button emits focusout with no relatedTarget.
+    // Move focus inside the board first, so countdown does not pause its music.
+    canvas.focus({preventScroll:true});
+    soundtrack.setPlaying(true,true);
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
     scenery.reset();
     startButton.disabled = true;
@@ -224,6 +235,9 @@
   const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down',Space:'drop'};
   document.addEventListener('keydown',e=>{
     if(!machine.contains(document.activeElement) && !machine.classList.contains('is-fullscreen')) return;
+    // Range arrows and focused toolbar buttons keep native keyboard controls.
+    if(document.activeElement?.matches('input,select,textarea,[contenteditable="true"]'))return;
+    if(e.code==='Space' && document.activeElement?.closest('button'))return;
     if(e.code==='Escape') {
       if(game.active) togglePause();
       if(machine.classList.contains('is-fullscreen') && !document.fullscreenElement) setFullscreen(false);
@@ -239,6 +253,7 @@
   });
   document.addEventListener('keyup',e=>{ keys.delete(e.code); held.delete(`key-${e.code}`); });
   function autoPause() {
+    soundtrack.setPlaying(false);
     clearHeld();
     if(!game.paused && ['running','clearing'].includes(game.phase)) { game.pause(); schedule(); }
   }
