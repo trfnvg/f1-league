@@ -36,6 +36,7 @@
       this.clearing = []; this.clearClock = 0; this.fallClock = 0;
       this.lockClock = 0; this.lockResets = 0; this.lastClear = 0; this.clearSerial = 0;
       this.spawnSerial = 0;
+      this.lockSerial = 0; this.lastLock = null; this.lastClearCells = [];
       this.revision++;
     }
     randomType() { return TYPES[Math.min(6, Math.max(0, Math.floor(this.random()*7)))]; }
@@ -61,6 +62,12 @@
     get gravity() { return Math.max(65, 800*Math.pow(.78, this.pace)); }
     get lockDelay() { return Math.max(220, 350-this.pace*8); }
     grounded() { return this.piece && !this.fits({...this.piece, y: this.piece.y+1}); }
+    landing() {
+      if (!this.piece || this.phase !== 'running') return null;
+      let y = this.piece.y;
+      while (this.fits({...this.piece, y: y+1})) y++;
+      return {...this.piece, y};
+    }
     resetLock(wasGrounded) {
       if (wasGrounded && this.lockResets < 10) { this.lockClock = 0; this.lockResets++; }
     }
@@ -98,14 +105,15 @@
     }
     drop() {
       if (!this.active) return false;
-      let distance = 0;
-      while (this.fits({...this.piece, y: this.piece.y+1})) { this.piece.y++; distance++; }
+      const landing = this.landing(), distance = landing.y-this.piece.y;
+      this.piece = landing;
       this.score += distance*2; this.lock(); return true;
     }
     lock() {
       const occupied = cells(this.piece);
       if (occupied.some(({y}) => y < 0)) { this.finish(); return; }
       occupied.forEach(({x,y}) => { this.board[y][x] = this.piece.type; });
+      this.lastLock = {type: this.piece.type, cells: occupied}; this.lockSerial++;
       this.piece = null;
       this.clearing = [];
       this.board.forEach((row,y) => { if (row.every(Boolean)) this.clearing.push(y); });
@@ -115,6 +123,7 @@
     }
     resolveClear() {
       const count = this.clearing.length;
+      this.lastClearCells = this.clearing.flatMap(y => this.board[y].map((type,x) => ({x,y,type})));
       this.board = this.board.filter((_,y) => !this.clearing.includes(y));
       while (this.board.length < ROWS) this.board.unshift(Array(COLS).fill(null));
       this.score += [0,40,100,300,1200][count]*this.level;

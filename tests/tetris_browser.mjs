@@ -34,6 +34,65 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true});
 const errors=[];
+async function checkFeedback(page,name) {
+  const nextFrame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const snapshot=()=>page.evaluate(()=>JSON.stringify({board:window.__game.board,piece:window.__game.piece,score:window.__game.score}));
+  await page.evaluate(()=>{
+    const g=window.__game;g.board.forEach(row=>row.fill(null));
+    g.piece={type:'T',matrix:window.PitStack.SHAPES.T.map(row=>row.slice()),x:3,y:2};
+    g.fallClock=-100000;g.lockSerial=0;g.lastLock=null;g.clearSerial=0;g.lastClear=0;
+    window.__feedback.reset();g.revision++;
+  });
+  await nextFrame();
+  const sample=()=>page.evaluate(()=>{
+    const c=document.getElementById('tetris-canvas'),ctx=c.getContext('2d'),p=window.PitStack.cells(window.__game.landing())[0];
+    return [...ctx.getImageData(Math.floor((p.x*32+16)*c.width/320),Math.floor((p.y*32+1)*c.height/640),1,1).data].slice(0,3).reduce((a,b)=>a+b);
+  });
+  const before=await snapshot(),on=await sample();
+  await page.locator('#tetris-ghost').click();await nextFrame();
+  const off=await sample();assert.ok(on>off+30,`${name}: thin ghost outline is visible and can be disabled (${on}/${off})`);
+  assert.equal(await snapshot(),before,'Ghost toggle is read-only');
+  await page.locator('#tetris-ghost').click();await nextFrame();
+  assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'true');
+  await page.evaluate(()=>{
+    const g=window.__game;g.board.forEach(row=>row.fill(null));
+    for(let y=16;y<20;y++){g.board[y].fill('J');g.board[y][5]=null;}
+    g.piece={type:'I',matrix:[[1],[1],[1],[1]],x:5,y:16};
+    g.score=0;g.lines=0;g.level=1;g.clearSerial=0;g.lockSerial=0;g.lastLock=null;
+    window.__feedback.reset();g.revision++;
+  });
+  await page.locator('#tetris-canvas').focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>window.__game.clearSerial===1 && window.__feedback.chips.length>0);
+  await page.evaluate(()=>{
+    window.__freezeFeedback=true;window.__feedback.chips.forEach(chip=>chip.age=85);
+    window.__feedback.dirty=true;window.dispatchEvent(new Event('resize'));
+  });
+  assert.equal(await page.evaluate(()=>window.__game.score),1200);
+  assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>node.classList.contains('is-celebrating')),true);
+  assert.equal(await page.locator('#tetris-track-lights i').count(),10);
+  assert.equal(await page.locator('#tetris-feedback').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
+  const rails=await page.evaluate(()=>{
+    const r=node=>node.getBoundingClientRect();
+    const machine=r(document.getElementById('tetris-machine')),board=r(document.getElementById('tetris-board'));
+    const telemetry=r(document.querySelector('.tetris-telemetry')),[left,right]=[...document.querySelectorAll('#tetris-track-lights > div')].map(r);
+    const a=document.getElementById('tetris-canvas'),b=document.getElementById('tetris-feedback');
+    return {outside:left.right<=board.left && right.left>=board.right,
+      fits:left.left>=machine.left && right.right<=telemetry.left,samePixels:a.width===b.width && a.height===b.height};
+  });
+  assert.deepEqual(rails,{outside:true,fits:true,samePixels:true},'Lights stay outside the field and clear of telemetry, at matching DPR');
+  const x=await page.evaluate(()=>window.__game.piece.x);await page.keyboard.press('ArrowLeft');
+  assert.equal(await page.evaluate(()=>window.__game.piece.x),x-1,'Next piece remains controllable during particles/lights');
+  assert.ok(await page.locator('#tetris-score').evaluate(node=>node.scrollWidth<=node.clientWidth),'Celebration score fits on one line');
+  if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-feedback-${name}.png`)});
+  await page.evaluate(()=>{window.__game.score=1200000;window.__game.revision++;});await nextFrame();
+  assert.ok(await page.locator('#tetris-score').evaluate(node=>node.scrollWidth<=node.clientWidth),'Large scores also fit the mobile panel');
+  await page.evaluate(()=>{
+    const g=window.__game;window.__freezeFeedback=false;window.__feedback.reset();
+    g.board.forEach(row=>row.fill(null));g.lines=0;g.level=1;g.score=0;
+    g.lockSerial=0;g.clearSerial=0;g.lastLock=null;g.lastClear=0;g.lastClearCells=[];
+    g.fallClock=-100000;g.revision++;
+  });
+}
 async function checkMusic(page) {
   const media=page.locator('#tetris-soundtrack'),sound=page.locator('#tetris-sound');
   await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
@@ -161,6 +220,9 @@ try {
         window.__sound=this;(window.__audioEvents??=[]).push({args,stack:new Error().stack});
         return play.apply(this,args);
       };
+      const observe=window.PitStackFeedback.prototype.observe,step=window.PitStackFeedback.prototype.step;
+      window.PitStackFeedback.prototype.observe=function(game){window.__feedback=this;return observe.call(this,game);};
+      window.PitStackFeedback.prototype.step=function(...args){if(!window.__freezeFeedback)return step.apply(this,args);};
     });
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
@@ -207,6 +269,7 @@ try {
     await page.keyboard.press('Space');
     assert.equal(await page.evaluate(()=>window.__game.paused),false);
     await checkMusic(page);
+    await checkFeedback(page,name);
     if(mobile) await checkTouch(page,context);
     // Exercise every actual renderer tile, not just colour constants in source.
     // A representative mixed stack also makes the optional screenshot useful.
@@ -281,9 +344,11 @@ try {
     await page.waitForFunction(()=>window.__game.phase==='running');
     assert.equal(await page.evaluate(()=>window.__game.score),0,'Space restarts after game over');
     await page.locator('#tetris-sound').click();
+    await page.locator('#tetris-ghost').click();
     await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
     assert.equal(await page.locator('#tetris-sound').getAttribute('aria-pressed'),'false','Muted preference survives reload');
     assert.equal(await page.locator('#tetris-volume').inputValue(),'29','Volume survives reload');
+    assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'false','Ghost preference survives reload');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(m=>m.paused),true);
     await context.close();
   }

@@ -22,7 +22,7 @@ This prototype uses familiar classic falling-block rules, not an exact emulator
 of any one historical release: 10 columns × 20 visible rows, all seven four-cell
 shapes, uniform independent random pieces, one-piece preview, bidirectional rotation
 with small horizontal wall adjustments only, 350–220 ms lock grace capped at ten
-movement/rotation resets. No ghost, hold, enemies or wheel bonuses.
+movement/rotation resets. No hold, enemies or wheel bonuses.
 
 Full rows clear together after a 180 ms visual effect. 1/2/3/4 rows award
 40/100/300/1200 × the current one-based level; soft drop awards 1 per cell, hard
@@ -108,6 +108,28 @@ Use case: stylized-concept. Asset type: production background illustration for a
 
 ## Verification
 
+### Landing guide and feedback
+
+The default-on landing guide uses `Game.landing()`, the same read-only projection
+used by hard drop. It traces only the outer silhouette, at 46% stroke opacity
+with a 3.5% tint, and hides when the active piece is already at its landing
+position. The dotted-piece toolbar button toggles it and stores the choice in
+`fastlap.pitStack.ghost.v1`; disabled/corrupt storage keeps the guide usable.
+
+`tetris-feedback.js` uses a separate transparent canvas at the same DPR as the
+board. Locked tiles gently compress by at most 5.5% for 150 ms, with a small
+grounding glint. Cleared rows contract/fade within the existing 180 ms clear
+window; their original colours become 80 tiny chips for a four-line clear,
+bounded at 120 live chips, which expire after 260–335 ms. Four lines trigger
+one finite pair of five-light rails outside the playfield, lasting <1 second.
+Reward text sits above the score panel, not over falling pieces.
+
+Effects observe bounded lock/clear snapshots without changing collision, gravity,
+score, input or next-piece timing. Pause freezes both canvas effects and CSS
+lights; restart/game over clear them. Reduced motion disables squash, chips
+and animated lights (a steady short light indication remains). Settled effects
+do not force redraws, and HUD/next-piece rendering is skipped on effect-only frames.
+
 ### Soundtrack
 
 **Grid Lights** is an original, deterministic chiptune composition written for
@@ -153,6 +175,10 @@ stale completions cannot resume music after pause/mute. No audio animation timer
   network failure retention/recovery, stale load completion protection and reset.
 - `node tests/tetris_audio.mjs`: no autoplay, persisted preferences, volume/gain,
   tempo cap, pause/play promise races, rejected playback retry, denied storage.
+- `node tests/tetris_feedback.mjs`: physics isolation, subtle tile compression,
+  particle cap/expiry, finite lights, pause, reduced motion and idle cleanup.
+  Engine checks also cover projection for seven pieces/rotations on uneven stacks
+  and exact agreement between guide and hard-drop footprints.
 - `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
   21 tests including access control, no mutations, no public links, rejected
   publication, removed UI and existing arcade regression tests.

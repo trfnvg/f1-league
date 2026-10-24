@@ -19,6 +19,21 @@
   let request = 0, lastTime = 0, renderedRevision = -1, clearSerial = 0;
   let messageTimer = 0, startTimer = 0, countdown = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
+  const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
+  let showGhost=true;
+  try {showGhost=localStorage.getItem(ghostKey)!=='false';} catch {}
+  function ghostLabel() {
+    ghostButton.setAttribute('aria-pressed',String(showGhost));
+    ghostButton.setAttribute('aria-label',showGhost?'Скрыть контур приземления':'Показать контур приземления');
+    ghostButton.title=showGhost?'Контур приземления включён':'Контур приземления выключен';
+  }
+  ghostLabel();
+  ghostButton.addEventListener('click',()=>{
+    showGhost=!showGhost;ghostLabel();
+    try {localStorage.setItem(ghostKey,String(showGhost));} catch {}
+    renderedRevision=-1;schedule();
+  });
 
   function block(type) {
     if (blockCache.has(type)) return blockCache.get(type);
@@ -51,6 +66,7 @@
     }
     nextCanvas.width = Math.round(128*dpr); nextCanvas.height = Math.round(112*dpr);
     nextCtx.imageSmoothingEnabled = false; fittedDpr = dpr;
+    feedback.resize(pixelWidth,pixelHeight);
     // Resizing clears Canvas synchronously. Repaint now, including while paused,
     // rather than leaving a black frame until the browser's next animation tick.
     renderedRevision = -1; draw(); schedule();
@@ -67,6 +83,7 @@
     for (const p of occupied) nextCtx.drawImage(block(game.next),startX+(p.x-minX)*size,startY+(p.y-minY)*size,size,size);
   }
   function draw() {
+    feedback.observe(game);
     ctx.setTransform(canvas.width/320,0,0,canvas.height/640,0,0);
     ctx.fillStyle = '#07090f'; ctx.fillRect(0,0,320,640);
     ctx.strokeStyle = '#161b25'; ctx.lineWidth = .5;
@@ -74,57 +91,81 @@
     for (let x=1;x<10;x++) { ctx.moveTo(x*32,0); ctx.lineTo(x*32,640); }
     for (let y=1;y<20;y++) { ctx.moveTo(0,y*32); ctx.lineTo(320,y*32); }
     ctx.stroke();
+    if(showGhost && game.piece) {
+      const landing=game.landing();
+      if(landing && landing.y!==game.piece.y) {
+        const projected=cells(landing).filter(cell=>cell.y>=0);
+        const occupied=new Set(projected.map(cell=>`${cell.x},${cell.y}`));
+        ctx.save();ctx.fillStyle=palette[landing.type];ctx.globalAlpha=.035;
+        for(const p of projected)ctx.fillRect(p.x*32+1,p.y*32+1,30,30);
+        ctx.globalAlpha=.46;ctx.strokeStyle=palette[landing.type];ctx.lineWidth=1.4;
+        ctx.beginPath();
+        // Only the outside silhouette is outlined, so it cannot look like a stack.
+        for(const {x,y} of projected) {
+          if(!occupied.has(`${x},${y-1}`)){ctx.moveTo(x*32+.8,y*32+.8);ctx.lineTo((x+1)*32-.8,y*32+.8);}
+          if(!occupied.has(`${x},${y+1}`)){ctx.moveTo(x*32+.8,(y+1)*32-.8);ctx.lineTo((x+1)*32-.8,(y+1)*32-.8);}
+          if(!occupied.has(`${x-1},${y}`)){ctx.moveTo(x*32+.8,y*32+.8);ctx.lineTo(x*32+.8,(y+1)*32-.8);}
+          if(!occupied.has(`${x+1},${y}`)){ctx.moveTo((x+1)*32-.8,y*32+.8);ctx.lineTo((x+1)*32-.8,(y+1)*32-.8);}
+        }
+        ctx.stroke();ctx.restore();
+      }
+    }
     game.board.forEach((row,y) => row.forEach((type,x) => {
-      if(type) ctx.drawImage(block(type),x*32,y*32,32,32);
+      if(!type)return;
+      const scale=feedback.squash(x,y);
+      const p=game.clearing.includes(y)?Math.min(1,game.clearClock/180):0;
+      const inset=reduceMotion?0:p*7;
+      ctx.globalAlpha=reduceMotion?1:1-p*p;
+      ctx.drawImage(block(type),x*32+inset,y*32+32*(1-scale)+inset,32-2*inset,32*scale-2*inset);
+      ctx.globalAlpha=1;
     }));
     if (game.piece) for (const p of cells(game.piece)) {
       if (p.y >= 0) ctx.drawImage(block(game.piece.type),p.x*32,p.y*32,32,32);
     }
-    if (game.clearing.length) {
-      const progress = Math.min(1,game.clearClock/180);
-      ctx.fillStyle = reduceMotion ? '#f0dfb8aa' : `rgba(240,223,184,${.85*(1-progress)})`;
-      for(const y of game.clearing) ctx.fillRect(0,y*32,320,32);
-    }
-    byId('score').textContent = game.score.toLocaleString('ru-RU');
-    byId('lines').textContent = game.lines;
-    scenery.update(game.lines);
-    byId('route-progress').style.width=`${(game.lines%10)*10}%`;
-    updatePace();
-    drawNext();
-    const playable = ['running','clearing'].includes(game.phase);
-    pauseButton.disabled = !playable || countdown;
-    pauseButton.textContent = game.paused ? 'Продолжить' : 'Пауза';
-    if (!countdown) {
-      const mode = game.paused ? 'paused' : game.phase;
-      overlay.hidden = playable && !game.paused;
-      if (shownOverlay !== mode) {
-        shownOverlay = mode;
-        if(mode === 'over') {
-          soundtrack.setPlaying(false);
-          byId('overlay-caption').textContent = 'ЗАЕЗД ЗАВЕРШЁН';
-          byId('overlay-title').textContent = 'Финиш!';
-          byId('overlay-text').textContent = `${game.score.toLocaleString('ru-RU')} очков · ${game.lines} линий`;
-          startButton.textContent = 'Новый заезд ↗';
-          clearHeld();
-        } else if(mode === 'paused') {
-          soundtrack.setPlaying(false);
-          byId('overlay-caption').textContent = 'КРАСНЫЙ ФЛАГ';
-          byId('overlay-title').textContent = 'Пауза';
-          byId('overlay-text').textContent = 'Передохни. Гараж подождёт.';
-          startButton.textContent = 'Продолжить ↗';
+    if(renderedRevision!==game.revision) {
+      const score=game.score.toLocaleString('ru-RU');
+      byId('score').textContent = score;
+      byId('score').style.setProperty('--score-chars',Math.max(1,score.length));
+      byId('lines').textContent = game.lines;
+      scenery.update(game.lines);
+      byId('route-progress').style.width=`${(game.lines%10)*10}%`;
+      updatePace();
+      drawNext();
+      const playable = ['running','clearing'].includes(game.phase);
+      pauseButton.disabled = !playable || countdown;
+      pauseButton.textContent = game.paused ? 'Продолжить' : 'Пауза';
+      if (!countdown) {
+        const mode = game.paused ? 'paused' : game.phase;
+        overlay.hidden = playable && !game.paused;
+        if (shownOverlay !== mode) {
+          shownOverlay = mode;
+          if(mode === 'over') {
+            soundtrack.setPlaying(false);
+            byId('overlay-caption').textContent = 'ЗАЕЗД ЗАВЕРШЁН';
+            byId('overlay-title').textContent = 'Финиш!';
+            byId('overlay-text').textContent = `${game.score.toLocaleString('ru-RU')} очков · ${game.lines} линий`;
+            startButton.textContent = 'Новый заезд ↗';
+            clearHeld();
+          } else if(mode === 'paused') {
+            soundtrack.setPlaying(false);
+            byId('overlay-caption').textContent = 'КРАСНЫЙ ФЛАГ';
+            byId('overlay-title').textContent = 'Пауза';
+            byId('overlay-text').textContent = 'Передохни. Гараж подождёт.';
+            startButton.textContent = 'Продолжить ↗';
+          }
         }
       }
+      if (clearSerial !== game.clearSerial) {
+        clearSerial = game.clearSerial;
+        const label = ['','ЛИНИЯ!','ДВОЙНАЯ!','ТРОЙНАЯ!','ПОУЛ-ПОЗИШЕН!'][game.lastClear];
+        const message = byId('line-message'); message.textContent = label;
+        message.classList.remove('is-visible');
+        // Restart a single finite CSS animation only when a row clear completes.
+        void message.offsetWidth; message.classList.add('is-visible');
+        clearTimeout(messageTimer); messageTimer = setTimeout(()=>message.classList.remove('is-visible'),950);
+      }
     }
-    if (clearSerial !== game.clearSerial) {
-      clearSerial = game.clearSerial;
-      const label = ['','ЛИНИЯ!','ДВОЙНАЯ!','ТРОЙНАЯ!','ПОУЛ-ПОЗИШЕН!'][game.lastClear];
-      const message = byId('line-message'); message.textContent = label;
-      message.classList.remove('is-visible');
-      // Restart a single finite CSS animation only when a row clear completes.
-      void message.offsetWidth; message.classList.add('is-visible');
-      clearTimeout(messageTimer); messageTimer = setTimeout(()=>message.classList.remove('is-visible'),950);
-    }
-    renderedRevision = game.revision;
+    feedback.paint();renderedRevision = game.revision;
   }
   function act(action) {
     if (!game.active || countdown) return;
@@ -134,6 +175,7 @@
     if(action==='rotateCCW') game.turn(-1);
     if(action==='down') game.down();
     if(action==='drop') game.drop();
+    feedback.observe(game);
     schedule();
   }
   function updatePace() {
@@ -167,8 +209,10 @@
     const dt = lastTime ? Math.max(0,Math.min(50,time-lastTime)) : 0; lastTime = time;
     if(fittedDpr !== Math.min(3,window.devicePixelRatio||1)) resize();
     if(!countdown && !game.paused) { updateHeld(dt); game.update(dt); }
+    feedback.observe(game);
+    feedback.step(dt,game.paused || countdown);
     updatePace();
-    if(renderedRevision !== game.revision) draw();
+    if(renderedRevision !== game.revision || feedback.dirty) draw();
     if(!game.paused && ['running','clearing'].includes(game.phase)) schedule();
     else lastTime = 0;
   }
@@ -177,6 +221,7 @@
     if(countdown) return;
     clearHeld();
     if(game.pause()) {
+      feedback.observe(game);
       soundtrack.setPlaying(!game.paused);
       lastTime=0; canvas.focus({preventScroll:true}); schedule();
     }
@@ -189,6 +234,7 @@
     canvas.focus({preventScroll:true});
     soundtrack.setPlaying(true,true);
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
+    feedback.reset();
     scenery.reset();
     startButton.disabled = true;
     byId('overlay-caption').textContent = 'ПЯТЬ КРАСНЫХ ОГНЕЙ';
@@ -265,7 +311,7 @@
   function autoPause() {
     soundtrack.setPlaying(false);
     clearHeld();
-    if(!game.paused && ['running','clearing'].includes(game.phase)) { game.pause(); schedule(); }
+    if(!game.paused && ['running','clearing'].includes(game.phase)) { game.pause(); feedback.observe(game); schedule(); }
   }
   document.addEventListener('visibilitychange',()=>{ if(document.hidden) autoPause(); });
   window.addEventListener('blur',autoPause);
