@@ -73,6 +73,8 @@ F1 styling stays outside the play surface: a red trim, small checkered flag,
 pit-wall score panels and start lights. Backgrounds advance every ten cleared
 lines, in shuffled sets of ten, with no adjacent repeat even between sets.
 The first load starts at Monaco to match the server-rendered, high-priority image.
+Starting or restarting keeps the currently displayed title-screen venue; the
+first transition is only after ten lines. Reset invalidates old-run downloads.
 Two reusable image layers crossfade for 1.4 seconds; reduced-motion switches
 instantly. The next venue alone is prefetched. Images are asynchronously decoded
 before switching: failed loads retain the old art, and stale completions cannot

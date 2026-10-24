@@ -23,6 +23,10 @@ function fixture(){
   assert.equal(scenery.current,0);assert.equal(label.textContent,'МОНАКО');
   assert.equal(pending.length,1,'Only the next venue is prefetched');
   const old=children.find(layer=>layer.visible).image;
+  assert.equal(await scenery.reset(),true);
+  assert.equal(scenery.current,0,'Starting a run retains the title-screen venue');
+  assert.equal(children.find(layer=>layer.visible).image,old,'Starting must not replace or fade the artwork');
+  await scenery.update(9);assert.equal(scenery.current,0,'First change is after ten lines');
   const failed=scenery.update(10);pending.shift().reject(new Error('offline'));
   assert.equal(await failed,false);assert.equal(scenery.current,0);
   assert.equal(children.find(layer=>layer.visible).image,old,'Keep old pixels after download failure');
@@ -42,6 +46,15 @@ function fixture(){
   // Reset may reuse the next prefetched image or start one additional load.
   for(const request of pending.splice(0))request.resolve();
   assert.equal(await reset,true);assert.equal(scenery.stage,0);
+  assert.equal(scenery.current,current,'Restart retains the previously displayed venue');
   assert.equal(children.length,2);
+}
+{
+  const {children,scenery}=fixture();pending.shift().resolve();await scenery.ready;
+  const old=children.find(layer=>layer.visible).image;
+  const transition=scenery.update(10),download=pending.shift();
+  await scenery.reset();download.resolve();assert.equal(await transition,false);
+  assert.equal(scenery.current,0,'An old-run download cannot change the new-run title artwork');
+  assert.equal(children.find(layer=>layer.visible).image,old);
 }
 console.log('Pit Stack scenery passed: decode-before-show, single next prefetch, failure retention, recovery, stale completion protection and reset.');

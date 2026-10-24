@@ -120,9 +120,12 @@ try {
       const start=window.PitStack.Game.prototype.start;
       window.PitStack.Game.prototype.start=function(){window.__game=this;return start.call(this);};
     });
+    const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
     await page.locator('#tetris-start').click();
     await page.waitForFunction(()=>window.__game?.phase==='running');
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
+    assert.equal(await page.locator('#tetris-scenery .is-visible img').getAttribute('src'),titleArtwork,
+      'Starting the game keeps the title-screen artwork');
     const x=await page.evaluate(()=>window.__game.piece.x);
     await page.keyboard.press('ArrowLeft');
     assert.equal(await page.evaluate(()=>window.__game.piece.x),x-1);
