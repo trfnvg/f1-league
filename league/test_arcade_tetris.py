@@ -38,11 +38,15 @@ class TetrisPreviewTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "arcade_tetris.html")
-        for text in ("Pit Stack", 'id="tetris-canvas"', "tetris-engine.js", 'data-action="rotate"',
-                     "Без зачёта, колеса и записи результатов"):
+        for text in ("Pit Stack", 'id="tetris-canvas"', "tetris-engine.js", "tetris-gestures.js",
+                     "tetris-scenery.js", "Лаборатория · закрытый тест"):
             self.assertContains(response, text)
         self.assertEqual([model.objects.count() for model in tracked], before)
         self.assertNotContains(response, 'id="arcade-wheel-panel"')
+        for text in ('class="tetris-controls"', 'id="tetris-level"', 'id="tetris-status"',
+                     'class="tetris-rules"', 'class="tetris-key-hint"',
+                     "Классическая механика. Гоночный ритм.", "Тестовый заезд. Результат не сохраняется."):
+            self.assertNotContains(response, text)
 
     def test_only_control_contains_preview_not_public_library(self):
         self.client.force_login(self.admin)

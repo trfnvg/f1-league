@@ -20,29 +20,59 @@ the entry into GAMES (existing models_for defaults to Flappy).
 The user's “original tennis rules” was interpreted as “original Tetris rules”.
 This prototype uses familiar classic falling-block rules, not an exact emulator
 of any one historical release: 10 columns × 20 visible rows, all seven four-cell
-shapes, uniform independent random pieces, one-piece preview, clockwise rotation
-with small horizontal wall adjustments only, 350 ms lock grace capped at ten
+shapes, uniform independent random pieces, one-piece preview, bidirectional rotation
+with small horizontal wall adjustments only, 350–220 ms lock grace capped at ten
 movement/rotation resets. No ghost, hold, enemies or wheel bonuses.
 
 Full rows clear together after a 180 ms visual effect. 1/2/3/4 rows award
 40/100/300/1200 × the current one-based level; soft drop awards 1 per cell, hard
-drop 2. Every ten lines increases the level and gravity, down to an 80 ms minimum
-cell interval. New-piece obstruction or lock above the board ends the run.
+drop 2. Every ten lines increases the score multiplier. Difficulty uses the larger
+of cleared-line tier and active-time tier (45 seconds per tier): gravity is
+800 × 0.78^tier, bounded at 65 ms per cell; lock grace decreases by 8 ms per tier,
+bounded at 220 ms. Pauses/hidden tabs do not accrue time. Accumulated fractional
+gravity time is retained, including multiple cell steps when required by a frame.
+New-piece obstruction or lock above the board ends the run.
 
-Arrows or physical A/D/W/S (also work with Russian keyboard layout), X to rotate,
-Space to hard drop, P to pause. Touch buttons support pointer capture and
-hold-to-repeat. Focus loss, hidden tab and leaving fullscreen pause safely;
+Arrows or physical A/D/W/S (also work with Russian keyboard layout), X for
+clockwise / Z for counterclockwise rotation, Space to hard drop, P to pause.
+Keyboard hold-to-repeat is retained. There are no bottom action buttons, rules
+description, visible keyboard instructions or test-status text. The level and
+its progress bar are removed from the HUD; scoring multipliers remain line-based.
+The compact tempo indicator describes increasing pressure without a level number.
+
+Mobile input follows the [official Tetris Mobile swipe scheme](https://playstudios.helpshift.com/hc/en/16-tetris-mobile/faq/2953-tetris-controls/?l=en&p=web):
+relative horizontal drag moves the piece, right-side tap rotates clockwise,
+left-side tap rotates counterclockwise. Slow downward dragging soft-drops;
+an intentional quick downward flick hard-drops exactly once. No up-swipe hold
+is introduced, because this game has no hold rule. These are independently
+implemented controls, not copied application code or assets.
+
+`tetris-gestures.js` is a DOM-free recognizer with cell-relative sensitivity,
+6–10 px jitter slop and a locked movement axis. Hard-drop requires a primarily
+downward gesture of at least 28 px / 1.8 movement steps, no more than 320 ms,
+and at least 0.45 CSS px/ms. Once a slow soft-drop has started, releasing never
+hard-drops. Pointer capture permits off-board releases; multitouch, pause,
+resize, pointer cancellation and new-piece spawning cancel pending gestures.
+Spawn serials prevent a held finger from dropping/rotating a subsequent piece.
+No swipe scroll, text selection or browser zoom is enabled on the board; the
+rest of the page retains normal browser gestures. No gesture timers run idle.
+
+Focus loss, hidden tab and leaving fullscreen pause safely;
 resume is explicit. iPhone-compatible fixed-viewport fallback when element
 fullscreen is unavailable. Board always stays 1:2; no stretched geometry.
 
 ## Graphics and performance
 
-Classic-first redesign: the game uses **no background illustration**, including
-no image preload. Solid graphite surrounds an opaque near-black 10×20 board
+World Tour: four original code-native vector panoramas depict a Riviera marina,
+desert circuit, night city and Alpine circuit, with kerbs, grandstands and a car.
+They sit outside an opaque near-black 10×20 board
 with a faint grid. All seven bright traditional tile colours have uncluttered
 faces with a narrow retro bevel, without rivets, racing stripes or textures.
 F1 styling stays outside the play surface: a red trim, small checkered flag,
-pit-wall score panels and start lights. Rules/physics are unchanged.
+pit-wall score panels and start lights. Backgrounds advance every ten cleared
+lines, in shuffled sets of four, with no adjacent repeat even between sets.
+Two reusable SVG layers crossfade for 1.4 seconds; reduced-motion switches
+instantly. There are no image downloads or permanent scenery animation loops.
 
 The initial garage illustration was generated **with built-in GPT imagegen** and
 is retained only for the admin laboratory card at
@@ -64,14 +94,19 @@ Use case: stylized-concept. Asset type: production background illustration for a
 - `node tests/tetris_engine.mjs`: rules, all seven pieces, rotation/walls,
   all four line clear counts, score/levels, pause, soft/hard drop, lock delay,
   restart and 150,000 seeded random mutation steps across 1,644 games.
+- `node tests/tetris_gestures.mjs`: taps in both directions, jitter, relative
+  drag/reversal, fast/slow downward input, exactly-once hard-drop, axis lock,
+  multitouch, cancel/pause/new-piece protection and bounded input work.
 - `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
   21 tests including access control, no mutations, no public links, rejected
-  publication and existing arcade regression tests.
+  publication, removed UI and existing arcade regression tests.
 - `PYTHON_BIN=/path/to/venv/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs
   node tests/tetris_browser.mjs`: real Django template rendered without a DB,
   real headless Chromium, 1440×1000, 390×844 and 320×568 screens, 2×/3× backing
-  density, keyboard, touch, pause/resume, inline/fullscreen/landscape geometry,
-  no script exceptions. Also checks no illustrated background and samples all
+  density, keyboard, trusted touch taps/drags/flick/cancel/multitouch and a
+  finger held across spawning, pause/resume, inline/fullscreen/landscape geometry,
+  no script exceptions. Also checks bounded scenery layers, shuffled tours without
+  adjacent repeats, an opaque play surface, and samples all
   seven rendered tile colours for at least 4.5:1 contrast against the field.
   Optional `TETRIS_PREVIEW_DIR` writes representative mixed-stack screenshots.
   Third-party fonts/Bootstrap are blocked for repeatability.

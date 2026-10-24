@@ -34,6 +34,55 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true});
 const errors=[];
+async function checkTouch(page,context) {
+  const cdp=await context.newCDPSession(page);
+  await page.locator('#tetris-canvas').scrollIntoViewIfNeeded();
+  const rect=await page.locator('#tetris-canvas').boundingBox(),cell=rect.width/10;
+  const x=rect.x+rect.width*.5,y=rect.y+rect.height*.3;
+  const initialScroll=await page.evaluate(()=>window.scrollY);
+  async function reset() {
+    await page.evaluate(()=>{
+      const game=window.__game;
+      game.board.forEach(row=>row.fill(null));
+      game.piece={type:'T',matrix:window.PitStack.SHAPES.T.map(row=>row.slice()),x:3,y:2};
+      game.fallClock=-100000;game.lockClock=0;game.score=0;game.revision++;
+    });
+  }
+  const touch=(type,points)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:points});
+  async function swipe(dx,dy,duration) {
+    await touch('touchStart',[{x,y,id:1}]);
+    for(let i=1;i<=3;i++) {
+      await page.waitForTimeout(duration/3);
+      await touch('touchMove',[{x:x+dx*i/3,y:y+dy*i/3,id:1}]);
+    }
+    await touch('touchEnd',[]);
+  }
+  await reset();
+  const original=await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix));
+  await page.touchscreen.tap(rect.x+rect.width*.75,y);
+  assert.notEqual(await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix)),original,'Right tap rotates clockwise');
+  await page.touchscreen.tap(rect.x+rect.width*.25,y);
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix)),original,'Left tap reverses rotation');
+  await reset();await swipe(cell*2.1,0,150);
+  assert.equal(await page.evaluate(()=>window.__game.piece.x),5,'Finger drag moves cells, not the whole browser');
+  await reset();await swipe(0,cell*3.1,500);
+  assert.ok(await page.evaluate(()=>window.__game.score>=3),'Slow downward drag soft-drops');
+  assert.equal(await page.evaluate(()=>window.__game.board.flat().filter(Boolean).length),0,'Soft drag does not lock');
+  await reset();const before=await page.evaluate(()=>window.__game.spawnSerial);
+  await swipe(0,Math.max(90,cell*4),30);
+  assert.equal(await page.evaluate(()=>window.__game.board.flat().filter(Boolean).length),4,'Down flick hard-drops once');
+  assert.equal(await page.evaluate(()=>window.__game.spawnSerial),before+1);
+  await reset();await touch('touchStart',[{x,y,id:1}]);await touch('touchCancel',[]);
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix)),original,'Cancelled touch cannot rotate');
+  await reset();await touch('touchStart',[{x,y,id:1}]);
+  await touch('touchStart',[{x,y,id:1},{x:x+20,y:y+20,id:2}]);await touch('touchEnd',[]);
+  assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece.matrix)),original,'Second finger cancels pending tap');
+  await reset();const serial=await page.evaluate(()=>window.__game.spawnSerial);
+  await touch('touchStart',[{x,y,id:1}]);await page.keyboard.press('Space');await touch('touchEnd',[]);
+  assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serial+1,'Held finger must not affect next piece');
+  assert.equal(await page.evaluate(()=>window.scrollY),initialScroll,'Gestures must not scroll the page');
+  await cdp.detach();
+}
 try {
   for(const [name,width,height,mobile] of [['desktop',1440,1000,false],['mobile',390,844,true],['small-mobile',320,568,true]]) {
     const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:mobile?3:2,isMobile:mobile,hasTouch:mobile});
@@ -42,6 +91,21 @@ try {
     await page.route('https://**/*',route=>route.abort());
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(()=>!!window.PitStack);
+    await page.waitForFunction(()=>!!window.PitStackScenery);
+    assert.equal(await page.locator('#tetris-scenery .is-visible svg').count(),1);
+    const tour=await page.evaluate(()=>{
+      const parent=document.createElement('div'),host=document.createElement('div'),label=document.createElement('span');
+      parent.append(host);host.append(document.createElement('div'),document.createElement('div'));
+      const scenery=new window.PitStackScenery(host,label,()=>.3),stages=[scenery.current];
+      scenery.update(9);const first=scenery.current;
+      for(let i=1;i<40;i++){scenery.update(i*10);stages.push(scenery.current);}
+      return {first,stages,layers:host.children.length,visible:host.querySelectorAll('.is-visible').length};
+    });
+    assert.equal(tour.first,tour.stages[0]);assert.equal(tour.layers,2);assert.equal(tour.visible,1);
+    for(let i=1;i<tour.stages.length;i++)assert.notEqual(tour.stages[i],tour.stages[i-1]);
+    for(let i=0;i<tour.stages.length;i+=4)assert.equal(new Set(tour.stages.slice(i,i+4)).size,4);
+    assert.equal(await page.locator('.tetris-controls,.tetris-bottom,.tetris-rules,.tetris-key-hint,#tetris-level,#tetris-status').count(),0,
+      'No bottom controls, descriptions, level or status text');
     await page.evaluate(()=>{
       const start=window.PitStack.Game.prototype.start;
       window.PitStack.Game.prototype.start=function(){window.__game=this;return start.call(this);};
@@ -65,12 +129,7 @@ try {
     assert.equal(await page.evaluate(()=>JSON.stringify(window.__game.piece)),snapshot);
     await page.locator('#tetris-start').click();
     assert.equal(await page.evaluate(()=>window.__game.paused),false);
-    if(mobile){
-      const rect=await page.locator('[data-action="left"]').boundingBox();
-      const before=await page.evaluate(()=>window.__game.piece.x);
-      await page.touchscreen.tap(rect.x+rect.width/2,rect.y+rect.height/2);
-      assert.equal(await page.evaluate(()=>window.__game.piece.x),before-1);
-    }
+    if(mobile) await checkTouch(page,context);
     // Exercise every actual renderer tile, not just colour constants in source.
     // A representative mixed stack also makes the optional screenshot useful.
     await page.evaluate(()=>{
@@ -91,15 +150,14 @@ try {
       return {image:getComputedStyle(document.getElementById('tetris-machine')).backgroundImage,
         ratios:Array.from({length:7},(_,x)=>(luminance(sample(x*32+16,624))+.05)/(background+.05))};
     });
-    assert.equal(contrast.image,'none','No illustration behind the play surface');
+    assert.equal(contrast.image,'none','Scenery is isolated in its own layer; board remains opaque');
     for(const ratio of contrast.ratios) assert.ok(ratio>=4.5,`${name}: each tile has at least 4.5:1 contrast, got ${ratio}`);
     const measure=()=>page.evaluate(()=>{
       const machine=document.getElementById('tetris-machine').getBoundingClientRect();
       const canvas=document.getElementById('tetris-canvas'),board=canvas.getBoundingClientRect();
-      const controls=document.querySelector('.tetris-controls').getBoundingClientRect();
       const telemetry=document.querySelector('.tetris-telemetry').getBoundingClientRect();
       return {aspect:board.height/board.width,canvasAspect:canvas.height/canvas.width,top:board.top-machine.top,
-        bottom:machine.bottom-board.bottom,controls:machine.bottom-controls.bottom,
+        bottom:machine.bottom-board.bottom,
         gap:telemetry.left-board.right,overflow:document.documentElement.scrollWidth-window.innerWidth,
         fullscreen:document.body.classList.contains('tetris-fullscreen'), machineWidth:machine.width,
         toolbarButtons:Array.from(document.querySelectorAll('.tetris-toolbar button')).map(button=>{
@@ -107,20 +165,16 @@ try {
         }),
         toolbarFits:Array.from(document.querySelectorAll('.tetris-toolbar button')).every(button=>{
           const rect=button.getBoundingClientRect();return rect.left>=machine.left && rect.right<=machine.right;
-        }),
-        controlsFit:Array.from(document.querySelectorAll('.tetris-controls button')).every(button=>{
-          const rect=button.getBoundingClientRect();return rect.left>=machine.left && rect.right<=machine.right;
         })};
     });
     let metrics=await measure();
     assert.ok(Math.abs(metrics.aspect-2)<.01,`${name}: undistorted board ${JSON.stringify(metrics)}`);
     assert.equal(metrics.canvasAspect,2);assert.ok(metrics.gap>0);assert.ok(metrics.top>=0);assert.ok(metrics.bottom>0);
-    assert.ok(metrics.controls>=0);assert.ok(metrics.overflow<=1,`${name}: no page overflow`);
+    assert.ok(metrics.overflow<=1,`${name}: no page overflow`);
     assert.ok(metrics.toolbarFits,`${name}: toolbar buttons stay inside cabinet ${JSON.stringify(metrics)}`);
-    assert.ok(metrics.controlsFit,`${name}: all control buttons stay inside cabinet`);
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>document.getElementById('tetris-machine').classList.contains('is-fullscreen'));
-    metrics=await measure();assert.ok(metrics.fullscreen);assert.ok(metrics.controls>=0);assert.ok(metrics.top>=0);
+    metrics=await measure();assert.ok(metrics.fullscreen);assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     await page.waitForFunction(()=>{
       const canvas=document.getElementById('tetris-canvas');
@@ -128,13 +182,14 @@ try {
       return pixel[0]+pixel[1]+pixel[2]>0;
     });
     if(process.env.TETRIS_PREVIEW_DIR) await page.screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-${name}.png`)});
+    if(mobile) await checkTouch(page,context);
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>!document.body.classList.contains('tetris-fullscreen'));
     await page.setViewportSize({width:844,height:390});
     await page.locator('#tetris-fullscreen').click();
-    metrics=await measure();assert.ok(metrics.controls>=0);assert.ok(metrics.top>=0);
+    metrics=await measure();assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
-    console.log(`${name}: keyboard, pause/resume, ${mobile?'touch, ':''}inline/fullscreen/landscape geometry, no backdrop and all seven tile contrasts >= 4.5:1 passed`);
+    console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}clean UI, inline/fullscreen/landscape geometry, no backdrop and all seven tile contrasts >= 4.5:1 passed`);
     await context.close();
   }
   assert.deepEqual(errors,[],'No browser script errors');

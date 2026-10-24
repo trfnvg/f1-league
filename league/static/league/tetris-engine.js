@@ -31,9 +31,11 @@
     reset() {
       this.board = Array.from({length: ROWS}, () => Array(COLS).fill(null));
       this.score = 0; this.lines = 0; this.level = 1;
+      this.elapsed = 0;
       this.phase = 'ready'; this.paused = false; this.piece = null; this.next = null;
       this.clearing = []; this.clearClock = 0; this.fallClock = 0;
       this.lockClock = 0; this.lockResets = 0; this.lastClear = 0; this.clearSerial = 0;
+      this.spawnSerial = 0;
       this.revision++;
     }
     randomType() { return TYPES[Math.min(6, Math.max(0, Math.floor(this.random()*7)))]; }
@@ -41,6 +43,7 @@
       this.reset(); this.next = this.randomType(); this.phase = 'running'; this.spawn();
     }
     spawn() {
+      this.spawnSerial++;
       const type = this.next;
       this.next = this.randomType();
       const matrix = clone(SHAPES[type]);
@@ -54,7 +57,9 @@
         (y < 0 || this.board[y][x] === null));
     }
     get active() { return this.phase === 'running' && !this.paused; }
-    get gravity() { return Math.max(80, 800*Math.pow(.82, this.level-1)); }
+    get pace() { return Math.max(this.level-1, Math.floor(this.elapsed/45000)); }
+    get gravity() { return Math.max(65, 800*Math.pow(.78, this.pace)); }
+    get lockDelay() { return Math.max(220, 350-this.pace*8); }
     grounded() { return this.piece && !this.fits({...this.piece, y: this.piece.y+1}); }
     resetLock(wasGrounded) {
       if (wasGrounded && this.lockResets < 10) { this.lockClock = 0; this.lockResets++; }
@@ -67,9 +72,11 @@
       this.piece = moved; this.resetLock(wasGrounded); this.revision++;
       return true;
     }
-    turn() {
-      if (!this.active || this.piece.type === 'O') return false;
-      const matrix = rotate(this.piece.matrix), wasGrounded = this.grounded();
+    turn(direction = 1) {
+      if (!this.active || this.piece.type === 'O' || ![-1,1].includes(direction)) return false;
+      let matrix = rotate(this.piece.matrix);
+      if (direction === -1) matrix = rotate(rotate(matrix));
+      const wasGrounded = this.grounded();
       // Only horizontal wall adjustments. No upward kick/climbing exploits.
       for (const offset of [0,-1,1,-2,2]) {
         const turned = {...this.piece, matrix, x: this.piece.x+offset};
@@ -118,6 +125,7 @@
     update(ms) {
       if (this.paused || !['running','clearing'].includes(this.phase)) return;
       const dt = Math.min(100, Math.max(0, ms));
+      this.elapsed += dt;
       if (this.phase === 'clearing') {
         this.clearClock += dt;
         if (this.clearClock >= 180) this.resolveClear();
@@ -126,11 +134,15 @@
       }
       if (this.grounded()) {
         this.lockClock += dt;
-        if (this.lockClock >= 350) this.lock();
+        if (this.lockClock >= this.lockDelay) this.lock();
         return;
       }
       this.lockClock = 0; this.fallClock += dt;
-      if (this.fallClock >= this.gravity) this.down(false);
+      // Preserve fractional time at high speeds, independently of frame rate.
+      while (this.fallClock >= this.gravity && !this.grounded()) {
+        const remainder = this.fallClock-this.gravity;
+        this.down(false); this.fallClock = remainder;
+      }
     }
     pause() {
       if (!['running','clearing'].includes(this.phase)) return false;

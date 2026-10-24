@@ -9,9 +9,12 @@
   const board = byId('board'), deck = byId('deck'), overlay = byId('overlay');
   const pauseButton = byId('pause'), startButton = byId('start'), fullscreenButton = byId('fullscreen');
   const game = new Game();
+  const scenery = new window.PitStackScenery(byId('scenery'),byId('venue'));
+  let shownPace=-1;
   const palette = {I:'#3ee6ed',J:'#4c84ff',L:'#ff9d3b',O:'#ffdf4a',S:'#69db6a',T:'#b783ff',Z:'#ff6268'};
   const blockCache = new Map();
-  const held = new Map(), pointers = new Map(), keys = new Map();
+  const held = new Map(), keys = new Map(), touchPointers = new Set();
+  const gestures = new window.PitStackGestures(act);
   let request = 0, lastTime = 0, renderedRevision = -1, clearSerial = 0;
   let messageTimer = 0, startTimer = 0, countdown = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,6 +33,7 @@
     blockCache.set(type,tile); return tile;
   }
   function resize() {
+    clearHeld();
     const rect = deck.getBoundingClientRect();
     const style = getComputedStyle(deck);
     const sidebar = machine.querySelector('.tetris-telemetry').getBoundingClientRect().width;
@@ -82,8 +86,9 @@
     }
     byId('score').textContent = game.score.toLocaleString('ru-RU');
     byId('lines').textContent = game.lines;
-    byId('level').textContent = String(game.level).padStart(2,'0');
-    byId('progress').style.width = `${game.lines%10*10}%`;
+    scenery.update(game.lines);
+    byId('route-progress').style.width=`${(game.lines%10)*10}%`;
+    updatePace();
     drawNext();
     const playable = ['running','clearing'].includes(game.phase);
     pauseButton.disabled = !playable || countdown;
@@ -98,7 +103,6 @@
           byId('overlay-title').textContent = 'Финиш!';
           byId('overlay-text').textContent = `${game.score.toLocaleString('ru-RU')} очков · ${game.lines} линий`;
           startButton.textContent = 'Новый заезд ↗';
-          byId('status').textContent = 'Тест завершён. Результат не записан в рейтинг.';
           clearHeld();
         } else if(mode === 'paused') {
           byId('overlay-caption').textContent = 'КРАСНЫЙ ФЛАГ';
@@ -116,7 +120,6 @@
       // Restart a single finite CSS animation only when a row clear completes.
       void message.offsetWidth; message.classList.add('is-visible');
       clearTimeout(messageTimer); messageTimer = setTimeout(()=>message.classList.remove('is-visible'),950);
-      byId('status').textContent = `${label} ${game.lines} линий · уровень ${game.level}`;
     }
     renderedRevision = game.revision;
   }
@@ -125,9 +128,17 @@
     if(action==='left') game.move(-1);
     if(action==='right') game.move(1);
     if(action==='rotate') game.turn();
+    if(action==='rotateCCW') game.turn(-1);
     if(action==='down') game.down();
     if(action==='drop') game.drop();
     schedule();
+  }
+  function updatePace() {
+    const pace=Math.min(4,Math.floor(game.pace/3));
+    if(shownPace===pace) return;
+    shownPace=pace;
+    byId('pace').textContent=['СТАРТ','РАЗГОН','АТАКА','НА ПРЕДЕЛЕ','МАКСИМУМ'][pace];
+    machine.querySelectorAll('.tetris-pace i').forEach((bar,i)=>bar.classList.toggle('is-lit',i<=pace));
   }
   function press(token,action) {
     if(held.has(token) || !game.active || countdown) return;
@@ -135,8 +146,11 @@
     if (['left','right','down'].includes(action)) held.set(token,{action,wait:action==='down'?45:170});
   }
   function clearHeld() {
-    held.clear(); keys.clear(); pointers.clear();
-    machine.querySelectorAll('.is-held').forEach(button=>button.classList.remove('is-held'));
+    held.clear(); keys.clear(); gestures.cancel();
+    for (const id of touchPointers) {
+      if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
+    }
+    touchPointers.clear();
   }
   function updateHeld(ms) {
     for(const state of held.values()) {
@@ -149,6 +163,7 @@
     const dt = lastTime ? Math.max(0,Math.min(50,time-lastTime)) : 0; lastTime = time;
     if(fittedDpr !== Math.min(3,window.devicePixelRatio||1)) resize();
     if(!countdown && !game.paused) { updateHeld(dt); game.update(dt); }
+    updatePace();
     if(renderedRevision !== game.revision) draw();
     if(!game.paused && ['running','clearing'].includes(game.phase)) schedule();
     else lastTime = 0;
@@ -163,42 +178,50 @@
     if(countdown) return;
     if(game.paused) { togglePause(); return; }
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
+    scenery.reset();
     startButton.disabled = true;
     byId('overlay-caption').textContent = 'ПЯТЬ КРАСНЫХ ОГНЕЙ';
     byId('overlay-title').textContent = 'На старт…';
     byId('overlay-text').textContent = 'Следи за следующей фигурой.';
-    byId('status').textContent = 'Подготовка к старту. Тест без записи результата.';
     overlay.hidden = false; renderedRevision=-1; schedule();
     startTimer = setTimeout(() => {
       countdown=false; startButton.disabled=false; game.start();
       overlay.hidden=true; lastTime=0;
-      byId('status').textContent='Заезд начался. Заполняй горизонтальные линии.';
       canvas.focus({preventScroll:true}); schedule();
       if(document.hidden) { game.pause(); schedule(); }
     },reduceMotion?0:650);
   }
   startButton.addEventListener('click',start);
   pauseButton.addEventListener('click',togglePause);
-  machine.querySelectorAll('[data-action]').forEach(button => {
-    button.addEventListener('contextmenu',e=>e.preventDefault());
-    button.addEventListener('pointerdown',e=>{
-      if(e.button!==0) return;
-      e.preventDefault(); button.setPointerCapture(e.pointerId);
-      const token=`pointer-${e.pointerId}`;
-      pointers.set(e.pointerId,token); button.classList.add('is-held');
-      press(token,button.dataset.action);
-    });
-    function release(e) {
-      const token=pointers.get(e.pointerId); if(token) held.delete(token);
-      pointers.delete(e.pointerId); button.classList.remove('is-held');
-    }
-    button.addEventListener('pointerup',release);
-    button.addEventListener('pointercancel',release);
-    button.addEventListener('lostpointercapture',release);
-    // Native keyboard activation of the accessible button, not a duplicate touch click.
-    button.addEventListener('click',e=>{ if(e.detail===0) act(button.dataset.action); });
+  const sample = e => ({id:e.pointerId,x:e.clientX,y:e.clientY,time:e.timeStamp});
+  const gesturePiece = () => game.active && !countdown ? game.spawnSerial : -1;
+  canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  canvas.addEventListener('pointerdown',e=>{
+    if(e.button!==0 || !game.active || countdown) return;
+    e.preventDefault(); canvas.focus({preventScroll:true});
+    canvas.setPointerCapture(e.pointerId); touchPointers.add(e.pointerId);
+    // A second finger cancels the gesture; it must not rotate or drop a piece.
+    if(touchPointers.size>1) { gestures.cancel(); return; }
+    const rect=canvas.getBoundingClientRect();
+    gestures.begin({...sample(e),cellSize:rect.width/10,piece:gesturePiece(),
+      tapDirection:e.clientX<rect.left+rect.width/2?-1:1});
   });
-  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',ArrowDown:'down',KeyS:'down',Space:'drop'};
+  canvas.addEventListener('pointermove',e=>{
+    if(!touchPointers.has(e.pointerId)) return;
+    e.preventDefault(); gestures.move(sample(e),gesturePiece());
+  });
+  canvas.addEventListener('pointerup',e=>{
+    if(!touchPointers.has(e.pointerId)) return;
+    e.preventDefault(); touchPointers.delete(e.pointerId);
+    gestures.end(sample(e),gesturePiece());
+  });
+  function cancelPointer(e) {
+    touchPointers.delete(e.pointerId);
+    if(gestures.state?.id===e.pointerId) gestures.cancel();
+  }
+  canvas.addEventListener('pointercancel',cancelPointer);
+  canvas.addEventListener('lostpointercapture',cancelPointer);
+  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down',Space:'drop'};
   document.addEventListener('keydown',e=>{
     if(!machine.contains(document.activeElement) && !machine.classList.contains('is-fullscreen')) return;
     if(e.code==='Escape') {
