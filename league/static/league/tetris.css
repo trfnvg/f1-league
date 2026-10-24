@@ -35,6 +35,15 @@
 .tetris-wordmark b { color: #f35e5e; font-weight: inherit; }
 .tetris-wordmark small { color: #9caab8; font: 9px "Manrope",sans-serif; margin-left: 12px; letter-spacing: .15em; }
 .tetris-toolbar-actions { display: flex; gap: 6px; }
+.tetris-audio-control { position: relative; display: flex; align-items: center; }
+.tetris-toolbar #tetris-sound { display: flex; align-items: center; justify-content: center; align-self: stretch; width: 32px; padding: 5px; color: #b7d5d1; }
+.tetris-speaker-slash, .is-muted .tetris-speaker-waves { display: none; }
+.is-muted .tetris-speaker-slash { display: block; }
+.tetris-toolbar #tetris-sound.is-muted { color: #8b9aa9; }
+.tetris-volume { position: absolute; right: 0; top: calc(100% + 8px); z-index: 10; width: 154px; padding: 12px; border: 1px solid #4a5a6b; border-radius: 6px; background: #101925; box-shadow: 0 8px 20px #0007; font-size: 10px; color: #cedae4; opacity: 0; visibility: hidden; pointer-events: none; }
+.tetris-volume input { display: block; width: 100%; margin: 10px 0 0; accent-color: #e96769; touch-action: pan-x; }
+.tetris-audio-control:focus-within .tetris-volume { opacity: 1; visibility: visible; pointer-events: auto; }
+@media (hover:hover) { .tetris-audio-control:hover .tetris-volume { opacity: 1; visibility: visible; pointer-events: auto; } }
 .tetris-machine button { font-family: inherit; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
 .tetris-toolbar button { background: #101923e8; border: 1px solid #64717b; border-radius: 5px; color: #dce5ec; padding: 7px 10px; font-size: 11px; }
 .tetris-toolbar button:disabled { opacity: .4; cursor: default; }

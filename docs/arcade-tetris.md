@@ -104,6 +104,41 @@ Use case: stylized-concept. Asset type: production background illustration for a
 
 ## Verification
 
+### Soundtrack
+
+**Grid Lights** is an original, deterministic chiptune composition written for
+Pit Stack: A minor, 128 BPM, 32 bars / exactly 60 seconds. Lead pulse harmonics,
+bass, arpeggios, synthesized kick/snare/hi-hat and stereo delay; no external music
+or samples. `tools/compose_pit_stack.mjs` contains the complete score and offline
+PCM synthesizer. The browser plays a rendered loop, not runtime synthesizers.
+
+Published file: `league/static/league/audio/pit-stack-grid-lights-v1.m4a`, AAC
+stereo, 44.1 kHz, approximately 1.04 MiB. Source master peak is 0.82, RMS ~0.132;
+short edge fades and wrapped delay avoid a click at the loop boundary.
+Rebuild with:
+
+```sh
+node tools/compose_pit_stack.mjs /tmp/pit-stack-grid-lights-v1.wav
+afconvert /tmp/pit-stack-grid-lights-v1.wav league/static/league/audio/pit-stack-grid-lights-v1.m4a -f m4af -d aac -b 160000 -q 127
+```
+
+`tetris-audio.js` starts media and resumes Web Audio directly in the trusted
+start/resume/sound gesture, per [MDN autoplay guidance](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices).
+No title-screen autoplay; `preload=none`. A single MediaElementSource/GainNode
+controls volume (default 28%, including on iOS). Mute and volume are stored in
+`fastlap.pitStack.audio.v1`; denied/corrupt storage does not affect the game.
+The speaker button opens a compact volume slider on focus/hover; arrows on the
+slider and Space on the speaker retain their native keyboard behavior.
+
+Music pauses on gameplay pause, focus loss, hidden page, game over and pagehide.
+Resume keeps the playhead; a new run rewinds. Tempo rises smoothly by 1.8% per
+difficulty tier, capped at 1.216× (~156 BPM), with
+[pitch preserved](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preservesPitch).
+Blocked play promises are caught and can be retried with the speaker button;
+stale completions cannot resume music after pause/mute. No audio animation timers.
+
+### Checks
+
 - `node tests/tetris_engine.mjs`: rules, all seven pieces, rotation/walls,
   all four line clear counts, score/levels, pause, soft/hard drop, lock delay,
   restart and 150,000 seeded random mutation steps across 1,644 games.
@@ -112,6 +147,8 @@ Use case: stylized-concept. Asset type: production background illustration for a
   multitouch, cancel/pause/new-piece protection and bounded input work.
 - `node tests/tetris_scenery.mjs`: decode-before-show, single-next prefetch,
   network failure retention/recovery, stale load completion protection and reset.
+- `node tests/tetris_audio.mjs`: no autoplay, persisted preferences, volume/gain,
+  tempo cap, pause/play promise races, rejected playback retry, denied storage.
 - `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
   21 tests including access control, no mutations, no public links, rejected
   publication, removed UI and existing arcade regression tests.
@@ -124,6 +161,8 @@ Use case: stylized-concept. Asset type: production background illustration for a
   adjacent repeats across all ten venues, decoded full-resolution images, an
   opaque play surface, and samples all
   seven rendered tile colours for at least 4.5:1 contrast against the field.
+  Real AAC decode/playback, looping, mute/volume, tempo, focus loss, pause/resume,
+  preference persistence, and decoded signal headroom are checked too.
   Optional `TETRIS_PREVIEW_DIR` writes representative mixed-stack screenshots.
   Third-party fonts/Bootstrap are blocked for repeatability.
 - Django migration check: no changes required. Existing pending unrelated
