@@ -36,7 +36,7 @@ function fixture({saved=null,blockedStorage=false}={}) {
   assert.equal(JSON.parse(f.saved).enabled,false);
   f.volume.value='42';f.volume.events.input();f.requests.shift().resolve();await tick();
   assert.equal(f.music.enabled,true);assert.equal(f.music.volume,.42);assert.equal(f.contexts,1);
-  f.music.setPace(999);assert.equal(f.media.playbackRate,1.216);assert.equal(f.media.preservesPitch,true);
+  f.music.setPace(999);assert.equal(f.media.playbackRate,1.048);assert.equal(f.media.preservesPitch,true);
   f.music.setPlaying(false);assert.equal(f.media.paused,true);assert.equal(f.music.context.state,'suspended');
   const restored=fixture({saved:f.saved});assert.equal(restored.music.volume,.42);
   restored.music.setPlaying(true);restored.music.setPlaying(false);

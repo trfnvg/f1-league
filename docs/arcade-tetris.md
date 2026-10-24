@@ -132,33 +132,35 @@ do not force redraws, and HUD/next-piece rendering is skipped on effect-only fra
 
 ### Soundtrack
 
-**Grid Lights** is an original, deterministic chiptune composition written for
-Pit Stack: A minor, 128 BPM, 32 bars / exactly 60 seconds. Lead pulse harmonics,
-bass, arpeggios, synthesized kick/snare/hi-hat and stereo delay; no external music
-or samples. `tools/compose_pit_stack.mjs` contains the complete score and offline
+**Parc Ferme** is an original, mellow retro/orchestral racing composition written
+for Pit Stack: D minor, 96 BPM, 80 bars / exactly 200 seconds (3:20). Soft sustained
+pads, low brass-like melodic answers, sparse arpeggios, quiet percussion, and
+longer breathing sections evoke the atmosphere of F1 broadcast scores without
+quoting the official melody. No external music or samples.
+`tools/compose_pit_stack_v2.mjs` contains the complete score and offline
 PCM synthesizer. The browser plays a rendered loop, not runtime synthesizers.
 
-Published file: `league/static/league/audio/pit-stack-grid-lights-v1.m4a`, AAC
-stereo, 44.1 kHz, approximately 1.04 MiB. Source master peak is 0.82, RMS ~0.132;
+Published file: `league/static/league/audio/pit-stack-parc-ferme-v2.m4a`, AAC
+stereo, 44.1 kHz. Master RMS is capped at 0.075 and peak at 0.62;
 short edge fades and wrapped delay avoid a click at the loop boundary.
 Rebuild with:
 
 ```sh
-node tools/compose_pit_stack.mjs /tmp/pit-stack-grid-lights-v1.wav
-afconvert /tmp/pit-stack-grid-lights-v1.wav league/static/league/audio/pit-stack-grid-lights-v1.m4a -f m4af -d aac -b 160000 -q 127
+node tools/compose_pit_stack_v2.mjs /tmp/pit-stack-parc-ferme-v2.wav
+afconvert /tmp/pit-stack-parc-ferme-v2.wav league/static/league/audio/pit-stack-parc-ferme-v2.m4a -f m4af -d aac -b 160000 -q 127
 ```
 
 `tetris-audio.js` starts media and resumes Web Audio directly in the trusted
 start/resume/sound gesture, per [MDN autoplay guidance](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API/Best_practices).
 No title-screen autoplay; `preload=none`. A single MediaElementSource/GainNode
-controls volume (default 28%, including on iOS). Mute and volume are stored in
+controls volume (default 22%, including on iOS; existing user choices preserved). Mute and volume are stored in
 `fastlap.pitStack.audio.v1`; denied/corrupt storage does not affect the game.
 The speaker button opens a compact volume slider on focus/hover; arrows on the
 slider and Space on the speaker retain their native keyboard behavior.
 
 Music pauses on gameplay pause, focus loss, hidden page, game over and pagehide.
-Resume keeps the playhead; a new run rewinds. Tempo rises smoothly by 1.8% per
-difficulty tier, capped at 1.216× (~156 BPM), with
+Resume keeps the playhead; a new run rewinds. Tempo rises only 0.4% per
+difficulty tier, capped at 1.048× (~101 BPM), with
 [pitch preserved](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preservesPitch).
 Blocked play promises are caught and can be retried with the speaker button;
 stale completions cannot resume music after pause/mute. No audio animation timers.

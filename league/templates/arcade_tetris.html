@@ -37,11 +37,11 @@
           <button type="button" id="tetris-sound" aria-label="Выключить музыку" aria-pressed="true" title="Музыка включена">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4z"/><path class="tetris-speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="tetris-speaker-slash" d="m15 9 6 6m0-6-6 6"/></svg>
           </button>
-          <label class="tetris-volume">Громкость <input id="tetris-volume" type="range" min="0" max="100" step="1" value="28" aria-label="Громкость музыки"></label>
+          <label class="tetris-volume">Громкость <input id="tetris-volume" type="range" min="0" max="100" step="1" value="22" aria-label="Громкость музыки"></label>
         </div>
       </div>
     </div>
-    <audio id="tetris-soundtrack" src="{% static 'league/audio/pit-stack-grid-lights-v1.m4a' %}" preload="none" loop playsinline hidden></audio>
+    <audio id="tetris-soundtrack" src="{% static 'league/audio/pit-stack-parc-ferme-v2.m4a' %}" preload="none" loop playsinline hidden></audio>
     <div class="tetris-deck" id="tetris-deck">
       <div class="tetris-board" id="tetris-board">
         <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — сброс, медленное движение вниз — ускорение. С клавиатуры: стрелки — движение и поворот, Enter — сброс, пробел — старт, пауза и продолжение; P — пауза."></canvas>
@@ -71,7 +71,7 @@
 <script src="{% static 'league/tetris-engine.js' %}?v=pit-stack-feedback-v9" defer></script>
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
-<script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-audio-v7" defer></script>
+<script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-feedback-v9" defer></script>
 <script src="{% static 'league/tetris.js' %}?v=pit-stack-feedback-v9" defer></script>
 {% endblock %}
