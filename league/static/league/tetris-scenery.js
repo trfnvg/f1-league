@@ -47,8 +47,17 @@
       this.prefetched={index,ready};
     }
     reset() {
-      this.stage=-1;this.bag=[];
-      return this.update(0);
+      this.generation++;this.bag=[];
+      if(this.current<0) {
+        this.stage=-1;
+        return this.update(0);
+      }
+      // Starting/restarting a run keeps the artwork already on the title screen.
+      // Cancel pending old-run transitions and count this venue as stop one.
+      this.stage=0;this.shuffle();
+      this.bag.splice(this.bag.indexOf(this.current),1);
+      this.prefetch();
+      return Promise.resolve(true);
     }
     async update(lines) {
       const stage=Math.floor(lines/10);
