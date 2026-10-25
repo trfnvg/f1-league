@@ -113,7 +113,7 @@ class PersonalWildcardTests(TestCase):
 
         response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
 
-        self.assertContains(response, "Карты этапа")
+        self.assertContains(response, "Дополнительный шанс")
         self.assertContains(response, 'name="slot"', count=3)
         self.assertContains(response, "Нажми на каждую карту")
         self.assertContains(response, "±3 PTS", count=3)

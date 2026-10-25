@@ -48,8 +48,36 @@ circular crop as elsewhere.
 
 Stage heroes have an explicit grid, a cover that fits without cropping, a
 circuit or round-number fallback, and no hidden/reveal animation dependency.
-Failed cover requests reveal the fallback. Calendar covers use a 16:9 frame and
-`object-fit: contain`, so the entire uploaded artwork remains visible.
+Failed stage-cover requests reveal the fallback. Uploaded covers in the calendar
+and stage hero follow their intrinsic aspect ratio (`width:100%; height:auto`),
+without fixed-height boxes, letterboxing or hover zoom. Circuit placeholders
+retain a 16:9 frame. Round/status metadata sits outside the artwork. The calendar
+uses one readable card per row on phones and two/three on larger screens.
+
+Nightshift component rules load after the legacy themes. The primary homepage
+action has a normal rectangular hit area and a vector arrow. Live Paddock uses
+32px vector icons in explicit grid columns; old sprite/timeline pseudo-elements
+are disabled. Event duels use the isolated `stage-duel` component, without the
+legacy Western background/seals; all challenge and response endpoints stay the
+same. Legacy uploaded duel artwork is preserved in storage, not shown behind
+the new panel.
+
+All player-photo wrappers (including profile, sidebar, table, and duel) position
+their image absolutely inside a square circle. This prevents portrait images
+inside inline/grid wrappers from resolving `height:100%` to their natural height
+and clipping a different part of the photo. The crop is always centre-cover.
+Browser coverage checks actual image and wrapper bounds, not just computed
+`object-fit`, and includes non-square portraits and covers in all duel states.
+
+## Event page hierarchy
+
+The event page puts the prediction form before optional wildcard and duel panels.
+Anchor navigation links directly to each section. `event-page.css` scopes the
+restrained typography, surfaces, input sizing and result panels to this page;
+mobile inputs remain at least 16px to avoid Safari's automatic focus zoom.
+The shared mobile menu and bottom navigation use consistent line SVG icons and
+touch targets. Prediction, wildcard and duel permissions and endpoints remain
+unchanged.
 
 ## Desktop blank-page regression
 

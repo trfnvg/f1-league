@@ -35,7 +35,6 @@ from .models import (
     ArcadeWheelSpin,
     CrazyPredictionVote,
     DuelChallenge,
-    DuelSettings,
     Event,
     HomeResultImage,
     LeagueSeason,
@@ -1761,7 +1760,6 @@ def event_detail(request, event_id: int):
         ]
 
     own_duel = get_user_event_duel(event, request.user)
-    duel_settings = DuelSettings.objects.first()
     duel_form = None
     if request.user.is_authenticated and state == "open" and own_duel is None:
         initial = {}
@@ -1829,7 +1827,6 @@ def event_detail(request, event_id: int):
             "crazy_vote_event": event if crazy_vote_open else None,
             "vetoed_crazy_prediction_id": vetoed_crazy_id,
             "own_duel": own_duel,
-            "duel_settings": duel_settings,
             "duel_form": duel_form,
             "event_duels": event_duels,
             "duel_history": duel_history,

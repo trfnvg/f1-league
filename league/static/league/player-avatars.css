@@ -1,7 +1,9 @@
 /* One crop for player photos everywhere. Keep the original uploaded image;
    page themes must not introduce rings or shrink the photo with padding. */
 body.apex-night-theme :is(.mini-avatar, .table-avatar, .profile-avatar,
-  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar) {
+  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar,
+  .nightshift-account-avatar, .stage-duel-avatar) {
+  position: relative;
   aspect-ratio: 1 / 1;
   box-sizing: border-box;
   flex-shrink: 0;
@@ -15,10 +17,17 @@ body.apex-night-theme :is(.mini-avatar, .table-avatar, .profile-avatar,
 }
 
 body.apex-night-theme :is(.mini-avatar, .table-avatar, .profile-avatar,
-  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar) img {
+  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar,
+  .nightshift-account-avatar, .stage-duel-avatar) > img {
+  /* Inline/grid avatars can resolve a percentage height as auto. Pin the
+     photo to the square instead, so a portrait cannot grow beyond its crop. */
+  position: absolute !important;
+  inset: 0 !important;
   display: block;
   width: 100% !important;
   height: 100% !important;
+  min-width: 0;
+  min-height: 0;
   max-width: none;
   margin: 0;
   padding: 0;

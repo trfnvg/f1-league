@@ -1,0 +1,96 @@
+<section
+  id="event-duel"
+  class="stage-duel mb-4"
+>
+  <div class="stage-duel-heading">
+    <div>
+      <span class="stage-duel-kicker">03 · ДУЭЛЬ ЭТАПА</span>
+      <h2>Дуэль</h2>
+      <p>У кого больше чистых очков за этап — тот получает ставку. При ничьей очки не меняются.</p>
+    </div>
+    <div class="stage-duel-limit"><small>Ставка до</small><strong>10</strong><span>очков</span></div>
+  </div>
+
+  {% if not user.is_authenticated %}
+    <div class="stage-duel-empty">
+      <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войди в аккаунт</a>, чтобы бросить вызов участнику.</p>
+    </div>
+  {% elif own_duel %}
+    <article class="stage-showdown is-{{ own_duel.status }}">
+      <div class="stage-fighter">
+        <span class="stage-duel-avatar">
+          {% if own_duel.challenger.league_profile.avatar %}<img src="{{ own_duel.challenger.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.challenger.username|slice:":1"|upper }}{% endif %}
+        </span>
+        <strong>{{ own_duel.challenger.username }}</strong>
+        <small>Бросил вызов</small>
+      </div>
+      <div class="stage-stake"><small>На кону</small><strong>{{ own_duel.stake }}</strong><span>очков</span></div>
+      <div class="stage-fighter is-opponent">
+        <span class="stage-duel-avatar">
+          {% if own_duel.opponent.league_profile.avatar %}<img src="{{ own_duel.opponent.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.opponent.username|slice:":1"|upper }}{% endif %}
+        </span>
+        <strong>{{ own_duel.opponent.username }}</strong>
+        <small>{% if own_duel.status == "pending" %}Получил вызов{% else %}Принял вызов{% endif %}</small>
+      </div>
+
+      <div class="stage-duel-state">
+        {% if own_duel.status == "pending" and own_duel.opponent_id == user.id %}
+          <div><span class="stage-state-label">Тебе бросили вызов</span><strong>Принимаешь бой?</strong></div>
+          <div class="stage-duel-actions">
+            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='accept' %}">{% csrf_token %}<button class="stage-duel-btn is-accept" type="submit">Принять</button></form>
+            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='decline' %}">{% csrf_token %}<button class="stage-duel-btn is-decline" type="submit">Отклонить и предложить своё</button></form>
+          </div>
+        {% elif own_duel.status == "pending" %}
+          <div><span class="stage-state-label">Вызов отправлен</span><strong>Ждём ответа от {{ own_duel.opponent.username }}</strong></div>
+          <form method="post" action="{% url 'league:cancel_event_duel' duel_id=own_duel.id %}">{% csrf_token %}<button class="stage-duel-btn is-quiet" type="submit">Отменить вызов</button></form>
+        {% else %}
+          <div><span class="stage-state-label">Дуэль принята</span><strong>Решение — после подсчёта этапа</strong></div>
+          <span class="stage-duel-locked">Ставка зафиксирована</span>
+        {% endif %}
+      </div>
+    </article>
+  {% elif duel_form %}
+    <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="stage-duel-form">
+      {% csrf_token %}
+      <div class="stage-duel-form-note"><span aria-hidden="true">VS</span><div><strong>Новый вызов</strong><small>Выбери соперника и размер ставки. Одного и того же соперника нельзя выбирать два этапа подряд.</small></div></div>
+      <label><span>Соперник</span>{{ duel_form.opponent }}</label>
+      <label class="stage-duel-stake-field"><span>Ставка · 1–10 очков</span>{{ duel_form.stake }}</label>
+      <button type="submit" class="stage-duel-btn is-challenge">Бросить вызов <span aria-hidden="true">→</span></button>
+    </form>
+  {% elif state != "open" %}
+    <div class="stage-duel-empty"><p>Приём новых вызовов закрыт вместе с дедлайном прогнозов.</p></div>
+  {% else %}
+    <div class="stage-duel-empty"><p>Свободных соперников сейчас нет — все уже участвуют в дуэлях.</p></div>
+  {% endif %}
+
+  {% if event_duels %}
+    <div class="stage-duel-roster">
+      <div class="stage-duel-roster-title"><strong>Дуэли этапа</strong></div>
+      <div class="stage-duel-roster-grid">
+        {% for duel in event_duels %}
+          {% if not own_duel or duel.id != own_duel.id %}
+            <article class="stage-duel-roster-card">
+              <div class="stage-duel-roster-players"><strong{% if duel.winner_id == duel.challenger_id %} class="is-winner"{% endif %}>{{ duel.challenger.username }}</strong><span>VS</span><strong{% if duel.winner_id == duel.opponent_id %} class="is-winner"{% endif %}>{{ duel.opponent.username }}</strong></div>
+              <div class="stage-duel-roster-result">
+                {% if duel.status == "settled" %}
+                  <span>{{ duel.challenger_prediction_points }} : {{ duel.opponent_prediction_points }}</span>
+                  {% if duel.winner %}<strong>{{ duel.winner.username }} · +{{ duel.stake }}</strong>{% else %}<strong>Ничья · без обмена</strong>{% endif %}
+                {% else %}
+                  <span>Ставка {{ duel.stake }}</span><strong>Бой принят</strong>
+                {% endif %}
+              </div>
+            </article>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  {% if duel_history and not own_duel %}
+    <div class="stage-duel-history">
+      {% for duel in duel_history %}
+        <span>{{ duel.challenger.username }} → {{ duel.opponent.username }} · {{ duel.get_status_display }}</span>
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>

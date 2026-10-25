@@ -989,10 +989,11 @@
   <link rel="stylesheet" href="{% static 'league/editorial-rework.css' %}">
   <link rel="stylesheet" href="{% static 'league/apex-night.css' %}">
   {% block extra_head %}{% endblock %}
-  <link rel="stylesheet" href="{% static 'league/player-avatars.css' %}">
+  <link rel="stylesheet" href="{% static 'league/player-avatars.css' %}?v=20261025-crop">
   <link rel="stylesheet" href="{% static 'league/circuit-visual.css' %}?v=1">
   <link rel="stylesheet" href="{% static 'league/nightshift-theme.css' %}?v=20261026-race">
   <link rel="stylesheet" href="{% static 'league/brand-mark.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'league/nightshift-components.css' %}?v=1">
 </head>
 
 <body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
@@ -1032,7 +1033,7 @@
               data-bs-target="#mainMenu"
               aria-controls="mainMenu"
               aria-label="Открыть меню">
-        &#9776;
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14M5 16h14"/></svg>
       </button>
 
       <a class="navbar-brand site-brand" href="{% url 'league:home' %}">

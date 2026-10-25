@@ -13,6 +13,7 @@ import threading
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -28,9 +29,10 @@ from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
-from PIL import Image
+from PIL import Image, ImageDraw
 from league.circuits import CIRCUITS
 from league.leagues import import_legacy_league
+from league.duels import create_duel_challenge, respond_to_duel
 from league.models import Event, Prediction, Score, Season, UserProfile
 
 
@@ -58,14 +60,30 @@ def render_pages():
     owner = User.objects.create_superuser("preview-admin", "preview@example.com", "test")
     league, _ = import_legacy_league(owner=owner, season_year=season.year, name="Fastlap Main")
     client = Client()
-    pages = {"/guest/": client.get(reverse("league:home")).content}
+    feed = [dict(type=kind, text=text, meta="После R18 · Fastlap Main", user_id=player.pk)
+        for kind, text in (("leader", "Аня возглавляет чемпионат"),
+            ("movement", "Гриша поднялся на одну позицию"),
+            ("duel-accepted", "Айдар и Славик приняли дуэль"),
+            ("arcade-winner", "Новый рекорд в Cowboy GP"),
+            ("crazy-veto", "Голосование Paddock Jury завершено"))]
+    def home_page():
+        with patch("league.views.build_activity_feed", return_value=feed):
+            return client.get(reverse("league:home")).content
+    pages = {"/guest/": home_page()}
     client.force_login(player)
-    pages["/"] = client.get(reverse("league:home")).content
+    pages["/"] = home_page()
     pages["/league/"] = client.get(reverse("league:friend_league", args=[league.league_id])).content
     pages["/standings/"] = client.get(reverse("league:global_leaderboard")).content
     pages["/event/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     pages["/profile/"] = client.get(reverse("league:player_profile", args=[player.pk])).content
     pages["/event-closed/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
+    challenge = create_duel_challenge(event, player, User.objects.get(username="Очень_длинное_имя_участника"), 7)
+    pages["/duel-sent/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
+    client.force_login(challenge.opponent)
+    pages["/duel-received/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
+    respond_to_duel(challenge, challenge.opponent, accept=True)
+    client.force_login(player)
+    pages["/duel-accepted/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     future = Event.objects.order_by("-round_number").first()
     pages["/far-future/"] = client.get(reverse("league:event_detail", args=[future.pk])).content
     event.cover_image = "covers/missing.png"
@@ -75,11 +93,15 @@ def render_pages():
         deadline=now+timedelta(days=100), race_datetime=now+timedelta(days=101))
     pages["/event-fallback/"] = client.get(reverse("league:event_detail", args=[custom.pk])).content
     Event.objects.filter(pk=event.pk).update(deadline=now-timedelta(hours=1))
-    pages["/closed/"] = client.get(reverse("league:home")).content
+    pages["/closed/"] = home_page()
     Event.objects.filter(pk=event.pk).update(race_datetime=now-timedelta(hours=1))
-    pages["/in-race/"] = client.get(reverse("league:home")).content
+    pages["/in-race/"] = home_page()
     Event.objects.filter(pk=event.pk).update(race_datetime=now-timedelta(hours=2, seconds=1))
-    pages["/switched/"] = client.get(reverse("league:home")).content
+    pages["/switched/"] = home_page()
+    for name, size in (("square", (600, 600)), ("portrait", (600, 900))):
+        Event.objects.filter(pk=event.pk).update(cover_image=f"covers/{name}.png")
+        pages[f"/cover-{name}/"] = home_page()
+        pages[f"/stage-{name}/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     Event.objects.filter(pk=event.pk).update(race_datetime=event.race_datetime, cover_image="covers/test-wide.png")
     client.force_login(owner)
     pages["/admin-add/"] = client.get(reverse("admin:league_event_add")).content
@@ -90,8 +112,21 @@ def render_pages():
     cover = io.BytesIO()
     Image.new("RGB", (1200, 500), "#45516a").save(cover, format="PNG")
     pages["/media/covers/test-wide.png"] = cover.getvalue()
+    for name, size in (("square", (600, 600)), ("portrait", (600, 900))):
+        cover = io.BytesIO()
+        image = Image.new("RGB", size, "#45516a")
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((0, 0, size[0]-1, size[1]-1), outline="#ee7566", width=18)
+        draw.line((0, 0, *size), fill="#b7c9df", width=6)
+        image.save(cover, format="PNG")
+        pages[f"/media/covers/{name}.png"] = cover.getvalue()
     avatar = io.BytesIO()
-    Image.new("RGB", (200, 300), "#c3b39b").save(avatar, format="PNG")
+    image = Image.new("RGB", (200, 300), "#1e3248")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 0, 200, 50), fill="#e29a66")
+    draw.ellipse((30, 80, 170, 220), fill="#c3b39b")
+    draw.line((100, 0, 100, 300), fill="#efe8da", width=4)
+    image.save(avatar, format="PNG")
     pages["/media/avatars/test.png"] = avatar.getvalue()
     assert all(b"Server Error" not in html for html in pages.values())
     return pages
@@ -139,11 +174,16 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/league/", "/standings/", "/event/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/league/", "/standings/", "/event/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), (width, route, "page overflow")
+                    assert page.locator('.mini-avatar,.profile-avatar,.table-avatar,.nightshift-account-avatar,.stage-duel-avatar').evaluate_all('''avatars => avatars.every(a => {
+                        const image = a.querySelector('img'); if (!image) return true;
+                        const box = a.getBoundingClientRect(), crop = image.getBoundingClientRect(), style = getComputedStyle(image);
+                        return Math.abs(box.width-box.height)<1 && Math.abs(crop.width-box.width)<1 && Math.abs(crop.height-box.height)<1 && Math.abs(crop.x-box.x)<1 && Math.abs(crop.y-box.y)<1 && style.objectFit==='cover' && style.objectPosition==='50% 50%';
+                    })'''), (width, route, "avatar crop differs from profile")
                     sidebar_visible = page.locator(".nightshift-sidebar").is_visible()
                     if sidebar_visible != (width > 780):
                         page.screenshot(path=str(output/f"failure-{width}-{route.strip('/') or 'home'}.png"), full_page=True)
@@ -157,6 +197,7 @@ def run(output, widths, engine):
                         assert page.locator(".ns-primary").is_visible()
                     if route == "/closed/":
                         assert page.locator(".ns-deadline").inner_text().startswith("ДО СТАРТА ГОНКИ")
+                        assert "Время гонки." not in page.locator('#featured-gp-title').inner_text()
                     if route == "/in-race/":
                         assert page.locator(".ns-race-status").inner_text() == "Гонка идёт"
                         assert page.locator(".ns-trackdrawing svg").get_attribute("data-circuit") == "austin"
@@ -166,6 +207,10 @@ def run(output, widths, engine):
                         assert page.locator(".event-stage-hero").is_visible(), (route, "empty stage header")
                         assert page.locator(".prediction-workbench form").is_visible(), (route, "forecast missing")
                         assert page.locator("#id_p1").is_visible()
+                        assert page.locator("#stage-prediction").bounding_box()["y"] < page.locator("#personal-wildcard").bounding_box()["y"], "Forecast must precede optional mechanics"
+                        assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
+                        if width < 781:
+                            assert float(page.locator("#id_p1").evaluate("e=>parseFloat(getComputedStyle(e).fontSize)")) >= 16, "Avoid iOS input zoom"
                     if route == "/event-broken-cover/":
                         assert not page.locator("[data-stage-cover]").is_visible()
                         assert page.locator(".event-stage-track").is_visible()
@@ -183,6 +228,34 @@ def run(output, widths, engine):
                             assert page.locator('.nightshift-account-avatar img').evaluate('e=>e.complete && e.naturalWidth>0')
                         image = page.locator('.ns-calendar .event-media>img').first
                         assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'contain'
+                        assert page.locator('.ns-live .activity-news-item').count() == 5
+                        assert page.locator('.ns-live .activity-news-item').evaluate_all('''items=>items.every(item=>{
+                            const icon=item.querySelector('.activity-feed-icon'),copy=item.querySelector('.activity-news-copy');
+                            const a=icon.getBoundingClientRect(),b=copy.getBoundingClientRect();
+                            return Math.abs(a.width-32)<1 && Math.abs(a.height-32)<1 && a.right+8<=b.left && a.y>=item.getBoundingClientRect().y && getComputedStyle(icon,'::before').content==='none' && !!icon.querySelector('svg');
+                        })'''), (width, "feed icons overlap copy")
+                        action=page.locator('.ns-primary')
+                        assert action.evaluate("e=>getComputedStyle(e).clipPath==='none' && getComputedStyle(e).transform==='none'")
+                        assert action.locator('svg').is_visible()
+                    if route.startswith('/cover-') or route.startswith('/stage-') or route == '/event/':
+                        selector='.ns-calendar .event-media.has-cover img' if route.startswith('/cover-') else '[data-stage-cover]'
+                        for image in page.locator(selector).all():
+                            image.scroll_into_view_if_needed()
+                            image.wait_for(state='visible')
+                            assert image.evaluate('''e=>{
+                                const b=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();
+                                return e.complete && e.naturalWidth>0 && Math.abs(b.height-b.width*e.naturalHeight/e.naturalWidth)<1 && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
+                            }'''), (width, route, "cover cropped or letterboxed")
+                            image.hover()
+                            assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
+                    if route.startswith('/duel-'):
+                        assert page.locator('#event-duel.stage-duel').is_visible()
+                        assert page.locator('.stage-showdown').is_visible()
+                        if route == '/duel-received/':
+                            assert page.locator('.stage-duel-btn.is-accept').is_visible()
+                            assert page.locator('.stage-duel-btn.is-decline').is_visible()
+                        if route == '/duel-accepted/':
+                            assert page.locator('.stage-duel-locked').is_visible()
                     if route == "/profile/":
                         assert page.locator("#season-predictions").is_visible()
                     page.screenshot(path=str(output/f"{width}-{route.strip('/') or 'home'}.png"), full_page=True)
@@ -214,7 +287,7 @@ def run(output, widths, engine):
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)
             browser.close()
         assert not errors, errors
-        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 13 real pages in standards mode, live seconds, race rollover, cover fallbacks, profile avatar, 27 admin choices and SVG motion. Screenshots: {output}")
+        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 20 real pages, intrinsic covers, consistent avatar bounds, populated feed icons, duel states, live seconds and 27 admin choices. Screenshots: {output}")
     finally:
         server.shutdown()
 

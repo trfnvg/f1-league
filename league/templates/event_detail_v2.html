@@ -3,236 +3,26 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=1">{% endblock %}
+
 {% block content %}
-<style>
-  .result-facts-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
-  }
+<div class="event-page">
 
-  .result-facts-item {
-    border-radius: 11px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.58rem 0.7rem;
-  }
-
-  .result-facts-label {
-    font-size: 0.73rem;
-    color: rgba(255, 255, 255, 0.68);
-    margin-bottom: 0.1rem;
-  }
-
-  .result-facts-value {
-    font-weight: 700;
-    font-size: 0.92rem;
-  }
-
-  .comparison-shell {
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background:
-      radial-gradient(600px 200px at 100% 0%, rgba(225, 6, 0, 0.16), transparent 70%),
-      linear-gradient(165deg, rgba(26, 35, 48, 0.9), rgba(14, 20, 29, 0.95));
-    padding: 0.9rem;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-
-  .comparison-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.72rem;
-  }
-
-  .comparison-row {
-    border-radius: 13px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.72rem;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .comparison-row::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    width: 3px;
-    border-radius: 4px;
-    opacity: 0.9;
-  }
-
-  .comparison-row-hit::before {
-    background: linear-gradient(180deg, #4ad08f, #2b8e60);
-  }
-
-  .comparison-row-partial::before {
-    background: linear-gradient(180deg, #ffc14d, #c98f24);
-  }
-
-  .comparison-row-miss::before {
-    background: linear-gradient(180deg, #ff7a72, #c0443d);
-  }
-
-  .comparison-row-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.7rem;
-    margin-bottom: 0.58rem;
-  }
-
-  .comparison-category {
-    font-weight: 800;
-    letter-spacing: 0.01em;
-    font-size: 0.95rem;
-  }
-
-  .comparison-values {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .comparison-value-card {
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.48rem 0.58rem;
-  }
-
-  .comparison-value-label {
-    color: rgba(255, 255, 255, 0.66);
-    font-size: 0.72rem;
-    margin-bottom: 0.08rem;
-  }
-
-  .comparison-value-text {
-    font-weight: 700;
-    font-size: 0.9rem;
-    word-break: break-word;
-  }
-
-  .comparison-status {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 23px;
-    padding: 0.12rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  .comparison-status-hit {
-    color: #9ff1c8;
-    background: rgba(63, 184, 126, 0.2);
-    border: 1px solid rgba(63, 184, 126, 0.42);
-  }
-
-  .comparison-status-partial {
-    color: #ffe2a0;
-    background: rgba(255, 184, 46, 0.18);
-    border: 1px solid rgba(255, 184, 46, 0.42);
-  }
-
-  .comparison-status-miss {
-    color: #ffc1bd;
-    background: rgba(225, 6, 0, 0.18);
-    border: 1px solid rgba(225, 6, 0, 0.42);
-  }
-
-  .comparison-note {
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.62);
-    margin-top: 0.2rem;
-  }
-
-  .comparison-points {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 26px;
-    min-width: 62px;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.06);
-    font-weight: 800;
-    font-size: 0.8rem;
-    white-space: nowrap;
-  }
-
-  .comparison-points-hit {
-    border-color: rgba(74, 208, 143, 0.48);
-    color: #b9f5d7;
-    background: rgba(74, 208, 143, 0.16);
-  }
-
-  .comparison-points-partial {
-    border-color: rgba(255, 193, 77, 0.48);
-    color: #ffe5b0;
-    background: rgba(255, 193, 77, 0.16);
-  }
-
-  .comparison-points-miss {
-    border-color: rgba(255, 122, 114, 0.45);
-    color: #ffc8c4;
-    background: rgba(255, 122, 114, 0.13);
-  }
-
-  .event-cover-image-upcoming {
-    width: 100%;
-    height: min(62vw, 520px);
-    min-height: 300px;
-    object-fit: cover;
-    object-position: center;
-    display: block;
-  }
-
-  .event-cover-image-past {
-    width: 100%;
-    height: auto;
-    object-fit: contain;
-    object-position: center;
-    display: block;
-  }
-
-  @media (max-width: 768px) {
-    .result-facts-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .comparison-values {
-      grid-template-columns: 1fr;
-    }
-
-    .event-cover-image-upcoming {
-      height: 300px;
-      min-height: 300px;
-    }
-  }
-</style>
-
-<div class="mb-3">
-  <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
+<div class="stage-backlink">
+  <a href="{% url 'league:home' %}" class="text-decoration-none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg> Календарь сезона</a>
 </div>
 
 <div class="card event-hero-card event-stage-hero mb-4">
   <div class="event-stage-layout">
-    <div class="event-stage-media">
+    <div class="event-stage-media{% if event.cover_image %} has-cover{% endif %}">
       {% if event.circuit_visual %}<div class="event-stage-track">{% include 'circuit_track.html' with circuit=event.circuit_visual track_id='event' animated=True %}</div>{% else %}<div class="event-stage-fallback"><span>GRAND PRIX</span><strong>R{{ event.round_number|stringformat:'02d' }}</strong></div>{% endif %}
       {% if event.cover_image %}<img src="{{ event.cover_image.url }}" class="event-stage-image" alt="{{ event.name }}" decoding="async" data-stage-cover>{% endif %}
     </div>
     <div class="card-body event-stage-copy">
       <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-        <span class="badge text-bg-light">R{{ event.round_number }}</span>
+        <span class="stage-round">Гран-при · R{{ event.round_number|stringformat:'02d' }}</span>
         {% if state == "open" and prediction %}
-          <span class="event-status-badge is-saved">Прогноз сохранён ✓</span>
+          <span class="event-status-badge is-saved">Прогноз сохранён</span>
         {% elif state == "open" %}
           <span class="event-status-badge is-open">Доступно для прогноза</span>
         {% elif state == "closed" %}
@@ -242,11 +32,147 @@
         {% endif %}
       </div>
       <h1 class="section-title mb-3">{{ event.name }}</h1>
+      <div class="stage-timing">
+      {% if event.race_datetime %}<div class="event-hero-deadline"><small>Начало гонки</small><strong>{{ event.race_datetime|date:"d.m · H:i" }} МСК</strong></div>{% endif %}
       <div class="event-hero-deadline">
-        <small>Дедлайн предиктов</small>
-        <strong>{{ event.deadline|date:"d.m.Y · H:i" }} МСК</strong>
+        <small>Прогноз до</small>
+        <strong>{{ event.deadline|date:"d.m · H:i" }} МСК</strong>
+      </div>
       </div>
     </div>
+  </div>
+</div>
+
+
+
+<nav class="stage-sections" aria-label="Разделы этапа"><a href="#stage-prediction">Мой прогноз</a><a href="#personal-wildcard">Личная карта</a><a href="#event-duel">Дуэль</a>{% if can_view_community %}<a href="#stage-results">Результаты</a>{% endif %}</nav>
+<div id="stage-prediction" class="card prediction-workbench mb-4">
+  <div class="card-body">
+    <div class="stage-section-heading"><span class="stage-section-number">01</span><div><h2>{% if prediction %}Твой прогноз{% else %}Прогноз на гонку{% endif %}</h2><p>{% if state == "open" %}Выбери свой состав на этот Гран-при.{% else %}Приём прогнозов завершён.{% endif %}</p></div></div>
+    {% if state == "open" %}<p class="workbench-note">Прогноз виден только тебе до закрытия приёма.</p>{% endif %}
+
+    {% if not user.is_authenticated %}
+      <div class="voting-status voting-status-{{ state }} mb-0">
+        Нужно
+        <a href="{% url 'login' %}?next={{ request.path|urlencode }}">войти</a>
+        или
+        <a href="{% url 'league:register' %}?next={{ request.path|urlencode }}">зарегистрироваться</a>,
+        чтобы сделать прогноз.
+      </div>
+    {% elif state != "open" %}
+      <div class="voting-status mb-0">
+        {% if state == "closed" %}
+          Дедлайн прошел, редактирование закрыто.
+        {% else %}
+          Очки посчитаны, этап завершен.
+        {% endif %}
+      </div>
+    {% else %}
+      <form method="post">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.p1.id_for_label }}">Победитель</label>
+              <span class="field-points-badge">10 очков</span>
+            </div>
+            {{ form.p1 }}
+            {{ form.p1.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.p2.id_for_label }}">Второе место</label>
+              <span class="field-points-badge">6 очков</span>
+            </div>
+            {{ form.p2 }}
+            {{ form.p2.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.p3.id_for_label }}">Третье место</label>
+              <span class="field-points-badge">4 очка</span>
+            </div>
+            {{ form.p3 }}
+            {{ form.p3.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.pole.id_for_label }}">Поул</label>
+              <span class="field-points-badge">4 очка</span>
+            </div>
+            {{ form.pole }}
+            {{ form.pole.errors }}
+          </div>
+          {% if event.has_sprint %}
+            <div class="col-md-6">
+              <div class="field-label-row">
+                <label class="form-label mb-0" for="{{ form.sprint_qualifying_winner.id_for_label }}">Квалификация к спринту</label>
+                <span class="field-points-badge">3 очка</span>
+              </div>
+              {{ form.sprint_qualifying_winner }}
+              {{ form.sprint_qualifying_winner.errors }}
+            </div>
+            <div class="col-md-6">
+              <div class="field-label-row">
+                <label class="form-label mb-0" for="{{ form.sprint_winner.id_for_label }}">Победитель спринта</label>
+                <span class="field-points-badge">5 очков</span>
+              </div>
+              {{ form.sprint_winner }}
+              {{ form.sprint_winner.errors }}
+            </div>
+          {% endif %}
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.fastest_lap.id_for_label }}">Быстрый круг</label>
+              <span class="field-points-badge">3 очка</span>
+            </div>
+            {{ form.fastest_lap }}
+            {{ form.fastest_lap.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.driver_of_day.id_for_label }}">Гонщик дня</label>
+              <span class="field-points-badge">3 очка</span>
+            </div>
+            {{ form.driver_of_day }}
+            {{ form.driver_of_day.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.safety_car_count.id_for_label }}">Выезды Safety Car</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
+            {{ form.safety_car_count }}
+            {{ form.safety_car_count.errors }}
+          </div>
+          <div class="col-md-6">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.dnf_count.id_for_label }}">Количество сходов</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
+            {{ form.dnf_count }}
+            {{ form.dnf_count.errors }}
+          </div>
+          <div class="col-12">
+            <div class="field-label-row">
+              <label class="form-label mb-0" for="{{ form.crazy_prediction.id_for_label }}">Crazy Prediction</label>
+              <span class="field-points-badge">5 очков</span>
+            </div>
+            {{ form.crazy_prediction }}
+            {{ form.crazy_prediction.errors }}
+          </div>
+        </div>
+        <div class="prediction-submit-bar">
+          <span>Проверь состав — до дедлайна прогноз можно изменить.</span>
+          <button type="submit" class="btn prediction-state-button {% if prediction %}is-saved{% else %}is-open{% endif %}">{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button>
+        </div>
+      </form>
+    {% endif %}
   </div>
 </div>
 
@@ -258,9 +184,9 @@
 >
   <div class="wildcard-heading">
     <div>
-      <span class="wildcard-kicker">Shared wildcard · R{{ event.round_number }}</span>
-      <h2>Карты этапа</h2>
-      <p>У всех игроков одна тройка. Переверни карты, изучи задания и оставь одну: верный ответ даст 3 очка, ошибка снимет 3.</p>
+      <span class="wildcard-kicker">02 · ЛИЧНАЯ КАРТА</span>
+      <h2>Дополнительный шанс</h2>
+      <p>Выбери одну из трёх карт. Верный ответ: +3 очка, ошибка: −3.</p>
     </div>
     <div class="wildcard-reward"><span>Риск</span><strong>±3</strong><small>очка</small></div>
   </div>
@@ -275,7 +201,7 @@
       <article class="wildcard-card is-single is-revealed" aria-label="Твоя личная карта">
         <span class="wildcard-card-inner">
           <span class="wildcard-card-back">
-            <span class="wildcard-card-brand">F1 Predictions</span>
+            <span class="wildcard-card-brand">FASTLAP</span>
             <span class="wildcard-question-mark">?</span>
             <span class="wildcard-card-round">R{{ event.round_number }}</span>
           </span>
@@ -374,7 +300,7 @@
           >
             <span class="wildcard-card-inner">
               <span class="wildcard-card-back">
-                <span class="wildcard-card-brand">F1 Predictions</span>
+                <span class="wildcard-card-brand">FASTLAP</span>
                 <span class="wildcard-question-mark">?</span>
                 <span class="wildcard-card-round">R{{ event.round_number }}</span>
               </span>
@@ -426,237 +352,11 @@
   {% endif %}
 </section>
 
-<section
-  id="event-duel"
-  class="western-duel mb-4{% if duel_settings.cover_image %} has-duel-art{% endif %}"
-  {% if duel_settings.cover_image %}style="--western-duel-art:url('{{ duel_settings.cover_image.url }}');"{% endif %}
->
-  <div class="western-duel-heading">
-    <div>
-      <span class="western-duel-kicker">F1 · Wild West</span>
-      <h2>Вызов на дуэль</h2>
-      <p>У кого больше чистых очков за этап — тот получает ставку. При ничьей очки не меняются.</p>
-    </div>
-    <div class="western-duel-limit"><small>Максимальная ставка</small><strong>10</strong><span>очков</span></div>
-  </div>
+{% include "event_duel.html" %}
 
-  {% if not user.is_authenticated %}
-    <div class="western-duel-empty">
-      <span>✦</span>
-      <p><a href="{% url 'login' %}?next={{ request.path|urlencode }}">Войди в аккаунт</a>, чтобы бросить вызов участнику.</p>
-    </div>
-  {% elif own_duel %}
-    <article class="western-showdown is-{{ own_duel.status }}">
-      <div class="western-fighter">
-        <span class="western-avatar">
-          {% if own_duel.challenger.league_profile.avatar %}<img src="{{ own_duel.challenger.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.challenger.username|slice:":1"|upper }}{% endif %}
-        </span>
-        <strong>{{ own_duel.challenger.username }}</strong>
-        <small>Бросил вызов</small>
-      </div>
-      <div class="western-stake-seal"><small>На кону</small><strong>{{ own_duel.stake }}</strong><span>очков</span></div>
-      <div class="western-fighter is-opponent">
-        <span class="western-avatar">
-          {% if own_duel.opponent.league_profile.avatar %}<img src="{{ own_duel.opponent.league_profile.avatar.url }}" alt="">{% else %}{{ own_duel.opponent.username|slice:":1"|upper }}{% endif %}
-        </span>
-        <strong>{{ own_duel.opponent.username }}</strong>
-        <small>{% if own_duel.status == "pending" %}Получил вызов{% else %}Принял вызов{% endif %}</small>
-      </div>
-
-      <div class="western-duel-state">
-        {% if own_duel.status == "pending" and own_duel.opponent_id == user.id %}
-          <div><span class="western-state-label">Тебе бросили вызов</span><strong>Принимаешь бой?</strong></div>
-          <div class="western-duel-actions">
-            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='accept' %}">{% csrf_token %}<button class="western-btn is-accept" type="submit">Принять</button></form>
-            <form method="post" action="{% url 'league:respond_event_duel' duel_id=own_duel.id action='decline' %}">{% csrf_token %}<button class="western-btn is-decline" type="submit">Отклонить и предложить своё</button></form>
-          </div>
-        {% elif own_duel.status == "pending" %}
-          <div><span class="western-state-label">Вызов отправлен</span><strong>Ждём ответа от {{ own_duel.opponent.username }}</strong></div>
-          <form method="post" action="{% url 'league:cancel_event_duel' duel_id=own_duel.id %}">{% csrf_token %}<button class="western-btn is-quiet" type="submit">Отменить вызов</button></form>
-        {% else %}
-          <div><span class="western-state-label">Дуэль принята</span><strong>Решение — после подсчёта этапа</strong></div>
-          <span class="western-locked-mark">Ставка зафиксирована</span>
-        {% endif %}
-      </div>
-    </article>
-  {% elif duel_form %}
-    <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="western-challenge-form">
-      {% csrf_token %}
-      <div class="western-form-intro"><span aria-hidden="true">VS</span><div><strong>Новый вызов</strong><small>Выбери соперника и размер ставки. Одного и того же соперника нельзя выбирать два этапа подряд.</small></div></div>
-      <label><span>Соперник</span>{{ duel_form.opponent }}</label>
-      <label class="western-stake-field"><span>Ставка · 1–10 очков</span>{{ duel_form.stake }}</label>
-      <button type="submit" class="western-btn is-challenge">Вызвать на дуэль <span aria-hidden="true">→</span></button>
-    </form>
-  {% elif state != "open" %}
-    <div class="western-duel-empty"><span>⌛</span><p>Приём новых вызовов закрыт вместе с дедлайном прогнозов.</p></div>
-  {% else %}
-    <div class="western-duel-empty"><span>✦</span><p>Свободных соперников сейчас нет — все уже участвуют в дуэлях.</p></div>
-  {% endif %}
-
-  {% if event_duels %}
-    <div class="western-duel-roster">
-      <div class="western-roster-title"><span>Showdowns</span><strong>Дуэли этапа</strong></div>
-      <div class="western-roster-grid">
-        {% for duel in event_duels %}
-          {% if not own_duel or duel.id != own_duel.id %}
-            <article class="western-roster-card">
-              <div class="western-roster-players"><strong{% if duel.winner_id == duel.challenger_id %} class="is-winner"{% endif %}>{{ duel.challenger.username }}</strong><span>VS</span><strong{% if duel.winner_id == duel.opponent_id %} class="is-winner"{% endif %}>{{ duel.opponent.username }}</strong></div>
-              <div class="western-roster-result">
-                {% if duel.status == "settled" %}
-                  <span>{{ duel.challenger_prediction_points }} : {{ duel.opponent_prediction_points }}</span>
-                  {% if duel.winner %}<strong>{{ duel.winner.username }} · +{{ duel.stake }}</strong>{% else %}<strong>Ничья · без обмена</strong>{% endif %}
-                {% else %}
-                  <span>Ставка {{ duel.stake }}</span><strong>Бой принят</strong>
-                {% endif %}
-              </div>
-            </article>
-          {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-  {% endif %}
-
-  {% if duel_history and not own_duel %}
-    <div class="western-duel-history">
-      {% for duel in duel_history %}
-        <span>{{ duel.challenger.username }} → {{ duel.opponent.username }} · {{ duel.get_status_display }}</span>
-      {% endfor %}
-    </div>
-  {% endif %}
-</section>
-
-<div class="card prediction-workbench mb-4 card-accent-top" style="animation: card-enter 340ms ease-out both;">
-  <div class="card-body">
-    <h2 class="h5 mb-3">Сделать прогноз</h2>
-    {% if state == "open" %}<p class="workbench-note">Твой выбор виден только тебе. Предикты всех участников откроются после дедлайна.</p>{% endif %}
-
-    {% if not user.is_authenticated %}
-      <div class="voting-status voting-status-{{ state }} mb-0">
-        Нужно
-        <a href="{% url 'login' %}?next={{ request.path|urlencode }}">войти</a>
-        или
-        <a href="{% url 'league:register' %}?next={{ request.path|urlencode }}">зарегистрироваться</a>,
-        чтобы сделать прогноз.
-      </div>
-    {% elif state != "open" %}
-      <div class="voting-status mb-0">
-        {% if state == "closed" %}
-          Дедлайн прошел, редактирование закрыто.
-        {% else %}
-          Очки посчитаны, этап завершен.
-        {% endif %}
-      </div>
-    {% else %}
-      <form method="post">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-          <div class="alert alert-danger mb-3">
-            {{ form.non_field_errors }}
-          </div>
-        {% endif %}
-        <div class="row g-3">
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.p1.id_for_label }}">P1</label>
-              <span class="field-points-badge">10 очков</span>
-            </div>
-            {{ form.p1 }}
-            {{ form.p1.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.p2.id_for_label }}">P2</label>
-              <span class="field-points-badge">6 очков</span>
-            </div>
-            {{ form.p2 }}
-            {{ form.p2.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.p3.id_for_label }}">P3</label>
-              <span class="field-points-badge">4 очка</span>
-            </div>
-            {{ form.p3 }}
-            {{ form.p3.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.pole.id_for_label }}">Поул</label>
-              <span class="field-points-badge">4 очка</span>
-            </div>
-            {{ form.pole }}
-            {{ form.pole.errors }}
-          </div>
-          {% if event.has_sprint %}
-            <div class="col-md-6">
-              <div class="field-label-row">
-                <label class="form-label mb-0" for="{{ form.sprint_qualifying_winner.id_for_label }}">Квалификация к спринту</label>
-                <span class="field-points-badge">3 очка</span>
-              </div>
-              {{ form.sprint_qualifying_winner }}
-              {{ form.sprint_qualifying_winner.errors }}
-            </div>
-            <div class="col-md-6">
-              <div class="field-label-row">
-                <label class="form-label mb-0" for="{{ form.sprint_winner.id_for_label }}">Победитель спринта</label>
-                <span class="field-points-badge">5 очков</span>
-              </div>
-              {{ form.sprint_winner }}
-              {{ form.sprint_winner.errors }}
-            </div>
-          {% endif %}
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.fastest_lap.id_for_label }}">Fastest Lap</label>
-              <span class="field-points-badge">3 очка</span>
-            </div>
-            {{ form.fastest_lap }}
-            {{ form.fastest_lap.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.driver_of_day.id_for_label }}">Driver of the Day</label>
-              <span class="field-points-badge">3 очка</span>
-            </div>
-            {{ form.driver_of_day }}
-            {{ form.driver_of_day.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.safety_car_count.id_for_label }}">Количество Safety Car</label>
-              <span class="field-points-badge">5 очков</span>
-            </div>
-            {{ form.safety_car_count }}
-            {{ form.safety_car_count.errors }}
-          </div>
-          <div class="col-md-6">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.dnf_count.id_for_label }}">Количество DNF</label>
-              <span class="field-points-badge">5 очков</span>
-            </div>
-            {{ form.dnf_count }}
-            {{ form.dnf_count.errors }}
-          </div>
-          <div class="col-12">
-            <div class="field-label-row">
-              <label class="form-label mb-0" for="{{ form.crazy_prediction.id_for_label }}">Crazy Prediction</label>
-              <span class="field-points-badge">5 очков</span>
-            </div>
-            {{ form.crazy_prediction }}
-            {{ form.crazy_prediction.errors }}
-          </div>
-        </div>
-        <div class="prediction-submit-bar">
-          <span>Проверь состав — до дедлайна прогноз можно изменить.</span>
-          <button type="submit" class="btn prediction-state-button {% if prediction %}is-saved{% else %}is-open{% endif %}">{% if prediction %}Сохранить изменения ✓{% else %}Сохранить прогноз →{% endif %}</button>
-        </div>
-      </form>
-    {% endif %}
-  </div>
-</div>
-
+<div id="stage-results" class="stage-results">
 {% if user.is_authenticated %}
-  <div class="score-card card mb-4" style="animation: card-enter 400ms ease-out both;">
+  <div class="score-card card mb-4">
     <div class="card-body">
       <div class="d-flex align-items-end justify-content-between">
         <div>
@@ -699,7 +399,7 @@
 {% endif %}
 
 {% if factual_rows %}
-  <div class="card mb-4 card-accent-top" style="animation: card-enter 440ms ease-out both;">
+  <div class="card mb-4 card-accent-top">
     <div class="card-body">
       <h2 class="h5 mb-3">Фактические результаты этапа</h2>
       <div class="result-facts-grid">
@@ -715,7 +415,7 @@
 {% endif %}
 
 {% if user.is_authenticated and comparison_rows %}
-  <div class="card mb-4 card-accent-top" style="animation: card-enter 480ms ease-out both;">
+  <div class="card mb-4 card-accent-top">
     <div class="card-body">
       <div class="d-flex align-items-end justify-content-between mb-3 gap-2">
         <div>
@@ -769,7 +469,7 @@
 {% endif %}
 
 {% if can_view_community %}
-  <section class="community-shell mb-4" style="animation: card-enter 500ms ease-out both;">
+  <section class="community-shell mb-4">
     <div class="community-head">
       <div class="community-kicker">Parc fermé</div>
       <h2 class="community-title">Предикты участников</h2>
@@ -867,10 +567,12 @@
     {% endfor %}
   </div>
 {% endif %}
+</div>
+</div>
 <script src="{% static 'league/wildcard.js' %}"></script>
 <script>
   document.querySelectorAll('[data-stage-cover]').forEach((image) => {
-    const fallback = () => { image.hidden = true; };
+    const fallback = () => { image.hidden = true; image.parentElement.classList.remove('has-cover'); };
     image.addEventListener('error', fallback, { once: true });
     if (image.complete && !image.naturalWidth) fallback();
   });

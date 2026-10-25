@@ -97,7 +97,7 @@ try{
           document.querySelector('main').append(fixture);
         });
       }
-      const avatarSelector='.mini-avatar,.table-avatar,.profile-avatar,.western-avatar,.duel-avatar,.round-winner-avatar,.leagues-avatar';
+      const avatarSelector='.mini-avatar,.table-avatar,.profile-avatar,.western-avatar,.duel-avatar,.round-winner-avatar,.leagues-avatar,.nightshift-account-avatar,.stage-duel-avatar';
       await page.locator(avatarSelector).evaluateAll(avatars=>{
         const svg='<svg xmlns="http://www.w3.org/2000/svg" width="180" height="100"><path fill="#4ba" d="M0 0h180v100H0z"/><circle fill="#fc8" cx="90" cy="50" r="35"/></svg>';
         for(const avatar of avatars){
@@ -106,8 +106,8 @@ try{
         }
       });
       const checkAvatars=async()=>assert.deepEqual(await page.locator(avatarSelector).evaluateAll(avatars=>avatars.flatMap(avatar=>{
-        const style=getComputedStyle(avatar),image=getComputedStyle(avatar.querySelector('img')),box=avatar.getBoundingClientRect();
-        const valid=style.borderRadius==='50%'&&style.boxShadow==='none'&&['Top','Right','Bottom','Left'].every(side=>style[`border${side}Width`]==='0px'&&style[`padding${side}`]==='0px')&&Math.abs(box.width-box.height)<1&&image.objectFit==='cover'&&image.objectPosition==='50% 50%';
+        const node=avatar.querySelector('img'),style=getComputedStyle(avatar),image=getComputedStyle(node),box=avatar.getBoundingClientRect(),crop=node.getBoundingClientRect();
+        const valid=style.borderRadius==='50%'&&style.boxShadow==='none'&&['Top','Right','Bottom','Left'].every(side=>style[`border${side}Width`]==='0px'&&style[`padding${side}`]==='0px')&&Math.abs(box.width-box.height)<1&&Math.abs(crop.width-box.width)<1&&Math.abs(crop.height-box.height)<1&&Math.abs(crop.x-box.x)<1&&Math.abs(crop.y-box.y)<1&&image.objectFit==='cover'&&image.objectPosition==='50% 50%';
         return valid?[]:[{className:avatar.className,border:style.border,shadow:style.boxShadow,width:box.width,height:box.height}];
       })),[],`${width} ${url}: player avatars have no frames and share a circular centre-cover crop`);
       await checkAvatars();

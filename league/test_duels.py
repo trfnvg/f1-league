@@ -255,14 +255,17 @@ class DuelChallengeTests(TestCase):
         self.assertEqual(Score.objects.get(event=self.event, user=self.opponent).duel_adjustment, 0)
         self.assertEqual(pending.status, DuelChallenge.Status.EXPIRED)
 
-    def test_event_page_renders_western_duel_form(self):
+    def test_event_page_renders_compact_nightshift_duel_form(self):
         self.client.force_login(self.challenger)
         response = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
-        self.assertContains(response, "Вызов на дуэль")
-        self.assertContains(response, "F1 · Wild West")
+        self.assertContains(response, 'class="stage-duel mb-4"')
+        self.assertContains(response, "Бросить вызов")
+        self.assertContains(response, 'class="stage-duel-form"')
+        self.assertNotContains(response, "F1 · Wild West")
+        self.assertTemplateUsed(response, "event_duel.html")
         self.assertContains(response, reverse("league:create_event_duel", args=(self.event.id,)))
 
-    def test_one_global_cover_is_used_for_every_event(self):
+    def test_legacy_cover_does_not_leak_into_compact_duel_panel(self):
         DuelSettings.objects.create(cover_image="duel_theme/western.webp")
         second_event = Event.objects.create(
             season_year=2026,
@@ -275,8 +278,10 @@ class DuelChallengeTests(TestCase):
 
         first_page = self.client.get(reverse("league:event_detail", args=(self.event.id,)))
         second_page = self.client.get(reverse("league:event_detail", args=(second_event.id,)))
-        self.assertContains(first_page, "/media/duel_theme/western.webp")
-        self.assertContains(second_page, "/media/duel_theme/western.webp")
+        for page in (first_page, second_page):
+            self.assertNotContains(page, "/media/duel_theme/western.webp")
+            self.assertContains(page, 'class="stage-duel mb-4"')
+        self.assertEqual(DuelSettings.objects.get().cover_image.name, "duel_theme/western.webp")
 
     @patch("league.telegram_bot.send_message")
     def test_duel_actions_do_not_notify_telegram_while_disabled(self, send_message):

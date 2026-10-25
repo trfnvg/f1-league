@@ -139,7 +139,7 @@ class HomeEventOrderingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["upcoming_events"], [upcoming_new, upcoming_old])
         self.assertEqual(response.context["past_events"], [past_new, past_old])
-        self.assertContains(response, 'class="event-editorial-card"')
+        self.assertContains(response, 'class="event-editorial-card gp-card"')
         self.assertContains(response, 'class="event-media-placeholder"')
 
 

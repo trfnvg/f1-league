@@ -7,7 +7,7 @@
       href="{% url 'league:player_profile' user_id=item.user_id %}?season={{ season.year }}"
     {% endif %}
   >
-    <span class="activity-feed-icon" aria-hidden="true"></span>
+    <span class="activity-feed-icon" aria-hidden="true">{% include 'activity_icon.html' with kind=item.type %}</span>
     <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Championship update{% elif item.type == "winner" %}Race result{% elif item.type == "movement" %}Position update{% elif item.type == "arcade-leader" %}Arcade record{% elif item.type == "arcade-winner" %}Arcade winner{% elif item.type == "duel-accepted" %}Duel accepted{% elif item.type == "duel-result" %}Duel result{% elif item.type == "crazy-veto" %}Paddock Jury{% else %}Race bulletin{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
   </a>
 {% empty %}
