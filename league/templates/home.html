@@ -16,7 +16,7 @@
       {% if featured_event %}
         {% with circuit=featured_event.circuit_visual %}
         <h2 id="featured-gp-title">{% if circuit %}{{ circuit.location }}<span>.</span>{% else %}{{ featured_event.name }}{% endif %}{% if featured_is_upcoming %}<br>Твой ход.{% elif featured_race_in_progress %}<br>На трассе.{% elif not featured_display_active %}<br>Финиш.{% endif %}</h2>
-        <p>{{ featured_event.name }}. {% if featured_is_upcoming %}Один гоночный уик-энд. И шанс изменить расклад в своей лиге.{% elif featured_display_active %}Прогнозы зафиксированы. Следи за гонкой и результатами своего паддока.{% else %}Посмотри результаты этапа и новую расстановку сил.{% endif %}</p>
+        <p>{% if featured_is_upcoming %}Один гоночный уик-энд. И шанс изменить расклад в своей лиге.{% elif featured_display_active %}Прогнозы зафиксированы. Следи за гонкой и результатами своего паддока.{% else %}Посмотри результаты этапа и новую расстановку сил.{% endif %}</p>
         <a class="ns-primary" href="{% url 'league:event_detail' event_id=featured_event.id %}"><span>{% if featured_is_upcoming %}{% if featured_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}{% elif featured_event.ui_state == 'scored' %}Результаты этапа{% else %}Открыть этап{% endif %}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></a>
         <div class="ns-racebottom">{% if circuit %}<span>{{ circuit.country }}</span><span>{{ circuit.name }}</span>{% else %}<span>SEASON {{ season.year }}</span><span>ROUND {{ featured_event.round_number }}</span>{% endif %}</div>
         {% endwith %}
@@ -122,8 +122,12 @@
       <div class="ns-bottomstrip"><span>Каждый этап меняет расстановку сил.</span>{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}">Моя лига →</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Вся таблица →</a>{% endif %}</div>
     </div>
     <section class="ns-panel ns-live" aria-labelledby="live-paddock-title">
-      <div class="ns-panelheading"><h3 id="live-paddock-title"><i class="ns-live-pip" aria-hidden="true"></i> Live paddock</h3><span>Последние события</span></div>
+      <div class="paddock-radio-header">
+        <div class="paddock-radio-channel"><span>FASTLAP / TEAM RADIO</span><span class="paddock-radio-status"><i class="ns-live-pip" aria-hidden="true"></i> LIVE</span></div>
+        <div class="paddock-radio-title"><div><h3 id="live-paddock-title">Live paddock</h3><p>На связи с твоим паддоком</p></div><svg class="paddock-radio-wave" viewBox="0 0 96 32" aria-hidden="true"><path d="M1 16h9m4-5v10m6-15v20m6-18v16m6-11v6m6-17v28m6-23v18m6-13v8m6-16v24m6-19v14m6-10v6m6-15v24m6-18v12m6-8v4m5-2h8"/></svg></div>
+      </div>
       <div class="activity-news-list" id="live-paddock-list" data-feed-url="{% url 'league:activity_feed' %}?season={{ season.year }}">{% include "activity_feed_items.html" %}</div>
+      <div class="paddock-radio-footer"><span>Канал событий</span><span>Сезон {{ season.year }}</span></div>
     </section>
   </div>
 </section>

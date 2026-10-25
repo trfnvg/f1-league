@@ -48,16 +48,19 @@ circular crop as elsewhere.
 
 Stage heroes have an explicit grid, a cover that fits without cropping, a
 circuit or round-number fallback, and no hidden/reveal animation dependency.
-Failed stage-cover requests reveal the fallback. Uploaded covers in the calendar
-and stage hero follow their intrinsic aspect ratio (`width:100%; height:auto`),
-without fixed-height boxes, letterboxing or hover zoom. Circuit placeholders
-retain a 16:9 frame. Round/status metadata sits outside the artwork. The calendar
-uses one readable card per row on phones and two/three on larger screens.
+Failed stage-cover requests reveal the fallback. Stage heroes follow the cover's
+intrinsic aspect ratio. Calendar cards use uniform 16:9 media frames and two-line
+title slots so that every card has equal dimensions at each viewport size.
+`object-fit:contain` keeps the full artwork visible inside these frames. Neither
+surface zooms on hover. Round/status metadata sits outside the artwork. The
+calendar uses one card per row on phones and two/three on larger screens.
 
 Nightshift component rules load after the legacy themes. The primary homepage
 action has a normal rectangular hit area and a vector arrow. Live Paddock uses
-32px vector icons in explicit grid columns; old sprite/timeline pseudo-elements
-are disabled. Event duels use the isolated `stage-duel` component, without the
+32px vector icons and numbered messages in a radio console. The channel header
+and decorative waveform are static; the five real messages still refresh through
+the feed endpoint. Old sprite/timeline pseudo-elements are disabled. Event duels
+use the isolated `stage-duel` component, without the
 legacy Western background/seals; all challenge and response endpoints stay the
 same. Legacy uploaded duel artwork is preserved in storage, not shown behind
 the new panel.

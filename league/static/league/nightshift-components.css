@@ -17,51 +17,61 @@ body.apex-night-theme.editorial-theme .ns-primary::after { content:none; }
 .ns-primary>span { min-width:0; }
 .ns-primary>svg,.event-card-action>svg { width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 
-/* Live feed: one icon per row, not an old timeline plus a second marker. */
+/* Radio console: restrained channel header, numbered transmissions, real feed. */
+.paddock-radio-header { padding:22px 24px 19px; }
+.paddock-radio-channel { display:flex; align-items:center; justify-content:space-between; gap:16px; color:#8f9aa8; font:550 9px/1.5 "SFMono-Regular",Consolas,monospace; letter-spacing:.09em; }
+.paddock-radio-status { display:inline-flex; align-items:center; gap:7px; color:#afc7b8; }
+.paddock-radio-status .ns-live-pip { width:5px; height:5px; margin:0; background:#91b6a0; box-shadow:none; }
+.paddock-radio-title { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-top:20px; }
+.paddock-radio-title h3 { margin:0; color:#edf0f5; font:650 23px/1.2 Inter,sans-serif; letter-spacing:-.04em; }
+.paddock-radio-title p { margin:7px 0 0; color:#919eae; font:400 11px/1.5 Inter,sans-serif; }
+.paddock-radio-wave { width:96px; height:32px; flex:none; fill:none; stroke:#afbabf; stroke-width:1.5; stroke-linecap:round; opacity:.65; }
+.paddock-radio-footer { display:flex; justify-content:space-between; gap:16px; margin:0 24px; padding:14px 0 18px; border-top:1px solid #ffffff12; color:#8795a6; font:450 9px/1.5 "SFMono-Regular",Consolas,monospace; }
+.paddock-radio-index { padding-top:3px; text-align:right; color:#7f8b9b; font:450 9px/1.5 "SFMono-Regular",Consolas,monospace; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-list { display:block; max-width:none; padding:0 24px 10px; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-list::before,
 body.apex-night-theme.editorial-theme .ns-live .activity-news-item::before,
 body.apex-night-theme.editorial-theme .ns-live .activity-feed-icon::before,
 body.apex-night-theme.editorial-theme .ns-live .activity-feed-icon::after { content:none; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-item {
-  display:grid; grid-template-columns:32px minmax(0,1fr); gap:12px; align-items:start;
+  display:grid; grid-template-columns:32px minmax(0,1fr) 20px; gap:12px; align-items:start;
   min-height:0; margin:0; padding:17px 0; border:0; border-top:1px solid #ffffff12;
   border-radius:0; background:none; box-shadow:none; transform:none; text-decoration:none;
 }
-body.apex-night-theme.editorial-theme .ns-live .activity-news-item:hover { background:none; transform:none; }
+body.apex-night-theme.editorial-theme .ns-live .activity-news-item:hover { background:linear-gradient(90deg,transparent,#ffffff04); transform:none; }
+body.apex-night-theme.editorial-theme .ns-live .activity-news-item:focus-visible { outline:2px solid #a5b2c2; outline-offset:4px; border-radius:4px; }
 body.apex-night-theme.editorial-theme .ns-live .activity-feed-icon {
   position:static; display:grid; place-items:center; width:32px; height:32px;
   min-width:32px; min-height:32px; margin:1px 0 0; padding:0; border:1px solid #46505d;
-  border-radius:9px; color:#b8c5d5; background:#2b323b; box-shadow:none; transform:none;
+  border-radius:50%; color:#b8c5d5; background:#ffffff03; box-shadow:none; transform:none;
 }
 body.apex-night-theme.editorial-theme .ns-live .activity-feed-icon svg { display:block; width:18px; height:18px; }
-body.apex-night-theme.editorial-theme .ns-live :is(.is-leader,.is-winner,.is-arcade-winner) .activity-feed-icon { color:#dbc29c; border-color:#594e3e; background:#35312b; }
-body.apex-night-theme.editorial-theme .ns-live .is-movement .activity-feed-icon { color:#afd2bf; border-color:#3d584c; background:#28382f; }
+body.apex-night-theme.editorial-theme .ns-live :is(.is-leader,.is-winner,.is-arcade-winner) .activity-feed-icon { color:#d2c3ac; border-color:#555249; background:#ffffff03; }
+body.apex-night-theme.editorial-theme .ns-live .is-movement .activity-feed-icon { color:#afd2bf; border-color:#46584f; background:#ffffff03; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-copy { display:block; min-width:0; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-label { display:block; margin:0; color:#929ca9!important; font:650 8px/1.5 Inter,sans-serif!important; letter-spacing:.07em; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>strong { display:block; margin:5px 0; color:#e4e8ee; font:550 12px/1.6 Inter,"Segoe UI",Arial,sans-serif; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>small:last-child { display:block; color:#9ca6b3; font:400 10px/1.5 Inter,sans-serif; }
 
-/* Calendar photography follows its intrinsic aspect ratio. A square upload is
-   still square; no invisible crop, letterbox or hover zoom changes the artwork. */
-body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { align-items:start; gap:20px; }
-body.apex-night-theme.editorial-theme .ns-calendar .gp-card { display:flex; flex-direction:column; overflow:hidden; border:1px solid #39424d; border-radius:16px!important; background:#1d2229; box-shadow:none; transform:none; }
+/* Equal calendar frames; contain preserves the entire uploaded artwork. */
+body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { align-items:stretch; gap:20px; }
+body.apex-night-theme.editorial-theme .ns-calendar .gp-card { display:flex; flex-direction:column; height:100%; min-width:0; overflow:hidden; border:1px solid #39424d; border-radius:16px!important; background:#1d2229; box-shadow:none; transform:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .gp-card:hover { border-color:#67717f; box-shadow:0 8px 24px #00000014; transform:none; }
-.gp-card-meta { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:14px 17px; }
+.gp-card-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; height:44px; flex:none; padding:12px 17px; }
 .gp-round { color:#e3e7ed; font:700 11px/1.4 "SFMono-Regular",Consolas,monospace; letter-spacing:.04em; }
 .gp-state { display:inline-flex; align-items:center; gap:6px; color:#a2acb9; font:550 10px/1.4 Inter,sans-serif; }
 .gp-state::before { content:""; width:5px; height:5px; flex:0 0 5px; border-radius:50%; background:#788391; }
 .gp-state.is-open { color:#dfb9b3; }.gp-state.is-open::before { background:#ef7569; }
 .gp-state.is-saved { color:#a5cbb6; }.gp-state.is-saved::before { background:#91bea5; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-media { display:block; flex:none; width:100%; height:auto; min-height:0; aspect-ratio:16/9; overflow:hidden; background:#232932; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-media.has-cover { aspect-ratio:auto; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media { position:relative; display:block; flex:none; width:100%; height:auto; min-height:0; aspect-ratio:16/9; overflow:hidden; background:#232932; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media.has-cover { aspect-ratio:16/9; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-media::after { content:none; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-media>img { position:static; display:block; width:100%; height:auto; max-height:none; margin:0; object-fit:contain; object-position:center; transform:none!important; filter:none; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { gap:0; padding:19px 18px 17px; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media>img { position:absolute; inset:0; display:block; width:100%; height:100%; max-height:none; margin:0; object-fit:contain; object-position:center; transform:none!important; filter:none; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { display:flex; flex-direction:column; flex:1; gap:0; padding:19px 18px 17px; }
 .gp-card-date { margin-bottom:9px; color:#98a3b1; font:550 10px/1.5 Inter,sans-serif; letter-spacing:.02em; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { margin:0 0 22px; color:#edf0f4; font:700 19px/1.3 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.035em; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; height:2.6em; flex:none; margin:0 0 22px; color:#edf0f4; font:700 19px/1.3 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.035em; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 a { color:inherit; text-decoration:none; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-card-foot { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-top:auto; padding-top:14px; border-top:1px solid #ffffff12; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-foot { display:flex; align-items:center; justify-content:space-between; flex-wrap:nowrap; gap:8px; margin-top:auto; padding-top:14px; border-top:1px solid #ffffff12; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-card-foot>span { color:#909ba9; font:400 10px/1.6 Inter,sans-serif; }
 .event-card-foot>span>strong { color:#bcc4cf; font-weight:550; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-card-action { display:inline-flex; align-items:center; justify-content:center; gap:13px; min-height:40px; padding:9px 12px; border:1px solid #46505c; border-radius:8px; color:#e9edf3!important; background:#282f38; box-shadow:none; font:650 11px/1.4 Inter,sans-serif; letter-spacing:0; text-transform:none; text-decoration:none; clip-path:none; }
@@ -115,6 +125,7 @@ body.apex-night-theme.editorial-theme .stage-duel-form :is(select,input) { width
 @media(max-width:1000px) { .stage-duel-roster-grid { grid-template-columns:1fr; } }
 @media(max-width:780px) {
   body.apex-night-theme.editorial-theme .ns-live .activity-news-list { padding-inline:18px; }
+  .paddock-radio-header { padding:20px 18px 18px; }.paddock-radio-footer { margin-inline:18px; }.paddock-radio-wave { width:76px; }
   body.apex-night-theme.editorial-theme .event-stage-media.has-cover { margin:0 22px 22px; }
   .stage-duel { padding:20px; }.stage-duel-heading { align-items:flex-start; gap:14px; }
   .stage-duel-heading h2 { font-size:25px; }.stage-duel-form { grid-template-columns:minmax(0,1fr) 110px; }.stage-duel-form>.stage-duel-btn { grid-column:1/-1; }

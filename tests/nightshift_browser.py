@@ -237,15 +237,21 @@ def run(output, widths, engine):
                         action=page.locator('.ns-primary')
                         assert action.evaluate("e=>getComputedStyle(e).clipPath==='none' && getComputedStyle(e).transform==='none'")
                         assert action.locator('svg').is_visible()
+                    if route == '/' or route.startswith('/cover-'):
+                        assert page.locator('.ns-calendar .gp-card').evaluate_all('''cards=>{
+                            const boxes=cards.map(e=>e.getBoundingClientRect());
+                            return Math.max(...boxes.map(b=>b.width))-Math.min(...boxes.map(b=>b.width))<2 && Math.max(...boxes.map(b=>b.height))-Math.min(...boxes.map(b=>b.height))<2;
+                        }'''), (width, route, "calendar cards must have equal dimensions")
                     if route.startswith('/cover-') or route.startswith('/stage-') or route == '/event/':
                         selector='.ns-calendar .event-media.has-cover img' if route.startswith('/cover-') else '[data-stage-cover]'
                         for image in page.locator(selector).all():
                             image.scroll_into_view_if_needed()
                             image.wait_for(state='visible')
+                            image.evaluate('e=>e.decode()')
                             assert image.evaluate('''e=>{
                                 const b=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();
-                                return e.complete && e.naturalWidth>0 && Math.abs(b.height-b.width*e.naturalHeight/e.naturalWidth)<1 && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
-                            }'''), (width, route, "cover cropped or letterboxed")
+                                return e.complete && e.naturalWidth>0 && getComputedStyle(e).objectFit==='contain' && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
+                            }'''), (width, route, "cover cropped or outside its frame", image.evaluate("e=>({image:[e.clientWidth,e.clientHeight],frame:[e.parentElement.clientWidth,e.parentElement.clientHeight],fit:getComputedStyle(e).objectFit})"))
                             image.hover()
                             assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
                     if route.startswith('/duel-'):
