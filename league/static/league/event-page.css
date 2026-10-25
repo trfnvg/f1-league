@@ -122,6 +122,51 @@ body.apex-night-theme.editorial-theme .event-page .stage-duel-heading h2 { font-
 @media(max-width:360px) { .event-page .event-stage-layout { grid-template-columns:minmax(0,1fr) 64px; gap:10px; }.event-page .stage-sections a { font-size:11px; } }
 
 /* Strategy cards: a technical race pass, shared with the site's charcoal UI. */
+body.apex-night-theme.editorial-theme .event-page .prediction-workbench.is-builder { padding:0; background:none!important; border:0!important; }
+.event-page .prediction-workbench.is-builder>.card-body { padding:0; }
+.event-page .is-builder .stage-section-heading h2 { font-size:clamp(28px,3vw,40px); letter-spacing:-.05em; }
+.event-page .is-builder .stage-section-heading p { max-width:720px; font-size:13px; }
+.race-prediction-layout { display:grid; grid-template-columns:minmax(0,1fr) 290px; gap:20px; align-items:start; }
+.race-prediction-layout [hidden] { display:none!important; }
+.race-prediction-main { min-width:0; }
+.prediction-points-help { margin:0 0 16px; color:#a6b3c3; font-size:12px; }.prediction-points-help summary { width:fit-content; cursor:pointer; color:#d2dce9; padding:6px 0; }.prediction-points-help p { margin:10px 0 0; padding:16px; border:1px solid #3b4552; border-radius:10px; background:#232a34; line-height:1.7; }
+.prediction-form-panel { min-width:0; overflow:hidden; border:1px solid #3b4552; border-radius:14px; background:#232a34; }
+.prediction-panel-head { padding:24px; border-bottom:1px solid #ffffff10; }
+.prediction-panel-head>span,.prediction-more summary small { display:block; color:#95a1b1; font:600 10px/1.5 monospace; letter-spacing:.07em; }
+.event-page .prediction-panel-head h2 { margin:12px 0 7px; font:650 21px/1.3 Inter,sans-serif; letter-spacing:-.04em; }
+.prediction-panel-head p { color:#9eabba; font-size:12px; line-height:1.6; margin:0; }
+.prediction-panel-body { padding:24px; }
+.prediction-panel-body h3 { color:#e4e9f0; font:600 15px/1.5 Inter,sans-serif; margin:0 0 6px; }
+.prediction-help { color:#98a5b5; font-size:12px; line-height:1.6; margin-bottom:18px; }
+.prediction-podium,.prediction-native-podium { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.prediction-native-podium label { font-size:12px; }
+.prediction-podium-slot { appearance:none; min-width:0; min-height:112px; padding:14px 12px; border:1px solid #46515f; border-radius:10px; background:#2a323e; color:#e4eaf2; text-align:left; }
+.prediction-podium-slot[aria-pressed="true"] { background:#3b2c32; border-color:#e55e53; }
+.prediction-podium-slot small { display:block; color:#f0998f; font:600 9px/1.5 Inter,sans-serif; text-transform:uppercase; }
+.prediction-podium-slot strong { display:block; margin:10px 0 7px; font-size:13px; overflow-wrap:anywhere; }
+.prediction-podium-slot>span { color:#a1adbc; font-size:10px; }
+.prediction-driver-picker { margin-top:25px; padding-top:25px; border-top:1px solid #ffffff12; }
+.prediction-driver-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.prediction-driver-option { display:flex; align-items:center; gap:10px; min-width:0; min-height:68px; padding:12px; border:1px solid #46505d; border-radius:10px; background:#2a323d; color:#e5eaf1; text-align:left; }
+.prediction-driver-option:hover:not(:disabled),.prediction-driver-option[aria-pressed="true"] { border-color:#c67a70; background:#39303a; }
+.prediction-driver-option:disabled { opacity:.5; }
+.prediction-driver-monogram { display:grid; place-items:center; flex:0 0 30px; width:30px; height:34px; border-radius:7px; background:#3a4553; color:#afbdce; font:600 10px monospace; }
+.prediction-driver-meta { min-width:0; }.prediction-driver-meta strong { display:block; font-size:12px; overflow-wrap:anywhere; }.prediction-driver-meta small { display:block; margin-top:4px; color:#9ba7b7; font:450 10px/1.4 monospace; }
+.prediction-driver-mark { margin-left:auto; color:#f28b7e; font:600 9px monospace; }
+.prediction-more { margin-top:18px; }.prediction-more summary { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:22px 24px; cursor:pointer; list-style:none; }.prediction-more summary::-webkit-details-marker { display:none; }
+.prediction-more summary strong { display:block; margin-top:9px; color:#e4e9ef; font-size:17px; font-weight:600; }.prediction-more-arrow { color:#e47c70; font-size:24px; }.prediction-more[open] summary { border-bottom:1px solid #ffffff12; }.prediction-more[open] .prediction-more-arrow { transform:rotate(45deg); }
+.prediction-live-summary { position:sticky; top:100px; }.prediction-progress { display:block; appearance:none; width:100%; height:6px; margin-top:20px; border:0; border-radius:8px; overflow:hidden; background:#424c58; accent-color:#ee6459; }.prediction-progress::-webkit-progress-bar { background:#424c58; }.prediction-progress::-webkit-progress-value { background:#ee6459; }.prediction-progress::-moz-progress-bar { background:#ee6459; }
+.prediction-summary-lines { margin:0; padding:8px 24px; }.prediction-summary-lines>div { display:flex; align-items:baseline; justify-content:space-between; gap:15px; padding:14px 0; border-bottom:1px solid #ffffff10; }.prediction-summary-lines>div:last-child { border:0; }
+.prediction-summary-lines dt { flex:1; color:#a5b0be; font:400 11px/1.5 Inter,sans-serif; }.prediction-summary-lines dd { flex:1; margin:0; text-align:right; overflow-wrap:anywhere; color:#e2e8ef; font:600 12px/1.5 Inter,sans-serif; }.prediction-summary-lines dd.is-empty { color:#8492a4; }
+.prediction-summary-action { padding:18px 24px 24px; }.prediction-summary-action button { width:100%; }.prediction-summary-action small { display:block; margin-top:12px; color:#91a0b2; font-size:10px; line-height:1.6; }
+.prediction-builder-error { color:#ffaca4; font-size:12px; margin-top:16px; }
+.prediction-fallback-submit { margin-top:20px; }
+.race-prediction-layout button:focus-visible,.prediction-more summary:focus-visible { outline:2px solid #aebccc; outline-offset:3px; }
+@media(max-width:1100px) { .race-prediction-layout { grid-template-columns:1fr; }.prediction-live-summary { position:static; }.prediction-summary-lines { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; } }
+@media(max-width:600px) {
+  .prediction-panel-head,.prediction-panel-body { padding:20px 16px; }.prediction-podium { gap:6px; }.prediction-podium-slot { padding:12px 8px; min-height:119px; }.prediction-podium-slot small { font-size:8px; }.prediction-podium-slot strong { font-size:12px; }
+  .prediction-driver-option { gap:7px; padding:11px 8px; }.prediction-driver-monogram { display:none; }.prediction-driver-meta strong { font-size:12px; }.prediction-more summary { padding:20px 16px; }.prediction-summary-lines { display:block; padding-inline:16px; }.prediction-summary-action { padding:18px 16px 22px; }
+}
 body.apex-night-theme.editorial-theme .event-page .wildcard-module .wildcard-card-back { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:8px; align-items:stretch; padding:16px; background:linear-gradient(145deg,#2b3542,#171f29)!important; border-color:#566273; }
 .race-card-topline { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; border-bottom:1px solid #ffffff16; color:#dce4ee; font:650 9px/1.3 Inter,sans-serif; letter-spacing:.1em; }
 .race-card-topline>span:last-child { color:#ef766b; font-family:monospace; letter-spacing:0; }

@@ -94,6 +94,16 @@ The shared mobile menu and bottom navigation use consistent line SVG icons and
 touch targets. Prediction, wildcard and duel permissions and endpoints remain
 unchanged.
 
+The open forecast uses the reference's two-column builder: three podium slots,
+driver buttons and a live answer summary. Buttons derive names and teams from
+the real form choices, and use initials rather than unverified racing numbers.
+Podium controls write into the original named Django fields, prevent duplicate
+drivers, and keep server validation authoritative. The expandable remaining
+questions retain exact numerical Safety Car/DNF answers and sprint fields.
+Progress counts zero as an answer and adapts to the actual fields. With JS
+disabled, native selects and the full form remain usable. Invalid fields open
+the remaining-questions section before the browser focuses them.
+
 ## Desktop blank-page regression
 
 Both the event template and base template used to contain UTF-8 byte-order marks.

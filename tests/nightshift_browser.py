@@ -220,7 +220,8 @@ def run(output, widths, engine):
                     if route in ("/event/", "/far-future/", "/event-broken-cover/", "/event-fallback/"):
                         assert page.locator(".event-stage-hero").is_visible(), (route, "empty stage header")
                         assert page.locator(".prediction-workbench form").is_visible(), (route, "forecast missing")
-                        assert page.locator("#id_p1").is_visible()
+                        assert page.locator(".prediction-podium-slot").count() == 3
+                        assert page.locator("[data-driver-grid]").is_visible()
                         assert page.locator("#personal-wildcard").is_hidden(), "Optional mechanics must not overwhelm the forecast"
                         assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
                         if width < 781:
@@ -278,7 +279,26 @@ def run(output, widths, engine):
                         if route == '/duel-accepted/':
                             assert page.locator('.stage-duel-locked').is_visible()
                     if route == '/event/':
+                        page.locator('[data-driver="norris"]').click()
+                        page.locator('[data-driver="piastri"]').click()
+                        page.locator('[data-driver="russell"]').click()
+                        assert page.locator('#id_p1').input_value() == 'norris'
+                        assert page.locator('#id_p2').input_value() == 'piastri'
+                        assert page.locator('#id_p3').input_value() == 'russell'
+                        assert page.locator('[data-driver="norris"]').is_disabled()
+                        assert 'Норрис' in page.locator('[data-summary-lines]').inner_text()
+                        page.locator('[data-more-predictions] summary').click()
+                        for name in ['pole', 'fastest_lap', 'driver_of_day']:
+                            page.locator(f'#id_{name}').select_option('norris')
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
+                        assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
+                        assert page.locator('#race-prediction-form').evaluate('f=>f.checkValidity()')
+                        assert page.locator('#race-prediction-form').evaluate("f=>new FormData(f).get('p1')") == 'norris'
+                        page.locator('#id_pole').select_option('')
+                        page.locator('[data-more-predictions] summary').click()
+                        page.locator('.prediction-summary-action button').click()
+                        assert page.locator('[data-more-predictions]').get_attribute('open') is not None
+                        page.locator('#id_pole').select_option('norris')
                         page.locator('.stage-sections a[href="#personal-wildcard"]').click()
                         assert page.locator('#personal-wildcard').is_visible()
                         assert page.locator('#stage-prediction').is_hidden()
@@ -301,6 +321,12 @@ def run(output, widths, engine):
                         assert page.locator("#season-predictions").is_visible()
                     page.screenshot(path=str(output/f"{width}-{route.strip('/') or 'home'}.png"), full_page=True)
                 page.close()
+            fallback_page = browser.new_page(viewport={"width": 390, "height": 1000}, java_script_enabled=False)
+            fallback_page.goto(base+'/event/', wait_until='networkidle')
+            assert fallback_page.locator('#id_p1').is_visible()
+            assert fallback_page.locator('#id_pole').is_visible()
+            assert fallback_page.locator('[data-fallback-submit]').is_visible()
+            fallback_page.close()
             page = browser.new_page(viewport={"width": 1440, "height": 1000})
             page.on("pageerror", lambda error: errors.append(str(error)))
             page.goto(base+"/admin-add/", wait_until="networkidle")

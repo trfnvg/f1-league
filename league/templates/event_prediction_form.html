@@ -1,0 +1,45 @@
+<form method="post" id="race-prediction-form" class="race-prediction-layout" data-prediction-builder>
+  {% csrf_token %}
+  <div class="race-prediction-main">
+    <details class="prediction-points-help"><summary>Как начисляются очки?</summary><p>Точное место на подиуме: 10 / 6 / 4 очка. Пилот попал в тройку, но на другое место: 3 очка. Поул — 4, быстрый круг и гонщик дня — по 3. Точное число выездов Safety Car и сходов — по 5. Засчитанный Crazy Prediction — 5.{% if event.has_sprint %} Квалификация спринта — 3, победитель спринта — 5.{% endif %}</p></details>
+    {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+    <section class="prediction-form-panel">
+      <header class="prediction-panel-head"><span>01 / ОСНОВНОЕ</span><h2>Предскажи подиум</h2><p>Выбери место, затем пилота. Один пилот — одна позиция на подиуме.</p></header>
+      <div class="prediction-panel-body">
+        <h3>Кто финиширует в первой тройке?</h3><p class="prediction-help">Начни с победителя, затем выбери второе и третье место.</p>
+        <div class="prediction-native-podium" data-native-podium>
+          <div><label for="{{ form.p1.id_for_label }}">P1 · Победитель</label>{{ form.p1 }}</div>
+          <div><label for="{{ form.p2.id_for_label }}">P2 · Второе место</label>{{ form.p2 }}</div>
+          <div><label for="{{ form.p3.id_for_label }}">P3 · Третье место</label>{{ form.p3 }}</div>
+        </div>
+        <div class="prediction-podium" data-podium-slots hidden></div>
+        {{ form.p1.errors }}{{ form.p2.errors }}{{ form.p3.errors }}
+        <p class="prediction-builder-error" data-podium-error role="alert" hidden></p>
+        <div class="prediction-driver-picker" data-driver-picker hidden>
+          <h3>Выбери гонщика</h3><p class="prediction-help" data-active-place aria-live="polite"></p>
+          <div class="prediction-driver-grid" data-driver-grid></div>
+        </div>
+      </div>
+    </section>
+    <details class="prediction-form-panel prediction-more" data-more-predictions open>
+      <summary><span><small>02 / ГОНОЧНЫЙ УИК-ЭНД</small><strong>Ещё несколько прогнозов</strong></span><span class="prediction-more-arrow" aria-hidden="true">+</span></summary>
+      <div class="prediction-panel-body">
+        <p class="prediction-help">Подиум — только начало. Выбери остальные исходы перед сохранением.</p>
+        <div class="row g-3">
+          {% for field in form %}{% if field.name != 'p1' and field.name != 'p2' and field.name != 'p3' %}
+            <div class="{% if field.name == 'crazy_prediction' %}col-12{% else %}col-md-6{% endif %}">
+              <label class="form-label" for="{{ field.id_for_label }}">{% if field.name == 'pole' %}Поул{% elif field.name == 'fastest_lap' %}Быстрый круг{% elif field.name == 'driver_of_day' %}Гонщик дня{% elif field.name == 'safety_car_count' %}Выезды Safety Car{% elif field.name == 'dnf_count' %}Количество сходов{% else %}{{ field.label }}{% endif %}</label>
+              {{ field }}{{ field.errors }}
+            </div>
+          {% endif %}{% endfor %}
+        </div>
+      </div>
+    </details>
+    <button type="submit" class="prediction-state-button prediction-fallback-submit" data-fallback-submit>{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button>
+  </div>
+  <aside class="prediction-form-panel prediction-live-summary" data-live-summary hidden aria-label="Сводка твоего прогноза">
+    <header class="prediction-panel-head"><span>ТВОЯ КАРТОЧКА / R{{ event.round_number|stringformat:'02d' }}</span><h2>Мой прогноз</h2><p data-prediction-progress aria-live="polite"></p><progress class="prediction-progress" data-progress-bar value="0" max="9" aria-label="Заполнение прогноза"></progress></header>
+    <dl class="prediction-summary-lines" data-summary-lines></dl>
+    <div class="prediction-summary-action"><button type="submit" class="prediction-state-button">{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button><small>До {{ event.deadline|date:'d.m · H:i' }} МСК ответы можно менять.</small></div>
+  </aside>
+</form>
