@@ -1,7 +1,7 @@
 """Private league HTTP surface; all object lookups are membership scoped."""
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
@@ -15,7 +15,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from .competition_scoring import recalculate_league_event
 from .forms import PredictionForm
 from .league_forms import CreateLeagueForm, LeagueDayForm, LeagueProfileForm
-from .league_management import decide_crazy, decide_day, require_manager, update_profile
+from .league_management import decide_crazy, decide_day, delete_league, require_manager, update_profile
 from .league_standings import standings
 from .prediction_submission import save_shared_prediction
 from .leagues import (
@@ -122,11 +122,17 @@ def detail(request, league_id):
     visible = {entry.membership.user_id for entry in page}
     data["rows"] = [r for r in data["rows"] if r["user"].pk in visible]
     data["leaderboard_chart"]["series"] = [s for s in data["leaderboard_chart"]["series"] if s["user_id"] in visible]
-    next_event = next((e for e in data["events"] if e.deadline > timezone.now() and e.status == Event.Status.OPEN), None)
+    now = timezone.now()
+    next_event = next((e for e in data["events"] if e.status != Event.Status.SCORED
+        and ((e.race_datetime is not None and e.race_datetime > now)
+             or (e.race_datetime is None and e.deadline > now))), None)
+    prediction_open = bool(next_event and next_event.voting_state() == "open" and now < next_event.deadline)
+    prediction_soon = bool(next_event and next_event.voting_state() == "soon")
     choices = LeagueSeason.objects.filter(league__memberships__user=request.user,
         league__memberships__is_active=True, league__archived_at__isnull=True).select_related("league", "season").order_by("-season__year", "league__name")
     context = dict(league=league, league_season=season, season=season.season, league_choices=choices,
-        page=page, next_event=next_event, **data, **_rights(request.user, league))
+        page=page, next_event=next_event, prediction_open=prediction_open, prediction_soon=prediction_soon,
+        **data, **_rights(request.user, league))
     return render(request, "leagues/detail.html", context)
 
 @login_required
@@ -307,6 +313,28 @@ def day_decision(request, league_id, event_id):
     else:
         messages.success(request, "Гонщик дня сохранён только в этой лиге.")
     return redirect(f"{reverse('league:friend_league_event', args=[league.pk, event.pk])}?manage=1")
+
+
+@login_required
+@never_cache
+@require_http_methods(["GET", "POST"])
+def delete(request, league_id):
+    league = _league(request, league_id)
+    if league.owner_id != request.user.pk:
+        raise PermissionDenied("Удалить лигу может только её создатель.")
+    error = None
+    if request.method == "POST":
+        try:
+            delete_league(actor=request.user, league=league, confirmation=request.POST.get("confirmation"))
+        except ValidationError as exc:
+            error = _error(exc)
+        else:
+            if request.session.get("active_friend_league") == str(league.pk):
+                request.session.pop("active_friend_league", None)
+                request.session.pop("active_friend_league_year", None)
+            messages.success(request, "Лига удалена из списка у всех участников. Общие прогнозы сохранены.")
+            return redirect(f"{reverse('league:friend_leagues')}?all=1")
+    return render(request, "leagues/delete.html", {"league": league, "error": error})
 
 
 @login_required

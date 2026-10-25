@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from .leagues import membership_for, require_crazy_judge, require_moderator
 from .models import (DRIVER_CHOICES, Event, League, LeagueActivity, LeagueCrazyDecision,
-    LeagueDayDecision, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction)
+    LeagueDayDecision, LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction)
 from .competition_scoring import _project_league, _text_digest, judge_crazy_prediction
 from .prediction_rules import RULES_VERSION
 
@@ -15,6 +15,25 @@ def require_manager(actor, league):
     if league.owner_id != actor.pk and member.role != LeagueMembership.Role.MANAGER:
         raise PermissionDenied("Нужны права управляющего этой лиги.")
     return member
+
+
+@transaction.atomic
+def delete_league(*, actor, league, confirmation):
+    league = League.objects.select_for_update().get(pk=league.pk)
+    if not getattr(actor, "is_authenticated", False) or not getattr(actor, "is_active", False) or not actor.pk:
+        raise PermissionDenied("Удалить лигу может только её создатель.")
+    member = LeagueMembership.objects.filter(league=league, user_id=actor.pk, is_active=True).first()
+    if not member or league.owner_id != actor.pk:
+        raise PermissionDenied("Удалить лигу может только её создатель.")
+    if not isinstance(confirmation, str) or confirmation.strip() != league.name:
+        raise ValidationError("Введите точное название лиги для подтверждения.")
+    if league.archived_at:
+        return league
+    league.archived_at = timezone.now()
+    league.save(update_fields=("archived_at",))
+    LeagueInvite.objects.filter(league_season__league=league, revoked_at__isnull=True).update(revoked_at=league.archived_at)
+    LeagueActivity.objects.create(league=league, actor=actor, action="archived", details={"name": league.name})
+    return league
 
 
 @transaction.atomic

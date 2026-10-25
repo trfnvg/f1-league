@@ -453,6 +453,7 @@ class LeagueActivity(models.Model):
         ("role_changed", "Изменение роли"),
         ("profile_changed", "Настройки лиги"), ("day_decided", "Гонщик дня"),
         ("crazy_decided", "Крейзи-предикт"),
+        ("archived", "Удаление лиги"),
     ])
     details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)

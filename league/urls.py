@@ -12,6 +12,7 @@ urlpatterns = [
     path("leagues/join/<str:token>/", league_views.join, name="friend_league_join"),
     path("leagues/<uuid:league_id>/", league_views.detail, name="friend_league"),
     path("leagues/<uuid:league_id>/settings/", league_views.settings, name="friend_league_settings"),
+    path("leagues/<uuid:league_id>/delete/", league_views.delete, name="friend_league_delete"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/day/", league_views.day_decision, name="friend_league_day"),
     path("leagues/<uuid:league_id>/invites/", league_views.invites, name="friend_league_invites"),
     path("leagues/<uuid:league_id>/invites/<int:invite_id>/revoke/", league_views.revoke, name="friend_league_revoke"),

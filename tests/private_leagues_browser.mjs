@@ -39,6 +39,10 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     urls={'/':reverse('league:friend_leagues')+'?all=1','/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token]),'/settings/':reverse('league:friend_league_settings',args=[ls.league_id])}
     pages={name:c.get(url).content.decode() for name,url in urls.items()}
     pages['/invites/']=c.post(reverse('league:friend_league_invites',args=[ls.league_id])).content.decode()
+    pages['/delete/']=c.get(reverse('league:friend_league_delete',args=[ls.league_id])).content.decode()
+    Event.objects.filter(pk=event.pk).update(deadline=timezone.now()-timedelta(hours=1))
+    pages['/closed-gp/']=c.get(reverse('league:friend_league',args=[ls.league_id])).content.decode()
+    Event.objects.filter(pk=event.pk).update(deadline=event.deadline)
     Event.objects.filter(pk=event.pk).update(deadline=timezone.now()-timedelta(days=2),race_datetime=timezone.now()-timedelta(days=1))
     pages['/review/']=c.get(reverse('league:friend_league_event',args=[ls.league_id,event.pk]),{'manage':'1'}).content.decode()
     Event.objects.filter(pk=event.pk).update(deadline=event.deadline,race_datetime=event.race_datetime)
@@ -89,6 +93,15 @@ try{
         assert.equal(await page.locator('.leaderboard-table tbody tr').count(),1);
         assert.equal(await page.locator('.total-chip').innerText(),'245');
       }
+      if(url==='/closed-gp/'){
+        assert.equal(await page.locator('#current-gp-title').innerText(),'Гран-при Монако');
+        assert.match(await page.locator('.league-race-status').innerText(),/Прогнозы закрыты/);
+        assert.match(await page.locator('.league-race-cta').innerText(),/Смотреть прогнозы/);
+      }
+      if(url==='/delete/'){
+        assert.equal(await page.locator('#delete-confirmation').getAttribute('required'),'');
+        assert.equal(await page.locator('.league-delete-confirm form[method="post"]').count(),1);
+      }
       if(url==='/review/'){
         await page.locator('.league-day-panel summary').click();
         assert.equal(await page.locator('#id_drivers input').count(),22);
@@ -97,7 +110,7 @@ try{
         assert.equal(await page.locator('#id_drivers input:disabled').count(),0);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       }
-      if(process.env.LEAGUE_PREVIEW_DIR&&['/','/detail/','/invites/'].includes(url)){
+      if(process.env.LEAGUE_PREVIEW_DIR&&['/','/detail/','/closed-gp/','/settings/','/delete/'].includes(url)){
         await fs.mkdir(process.env.LEAGUE_PREVIEW_DIR,{recursive:true});
         await page.screenshot({path:path.join(process.env.LEAGUE_PREVIEW_DIR,`leagues-${width}-${url==='/'?'index':url.replaceAll('/','')}.png`),fullPage:true});
       }
@@ -105,5 +118,5 @@ try{
     assert.deepEqual(errors,[],`${width}: browser runtime errors`);
     await page.close();
   }
-  console.log('Private leagues: 9 real Django pages × 5 desktop/mobile widths passed, including 23 GP columns, league switch, management and judging.');
+  console.log('Private leagues: 11 real Django pages × 5 desktop/mobile widths passed, including 23 GP columns, current GP after predictions close and deletion confirmation.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

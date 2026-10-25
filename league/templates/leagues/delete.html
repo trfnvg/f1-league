@@ -1,0 +1,10 @@
+{% extends 'leagues/base.html' %}
+{% block league_breadcrumb %}{% endblock %}
+{% block league_content %}
+<section class="league-delete-confirm leagues-panel">
+  <span class="league-delete-symbol" aria-hidden="true">×</span>
+  <h1>Удалить лигу?</h1><p><strong>{{ league.name }}</strong> исчезнет у всех участников. Приглашения перестанут действовать.</p>
+  <p class="leagues-help">Общие прогнозы игроков не удалятся. История лиги сохранится в архиве; восстановить её сможет администратор платформы.</p>
+  <form method="post" class="leagues-form">{% csrf_token %}<label for="delete-confirmation">Для подтверждения введите: {{ league.name }}</label><input id="delete-confirmation" name="confirmation" type="text" autocomplete="off" maxlength="80" required>{% if error %}<p class="league-form-error" role="alert">{{ error }}</p>{% endif %}<div class="league-delete-actions"><a class="leagues-button leagues-button-secondary" href="{% url 'league:friend_league_settings' league.id %}">Отмена</a><button class="leagues-button league-button-danger" type="submit">Удалить лигу</button></div></form>
+</section>
+{% endblock %}

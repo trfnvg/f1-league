@@ -18,4 +18,9 @@
       if(event.key==='Escape'){menu.open=false;menu.querySelector('summary').focus();}
     });
   });
+  document.querySelectorAll('[data-race-cover]').forEach(cover=>{
+    const fallback=()=>{cover.hidden=true;};
+    cover.addEventListener('error',fallback);
+    if(cover.complete&&!cover.naturalWidth)fallback();
+  });
 })();

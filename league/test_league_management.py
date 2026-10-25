@@ -14,10 +14,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .competition_scoring import recalculate_global_event, recalculate_league_event
-from .league_management import decide_crazy, decide_day
+from .league_management import decide_crazy, decide_day, delete_league
 from .league_standings import standings
 from .leagues import create_league, enroll_member
-from .models import (Event, GlobalEventScore, League, LeagueCrazyDecision, LeagueDayDecision,
+from .models import (Event, GlobalEventScore, League, LeagueActivity, LeagueCrazyDecision, LeagueDayDecision,
     LeagueMembership, Prediction, Result, Score, Season)
 
 
@@ -174,3 +174,66 @@ class LeagueManagementTests(TestCase):
         foreign=Event.objects.create(name="Other season",season_year=2028,round_number=1,
             deadline=self.now-timedelta(days=2),race_datetime=self.now-timedelta(days=1))
         self.assertEqual(self.client.post(self.url("friend_league_day",event_id=foreign.pk),{"drivers":["russell"]}).status_code,404)
+
+    def test_creator_deletion_requires_confirmation_and_keeps_shared_history(self):
+        self.publish()
+        before=(list(Prediction.objects.values()),list(GlobalEventScore.objects.values()))
+        url=self.url("friend_league_delete")
+        self.assertEqual(self.client.get(url).status_code,200)
+        self.a.league.refresh_from_db();self.assertIsNone(self.a.league.archived_at)
+        self.assertContains(self.client.post(url,{"confirmation":"wrong"}),"Введите точное название")
+        self.assertEqual(self.client.post(url,{"confirmation":"Alpha"}).status_code,302)
+        self.a.league.refresh_from_db();self.assertIsNotNone(self.a.league.archived_at)
+        self.assertEqual(before,(list(Prediction.objects.values()),list(GlobalEventScore.objects.values())))
+        self.assertEqual(self.client.get(self.url("friend_league")).status_code,404)
+        self.assertNotContains(self.client.get(reverse("league:friend_leagues"),{"all":"1"}),"Alpha")
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.get(self.url("friend_league")).status_code,404)
+        self.assertContains(self.client.get(self.url("friend_league",league=self.b)),"Bravo")
+        delete_league(actor=self.owner,league=self.a.league,confirmation="Alpha")
+        self.assertEqual(LeagueActivity.objects.filter(league=self.a.league,action="archived").count(),1)
+
+    def test_manager_cannot_delete_and_delete_post_requires_csrf(self):
+        member=self.entry.membership;member.role="manager";member.save(update_fields=("role",))
+        self.client.force_login(self.player)
+        self.assertNotContains(self.client.get(self.url()),"Удалить лигу")
+        self.assertEqual(self.client.get(self.url("friend_league_delete")).status_code,403)
+        self.assertEqual(self.client.post(self.url("friend_league_delete"),{"confirmation":"Alpha"}).status_code,403)
+        self.client.force_login(self.operator)
+        self.assertEqual(self.client.post(self.url("friend_league_delete"),{"confirmation":"Alpha"}).status_code,404)
+        strict=Client(enforce_csrf_checks=True);strict.force_login(self.owner)
+        self.assertEqual(strict.post(self.url("friend_league_delete"),{"confirmation":"Alpha"}).status_code,403)
+
+    def test_deletion_revokes_existing_invite_and_leaves_other_league_intact(self):
+        from .leagues import create_invite,invite_for_token
+        from django.core.exceptions import ValidationError
+        invite,token=create_invite(actor=self.owner,league_season=self.a)
+        self.client.post(self.url("friend_league_delete"),{"confirmation":"Alpha"})
+        invite.refresh_from_db();self.assertIsNotNone(invite.revoked_at)
+        with self.assertRaises(ValidationError):invite_for_token(token)
+        self.b.league.refresh_from_db();self.assertIsNone(self.b.league.archived_at)
+
+    def test_current_gp_remains_after_predictions_close_until_race_start(self):
+        from unittest.mock import patch
+        later=Event.objects.create(name="Later GP",season_year=2027,round_number=2,
+            deadline=self.now+timedelta(days=8),race_datetime=self.now+timedelta(days=9))
+        self.event.deadline=self.now-timedelta(minutes=1)
+        self.event.status=Event.Status.LOCKED;self.event.save()
+        response=self.client.get(self.url("friend_league"))
+        self.assertEqual(response.context["next_event"],self.event)
+        self.assertContains(response,"Прогнозы закрыты");self.assertContains(response,"Смотреть прогнозы")
+        with patch("django.utils.timezone.now",return_value=self.event.race_datetime):
+            response=self.client.get(self.url("friend_league"))
+        self.assertEqual(response.context["next_event"],later)
+
+    def test_current_gp_without_race_time_falls_back_to_prediction_deadline(self):
+        self.event.race_datetime=None;self.event.save(update_fields=("race_datetime",))
+        response=self.client.get(self.url("friend_league"))
+        self.assertEqual(response.context["next_event"],self.event)
+        self.assertContains(response,"Время уточняется")
+        self.event.deadline=self.now-timedelta(seconds=1);self.event.save(update_fields=("deadline",))
+        self.assertIsNone(self.client.get(self.url("friend_league")).context["next_event"])
+
+    def test_duel_is_removed_from_desktop_and_mobile_navigation(self):
+        response=self.client.get(self.url("friend_league"))
+        self.assertNotContains(response,'href="'+reverse("league:duel")+'"')
