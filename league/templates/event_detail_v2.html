@@ -3,10 +3,10 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=1">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=2">{% endblock %}
 
 {% block content %}
-<div class="event-page">
+<div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
 
 <div class="stage-backlink">
   <a href="{% url 'league:home' %}" class="text-decoration-none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg> Календарь сезона</a>
@@ -45,11 +45,10 @@
 
 
 
-<nav class="stage-sections" aria-label="Разделы этапа"><a href="#stage-prediction">Мой прогноз</a><a href="#personal-wildcard">Личная карта</a><a href="#event-duel">Дуэль</a>{% if can_view_community %}<a href="#stage-results">Результаты</a>{% endif %}</nav>
+<nav class="stage-sections" aria-label="Разделы этапа"><a href="#stage-prediction">Прогноз</a><a href="#personal-wildcard">Карта{% if wildcard_assignment.selected_option %}<span class="stage-tab-dot" aria-label="Ответ сохранён"></span>{% endif %}</a><a href="#event-duel">Дуэль{% if own_duel.status == 'pending' %}<span class="stage-tab-dot" aria-label="Ожидает ответа"></span>{% endif %}</a><a href="#stage-results">Итоги</a></nav>
 <div id="stage-prediction" class="card prediction-workbench mb-4">
   <div class="card-body">
-    <div class="stage-section-heading"><span class="stage-section-number">01</span><div><h2>{% if prediction %}Твой прогноз{% else %}Прогноз на гонку{% endif %}</h2><p>{% if state == "open" %}Выбери свой состав на этот Гран-при.{% else %}Приём прогнозов завершён.{% endif %}</p></div></div>
-    {% if state == "open" %}<p class="workbench-note">Прогноз виден только тебе до закрытия приёма.</p>{% endif %}
+    <div class="stage-section-heading"><div><h2>{% if prediction %}Твой прогноз{% else %}Прогноз на гонку{% endif %}</h2><p>{% if state == "open" %}Выбери пилотов и исходы. До дедлайна ответы можно менять.{% else %}Ответы зафиксированы. Изменить их уже нельзя.{% endif %}</p></div></div>
 
     {% if not user.is_authenticated %}
       <div class="voting-status voting-status-{{ state }} mb-0">
@@ -60,13 +59,13 @@
         чтобы сделать прогноз.
       </div>
     {% elif state != "open" %}
+      {% if prediction %}
+        {% include 'event_prediction_summary.html' %}
+      {% else %}
       <div class="voting-status mb-0">
-        {% if state == "closed" %}
-          Дедлайн прошел, редактирование закрыто.
-        {% else %}
-          Очки посчитаны, этап завершен.
-        {% endif %}
+        Ты не оставил прогноз на этот этап.
       </div>
+      {% endif %}
     {% else %}
       <form method="post">
         {% csrf_token %}
@@ -75,8 +74,8 @@
             {{ form.non_field_errors }}
           </div>
         {% endif %}
-        <div class="row g-3">
-          <div class="col-md-6">
+        <fieldset class="stage-form-group"><legend>Подиум</legend><div class="row g-3">
+          <div class="col-md-4">
             <div class="field-label-row">
               <label class="form-label mb-0" for="{{ form.p1.id_for_label }}">Победитель</label>
               <span class="field-points-badge">10 очков</span>
@@ -84,7 +83,7 @@
             {{ form.p1 }}
             {{ form.p1.errors }}
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="field-label-row">
               <label class="form-label mb-0" for="{{ form.p2.id_for_label }}">Второе место</label>
               <span class="field-points-badge">6 очков</span>
@@ -92,7 +91,7 @@
             {{ form.p2 }}
             {{ form.p2.errors }}
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <div class="field-label-row">
               <label class="form-label mb-0" for="{{ form.p3.id_for_label }}">Третье место</label>
               <span class="field-points-badge">4 очка</span>
@@ -100,6 +99,8 @@
             {{ form.p3 }}
             {{ form.p3.errors }}
           </div>
+        </div></fieldset>
+        <fieldset class="stage-form-group"><legend>Гоночный уик-энд</legend><div class="row g-3">
           <div class="col-md-6">
             <div class="field-label-row">
               <label class="form-label mb-0" for="{{ form.pole.id_for_label }}">Поул</label>
@@ -166,9 +167,9 @@
             {{ form.crazy_prediction }}
             {{ form.crazy_prediction.errors }}
           </div>
-        </div>
+        </div></fieldset>
         <div class="prediction-submit-bar">
-          <span>Проверь состав — до дедлайна прогноз можно изменить.</span>
+          <span>Твои ответы скрыты от других до дедлайна.</span>
           <button type="submit" class="btn prediction-state-button {% if prediction %}is-saved{% else %}is-open{% endif %}">{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button>
         </div>
       </form>
@@ -184,7 +185,6 @@
 >
   <div class="wildcard-heading">
     <div>
-      <span class="wildcard-kicker">02 · ЛИЧНАЯ КАРТА</span>
       <h2>Дополнительный шанс</h2>
       <p>Выбери одну из трёх карт. Верный ответ: +3 очка, ошибка: −3.</p>
     </div>
@@ -355,6 +355,7 @@
 {% include "event_duel.html" %}
 
 <div id="stage-results" class="stage-results">
+{% if state == 'open' %}<div class="stage-result-pending"><h2>Результаты появятся после гонки</h2><p>Прогнозы участников откроются после дедлайна. Здесь будут твои очки и итоговая таблица этапа.</p></div>{% else %}
 {% if user.is_authenticated %}
   <div class="score-card card mb-4">
     <div class="card-body">
@@ -567,8 +568,10 @@
     {% endfor %}
   </div>
 {% endif %}
+{% endif %}
 </div>
 </div>
+<script src="{% static 'league/event-workspace.js' %}?v=1" defer></script>
 <script src="{% static 'league/wildcard.js' %}"></script>
 <script>
   document.querySelectorAll('[data-stage-cover]').forEach((image) => {

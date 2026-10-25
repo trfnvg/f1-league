@@ -1,0 +1,12 @@
+<dl class="stage-answer-grid">
+  <div><dt>Победитель</dt><dd>{{ prediction.get_p1_display|default:'—' }}</dd></div>
+  <div><dt>Второе место</dt><dd>{{ prediction.get_p2_display|default:'—' }}</dd></div>
+  <div><dt>Третье место</dt><dd>{{ prediction.get_p3_display|default:'—' }}</dd></div>
+  <div><dt>Поул</dt><dd>{{ prediction.get_pole_display|default:'—' }}</dd></div>
+  {% if event.has_sprint %}<div><dt>Квалификация к спринту</dt><dd>{{ prediction.get_sprint_qualifying_winner_display|default:'—' }}</dd></div><div><dt>Победитель спринта</dt><dd>{{ prediction.get_sprint_winner_display|default:'—' }}</dd></div>{% endif %}
+  <div><dt>Быстрый круг</dt><dd>{{ prediction.get_fastest_lap_display|default:'—' }}</dd></div>
+  <div><dt>Гонщик дня</dt><dd>{{ prediction.get_driver_of_day_display|default:'—' }}</dd></div>
+  <div><dt>Выезды Safety Car</dt><dd>{{ prediction.safety_car_count }}</dd></div>
+  <div><dt>Количество сходов</dt><dd>{{ prediction.dnf_count }}</dd></div>
+  <div class="stage-answer-wide"><dt>Crazy Prediction</dt><dd>{{ prediction.crazy_prediction|default:'—' }}</dd></div>
+</dl>

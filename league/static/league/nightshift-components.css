@@ -54,6 +54,8 @@ body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>strong { disp
 body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>small:last-child { display:block; color:#9ca6b3; font:400 10px/1.5 Inter,sans-serif; }
 
 /* Equal calendar frames; contain preserves the entire uploaded artwork. */
+.ns-score b>.ns-rank-total { display:inline-flex; align-items:baseline; gap:6px; margin-left:9px; letter-spacing:0; }
+.event-cover-fill { position:absolute; inset:-12px; background-size:cover; background-position:center; filter:blur(12px) brightness(.65); pointer-events:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { align-items:stretch; gap:20px; }
 body.apex-night-theme.editorial-theme .ns-calendar .gp-card { display:flex; flex-direction:column; height:100%; min-width:0; overflow:hidden; border:1px solid #39424d; border-radius:16px!important; background:#1d2229; box-shadow:none; transform:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .gp-card:hover { border-color:#67717f; box-shadow:0 8px 24px #00000014; transform:none; }

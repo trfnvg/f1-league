@@ -33,7 +33,7 @@ from PIL import Image, ImageDraw
 from league.circuits import CIRCUITS
 from league.leagues import import_legacy_league
 from league.duels import create_duel_challenge, respond_to_duel
-from league.models import Event, Prediction, Score, Season, UserProfile
+from league.models import Event, Prediction, Score, Season, UserProfile, EventWildcardQuestion, EventWildcardDeck, EventWildcardDeckCard
 
 
 def render_pages():
@@ -44,6 +44,10 @@ def render_pages():
         deadline=now-timedelta(days=9), race_datetime=now-timedelta(days=7), status="scored")
     event = Event.objects.create(name="Гран-при США", round_number=19, season_year=season.year,
         deadline=now+timedelta(days=2), race_datetime=now+timedelta(days=3), cover_image="covers/test-wide.png")
+    deck = EventWildcardDeck.objects.create(event=event)
+    for slot, question in enumerate(("Кто финиширует выше?", "Кто окажется выше в квалификации?", "Кто наберёт больше очков?"), 1):
+        card = EventWildcardQuestion.objects.create(event=event, question=question, option_a="Леклер", option_b="Рассел")
+        EventWildcardDeckCard.objects.create(deck=deck, question=card, slot=slot)
     for i, key in enumerate(("mexico", "interlagos", "las-vegas", "lusail", "yas-marina"), 20):
         Event.objects.create(name=CIRCUITS[key]["grand_prix"], circuit=key, round_number=i,
             season_year=season.year, deadline=now+timedelta(days=(i-19)*7+2), race_datetime=now+timedelta(days=(i-19)*7+3))
@@ -207,7 +211,7 @@ def run(output, widths, engine):
                         assert page.locator(".event-stage-hero").is_visible(), (route, "empty stage header")
                         assert page.locator(".prediction-workbench form").is_visible(), (route, "forecast missing")
                         assert page.locator("#id_p1").is_visible()
-                        assert page.locator("#stage-prediction").bounding_box()["y"] < page.locator("#personal-wildcard").bounding_box()["y"], "Forecast must precede optional mechanics"
+                        assert page.locator("#personal-wildcard").is_hidden(), "Optional mechanics must not overwhelm the forecast"
                         assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
                         if width < 781:
                             assert float(page.locator("#id_p1").evaluate("e=>parseFloat(getComputedStyle(e).fontSize)")) >= 16, "Avoid iOS input zoom"
@@ -255,6 +259,7 @@ def run(output, widths, engine):
                             image.hover()
                             assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
                     if route.startswith('/duel-'):
+                        page.locator('.stage-sections a[href="#event-duel"]').click()
                         assert page.locator('#event-duel.stage-duel').is_visible()
                         assert page.locator('.stage-showdown').is_visible()
                         if route == '/duel-received/':
@@ -262,6 +267,24 @@ def run(output, widths, engine):
                             assert page.locator('.stage-duel-btn.is-decline').is_visible()
                         if route == '/duel-accepted/':
                             assert page.locator('.stage-duel-locked').is_visible()
+                    if route == '/event/':
+                        page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
+                        page.locator('.stage-sections a[href="#personal-wildcard"]').click()
+                        assert page.locator('#personal-wildcard').is_visible()
+                        assert page.locator('#stage-prediction').is_hidden()
+                        page.locator('[data-wildcard-card]').first.click()
+                        assert page.locator('[data-wildcard-card]').first.get_attribute('aria-expanded') == 'true'
+                        page.locator('[data-wildcard-card]').first.evaluate('e=>Promise.all(e.getAnimations({subtree:true}).map(a=>a.finished))')
+                        page.screenshot(path=str(output/f'{width}-wildcard-tab.png'), full_page=True)
+                        page.locator('.stage-sections a[href="#stage-prediction"]').click()
+                        assert page.locator('#id_crazy_prediction').input_value() == 'Тест сохранения черновика'
+                        page.locator('.stage-sections a[href="#stage-prediction"]').press('End')
+                        assert page.locator('#stage-results').is_visible()
+                        page.locator('.stage-sections a[href="#stage-results"]').press('Home')
+                        page.evaluate("location.hash='event-duel'")
+                        page.wait_for_function("!document.getElementById('event-duel').hidden")
+                        assert page.locator('#event-duel').is_visible()
+                        page.locator('.stage-sections a[href="#stage-prediction"]').click()
                     if route == "/profile/":
                         assert page.locator("#season-predictions").is_visible()
                     page.screenshot(path=str(output/f"{width}-{route.strip('/') or 'home'}.png"), full_page=True)

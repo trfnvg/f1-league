@@ -45,7 +45,7 @@
     <section class="ns-ranktile">
       <div class="ns-eyebrow">{% if home_league %}Твоя позиция / лига{% else %}Твоя позиция / общий рейтинг{% endif %}</div>
       {% if personal_dashboard %}
-        <div class="ns-score"><b>{% if personal_dashboard.rank %}{{ personal_dashboard.rank|stringformat:'02d' }}<span>/{{ personal_dashboard.player_count|stringformat:'02d' }}</span>{% else %}—{% endif %}</b>{% if personal_dashboard.movement > 0 %}<small>↑ {{ personal_dashboard.movement }}</small>{% elif personal_dashboard.movement < 0 %}<small>↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</small>{% endif %}</div>
+        <div class="ns-score"><b>{% if personal_dashboard.rank %}{{ personal_dashboard.rank|stringformat:'02d' }}<span class="ns-rank-total"><span aria-hidden="true">/</span> {{ personal_dashboard.player_count|stringformat:'02d' }}</span>{% else %}—{% endif %}</b>{% if personal_dashboard.movement > 0 %}<small>↑ {{ personal_dashboard.movement }}</small>{% elif personal_dashboard.movement < 0 %}<small>↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</small>{% endif %}</div>
         <p>{% if home_league %}{{ home_league.league.name }}{% else %}Общий рейтинг · {{ season.year }}{% endif %}</p>
         <div class="ns-rank-gap">{% if not personal_dashboard.rank %}<span>Твоя гонка ещё впереди</span>{% elif personal_dashboard.leader_gap %}<span>До лидера <strong>{{ personal_dashboard.leader_gap }} очк.</strong></span>{% else %}<span>Ты лидируешь в зачёте</span>{% endif %}{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}" aria-label="Открыть таблицу лиги">↗</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}" aria-label="Открыть рейтинг">↗</a>{% endif %}</div>
       {% else %}
@@ -173,7 +173,7 @@
       <article class="event-editorial-card gp-card">
         <div class="gp-card-meta"><span class="gp-round">R{{ e.round_number|stringformat:'02d' }}</span><span class="gp-state is-{{ e.ui_state }}">{% if e.ui_state == "saved" %}Прогноз сохранён{% elif e.ui_state == "open" %}Приём прогнозов{% elif e.ui_state == "scored" %}Результаты{% else %}Прогнозы закрыты{% endif %}</span></div>
         <a class="event-media{% if e.cover_image %} has-cover{% endif %}" href="{% url 'league:event_detail' event_id=e.id %}" aria-label="Открыть {{ e.name }}">
-          {% if e.cover_image %}<img src="{{ e.cover_image.url }}" alt="{{ e.name }}" loading="lazy" decoding="async">{% elif e.circuit_visual %}<div class="ns-calendar-track">{% include 'circuit_track.html' with circuit=e.circuit_visual track_id=e.pk animated=False %}</div>{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
+          {% if e.cover_image %}<span class="event-cover-fill" aria-hidden="true" style="background-image:url('{{ e.cover_image.url }}')"></span><img src="{{ e.cover_image.url }}" alt="{{ e.name }}" loading="lazy" decoding="async">{% elif e.circuit_visual %}<div class="ns-calendar-track">{% include 'circuit_track.html' with circuit=e.circuit_visual track_id=e.pk animated=False %}</div>{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
         </a>
         <div class="event-card-copy">
           <div class="gp-card-date">{% if e.race_datetime %}{{ e.race_datetime|date:"d M Y · H:i" }} МСК{% else %}{{ e.deadline|date:"d M Y" }}{% endif %}</div>

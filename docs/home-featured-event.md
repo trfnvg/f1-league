@@ -48,10 +48,11 @@ circular crop as elsewhere.
 
 Stage heroes have an explicit grid, a cover that fits without cropping, a
 circuit or round-number fallback, and no hidden/reveal animation dependency.
-Failed stage-cover requests reveal the fallback. Stage heroes follow the cover's
-intrinsic aspect ratio. Calendar cards use uniform 16:9 media frames and two-line
+Failed stage-cover requests reveal the fallback. Stage artwork fits inside a
+compact header thumbnail on mobile. Calendar cards use uniform 16:9 media frames and two-line
 title slots so that every card has equal dimensions at each viewport size.
-`object-fit:contain` keeps the full artwork visible inside these frames. Neither
+`object-fit:contain` keeps the full artwork visible inside these frames; a blurred
+extension of the same image fills any unused space behind it. Neither
 surface zooms on hover. Round/status metadata sits outside the artwork. The
 calendar uses one card per row on phones and two/three on larger screens.
 
@@ -74,8 +75,12 @@ Browser coverage checks actual image and wrapper bounds, not just computed
 
 ## Event page hierarchy
 
-The event page puts the prediction form before optional wildcard and duel panels.
-Anchor navigation links directly to each section. `event-page.css` scopes the
+The event page has four progressively enhanced tabs: forecast, wildcard, duel
+and results. Open events default to forecast; closed/scored events to results.
+Hash links open the correct panel, including nested voting anchors. Switching
+tabs leaves form values intact. Arrow/Home/End keys navigate the tablist, with
+ARIA selection and panel relationships. Without JS all sections stay accessible.
+Closed forecasts have a read-only answer summary. `event-page.css` scopes the
 restrained typography, surfaces, input sizing and result panels to this page;
 mobile inputs remain at least 16px to avoid Safari's automatic focus zoom.
 The shared mobile menu and bottom navigation use consistent line SVG icons and

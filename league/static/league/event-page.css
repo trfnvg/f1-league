@@ -16,7 +16,7 @@ body.apex-night-theme.editorial-theme .event-page .event-stage-media { border-ra
 body.apex-night-theme.editorial-theme .event-page .event-stage-media.has-cover { min-height:0; margin:0; }
 .stage-sections { display:flex; gap:27px; margin:25px 0 28px; border-top:1px solid #ffffff10; border-bottom:1px solid #ffffff10; overflow-x:auto; scrollbar-width:none; }
 .stage-sections a { display:flex; flex:none; align-items:center; min-height:52px; color:#a7b2c1; font-size:12px; font-weight:550; text-decoration:none; border-bottom:2px solid transparent; }
-.stage-sections a:first-child { color:#eef1f5; border-bottom-color:#dc4941; }
+.stage-sections a:first-child:not([role="tab"]),.stage-sections a[aria-selected="true"] { color:#eef1f5; border-bottom-color:#dc4941; }
 .stage-sections a:hover { color:#fff; }
 body.apex-night-theme.editorial-theme .event-page :is(.prediction-workbench,.score-card,.card:not(.event-stage-hero),.wildcard-module,.stage-duel,.community-shell) { border:1px solid #343d49!important; border-radius:14px!important; background:#1d232b!important; box-shadow:none!important; }
 body.apex-night-theme.editorial-theme .event-page :is(.card-accent-top,.score-card,.wildcard-module,.community-head)::before,
@@ -76,3 +76,47 @@ body.apex-night-theme.editorial-theme .event-page .community-table :is(th,td) { 
   body.apex-night-theme.editorial-theme .event-page .community-head { padding:21px 18px; }.event-page .stage-results h2 { font-size:20px; }
   .event-page .comparison-values { grid-template-columns:1fr; }.event-page .result-facts-grid { grid-template-columns:1fr; }
 }
+
+/* A single workspace; only the selected panel is shown when JS is available. */
+.event-page [role="tabpanel"][hidden] { display:none!important; }
+.event-page [role="tabpanel"]:focus-visible,.stage-sections a:focus-visible { outline:2px solid #9eabbc; outline-offset:4px; }
+.event-page .stage-sections { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; padding:5px; border:1px solid #343d49; border-radius:12px; background:#1b2129; margin:18px 0 24px; }
+.event-page .stage-sections a { justify-content:center; gap:7px; min-height:45px; border:0; border-radius:8px; color:#9ca8b7; font-size:13px; }
+.event-page .stage-sections a[aria-selected="true"] { background:#303a47; color:#f3f5f8!important; box-shadow:0 2px 5px #00000015; }
+.stage-tab-dot { width:5px; height:5px; border-radius:50%; background:#d79e6c; }
+.event-page .event-stage-layout { grid-template-columns:minmax(0,1fr) 30%; gap:30px; }
+body.apex-night-theme.editorial-theme .event-page .event-stage-copy { padding:12px 0; }
+body.apex-night-theme.editorial-theme .event-page .event-stage-copy h1 { font-size:clamp(28px,3vw,40px); margin:14px 0 22px!important; }
+.event-page .event-stage-image { max-height:180px!important; object-fit:contain; }
+.event-page .stage-section-heading { margin-bottom:26px; }
+.event-page .stage-form-group { min-width:0; margin:0; padding:0; border:0; }
+.event-page .stage-form-group+.stage-form-group { margin-top:28px; padding-top:24px; border-top:1px solid #ffffff10; }
+.event-page .stage-form-group legend { float:none; width:auto; margin-bottom:17px; color:#91a0b2; font:600 11px/1.5 Inter,sans-serif; letter-spacing:.05em; text-transform:uppercase; }
+.stage-answer-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; margin:24px 0 0; }
+.stage-answer-grid dt { color:#8f9eb0; font:450 11px/1.5 Inter,sans-serif; margin-bottom:6px; }.stage-answer-grid dd { color:#e0e6ef; font:550 14px/1.5 Inter,sans-serif; margin:0; overflow-wrap:anywhere; }
+.stage-answer-wide { grid-column:1/-1; }
+.stage-result-pending { padding:32px; border:1px solid #343d49; border-radius:14px; background:#1d232b; }.stage-result-pending p { max-width:530px; margin:12px 0 0; color:#99a6b7; font-size:13px; line-height:1.7; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-heading { padding:0; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card :is(.wildcard-card-back,.wildcard-card-front) { border:1px solid #526173; border-radius:12px; box-shadow:none; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card-front { background:#242e3a; color:#e0e7ef; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-module:not(.has-wildcard-art) .wildcard-card-back { background:linear-gradient(145deg,#33404f,#1d2631); color:#bcc9da; }
+body.apex-night-theme.editorial-theme .event-page :is(.wildcard-card-front,.wildcard-card-back)::before,
+body.apex-night-theme.editorial-theme .event-page .wildcard-card-back::after { content:none; }
+body.apex-night-theme.editorial-theme .event-page :is(.wildcard-face-question,.wildcard-face-option,.wildcard-face-kicker,.wildcard-card-brand,.wildcard-face-points,.wildcard-card-round) { color:#d8e1eb; font-family:Inter,sans-serif; text-shadow:none; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-option { background:#ffffff06; border-color:#ffffff15; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-question-mark { color:#b4c2d2; font-family:Inter,sans-serif; text-shadow:none; }
+body.apex-night-theme.editorial-theme .event-page .stage-duel-heading h2 { font-size:23px; letter-spacing:-.04em; }
+@media(max-width:780px) {
+  .event-page .event-stage-layout { grid-template-columns:minmax(0,1fr) 90px; gap:14px; }
+  body.apex-night-theme.editorial-theme .event-page .event-stage-copy { grid-column:1; grid-row:1; }
+  body.apex-night-theme.editorial-theme .event-page .event-stage-media { grid-column:2; grid-row:1; align-self:start; margin-top:12px; aspect-ratio:1; }
+  body.apex-night-theme.editorial-theme .event-page .event-stage-media.has-cover { margin-top:12px; aspect-ratio:1; }
+  body.apex-night-theme.editorial-theme .event-page .event-stage-media.has-cover .event-stage-image { position:absolute; height:100%; }
+  .event-page .event-stage-track { inset:5px; }.event-page .stage-timing { gap:13px; }
+  .event-page .stage-sections a { font-size:12px; }.stage-answer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+  .stage-result-pending { padding:24px 18px; }
+  body.apex-night-theme.editorial-theme .event-page .wildcard-reward { display:none; }
+  body.apex-night-theme.editorial-theme .event-page .wildcard-draw-prompt { color:#9ba9bb; font:400 12px/1.6 Inter,sans-serif; text-transform:none; letter-spacing:0; }
+  body.apex-night-theme.editorial-theme .event-page .event-stage-copy h1 { font-size:28px; }
+}
+@media(max-width:360px) { .event-page .event-stage-layout { grid-template-columns:minmax(0,1fr) 64px; gap:10px; }.event-page .stage-sections a { font-size:11px; } }
