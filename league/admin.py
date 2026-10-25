@@ -122,6 +122,23 @@ class WildcardTemplateChoiceField(forms.ModelChoiceField):
         return f"{card.title} — {card.question}{state}"
 
 
+class CircuitSelect(forms.Select):
+    circuits = {}
+
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        circuit = self.circuits.get(str(value))
+        if circuit:
+            option["attrs"].update({
+                "data-circuit-path": circuit["path"],
+                "data-circuit-start-x": circuit["start_x"],
+                "data-circuit-start-y": circuit["start_y"],
+                "data-circuit-name": circuit["name"],
+                "data-circuit-gp": circuit["grand_prix"],
+            })
+        return option
+
+
 class EventAdminForm(forms.ModelForm):
     wildcard_field_names = ("wildcard_card_1", "wildcard_card_2", "wildcard_card_3")
 
@@ -153,6 +170,13 @@ class EventAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["name"].required = False
+        self.fields["name"].help_text = "Можно оставить пустым: название подставится из выбранного Гран-при."
+        if self.instance.pk and not self.instance.circuit and self.instance.circuit_visual:
+            self.initial["circuit"] = self.instance.circuit_visual["key"]
+        from .circuits import CIRCUITS
+        self.fields["circuit"].widget = CircuitSelect(choices=self.fields["circuit"].choices)
+        self.fields["circuit"].widget.circuits = CIRCUITS
         cards = WildcardCardTemplate.objects.order_by("title", "id")
         for field_name in self.wildcard_field_names:
             self.fields[field_name].queryset = cards
@@ -176,6 +200,13 @@ class EventAdminForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        from .circuits import CIRCUITS
+        if not cleaned_data.get("name"):
+            circuit = CIRCUITS.get(cleaned_data.get("circuit"))
+            if circuit:
+                cleaned_data["name"] = circuit["grand_prix"]
+            else:
+                self.add_error("name", "Введите название или выберите Гран-при / трассу.")
         selected_cards = self.selected_wildcard_cards()
         selected_count = sum(card is not None for card in selected_cards)
 
@@ -317,6 +348,7 @@ class EventWildcardQuestionInline(admin.TabularInline):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     form = EventAdminForm
+    readonly_fields = ("circuit_preview",)
     list_display = (
         "season_year",
         "round_number",
@@ -341,6 +373,8 @@ class EventAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "season_year",
+                    "circuit",
+                    "circuit_preview",
                     "name",
                     "round_number",
                     "has_sprint",
@@ -366,8 +400,16 @@ class EventAdmin(admin.ModelAdmin):
     )
 
     class Media:
-        css = {"all": ("league/admin-wildcards.css",)}
-        js = ("league/admin-wildcards.js",)
+        css = {"all": ("league/admin-wildcards.css", "league/circuit-visual.css", "league/admin-circuits.css")}
+        js = ("league/admin-wildcards.js", "league/admin-circuits.js")
+
+    @admin.display(description="Схема трассы")
+    def circuit_preview(self, obj):
+        from django.template.loader import render_to_string
+        from django.utils.safestring import mark_safe
+        return mark_safe(render_to_string("admin/circuit_preview.html", {
+            "circuit": obj.circuit_visual if obj else None,
+        }))
 
     actions = ["preview_and_publish_scores"]
 

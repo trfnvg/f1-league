@@ -38,6 +38,7 @@ from .models import (
     DuelSettings,
     Event,
     HomeResultImage,
+    LeagueSeason,
     MinesweeperAttempt,
     DoodleAttempt,
     DoodleRecord,
@@ -1015,8 +1016,12 @@ def home(request):
     featured_event = select_featured_event(events, now)
     featured_is_upcoming = bool(
         featured_event
-        and featured_event.status != Event.Status.SCORED
         and featured_event.deadline > now
+        and featured_event.ui_state in ("open", "saved")
+    )
+    featured_race_upcoming = bool(
+        featured_event and featured_event.status != Event.Status.SCORED
+        and (featured_event.race_datetime or featured_event.deadline) > now
     )
     featured_prediction = (
         Prediction.objects.filter(event=featured_event, user=request.user).first()
@@ -1028,12 +1033,36 @@ def home(request):
         key=lambda event: event.race_datetime,
         default=None,
     )
+    home_league = None
+    home_board = leaderboard_data
     if request.user.is_authenticated:
+        from .league_standings import standings
+        memberships = list(LeagueSeason.objects.filter(
+            season=season, league__archived_at__isnull=True,
+            entries__membership__user=request.user,
+            entries__membership__is_active=True,
+        ).select_related("league", "season", "start_event").order_by("league__created_at").distinct())
+        remembered = request.session.get("active_friend_league")
+        home_league = next((item for item in memberships if str(item.league_id) == remembered), None)
+        home_league = home_league or next(iter(memberships), None)
+        if home_league:
+            home_board = standings(home_league)
         user_row = next(
-            (row for row in leaderboard_data["rows"] if row["user"].id == request.user.id),
+            (row for row in home_board["rows"] if row["user"].id == request.user.id),
             None,
         )
-        latest_event = leaderboard_data["latest_event"]
+        latest_event = home_board["latest_event"]
+        score_map = home_board["scores_map"]
+        user_scores = [score for (uid, _), score in score_map.items() if uid == request.user.id]
+        best_by_event = {}
+        for (_, event_id), score in score_map.items():
+            best_by_event[event_id] = max(best_by_event.get(event_id, score.points), score.points)
+        wins = sum(
+            score.points == best_by_event[event_id]
+            for (uid, event_id), score in score_map.items() if uid == request.user.id
+        )
+        total = user_row["total"] if user_row else 0
+        leader_total = home_board["rows"][0]["total"] if home_board["rows"] else 0
         personal_dashboard = {
             "next_event": next_event,
             "next_prediction": (
@@ -1043,10 +1072,16 @@ def home(request):
             ),
             "rank": user_row["rank"] if user_row else None,
             "movement": user_row["movement"] if user_row else 0,
-            "total": user_row["total"] if user_row else 0,
+            "total": total,
+            "player_count": len(home_board["rows"]),
+            "leader_gap": max(0, leader_total - total),
+            "leader_progress": min(100, max(0, round(100 * total / leader_total))) if leader_total > 0 else 0,
+            "submitted": len(saved_event_ids),
+            "wins": wins,
+            "best_score": max((score.points for score in user_scores), default=0),
             "latest_event": latest_event,
             "latest_score": (
-                Score.objects.filter(event=latest_event, user=request.user).first()
+                score_map.get((request.user.id, latest_event.id))
                 if latest_event
                 else None
             ),
@@ -1067,6 +1102,11 @@ def home(request):
             "featured_event": featured_event,
             "featured_prediction": featured_prediction,
             "featured_is_upcoming": featured_is_upcoming,
+            "featured_race_upcoming": featured_race_upcoming,
+            "home_league": home_league,
+            "home_rows": home_board["rows"][:5],
+            "player_count": len(leaderboard_data["rows"]),
+            "completed_events": len(leaderboard_data["scored_events"]),
             "leaderboard_top": leaderboard_data["rows"][:3],
             "activity_feed": build_activity_feed(leaderboard_data),
             "crazy_jury": crazy_jury_context(jury_event, request.user, now) if jury_event else None,
@@ -2034,9 +2074,9 @@ def player_profile(request, user_id: int):
     )
 
 
-def leaderboard(request):
+def leaderboard(request, force_global=False):
     season = get_selected_season(request)
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and not force_global:
         from .models import LeagueSeason
         original = LeagueSeason.objects.filter(season__year=season.year,
             league__legacy_key="original-friends", league__memberships__user=request.user,

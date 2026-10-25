@@ -1,93 +1,69 @@
 {% extends "base.html" %}
-
-{% block title %}F1 Predictions {{ season.year }} — лига прогнозов{% endblock %}
-
+{% load static %}
+{% block title %}Fastlap · Обзор сезона {{ season.year }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/nightshift-home.css' %}?v=20261025-circuits">{% endblock %}
 {% block content %}
-<section class="home-command mb-4">
-  <div
-    class="home-command-main {% if featured_event.cover_image %}has-event-cover{% endif %}"
-    {% if featured_event.cover_image %}style="--next-event-cover: url('{{ featured_event.cover_image.url }}');"{% endif %}
-  >
-    <div class="eyebrow"><span class="live-dot"></span> F1 Predictions · Season {{ season.year }}</div>
-    {% if featured_event %}
-        <p class="display-kicker">{% if featured_is_upcoming %}Следующий старт{% else %}Последний доступный этап{% endif %}</p>
-        <h1>{{ featured_event.name }}</h1>
-        <p class="home-lead">R{{ featured_event.round_number }} · дедлайн {{ featured_event.deadline|date:"d.m · H:i" }} МСК</p>
-        {% if personal_dashboard and personal_dashboard.next_event and personal_dashboard.next_event.id == featured_event.id %}
-        <div class="hero-actions">
-          <a class="action-primary {% if featured_prediction %}action-saved{% else %}action-open{% endif %}" href="{% url 'league:event_detail' event_id=featured_event.id %}">
-            {% if featured_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}
-            <span aria-hidden="true">{% if featured_prediction %}✓{% else %}→{% endif %}</span>
-          </a>
-          <div class="countdown-chip" data-deadline="{{ featured_event.deadline|date:'c' }}">
-            <span class="countdown-label">До дедлайна</span>
-            <strong data-countdown>—</strong>
-          </div>
-        </div>
-        {% if featured_prediction %}
-          <div class="prediction-confirmed"><span>✓</span> Прогноз сохранён — его можно изменить до дедлайна</div>
-        {% endif %}
-        {% if personal_dashboard.next_duel %}
-          <a class="home-duel-alert is-{{ personal_dashboard.next_duel.status }}" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}#event-duel">
-            <span class="home-duel-alert-icon">✦</span>
-            <span>
-              {% if personal_dashboard.next_duel.status == "pending" and personal_dashboard.next_duel.opponent_id == user.id %}
-                <small>Тебе бросили вызов</small><strong>{{ personal_dashboard.next_duel.challenger.username }} · ставка {{ personal_dashboard.next_duel.stake }}</strong>
-              {% elif personal_dashboard.next_duel.status == "pending" %}
-                <small>Ожидаем ответ</small><strong>{{ personal_dashboard.next_duel.opponent.username }} · ставка {{ personal_dashboard.next_duel.stake }}</strong>
-              {% else %}
-                <small>Дуэль принята</small><strong>{% if personal_dashboard.next_duel.challenger_id == user.id %}{{ personal_dashboard.next_duel.opponent.username }}{% else %}{{ personal_dashboard.next_duel.challenger.username }}{% endif %} · {{ personal_dashboard.next_duel.stake }} очков</strong>
-              {% endif %}
-            </span>
-            <b>Открыть →</b>
-          </a>
-        {% endif %}
-        {% elif not request.user.is_authenticated %}
-          <div class="hero-actions"><a class="action-primary" href="{% url 'login' %}">Войти и сделать прогноз <span>→</span></a></div>
-        {% else %}
-          <div class="hero-actions"><a class="action-primary" href="{% url 'league:event_detail' event_id=featured_event.id %}">Открыть этап <span>→</span></a></div>
-        {% endif %}
-    {% else %}
-      <p class="display-kicker">Твоя собственная пит-уолл</p>
-      <h1>Прогнозируй гонки.<br>Выигрывай сезон.</h1>
-      <p class="home-lead">Закрытая лига друзей с живой таблицей и подробным разбором очков.</p>
-      <div class="hero-actions"><a class="action-primary" href="{% url 'login' %}">Войти в аккаунт <span>→</span></a><a class="action-secondary" href="{% url 'league:register' %}">Создать аккаунт</a></div>
-    {% endif %}
-  </div>
+<div class="ns-home">
+<header class="ns-page-intro">
+  <div><div class="ns-kicker">СЕЗОН {{ season.year }} · ТВОЙ КОМАНДНЫЙ ПУНКТ</div><h1>Гонка начинается<br><span>до старта.</span></h1><p>Предсказывай результат. Забирай очки. Напоминай друзьям, кто здесь лучше разбирается в гонках.</p></div>
+  <a class="ns-secondary" href="{% url 'league:friend_league_create' %}"><span aria-hidden="true">＋</span> Создать лигу</a>
+</header>
 
-  <aside class="home-command-side">
-    {% if personal_dashboard %}
-      <div class="dashboard-label">Мой чемпионат</div>
-      <div class="dashboard-rank-row">
-        <div>
-          <small>Позиция</small>
-          <strong>{% if personal_dashboard.rank %}P{{ personal_dashboard.rank }}{% else %}—{% endif %}</strong>
-        </div>
-        {% if personal_dashboard.movement > 0 %}<span class="movement up">↑ {{ personal_dashboard.movement }}</span>{% elif personal_dashboard.movement < 0 %}<span class="movement down">↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</span>{% else %}<span class="movement steady">—</span>{% endif %}
-      </div>
-      <div class="dashboard-stats">
-        <div><small>Очки</small><strong>{{ personal_dashboard.total }}</strong></div>
-        <div><small>Последний этап</small><strong>{% if personal_dashboard.latest_score %}{% if personal_dashboard.latest_score.points > 0 %}+{% endif %}{{ personal_dashboard.latest_score.points }}{% else %}—{% endif %}</strong></div>
-      </div>
-    {% else %}
-      <div class="dashboard-label">Топ чемпионата</div>
-    {% endif %}
-
-    <div class="mini-standings">
-      {% for row in leaderboard_top %}
-        <a href="{% url 'league:player_profile' user_id=row.user.id %}">
-          <span class="mini-position">{{ row.rank }}</span>
-          <span class="mini-avatar">{% if row.avatar_url %}<img src="{{ row.avatar_url }}" alt="">{% else %}{{ row.user.username|slice:":1"|upper }}{% endif %}</span>
-          <span class="mini-name">{{ row.user.username }}</span>
-          <strong>{{ row.total }}</strong>
-        </a>
-      {% empty %}
-        <p class="muted-copy mb-0">Таблица появится после первого предикта.</p>
-      {% endfor %}
+<div class="ns-homegrid">
+  <section class="ns-feature" aria-labelledby="featured-gp-title">
+    <div class="ns-feature-inside">
+      <div class="ns-feature-eyebrow">{% if featured_event %}<span class="ns-round">R{{ featured_event.round_number|stringformat:'02d' }}</span>{% if featured_race_upcoming %}ТЕКУЩИЙ ГРАН-ПРИ{% else %}ПОСЛЕДНИЙ ЭТАП{% endif %}{% else %}FASTLAP / {{ season.year }}{% endif %}</div>
+      {% if featured_event %}
+        {% with circuit=featured_event.circuit_visual %}
+        <h2 id="featured-gp-title">{% if circuit %}{{ circuit.location }}<span>.</span>{% else %}{{ featured_event.name }}{% endif %}<br>{% if featured_is_upcoming %}Твой ход.{% elif featured_race_upcoming %}Время гонки.{% else %}Финиш.{% endif %}</h2>
+        <p>{{ featured_event.name }}. {% if featured_is_upcoming %}Один гоночный уик-энд. И шанс изменить расклад в своей лиге.{% elif featured_race_upcoming %}Прогнозы зафиксированы. Следи за гонкой и результатами своего паддока.{% else %}Посмотри результаты этапа и новую расстановку сил.{% endif %}</p>
+        <a class="ns-primary" href="{% url 'league:event_detail' event_id=featured_event.id %}">{% if featured_is_upcoming %}{% if featured_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}{% elif featured_event.ui_state == 'scored' %}Результаты этапа{% else %}Открыть этап{% endif %}<span aria-hidden="true">→</span></a>
+        <div class="ns-racebottom">{% if circuit %}<span>{{ circuit.country }}</span><span>{{ circuit.name }}</span>{% else %}<span>SEASON {{ season.year }}</span><span>ROUND {{ featured_event.round_number }}</span>{% endif %}</div>
+        {% endwith %}
+      {% else %}
+        <h2 id="featured-gp-title">Твоя сетка<span>.</span><br>Твой сезон.</h2><p>Собери свою компанию и соревнуйся с друзьями. Здесь появится ближайший Гран-при.</p><a class="ns-primary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">→</span></a>
+      {% endif %}
     </div>
-    <a class="text-link" href="{% url 'league:leaderboard' %}">Полная таблица <span>→</span></a>
-  </aside>
-</section>
+    {% if featured_event.circuit_visual %}<div class="ns-trackdrawing">{% include 'circuit_track.html' with circuit=featured_event.circuit_visual track_id='home' animated=True %}</div><div class="ns-track-meta">{{ featured_event.circuit_visual.length_km }} KM / {{ featured_event.circuit_visual.name }}</div>{% endif %}
+  </section>
+
+  <div class="ns-side-stack">
+    <section class="ns-deadline">
+      {% if featured_is_upcoming %}
+        <div class="ns-eyebrow">Прогнозы закроются через</div><div class="ns-timer" data-deadline="{{ featured_event.deadline|date:'c' }}"><strong data-countdown>—</strong></div><div class="ns-dates"><span class="ns-status">OPEN</span><time datetime="{{ featured_event.deadline|date:'c' }}">{{ featured_event.deadline|date:'d.m · H:i' }} МСК</time></div>
+      {% elif featured_race_upcoming %}
+        <div class="ns-eyebrow">До старта гонки</div><div class="ns-timer" data-deadline="{{ featured_event.race_datetime|default:featured_event.deadline|date:'c' }}"><strong data-countdown>—</strong></div><div class="ns-dates"><span class="ns-status is-locked">{% if featured_event.ui_state == 'soon' %}СКОРО{% else %}RACE{% endif %}</span><time>{{ featured_event.race_datetime|default:featured_event.deadline|date:'d.m · H:i' }} МСК</time></div>
+      {% else %}
+        <div class="ns-eyebrow">Race control</div><div class="ns-timer"><strong>{% if featured_event %}Финиш{% else %}На старте{% endif %}</strong></div><div class="ns-dates">Ждём следующий Гран-при</div>
+      {% endif %}
+      <div class="ns-mini-bars" aria-hidden="true"><span></span><span></span><span></span></div>
+    </section>
+    <section class="ns-ranktile">
+      <div class="ns-eyebrow">{% if home_league %}Твоя позиция / лига{% else %}Твоя позиция / общий рейтинг{% endif %}</div>
+      {% if personal_dashboard %}
+        <div class="ns-score"><b>{% if personal_dashboard.rank %}{{ personal_dashboard.rank|stringformat:'02d' }}<span>/{{ personal_dashboard.player_count|stringformat:'02d' }}</span>{% else %}—{% endif %}</b>{% if personal_dashboard.movement > 0 %}<small>↑ {{ personal_dashboard.movement }}</small>{% elif personal_dashboard.movement < 0 %}<small>↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</small>{% endif %}</div>
+        <p>{% if home_league %}{{ home_league.league.name }} · {% endif %}{% if not personal_dashboard.rank %}Твоя гонка ещё впереди.{% elif personal_dashboard.leader_gap %}До лидера {{ personal_dashboard.leader_gap }} очк.{% else %}Ты возглавляешь таблицу.{% endif %}</p>
+        <div class="ns-progress" aria-hidden="true"><span style="width:{{ personal_dashboard.leader_progress }}%"></span></div>
+      {% else %}
+        <div class="ns-score"><b>Твой ход<span>.</span></b></div><p>Войди, чтобы увидеть свою позицию.</p><a class="ns-inline" href="{% url 'login' %}">Войти в Fastlap ↗</a>
+      {% endif %}
+    </section>
+  </div>
+</div>
+
+<div class="ns-stats">
+  {% if personal_dashboard %}
+  <article class="ns-stat"><div>Очки за сезон <span aria-hidden="true">↗</span></div><strong>{{ personal_dashboard.total }}</strong><small>{% if personal_dashboard.latest_score %}<b>{{ personal_dashboard.latest_score.points|stringformat:"+d" }}</b> ЗА ПРОШЛЫЙ ЭТАП{% else %}ПЕРВЫЕ ОЧКИ ВПЕРЕДИ{% endif %}</small></article>
+  <article class="ns-stat"><div>Лучший этап <span aria-hidden="true">⚑</span></div><strong>{{ personal_dashboard.best_score }}</strong><small>ЛИЧНЫЙ РЕКОРД / ОЧКИ</small></article>
+  <article class="ns-stat"><div>Твои победы <span aria-hidden="true">◇</span></div><strong>{{ personal_dashboard.wins|stringformat:'02d' }}</strong><small>{% if home_league %}ВНУТРИ ТВОЕЙ ЛИГИ{% else %}В ОБЩЕМ ЗАЧЁТЕ{% endif %}</small></article>
+  <article class="ns-stat"><div>Твои прогнозы <span aria-hidden="true">◷</span></div><strong>{{ personal_dashboard.submitted|stringformat:'02d' }}</strong><small>СОХРАНЕНО В ЭТОМ СЕЗОНЕ</small></article>
+  {% else %}
+  <article class="ns-stat"><div>Участники <span aria-hidden="true">↗</span></div><strong>{{ player_count|stringformat:'02d' }}</strong><small>В ОБЩЕЙ СЕТКЕ</small></article>
+  <article class="ns-stat"><div>Гран-при <span aria-hidden="true">⚑</span></div><strong>{{ total_events|stringformat:'02d' }}</strong><small>В КАЛЕНДАРЕ {{ season.year }}</small></article>
+  <article class="ns-stat"><div>Этапы с результатами <span aria-hidden="true">◇</span></div><strong>{{ completed_events|stringformat:'02d' }}</strong><small>ОЧКИ УЖЕ РАЗЫГРАНЫ</small></article>
+  <article class="ns-stat"><div>Впереди <span aria-hidden="true">◷</span></div><strong>{{ upcoming_events|length|stringformat:'02d' }}</strong><small>НОВЫЕ ШАНСЫ НА ПОБЕДУ</small></article>
+  {% endif %}
+</div>
 
 {% if crazy_jury %}
   <section class="crazy-jury-shell" id="crazy-jury" aria-labelledby="crazy-jury-title">
@@ -128,15 +104,23 @@
   </section>
 {% endif %}
 
-<section class="activity-feed-shell editorial-section mb-4">
-  <div class="section-heading-row">
-    <div><span class="eyebrow">Live paddock</span><h2>Последние события</h2></div>
-    <a class="section-inline-link" href="{% url 'league:leaderboard' %}?season={{ season.year }}">Таблица →</a>
-  </div>
-  <div class="activity-news-list" id="live-paddock-list" data-feed-url="{% url 'league:activity_feed' %}?season={{ season.year }}">
-    {% include "activity_feed_items.html" %}
+<section class="ns-social">
+  <div class="ns-sectionlabel"><div><h2>На пит-уолле</h2><p>Всё, что имеет значение перед следующей гонкой.</p></div><span>01 / SOCIAL</span></div>
+  <div class="ns-socialgrid">
+    <div class="ns-panel">
+      <div class="ns-panelheading"><h3>{% if home_league %}{{ home_league.league.name }}{% else %}Общий рейтинг{% endif %}</h3><span>{{ season.year }} / SEASON</span></div>
+      <div class="ns-rankrows">{% for row in home_rows %}
+        <a class="ns-rankrow{% if row.user.id == user.id %} is-you{% endif %}" href="{% url 'league:player_profile' user_id=row.user.id %}?season={{ season.year }}"><span class="ns-ranknum">{{ row.rank|stringformat:'02d' }}</span><span class="mini-avatar">{% if row.avatar_url %}<img src="{{ row.avatar_url }}" alt="" loading="lazy">{% else %}{{ row.user.username|slice:":1"|upper }}{% endif %}</span><span class="ns-nickname">{{ row.user.username }}</span><strong>{{ row.total }}</strong><span class="ns-delta">{% if row.movement > 0 %}↑ {{ row.movement }}{% elif row.movement < 0 %}↓ {{ row.movement|stringformat:"+d"|slice:"1:" }}{% else %}—{% endif %}</span></a>
+      {% empty %}<p class="ns-empty">Таблица появится после первых прогнозов.</p>{% endfor %}</div>
+      <div class="ns-bottomstrip"><span>Каждый этап меняет расстановку сил.</span>{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}">Моя лига →</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Вся таблица →</a>{% endif %}</div>
+    </div>
+    <section class="ns-panel ns-live" aria-labelledby="live-paddock-title">
+      <div class="ns-panelheading"><h3 id="live-paddock-title"><i class="ns-live-pip" aria-hidden="true"></i> Live paddock</h3><span>Последние события</span></div>
+      <div class="activity-news-list" id="live-paddock-list" data-feed-url="{% url 'league:activity_feed' %}?season={{ season.year }}">{% include "activity_feed_items.html" %}</div>
+    </section>
   </div>
 </section>
+<div class="ns-community"><div><div class="ns-kicker">FASTLAP / ОДНА ГОНКА — МНОГО МНЕНИЙ</div><h3>Своя лига. Своя борьба.</h3><p>Приглашай друзей, угадывай исходы и переписывай историю своего чата.</p></div><a class="ns-secondary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">↗</span></a></div>
 
 {% if result_images %}
   <section class="editorial-section mb-4">
@@ -162,7 +146,7 @@
   </section>
 {% endif %}
 
-<section class="editorial-section" id="calendar">
+<section class="editorial-section ns-calendar" id="calendar">
   <div class="section-heading-row calendar-heading-row">
     <div class="calendar-heading-copy">
       <div class="calendar-heading-meta">
@@ -177,7 +161,7 @@
     {% for e in events %}
       <article class="event-editorial-card">
         <a class="event-media" href="{% url 'league:event_detail' event_id=e.id %}">
-          {% if e.cover_image %}<img src="{{ e.cover_image.url }}" alt="{{ e.name }}">{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
+          {% if e.cover_image %}<img src="{{ e.cover_image.url }}" alt="{{ e.name }}">{% elif e.circuit_visual %}<div class="ns-calendar-track">{% include 'circuit_track.html' with circuit=e.circuit_visual track_id=e.pk animated=False %}</div>{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
           <span class="round-flag">R{{ e.round_number }}</span>
           {% if e.ui_state == "saved" %}<span class="event-state saved">Сохранено ✓</span>{% elif e.ui_state == "open" %}<span class="event-state open">Доступно</span>{% elif e.ui_state == "scored" %}<span class="event-state scored">Рассчитано</span>{% elif e.ui_state == "soon" %}<span class="event-state soon">Скоро</span>{% else %}<span class="event-state locked">Закрыто</span>{% endif %}
         </a>
@@ -198,6 +182,7 @@
   </div>
 </section>
 
+</div>
 <script>
   document.querySelectorAll("[data-deadline]").forEach((node) => {
     const output = node.querySelector("[data-countdown]");
@@ -208,7 +193,7 @@
       const hours = Math.floor((distance % 86400000) / 3600000);
       const minutes = Math.floor((distance % 3600000) / 60000);
       output.textContent = distance
-        ? `${days} дн · ${String(hours).padStart(2, "0")} ч · ${String(minutes).padStart(2, "0")} мин`
+        ? `${days ? days + " д " : ""}${String(hours).padStart(2, "0")} ч ${String(minutes).padStart(2, "0")} м`
         : "закрыто";
     };
     render();

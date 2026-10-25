@@ -17,7 +17,7 @@ def league_context(request):
     next_prediction_event = (
         Event.objects.filter(
             season_year=selected_year,
-            status__in=(Event.Status.OPEN, Event.Status.LOCKED),
+            status=Event.Status.OPEN,
             deadline__gt=now,
         )
         .order_by("deadline", "round_number")

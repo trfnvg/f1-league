@@ -11,12 +11,13 @@
   --nightshift-text: #f3f5f7;
   --nightshift-muted: #b0b6bf;
   --nightshift-dim: #8a919b;
-  --nightshift-red: #e10600;
+  --nightshift-red: #dd2f2a;
 }
 html { background: var(--nightshift-bg); scroll-padding-top: 90px; }
 body.apex-night-theme.editorial-theme {
   display:grid!important; grid-template-columns:246px minmax(0,1fr); align-items:stretch;
   min-height:100vh; padding-top:0!important; color:var(--nightshift-text);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
   background:linear-gradient(180deg,#15191f,#181d24 48%,#14181d)!important;
   --apex-bg:var(--nightshift-bg); --apex-bg-soft:#181d24;
   --apex-surface:var(--nightshift-surface); --apex-surface-2:var(--nightshift-surface-2);
@@ -29,7 +30,7 @@ body.apex-night-theme.editorial-theme {
   --race-muted:var(--nightshift-muted); --race-line:var(--nightshift-stroke-soft);
 }
 body.apex-night-theme.editorial-theme::before,body.apex-night-theme::after { content:none!important; }
-.nightshift-sidebar { grid-column:1; grid-row:1; position:sticky; top:0; display:flex; flex-direction:column; width:246px; height:100vh; min-height:540px; padding:28px 17px 17px; color:var(--nightshift-text); background:var(--nightshift-sidebar); border-right:1px solid var(--nightshift-stroke-soft); z-index:45; }
+.nightshift-sidebar { grid-column:1; grid-row:1; position:sticky; top:0; display:flex; flex-direction:column; width:246px; height:100vh; min-height:540px; padding:30px 18px 22px; color:var(--nightshift-text); background:linear-gradient(180deg,#191d23,#171b20); border-right:1px solid var(--nightshift-stroke-soft); z-index:45; overflow-y:auto; scrollbar-width:thin; }
 .nightshift-brand { display:flex; align-items:center; gap:12px; padding:0 8px 31px; color:inherit!important; text-decoration:none!important; }
 .nightshift-brandmark { width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(180deg,#ff2b22,#cc0500); box-shadow:0 10px 25px #e1060028; }
 .nightshift-brandmark svg { width:23px; height:23px; }.nightshift-brandmark path { fill:#fff; }
@@ -37,7 +38,7 @@ body.apex-night-theme.editorial-theme::before,body.apex-night-theme::after { con
 .nightshift-brand strong span { color:var(--nightshift-red); }.nightshift-brand small { display:block; margin-top:5px; color:var(--nightshift-dim); font-size:8px; font-weight:800; letter-spacing:.18em; }
 .nightshift-nav-label { margin:6px 12px 10px; color:var(--nightshift-dim); font-size:9px; font-weight:800; letter-spacing:.15em; }
 .nightshift-nav { display:grid; gap:3px; }
-.nightshift-nav-item { min-height:43px; display:flex; align-items:center; gap:12px; padding:10px 12px; color:#a9afb8!important; border:1px solid transparent; border-radius:10px; text-decoration:none!important; font-size:12px; font-weight:700; transition:background .16s,border-color .16s,color .16s; }
+.nightshift-nav-item { min-height:44px; display:flex; align-items:center; gap:13px; padding:12px 14px; color:#a9afb8!important; border:1px solid transparent; border-radius:11px; text-decoration:none!important; font-size:13px; font-weight:650; transition:background .16s,border-color .16s,color .16s; }
 .nightshift-nav-item:hover { color:#fff!important; background:#222831; }.nightshift-nav-item.is-active { color:#fff!important; background:#252c35; border-color:#424a55; }
 .nightshift-nav-item svg { width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 .nightshift-nav-item small { margin-left:auto; padding:3px 6px; border:1px solid #404754; border-radius:6px; background:#222730; color:#d0d5dd; font:700 9px ui-monospace,monospace; }
@@ -60,6 +61,7 @@ body.apex-night-theme.editorial-theme::before,body.apex-night-theme::after { con
 .nightshift-mobile-brand { display:none; color:#f3f5f7!important; text-decoration:none!important; font-size:22px; font-weight:900; letter-spacing:-.075em; }
 .nightshift-mobile-brand span { color:var(--nightshift-red); }
 body.apex-night-theme.editorial-theme .site-header { position:sticky!important; top:0; left:auto; right:auto; height:85px; min-height:85px; transform:none!important; border:0; border-bottom:1px solid var(--nightshift-stroke-soft); border-radius:0; background:rgba(23,27,33,.91); box-shadow:none; backdrop-filter:blur(20px); z-index:30; }
+body.apex-night-theme.editorial-theme .site-header::after { content:none; }
 body.apex-night-theme.editorial-theme .site-header>.container { width:100%; max-width:none; min-height:85px; padding:0 42px; }
 body.apex-night-theme.editorial-theme .site-menu-btn,body.apex-night-theme.editorial-theme .desktop-nav { display:none!important; }
 body.apex-night-theme.editorial-theme .site-brand { display:none; }
@@ -127,3 +129,64 @@ body.apex-night-theme.editorial-theme .crazy-jury-shell { background:linear-grad
   body.apex-night-theme.editorial-theme .nav-chip { padding-inline:10px; font-size:11px; }
 }
 @media(prefers-reduced-motion:reduce) { .nightshift-nav-item { transition:none; } }
+
+/* Shared page hierarchy follows the reference, beyond the homepage. */
+body.apex-night-theme.editorial-theme :is(.section-title,.leagues-heading h1,.league-dashboard-head h1,.event-hero-copy h1,.profile-name) { font-family:Inter,"Segoe UI",Arial,sans-serif; font-style:normal; font-weight:750; text-transform:none; letter-spacing:-.055em; }
+body.apex-night-theme.editorial-theme .league-dashboard-head-premium { padding:30px 32px; border:1px solid #3b434f; background:linear-gradient(145deg,#232932,#1d2229)!important; }
+body.apex-night-theme.editorial-theme .league-dashboard-head-premium::before,body.apex-night-theme.editorial-theme .league-dashboard-head-premium::after { content:none; }
+body.apex-night-theme.editorial-theme .league-race-card { border:1px solid #3b434f; background:linear-gradient(110deg,#232932,#1d2229)!important; }
+body.apex-night-theme.editorial-theme .league-race-visual .circuit-visual { width:100%; height:100%; max-height:290px; transform:none; opacity:1; }
+body.apex-night-theme.editorial-theme .league-race-visual .circuit-visual path { vector-effect:non-scaling-stroke; }
+body.apex-night-theme.editorial-theme .league-race-watermark { opacity:.04; }
+body.apex-night-theme.editorial-theme .leagues-button { border-radius:10px; background:linear-gradient(180deg,#ef4940,#d91f1a); color:#fff; box-shadow:0 10px 20px #d91f1a24; }
+body.apex-night-theme.editorial-theme .leagues-button-secondary { border-color:#414955; background:#ffffff08; color:#edf0f4; box-shadow:none; }
+body.apex-night-theme.editorial-theme .leagues-card { background:linear-gradient(180deg,#232932,#1d2229)!important; }
+body.apex-night-theme.editorial-theme .leagues-card:hover { border-color:#626b77!important; transform:translateY(-2px); }
+body.apex-night-theme.editorial-theme .leagues-card h3 { font-family:Inter,"Segoe UI",Arial,sans-serif; font-weight:750; letter-spacing:-.04em; }
+body.apex-night-theme.editorial-theme .leaderboard-table :is(th,td),body.apex-night-theme.editorial-theme .leagues-table :is(th,td) { border-color:#ffffff12; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody tr:hover { background-color:#262d36; }
+body.apex-night-theme.editorial-theme .league-race-visual { background:#1d2229; }
+body.apex-night-theme.editorial-theme .league-race-visual::after { background:none; }
+body.apex-night-theme.editorial-theme .league-race-copy { background:none; }
+body.apex-night-theme.editorial-theme .round-winner-spotlight { border:1px solid #514a40; border-radius:15px; background:linear-gradient(110deg,#2b2a28,#232932); box-shadow:none; }
+body.apex-night-theme.editorial-theme .round-winner-kicker,body.apex-night-theme.editorial-theme .round-winner-person>b { color:#d8b792; }
+body.apex-night-theme.editorial-theme .round-winner-copy strong { font-family:Inter,"Segoe UI",Arial,sans-serif; font-size:15px; font-weight:700; letter-spacing:-.025em; text-transform:none; }
+body.apex-night-theme.editorial-theme .round-winner-person { border-color:#5a5145; border-radius:10px; background:#ffffff04; }
+body.apex-night-theme.editorial-theme .leaderboard-luxe .table-responsive { background:#1d2229; }
+body.apex-night-theme.editorial-theme .leaderboard-table thead>tr>th { background-color:#232932!important; background-image:none!important; color:#9fa8b4; font-family:Inter,"Segoe UI",Arial,sans-serif; font-size:10px; font-weight:700; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr>td { background-color:#1d2229!important; background-image:none!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr.is-round-winner>td { background-color:#2b2a28!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr:hover>td { background-color:#2a3039!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr.is-round-winner:hover>td { background-color:#34312c!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr>:is(.sticky-col,.sticky-col-2,.sticky-total) { background-color:#1d2229!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr.is-round-winner>:is(.sticky-col,.sticky-col-2,.sticky-total) { background-color:#2b2a28!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr:hover>:is(.sticky-col,.sticky-col-2,.sticky-total) { background-color:#2a3039!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody>tr.is-round-winner:hover>:is(.sticky-col,.sticky-col-2,.sticky-total) { background-color:#34312c!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table :is(.rank-chip,.points-chip,.total-chip) { border:0; background:transparent; box-shadow:none; font-family:"SFMono-Regular",Consolas,monospace; font-weight:700; }
+body.apex-night-theme.editorial-theme .leaderboard-table .total-chip { padding:6px 2px; color:#f3f5f7; font-size:17px; }
+body.apex-night-theme.editorial-theme .leaderboard-table .points-chip { color:#bac2cd; font-size:12px; }
+body.apex-night-theme.editorial-theme .leaderboard-table .rank-chip { color:#aeb5bf; font-size:12px; }
+body.apex-night-theme.editorial-theme .nightshift-pageheading { margin:0 0 31px; padding:0 0 10px; border:0; background:none; }
+body.apex-night-theme.editorial-theme .nightshift-pageheading h1,body.apex-night-theme.editorial-theme .leagues-heading h1 { margin:12px 0 8px; font-size:clamp(32px,3.45vw,52px); line-height:1.08; }
+body.apex-night-theme.editorial-theme .nightshift-pageheading .page-kicker { color:#ef645b; font-family:Inter,"Segoe UI",Arial,sans-serif; font-size:10px; font-weight:800; letter-spacing:.14em; }
+body.apex-night-theme.editorial-theme .ns-rankrow .mini-avatar { background:#343c48; color:#edf0f4; }
+body.apex-night-theme.editorial-theme footer .footer-inner { display:flex; align-items:center; justify-content:space-between; max-width:none; padding:0 42px; }
+body.apex-night-theme.editorial-theme footer .footer-signature { width:100%; display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:20px; font-family:Inter,"Segoe UI",Arial,sans-serif; }
+body.apex-night-theme.editorial-theme footer .footer-brand { font-size:9px; font-weight:650; letter-spacing:.08em; color:#8a919b; }
+body.apex-night-theme.editorial-theme footer .footer-brand strong { color:#c2c8d0; }
+body.apex-night-theme.editorial-theme .f1-menu .nightshift-mobile-brand { display:block; }
+body.apex-night-theme.editorial-theme .event-hero-card { background:linear-gradient(110deg,#232932,#1d2229)!important; }
+body.apex-night-theme.editorial-theme .event-hero-card.card-accent-top::before { content:none; }
+body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-layout { display:grid; grid-template-columns:minmax(0,1fr) 36%; min-height:250px; }
+body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-copy { grid-column:1; grid-row:1; padding:30px 32px; background:transparent; }
+body.apex-night-theme.editorial-theme .nightshift-event-track { grid-column:2; grid-row:1; padding:18px; min-height:0; background:none; }
+body.apex-night-theme.editorial-theme .nightshift-event-track::before,body.apex-night-theme.editorial-theme .nightshift-event-track::after { content:none; }
+body.apex-night-theme.editorial-theme .nightshift-event-track .circuit-visual { position:static; width:100%; height:100%; min-height:200px; object-fit:contain; }
+@media(max-width:780px) { body.apex-night-theme.editorial-theme .league-dashboard-head-premium { padding:22px 18px; } }
+@media(max-width:780px) { body.apex-night-theme.editorial-theme footer .footer-inner { padding-inline:17px; } body.apex-night-theme.editorial-theme footer .footer-signature { flex-wrap:wrap; font-size:8px; } }
+@media(max-width:600px) {
+  body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-layout { grid-template-columns:1fr; }
+  body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-copy { padding:24px 22px 0; }
+  body.apex-night-theme.editorial-theme .nightshift-event-track { grid-column:1; grid-row:2; height:180px; padding:0 35px 15px; }
+  body.apex-night-theme.editorial-theme .nightshift-event-track .circuit-visual { min-height:0; }
+}

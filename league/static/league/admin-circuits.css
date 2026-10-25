@@ -1,0 +1,4 @@
+.admin-circuit-preview { width:min(100%,520px); padding:14px 20px; border:1px solid #414955; border-radius:14px; background:linear-gradient(145deg,#232932,#1d2229); color:#c4cbd5; }
+.admin-circuit-preview[hidden] { display:none; }
+.admin-circuit-preview .circuit-visual { height:240px; }
+.admin-circuit-preview>span { display:block; font:11px/1.5 monospace; text-align:center; }

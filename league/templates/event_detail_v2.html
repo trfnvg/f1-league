@@ -224,8 +224,10 @@
 
 <div class="card event-hero-card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
   <div class="event-hero-layout">
-    <div class="event-hero-media">
-      {% if event.cover_image %}
+    <div class="event-hero-media{% if event.circuit_visual %} nightshift-event-track{% endif %}">
+      {% if event.circuit_visual %}
+        {% include 'circuit_track.html' with circuit=event.circuit_visual track_id='event' animated=True %}
+      {% elif event.cover_image %}
         <img src="{{ event.cover_image.url }}" class="event-hero-image" alt="{{ event.name }}">
       {% else %}
         <div class="event-detail-placeholder" aria-hidden="true"><span>R{{ event.round_number }}</span></div>

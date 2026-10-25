@@ -1,0 +1,107 @@
+/* Live homepage layout from the Nightshift Soft Charcoal reference. */
+.ns-home { --ns-mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace; --ns-red:#dd2f2a; font-family:Inter,"Segoe UI",Arial,sans-serif; }
+.ns-page-intro { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; margin:0 0 31px; }
+.ns-kicker { display:flex; align-items:center; gap:9px; color:#ef645b; font-size:10px; font-weight:800; letter-spacing:.14em; line-height:1.5; text-transform:uppercase; }
+.ns-kicker::before { content:""; flex:0 0 15px; height:2px; background:var(--ns-red,#dd2f2a); }
+.ns-page-intro h1 { margin:13px 0 0; max-width:760px; color:#f3f5f7; font:750 clamp(34px,3.45vw,58px)/1.06 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.072em; text-transform:none; }
+.ns-page-intro h1 span { color:var(--ns-red,#dd2f2a); }
+.ns-page-intro p { max-width:430px; margin:12px 0 0; color:#b0b6bf; font-size:13px; line-height:1.7; }
+.ns-secondary,.ns-primary { display:inline-flex; align-items:center; justify-content:center; gap:12px; border:1px solid #414955; border-radius:11px; padding:13px 18px; color:#edf0f4!important; background:rgba(255,255,255,.03); font-size:12px; font-weight:750; line-height:1.5; text-decoration:none!important; transition:background .18s,transform .18s; }
+.ns-secondary:hover { background:#2a3039; }
+.ns-primary { gap:20px; border-color:#e83e36; padding:14px 19px; background:linear-gradient(180deg,#ef4940,#d91f1a); box-shadow:0 3px 0 #a4110e inset,0 10px 20px rgba(217,31,26,.14); font-weight:800; }
+.ns-primary:hover { transform:translateY(-2px); background:linear-gradient(180deg,#f35b53,#e22621); }
+.ns-home :is(a,button):focus-visible { outline:2px solid #f17970; outline-offset:4px; }
+.ns-homegrid { display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:18px; }
+.ns-feature { position:relative; min-width:0; min-height:427px; overflow:hidden; border:1px solid #39414c; border-radius:18px; background:#1d2229; box-shadow:0 22px 48px rgba(0,0,0,.18); isolation:isolate; }
+.ns-feature::before { content:""; position:absolute; z-index:-1; inset:0; background:radial-gradient(circle at 88% 35%,rgba(221,47,42,.06),transparent 34%),linear-gradient(90deg,#1d2229,#1d2229d6 52%,#23293229); pointer-events:none; }
+.ns-feature::after { content:""; position:absolute; z-index:-1; inset:0; background-image:linear-gradient(#ffffff04 1px,transparent 1px),linear-gradient(90deg,#ffffff04 1px,transparent 1px); background-size:28px 28px; mask-image:linear-gradient(90deg,transparent,#000); pointer-events:none; }
+.ns-feature-inside { position:relative; z-index:2; width:58%; min-height:427px; padding:36px 0 30px 36px; display:flex; flex-direction:column; align-items:flex-start; }
+.ns-feature-eyebrow { display:flex; align-items:center; gap:10px; color:#d0d4da; font:750 9px/1.5 var(--ns-mono); letter-spacing:.05em; }
+.ns-round { flex:none; padding:6px 8px; border:1px solid #d2f2da40; border-radius:5px; }
+.ns-feature h2 { margin:36px 0 16px; color:#f3f5f7; font:800 clamp(38px,4vw,66px)/.99 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.073em; text-transform:none; overflow-wrap:anywhere; }
+.ns-feature h2>span { color:var(--ns-red); }
+.ns-feature p { max-width:290px; margin:0 0 24px; color:#c0c5cd; font-size:13px; line-height:1.65; }
+.ns-racebottom { display:flex; gap:13px; align-items:center; flex-wrap:wrap; margin-top:auto; padding-top:27px; color:#d0d4da; font:700 9px/1.5 var(--ns-mono); }
+.ns-racebottom span+span { max-width:220px; padding-left:13px; border-left:1px solid #536057; }
+.ns-trackdrawing { position:absolute; z-index:1; top:42px; right:0; width:64%; height:330px; pointer-events:none; mask-image:linear-gradient(90deg,transparent 0%,#000 20%); }
+.ns-track-meta { position:absolute; right:24px; bottom:24px; max-width:42%; color:#98a0aa; font:700 8px/1.6 var(--ns-mono); letter-spacing:.04em; text-align:right; }
+.ns-side-stack { display:grid; grid-template-rows:1.15fr 1fr; gap:18px; min-width:0; }
+.ns-deadline,.ns-ranktile,.ns-stat,.ns-panel { border:1px solid #3b434f; border-radius:18px; background:linear-gradient(180deg,#232932,#1d2229); box-shadow:0 18px 40px rgba(0,0,0,.14); }
+.ns-deadline { padding:24px; }
+.ns-eyebrow { color:#aeb5bf; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.ns-timer { min-height:53px; display:flex; align-items:center; margin:20px 0 10px; }
+.ns-timer strong { color:#f3f5f7; font:700 clamp(23px,2.3vw,34px)/1.2 var(--ns-mono); letter-spacing:-.07em; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ns-dates { display:flex; align-items:center; flex-wrap:wrap; gap:8px; color:#aeb4bd; font-size:10px; }
+.ns-status { padding:5px 8px; border-radius:5px; background:#3a2120; color:#ffd8d6; font:800 9px/1.5 var(--ns-mono); }
+.ns-status.is-locked { background:#303742; color:#e1e6ed; }
+.ns-mini-bars { display:grid; grid-template-columns:1.8fr 1fr .6fr; gap:4px; margin-top:22px; }
+.ns-mini-bars span { height:4px; border-radius:2px; background:#4a535f; }.ns-mini-bars span:first-child { background:var(--ns-red); }.ns-mini-bars span:nth-child(2) { background:#9a5450; }
+.ns-ranktile { padding:22px 24px; background:radial-gradient(circle at 96% 8%,#ffffff0a,transparent 55%),linear-gradient(180deg,#252b34,#1f252d); }
+.ns-score { display:flex; align-items:flex-end; gap:12px; margin:17px 0 8px; }
+.ns-score b { color:#f3f5f7; font:750 46px/1 var(--ns-mono); letter-spacing:-.09em; }
+.ns-score b>span { color:#8a919b; font-size:22px; }.ns-score small { color:#d8b792; font:800 11px/1.5 var(--ns-mono); padding-bottom:6px; }
+.ns-ranktile p { margin:7px 0 15px; color:#b0b6bf; font-size:11px; line-height:1.6; }
+.ns-progress { height:5px; overflow:hidden; border-radius:8px; background:#39414b; }.ns-progress span { display:block; height:100%; border-radius:8px; background:linear-gradient(90deg,#dd2f2a,#f2554b); }
+.ns-inline { color:#f18a82!important; font-size:11px; font-weight:750; }
+.ns-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin:18px 0 0; }
+.ns-stat { padding:20px 22px; border-radius:15px; min-width:0; }
+.ns-stat>div { display:flex; align-items:center; justify-content:space-between; gap:9px; color:#b0b6bf; font-size:11px; }.ns-stat>div>span { color:#8a919b; font-size:16px; }
+.ns-stat>strong { display:block; margin-top:19px; color:#f3f5f7; font:740 30px/1.2 var(--ns-mono); letter-spacing:-.07em; }
+.ns-stat>small { display:block; margin-top:8px; color:#8a919b; font:700 9px/1.5 var(--ns-mono); }.ns-stat>small>b { color:#ef746b; }
+.ns-sectionlabel { display:flex; justify-content:space-between; align-items:center; gap:15px; margin:31px 0 16px; }
+.ns-sectionlabel h2 { margin:0; color:#f3f5f7; font:750 18px/1.3 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.045em; }.ns-sectionlabel p { margin:5px 0 0; color:#8a919b; font-size:12px; }.ns-sectionlabel>span { flex:none; color:#aeb5bf; font:700 10px/1.5 var(--ns-mono); }
+.ns-socialgrid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr); gap:18px; align-items:start; }
+.ns-panel { min-width:0; overflow:hidden; }
+.ns-panelheading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px 25px 16px; }
+.ns-panelheading h3 { min-width:0; margin:0; color:#f3f5f7; font:750 16px/1.4 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.035em; }.ns-panelheading>span { flex:none; color:#b0b6bf; font:600 9px/1.5 var(--ns-mono); }
+.ns-rankrows { padding:0 24px 12px; }
+.ns-rankrow { display:grid; grid-template-columns:25px 32px minmax(0,1fr) 49px 30px; gap:12px; align-items:center; padding:13px 4px; border-top:1px solid #ffffff13; font-size:12px; text-decoration:none!important; }
+.ns-rankrow.is-you { margin:0 -10px; padding-inline:14px; border-radius:9px; background:linear-gradient(90deg,#dd2f2a12,transparent); }
+.ns-ranknum,.ns-delta { color:#8a919b; font:700 10px/1.5 var(--ns-mono); }.ns-nickname { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#f3f5f7; font-weight:750; }.ns-rankrow>strong { color:#f3f5f7; text-align:right; font:800 13px/1.5 var(--ns-mono); }.ns-rankrow.is-you>.ns-nickname,.ns-rankrow.is-you>strong { color:#f3b0aa; }.ns-delta { text-align:right; color:#b0b6bf; }
+.ns-rankrow .mini-avatar { width:32px; height:32px; min-width:32px; background:#343c48; color:#edf0f4; font:750 11px/1 Inter,sans-serif; }
+.ns-bottomstrip { display:flex; align-items:center; justify-content:space-between; gap:15px; padding:14px 24px; border-top:1px solid #ffffff13; color:#8a919b; font-size:10px; }.ns-bottomstrip>a { flex:none; color:#f18a82!important; font-size:11px; font-weight:800; }
+.ns-live .ns-panelheading h3 { display:flex; align-items:center; gap:8px; }.ns-live-pip { width:6px; height:6px; border-radius:50%; background:#ef4940; box-shadow:0 0 0 4px #dd2f2a18; }
+.ns-live .activity-news-list { display:block; padding:0 24px 12px; }
+.ns-live .activity-news-item { display:grid; grid-template-columns:7px minmax(0,1fr); gap:12px; padding:13px 0; margin:0; border:0; border-radius:0; border-top:1px solid #ffffff13; background:none; box-shadow:none; }
+.ns-live .activity-feed-icon { position:static; display:block; width:6px; height:6px; min-width:0; min-height:0; margin:6px 0 0; border:0; border-radius:50%; background:#a2acb9; box-shadow:none; }
+.ns-live .activity-feed-icon::before,.ns-live .activity-feed-icon::after { content:none; }
+.ns-live .activity-news-copy { min-width:0; }.ns-live .activity-news-label { display:block; color:#8a919b; font:700 8px/1.4 var(--ns-mono); letter-spacing:.08em; }.ns-live .activity-news-copy>strong { display:block; margin:5px 0; color:#e0e4ea; font-size:11px; font-weight:600; line-height:1.65; }.ns-live .activity-news-copy>small:last-child { display:block; color:#8a919b; font-size:9px; }.ns-live .activity-news-empty,.ns-empty { padding:20px 0; margin:0; color:#aeb5bf; font-size:12px; line-height:1.7; }
+.ns-community { display:flex; align-items:center; justify-content:space-between; gap:25px; margin-top:18px; padding:24px 28px; border:1px solid #3b434f; border-radius:15px; background:linear-gradient(110deg,#232932,#1d2229); }.ns-community .ns-kicker { font-size:8px; color:#d8b792; }.ns-community .ns-kicker::before { background:#d8b792; }.ns-community h3 { margin:10px 0 5px; color:#f3f5f7; font:750 21px/1.3 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.04em; }.ns-community p { margin:0; color:#b0b6bf; font-size:12px; line-height:1.65; }.ns-community>a { flex:none; }
+.ns-calendar { margin-top:35px; }.ns-calendar .section-heading-row { border:0; margin-bottom:16px; padding:0; }.ns-calendar .calendar-heading-meta { margin-bottom:6px; }.ns-calendar .calendar-heading-meta>.eyebrow { color:#aeb5bf; font-size:9px; letter-spacing:.12em; }.ns-calendar .calendar-heading-copy h2 { font:750 25px/1.2 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.045em; color:#f3f5f7; }.ns-calendar .event-editorial-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }.ns-calendar .event-media { height:150px; background:#232932; }.ns-calendar .event-media img { width:100%; height:100%; object-fit:cover; }.ns-calendar-track { height:100%; padding:12px 30px; background:radial-gradient(ellipse at 70% 40%,#dd2f2a09,transparent 70%); }.ns-calendar-track .circuit-trace { stroke-width:4; }.ns-calendar .event-card-copy { padding:17px 18px; }.ns-calendar .event-card-copy h3 { font:750 16px/1.4 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.025em; }.ns-calendar .event-card-foot { gap:7px; }.ns-calendar .event-card-foot>span { font-size:10px; }.ns-calendar .event-card-action { flex:none; font-size:10px; }.ns-calendar .event-media-placeholder { height:100%; background:#252c35; }
+@media(min-width:1800px) { .ns-feature-inside { width:56%; } }
+@media(max-width:1350px) and (min-width:1001px) {
+  .ns-homegrid { grid-template-columns:minmax(0,1fr) 255px; }.ns-feature-inside { padding-left:29px; width:62%; }.ns-feature h2 { font-size:49px; }.ns-trackdrawing { right:0; width:64%; }.ns-deadline,.ns-ranktile { padding:22px 20px; }.ns-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:1000px) {
+  .ns-homegrid { grid-template-columns:1fr; }.ns-feature-inside { width:56%; }.ns-trackdrawing { right:0; width:62%; }.ns-feature h2 { font-size:58px; }.ns-side-stack { grid-template-rows:auto; grid-template-columns:1fr 1fr; }.ns-deadline,.ns-ranktile { padding:22px 24px; }.ns-timer { margin:16px 0 10px; }.ns-score { margin-top:15px; }.ns-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }.ns-socialgrid { grid-template-columns:1fr; }.ns-calendar .event-editorial-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:780px) {
+  .ns-page-intro { margin-bottom:24px; align-items:flex-start; flex-direction:column; gap:17px; }.ns-page-intro h1 { font-size:43px; }.ns-page-intro>.ns-secondary { padding:10px 14px; font-size:11px; }.ns-kicker { font-size:8px; letter-spacing:.1em; }.ns-page-intro p { font-size:12px; max-width:350px; }.ns-feature h2 { font-size:49px; }.ns-feature-inside { min-height:400px; padding:29px 0 26px 27px; width:60%; }.ns-feature-eyebrow { font-size:8px; gap:7px; }.ns-feature p { font-size:12px; max-width:260px; }.ns-trackdrawing { width:60%; top:54px; height:300px; right:-20px; }.ns-track-meta { font-size:7px; }.ns-stats { gap:11px; }.ns-stat { padding:17px 18px; }.ns-stat>div { font-size:10px; }.ns-stat>small { font-size:8px; }.ns-sectionlabel>span { display:none; }.ns-sectionlabel p { font-size:11px; }.ns-community { padding:22px; flex-wrap:wrap; gap:18px; }.ns-community h3 { font-size:20px; }.ns-calendar .event-media { height:125px; }.ns-calendar .event-card-copy { padding:14px; }.ns-calendar .event-card-copy h3 { font-size:14px; }.ns-calendar .event-card-foot { flex-wrap:wrap; }
+}
+@media(max-width:480px) {
+  .ns-page-intro h1 { font-size:37px; }.ns-feature-inside { min-height:0; width:100%; padding:25px 22px 0; }.ns-feature { min-height:0; display:flex; flex-direction:column; }.ns-feature h2 { max-width:100%; margin:26px 0 13px; font-size:43px; }.ns-feature p { max-width:290px; }.ns-feature .ns-primary { padding:12px 16px; font-size:11px; }.ns-racebottom { max-width:100%; padding-top:23px; font-size:8px; gap:8px; }.ns-racebottom span+span { max-width:175px; padding-left:8px; }.ns-trackdrawing { position:relative; top:auto; right:auto; align-self:center; flex:none; width:96%; height:198px; margin:5px 0 18px; mask-image:none; }.ns-track-meta { right:22px; bottom:12px; max-width:95%; font-size:7px; }.ns-side-stack { gap:11px; }.ns-deadline,.ns-ranktile { padding:17px 14px; border-radius:14px; }.ns-eyebrow { font-size:8px; line-height:1.5; letter-spacing:.06em; }.ns-timer { min-height:43px; margin:17px 0 8px; }.ns-timer strong { font-size:19px; letter-spacing:-.08em; }.ns-dates { gap:6px; font-size:9px; }.ns-status { font-size:8px; padding:4px 6px; }.ns-mini-bars { margin-top:17px; }.ns-score { margin-top:20px; gap:7px; }.ns-score b { font-size:34px; }.ns-score b>span { font-size:16px; }.ns-score small { font-size:9px; }.ns-ranktile p { margin:10px 0 13px; font-size:10px; }.ns-ranktile .ns-score b:first-child { overflow-wrap:anywhere; }.ns-panelheading { padding:21px 18px 15px; }.ns-panelheading h3 { font-size:14px; }.ns-panelheading>span { font-size:8px; }.ns-rankrows { padding:0 18px 8px; }.ns-rankrow { grid-template-columns:20px 28px minmax(0,1fr) 37px 24px; gap:8px; font-size:11px; }.ns-rankrow .mini-avatar { width:28px; height:28px; min-width:28px; }.ns-rankrow>strong { font-size:12px; }.ns-ranknum,.ns-delta { font-size:9px; }.ns-bottomstrip { padding:13px 18px; font-size:9px; }.ns-bottomstrip>span { max-width:58%; }.ns-bottomstrip>a { font-size:10px; }.ns-live .activity-news-list { padding-inline:18px; }.ns-calendar .event-editorial-grid { gap:11px; }.ns-calendar .event-media { height:100px; }.ns-calendar-track { padding:10px; }.ns-calendar .event-card-copy { padding:12px 10px; }.ns-calendar .event-card-copy h3 { font-size:12px; }.ns-calendar .event-card-foot>span { font-size:9px; }.ns-calendar .event-card-action { font-size:9px; }.ns-calendar .round-flag,.ns-calendar .event-state { font-size:8px; }.ns-calendar .event-state { max-width:68%; }.ns-calendar .round-flag { left:8px; }.ns-calendar .event-date { font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) { .ns-primary,.ns-secondary { transition:none; }.ns-primary:hover { transform:none; } }
+
+/* Override the older calendar's one-column/mobile and photo vignette rules. */
+body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media { aspect-ratio:auto; height:150px; background:#232932; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media::after { content:none; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { padding:17px 18px; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { font:750 16px/1.4 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.025em; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-state { border:1px solid #444d5a; border-radius:6px; background:#303844; color:#d7dde5; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-state.saved { background:#243b31; border-color:#3a5949; color:#a7d4b7; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-state.open { background:#3a2525; border-color:#70413f; color:#f1b2ad; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-card-action { border:1px solid #414955; border-radius:7px; background:#ffffff08; color:#e3e7ee; }
+@media(max-width:1000px) { body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:780px) {
+  body.apex-night-theme.editorial-theme .ns-calendar .event-media { height:125px; }
+  body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { padding:14px; }
+  body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { font-size:14px; }
+}
+@media(max-width:480px) {
+  body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { gap:11px; }
+  body.apex-night-theme.editorial-theme .ns-calendar .event-media { height:100px; }
+  body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { padding:12px 10px; }
+  body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { font-size:12px; }
+}

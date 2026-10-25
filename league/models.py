@@ -10,6 +10,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
+from .circuits import CIRCUIT_CHOICES, resolve_circuit
+
 DRIVER_CHOICES = [
     ("norris", "Норрис (McLaren)"),
     ("piastri", "Пиастри (McLaren)"),
@@ -97,6 +99,12 @@ class Season(models.Model):
 class Event(models.Model):
     season_year = models.PositiveSmallIntegerField("Сезон", default=2026, db_index=True)
     name = models.CharField("Название этапа", max_length=120)
+    circuit = models.CharField(
+        "Гран-при / трасса", max_length=24, blank=True, default="",
+        choices=CIRCUIT_CHOICES,
+        help_text="Выберите этап: схема трассы и её анимация появятся автоматически. "
+                  "Для старых карточек трасса определяется по названию.",
+    )
     round_number = models.PositiveIntegerField("Раунд")
     deadline = models.DateTimeField("Дедлайн предиктов")
     qualifying_datetime = models.DateTimeField("Время окончания квалификации", null=True, blank=True)
@@ -132,6 +140,10 @@ class Event(models.Model):
 
     def __str__(self):
         return f"R{self.round_number} - {self.name}"
+
+    @property
+    def circuit_visual(self):
+        return resolve_circuit(self.circuit, self.name, self.season_year)
 
     def voting_state(self):
         """

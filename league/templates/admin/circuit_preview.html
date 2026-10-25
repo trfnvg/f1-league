@@ -1,0 +1,5 @@
+<div class="admin-circuit-preview" data-circuit-preview {% if not circuit %}hidden{% endif %}>
+  {% include 'circuit_track.html' with track_id='admin' animated=True %}
+  <span data-circuit-caption>{{ circuit.name }}</span>
+</div>
+<p data-circuit-placeholder {% if circuit %}hidden{% endif %}>Выберите Гран-при выше — здесь появится анимированная схема трассы.</p>

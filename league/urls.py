@@ -54,4 +54,5 @@ urlpatterns = [
     path("duels/<int:duel_id>/<str:action>/", views.respond_event_duel, name="respond_event_duel"),
     path("players/<int:user_id>/", views.player_profile, name="player_profile"),
     path("leaderboard/", views.leaderboard, name="leaderboard"),
+    path("ranking/", views.leaderboard, {"force_global": True}, name="global_leaderboard"),
 ]

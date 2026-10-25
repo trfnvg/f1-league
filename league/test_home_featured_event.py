@@ -37,20 +37,29 @@ class HomeFeaturedEventTests(TestCase):
         self.assertFalse(response.context["featured_is_upcoming"])
         self.assertEqual(select_featured_event([self.next, self.current], now), self.current)
 
-    def test_scored_sunday_stays_until_midnight_moscow(self):
+    def test_scored_race_does_not_hide_the_next_race(self):
         self.current.status = Event.Status.SCORED
         self.current.save(update_fields=["status"])
-        self.assertEqual(self.home_at(datetime(2026, 10, 25, 23, 59, 59, tzinfo=MSK)).context["featured_event"], self.current)
+        self.assertEqual(self.home_at(datetime(2026, 10, 25, 23, 59, 59, tzinfo=MSK)).context["featured_event"], self.next)
 
-    def test_monday_boundary_switches_to_next_gp_in_moscow_not_utc(self):
-        monday = datetime(2026, 10, 26, tzinfo=MSK)
-        self.assertEqual(self.home_at(monday-timedelta(microseconds=1)).context["featured_event"], self.current)
-        self.assertEqual(self.home_at(monday).context["featured_event"], self.next)
+    def test_exact_race_deadline_switches_to_next_gp(self):
+        self.assertEqual(self.home_at(self.race-timedelta(microseconds=1)).context["featured_event"], self.current)
+        self.assertEqual(self.home_at(self.race).context["featured_event"], self.next)
 
-    def test_missing_race_uses_deadline_week(self):
+    def test_missing_race_uses_prediction_deadline_as_fallback(self):
         self.current.race_datetime = None
         self.current.save(update_fields=["race_datetime"])
-        self.assertEqual(select_featured_event([self.next, self.current], self.race), self.current)
+        self.assertEqual(select_featured_event([self.next, self.current], self.current.deadline-timedelta(seconds=1)), self.current)
+        self.assertEqual(select_featured_event([self.next, self.current], self.race), self.next)
+
+    def test_locked_predictions_do_not_hide_upcoming_race(self):
+        self.current.status = Event.Status.LOCKED
+        self.current.save(update_fields=["status"])
+        response = self.home_at(self.race-timedelta(hours=2))
+        self.assertEqual(response.context["featured_event"], self.current)
+        self.assertTrue(response.context["featured_race_upcoming"])
+        self.assertFalse(response.context["featured_is_upcoming"])
+        self.assertContains(response, "До старта гонки")
 
     def test_empty_archive_and_upcoming_fallbacks(self):
         self.assertIsNone(select_featured_event([], self.race))
