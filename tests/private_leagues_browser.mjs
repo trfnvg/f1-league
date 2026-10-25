@@ -36,7 +36,7 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     for i in range(7,29):
         Event.objects.create(season_year=season.year,name=f'Гран-при {i}',round_number=i,deadline=timezone.now()+timedelta(days=i*7),race_datetime=timezone.now()+timedelta(days=i*7+1))
     c=Client();c.force_login(owner)
-    urls={'/':reverse('league:friend_leagues')+'?all=1','/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token]),'/settings/':reverse('league:friend_league_settings',args=[ls.league_id])}
+    urls={'/':reverse('league:friend_leagues')+'?all=1','/overview/':reverse('league:home'),'/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token]),'/settings/':reverse('league:friend_league_settings',args=[ls.league_id])}
     pages={name:c.get(url).content.decode() for name,url in urls.items()}
     pages['/invites/']=c.post(reverse('league:friend_league_invites',args=[ls.league_id])).content.decode()
     pages['/delete/']=c.get(reverse('league:friend_league_delete',args=[ls.league_id])).content.decode()
@@ -76,7 +76,14 @@ try{
     for(const url of Object.keys(pages)){
       await page.goto(`http://127.0.0.1:${server.address().port}${url}`,{waitUntil:'networkidle'});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width} ${url}: horizontal page overflow`);
-      if(url!=='/avatars/')assert.equal(await page.locator('.leagues-page').count(),1);
+      if(!['/avatars/','/overview/'].includes(url))assert.equal(await page.locator('.leagues-page').count(),1);
+      if(url==='/overview/'){
+        assert.equal(await page.locator('#calendar').count(),1);
+        assert.ok(await page.locator('.nightshift-nav-item').count()>=5);
+        assert.equal(await page.locator('.nightshift-sidebar').isVisible(),width>780);
+        assert.equal(await page.locator('.nightshift-mobile-nav').isVisible(),width<=780);
+        if(width<=1100)assert.equal(await page.locator('.site-menu-btn').isVisible(),true);
+      }
       if(url==='/avatars/'){
         // Exercise every historical avatar variant under the actual profile
         // page's inline styles, including the blue opponent and editable state.
@@ -143,7 +150,7 @@ try{
         assert.equal(await page.locator('#id_drivers input:disabled').count(),0);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       }
-      if(process.env.LEAGUE_PREVIEW_DIR&&['/','/detail/','/closed-gp/','/settings/','/delete/'].includes(url)){
+      if(process.env.LEAGUE_PREVIEW_DIR&&['/','/overview/','/detail/','/closed-gp/','/settings/','/delete/'].includes(url)){
         await fs.mkdir(process.env.LEAGUE_PREVIEW_DIR,{recursive:true});
         await page.screenshot({path:path.join(process.env.LEAGUE_PREVIEW_DIR,`leagues-${width}-${url==='/'?'index':url.replaceAll('/','')}.png`),fullPage:true});
       }
@@ -151,5 +158,5 @@ try{
     assert.deepEqual(errors,[],`${width}: browser runtime errors`);
     await page.close();
   }
-  console.log('Private leagues: 12 real Django pages × 5 desktop/mobile widths passed, including all player avatar variants, 23 GP columns, current GP after predictions close and deletion confirmation.');
+  console.log('Nightshift shell and private leagues: 13 real Django pages × 5 desktop/mobile widths passed, including navigation breakpoints, player avatar variants, 23 GP columns and league actions.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

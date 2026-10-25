@@ -1,0 +1,129 @@
+/* Nightshift / Soft Charcoal. Shared shell and component skin for the live site. */
+:root {
+  --page-max: 1670px;
+  --nightshift-bg: #14181d;
+  --nightshift-sidebar: #171b21;
+  --nightshift-surface: #1d2229;
+  --nightshift-surface-2: #232932;
+  --nightshift-surface-3: #2a313a;
+  --nightshift-stroke: #353d48;
+  --nightshift-stroke-soft: rgba(255,255,255,.075);
+  --nightshift-text: #f3f5f7;
+  --nightshift-muted: #b0b6bf;
+  --nightshift-dim: #8a919b;
+  --nightshift-red: #e10600;
+}
+html { background: var(--nightshift-bg); scroll-padding-top: 90px; }
+body.apex-night-theme.editorial-theme {
+  display:grid!important; grid-template-columns:246px minmax(0,1fr); align-items:stretch;
+  min-height:100vh; padding-top:0!important; color:var(--nightshift-text);
+  background:linear-gradient(180deg,#15191f,#181d24 48%,#14181d)!important;
+  --apex-bg:var(--nightshift-bg); --apex-bg-soft:#181d24;
+  --apex-surface:var(--nightshift-surface); --apex-surface-2:var(--nightshift-surface-2);
+  --apex-surface-3:var(--nightshift-surface-3); --apex-ink:var(--nightshift-text);
+  --apex-ink-soft:#c4c9d0; --apex-muted:var(--nightshift-muted);
+  --apex-line:var(--nightshift-stroke-soft); --apex-line-strong:rgba(255,255,255,.16);
+  --apex-red:var(--nightshift-red); --apex-red-deep:#bc0a06; --apex-green:#91c7a0;
+  --race-red:var(--nightshift-red); --race-red-dark:#bc0a06;
+  --race-paper:var(--nightshift-surface); --race-ink:var(--nightshift-text);
+  --race-muted:var(--nightshift-muted); --race-line:var(--nightshift-stroke-soft);
+}
+body.apex-night-theme.editorial-theme::before,body.apex-night-theme::after { content:none!important; }
+.nightshift-sidebar { grid-column:1; grid-row:1; position:sticky; top:0; display:flex; flex-direction:column; width:246px; height:100vh; min-height:540px; padding:28px 17px 17px; color:var(--nightshift-text); background:var(--nightshift-sidebar); border-right:1px solid var(--nightshift-stroke-soft); z-index:45; }
+.nightshift-brand { display:flex; align-items:center; gap:12px; padding:0 8px 31px; color:inherit!important; text-decoration:none!important; }
+.nightshift-brandmark { width:36px; height:36px; flex:0 0 36px; display:grid; place-items:center; border-radius:10px; background:linear-gradient(180deg,#ff2b22,#cc0500); box-shadow:0 10px 25px #e1060028; }
+.nightshift-brandmark svg { width:23px; height:23px; }.nightshift-brandmark path { fill:#fff; }
+.nightshift-brand strong { display:block; color:#f3f5f7; font-size:23px; line-height:1; letter-spacing:-.075em; }
+.nightshift-brand strong span { color:var(--nightshift-red); }.nightshift-brand small { display:block; margin-top:5px; color:var(--nightshift-dim); font-size:8px; font-weight:800; letter-spacing:.18em; }
+.nightshift-nav-label { margin:6px 12px 10px; color:var(--nightshift-dim); font-size:9px; font-weight:800; letter-spacing:.15em; }
+.nightshift-nav { display:grid; gap:3px; }
+.nightshift-nav-item { min-height:43px; display:flex; align-items:center; gap:12px; padding:10px 12px; color:#a9afb8!important; border:1px solid transparent; border-radius:10px; text-decoration:none!important; font-size:12px; font-weight:700; transition:background .16s,border-color .16s,color .16s; }
+.nightshift-nav-item:hover { color:#fff!important; background:#222831; }.nightshift-nav-item.is-active { color:#fff!important; background:#252c35; border-color:#424a55; }
+.nightshift-nav-item svg { width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.nightshift-nav-item small { margin-left:auto; padding:3px 6px; border:1px solid #404754; border-radius:6px; background:#222730; color:#d0d5dd; font:700 9px ui-monospace,monospace; }
+.nightshift-secondary-label { margin-top:25px; }.nightshift-secondary-nav .nightshift-nav-item { min-height:39px; font-size:11px; }
+.nightshift-sidebar-bottom { margin-top:auto; }
+.nightshift-race-card { margin:16px 0 13px; padding:15px; border:1px solid #404754; border-radius:14px; background:linear-gradient(180deg,#232932,#1d2229); }
+.nightshift-race-card>div { display:flex; align-items:center; gap:8px; color:#c5cbd3; font-size:8px; font-weight:800; letter-spacing:.12em; }
+.nightshift-race-card i { width:6px; height:6px; border-radius:50%; background:var(--nightshift-red); box-shadow:0 0 0 4px #e106001e; }
+.nightshift-race-card strong { display:block; margin-top:13px; font-size:16px; letter-spacing:-.035em; }.nightshift-race-card p { margin:6px 0 13px; color:var(--nightshift-muted); font-size:10px; }
+.nightshift-race-card a { display:flex; justify-content:space-between; padding:9px 10px; border:1px solid #454d59; border-radius:8px; background:#272d36; color:#f6f7f8!important; text-decoration:none!important; font-size:10px; font-weight:800; }
+.nightshift-race-card a:hover { border-color:#737b85; background:#303741; }
+.nightshift-account { display:flex; align-items:center; gap:10px; min-width:0; padding:13px 6px 3px; border-top:1px solid var(--nightshift-stroke-soft); color:inherit!important; text-decoration:none!important; }
+.nightshift-account-avatar { width:35px; height:35px; flex:0 0 35px; display:grid; place-items:center; border-radius:50%; background:#303842; color:#fff; font-size:13px; font-weight:800; }
+.nightshift-account strong,.nightshift-account small { display:block; max-width:145px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.nightshift-account strong { font-size:11px; }.nightshift-account small { margin-top:3px; color:var(--nightshift-dim); font-size:9px; }.nightshift-account-arrow { margin-left:auto; color:var(--nightshift-dim); }
+.nightshift-account-row { padding-top:10px; border-top:1px solid var(--nightshift-stroke-soft); }.nightshift-account-row .nightshift-account { padding:2px 6px 7px; border:0; }
+.nightshift-logout { display:block; width:100%; padding:7px 9px; border:0; border-radius:7px; background:transparent; color:var(--nightshift-dim); text-align:left; font-size:10px; }
+.nightshift-logout:hover { background:#222831; color:#fff; }
+.nightshift-workspace { grid-column:2; grid-row:1; display:flex; flex-direction:column; min-width:0; min-height:100vh; }.nightshift-mobile-nav { display:none; }
+.nightshift-mobile-brand { display:none; color:#f3f5f7!important; text-decoration:none!important; font-size:22px; font-weight:900; letter-spacing:-.075em; }
+.nightshift-mobile-brand span { color:var(--nightshift-red); }
+body.apex-night-theme.editorial-theme .site-header { position:sticky!important; top:0; left:auto; right:auto; height:85px; min-height:85px; transform:none!important; border:0; border-bottom:1px solid var(--nightshift-stroke-soft); border-radius:0; background:rgba(23,27,33,.91); box-shadow:none; backdrop-filter:blur(20px); z-index:30; }
+body.apex-night-theme.editorial-theme .site-header>.container { width:100%; max-width:none; min-height:85px; padding:0 42px; }
+body.apex-night-theme.editorial-theme .site-menu-btn,body.apex-night-theme.editorial-theme .desktop-nav { display:none!important; }
+body.apex-night-theme.editorial-theme .site-brand { display:none; }
+body.apex-night-theme.editorial-theme .nightshift-crumb { display:flex; align-items:center; gap:9px; color:var(--nightshift-dim); font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+body.apex-night-theme.editorial-theme .nightshift-crumb i { color:#555d67; font-style:normal; }
+body.apex-night-theme.editorial-theme .nightshift-crumb strong { color:#e1e4e8; font-weight:700; }
+body.apex-night-theme.editorial-theme .site-header-left,body.apex-night-theme.editorial-theme .site-header-actions,body.apex-night-theme.editorial-theme .site-brand { min-height:85px; }
+body.apex-night-theme.editorial-theme .brand-f1 { color:var(--nightshift-red); }
+body.apex-night-theme.editorial-theme .nav-chip { min-height:36px; border-color:#414955; border-radius:9px; background:rgba(255,255,255,.03); }
+body.apex-night-theme.editorial-theme .nav-chip:hover { background:#2a3039; border-color:#565e69; }
+body.apex-night-theme.editorial-theme .main-content { width:100%; max-width:1670px; padding:40px 42px 60px; }
+body.apex-night-theme.editorial-theme .nightshift-workspace>footer { width:100%; margin-top:auto; border-top:1px solid var(--nightshift-stroke-soft); background:transparent; }
+body.apex-night-theme.editorial-theme a:not(.nightshift-nav-item):not(.nightshift-account):not(.nightshift-brand):not(.nightshift-race-card a):hover { color:#ff655e; }
+
+body.apex-night-theme.editorial-theme :is(.card,.panel,.glass-panel,.table-shell,.score-card,.season-priority-banner,.season-form-panel,.season-scoring-card,.season-form-group,.event-hero-card,.metric,.profile-panel,.profile-card,.activity-feed-shell,.results-stage,.crazy-jury-shell,.league-panel,.leagues-panel,.leagues-card,.leagues-standings,.leagues-event-list,.league-race-card,.league-dashboard-head-premium,.leaderboard-luxe,.points-chart-shell) { border-color:var(--nightshift-stroke)!important; border-radius:16px!important; background-color:var(--nightshift-surface)!important; box-shadow:0 18px 40px rgba(0,0,0,.14)!important; }
+body.apex-night-theme.editorial-theme :is(.section-title,.section-heading-row h2,.profile-name,.season-banner-title) { letter-spacing:-.045em; }
+body.apex-night-theme.editorial-theme :is(.form-control,.form-select,input:not([type=checkbox]):not([type=radio]):not([type=file]),select,textarea) { border-color:#414955; border-radius:9px; background-color:#171c22; color:#f4f5f7; }
+body.apex-night-theme.editorial-theme :is(.form-control,.form-select,input,select,textarea):focus { border-color:#9b5753; box-shadow:0 0 0 3px rgba(225,6,0,.13); }
+body.apex-night-theme.editorial-theme .btn-primary { border-color:#d91f1a; border-radius:9px; background:linear-gradient(180deg,#ef4940,#d91f1a); box-shadow:0 8px 18px rgba(217,31,26,.14); }
+body.apex-night-theme.editorial-theme .btn-primary:hover { background:linear-gradient(180deg,#f35b53,#e22621); }
+body.apex-night-theme.editorial-theme .btn-outline-primary { border-color:#694441; color:#f0b0ab; border-radius:9px; }
+body.apex-night-theme.editorial-theme .leaderboard-luxe { background:#1d2229!important; }
+body.apex-night-theme.editorial-theme .leaderboard-table thead th { background:#20252c; }
+body.apex-night-theme.editorial-theme .leaderboard-table tbody tr.is-leader { background:rgba(225,6,0,.065); }
+body.apex-night-theme.editorial-theme .total-chip { border-color:#6a3331; background:#392426; color:#f5eeee; }
+body.apex-night-theme.editorial-theme .home-command { border-radius:18px!important; box-shadow:0 22px 48px rgba(0,0,0,.18)!important; }
+body.apex-night-theme.editorial-theme .home-command-main { background-color:#1d2229; }
+body.apex-night-theme.editorial-theme .home-command-side { background:#191e24; }
+body.apex-night-theme.editorial-theme .home-command h1 { font-size:clamp(2.3rem,5.2vw,4.85rem); }
+body.apex-night-theme.editorial-theme .event-editorial-card { border-radius:15px!important; background:#1d2229; }
+body.apex-night-theme.editorial-theme .page-kicker,body.apex-night-theme.editorial-theme .eyebrow { color:#c5a8a5; }
+body.apex-night-theme.editorial-theme .crazy-jury-shell { background:linear-gradient(145deg,#24282e,#1d2229)!important; }
+
+@media(max-width:1100px) and (min-width:781px) {
+  body.apex-night-theme.editorial-theme { grid-template-columns:78px minmax(0,1fr); }
+  .nightshift-sidebar { width:78px; padding:23px 10px 14px; }.nightshift-brand { justify-content:center; padding:0 0 28px; }
+  .nightshift-brand>span:last-child,.nightshift-nav-label,.nightshift-nav-item span,.nightshift-nav-item small,.nightshift-sidebar-bottom { display:none; }
+  .nightshift-nav-item { justify-content:center; padding:12px 0; }.nightshift-nav-item svg { width:21px; height:21px; }
+  .nightshift-secondary-label { display:block; height:1px; overflow:hidden; margin:17px 5px; border-top:1px solid var(--nightshift-stroke-soft); }
+  body.apex-night-theme.editorial-theme .site-menu-btn { display:inline-flex!important; }
+  body.apex-night-theme.editorial-theme .site-header>.container { padding-inline:27px; }
+  body.apex-night-theme.editorial-theme .main-content { padding-inline:27px; }
+}
+@media(max-width:780px) {
+  body.apex-night-theme.editorial-theme { display:block!important; padding-bottom:calc(68px + env(safe-area-inset-bottom))!important; }
+  .nightshift-sidebar { display:none; }.nightshift-workspace { min-height:100vh; padding-bottom:0; }
+  body.apex-night-theme.editorial-theme .site-header { height:60px; min-height:60px; }
+  body.apex-night-theme.editorial-theme .site-menu-btn { display:inline-flex!important; }
+  body.apex-night-theme.editorial-theme .site-header>.container { min-height:60px; padding-inline:17px; }
+  body.apex-night-theme.editorial-theme .site-header-left,body.apex-night-theme.editorial-theme .site-header-actions,body.apex-night-theme.editorial-theme .site-brand { min-height:60px; }
+  body.apex-night-theme.editorial-theme .site-brand { display:none!important; }
+  .nightshift-mobile-brand { display:inline-block; }
+  body.apex-night-theme.editorial-theme .nightshift-crumb { display:none; }
+  body.apex-night-theme.editorial-theme .main-content { padding:26px 17px 38px; }
+  .nightshift-mobile-nav { display:grid; position:fixed; inset:auto 0 0; z-index:1050; grid-template-columns:repeat(4,minmax(0,1fr)); padding:8px 5px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #3b424b; background:rgba(23,27,33,.97); backdrop-filter:blur(20px); }
+  .nightshift-mobile-nav a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:44px; color:#9aa1ab!important; text-decoration:none!important; font-size:9px; font-weight:750; }
+  .nightshift-mobile-nav svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
+  .nightshift-mobile-nav a.is-active { color:#f3f5f7!important; }.nightshift-mobile-nav a.is-active svg { color:var(--nightshift-red); }
+  body.apex-night-theme.editorial-theme .home-command { min-height:0; }
+}
+@media(max-width:480px) {
+  body.apex-night-theme.editorial-theme .main-content { padding-inline:14px; }
+  body.apex-night-theme.editorial-theme .site-header>.container { padding-inline:14px; }
+  body.apex-night-theme.editorial-theme .site-header-actions { gap:6px; }
+  body.apex-night-theme.editorial-theme .nav-chip { padding-inline:10px; font-size:11px; }
+}
+@media(prefers-reduced-motion:reduce) { .nightshift-nav-item { transition:none; } }

@@ -14,6 +14,15 @@ def league_context(request):
     arcade_event = arcade_settings.competition_event if arcade_settings else None
     selected_year = (selected or active).year
     now = timezone.now()
+    next_prediction_event = (
+        Event.objects.filter(
+            season_year=selected_year,
+            status__in=(Event.Status.OPEN, Event.Status.LOCKED),
+            deadline__gt=now,
+        )
+        .order_by("deadline", "round_number")
+        .first()
+    )
     arcade_running = bool(
         arcade_settings
         and arcade_settings.public_enabled
@@ -37,4 +46,5 @@ def league_context(request):
     return {
         "current_season": selected or active,
         "arcade_public_enabled": arcade_visible,
+        "next_prediction_event": next_prediction_event,
     }
