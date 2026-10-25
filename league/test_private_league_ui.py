@@ -1,7 +1,10 @@
 from datetime import datetime, timedelta, timezone as dt_timezone
+from importlib import import_module
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.db import connection
 from django.test import Client, TestCase, override_settings
@@ -12,7 +15,7 @@ from .competition_scoring import recalculate_league_event
 from .leagues import accept_invite, create_invite, create_league, invite_for_token, revoke_invite
 from .models import (
     Event, GlobalEventScore, League, LeagueActivity, LeagueCrazyDecision, LeagueEventScore,
-    LeagueInvite, LeagueMembership, Prediction, Result, Season,
+    LeagueInvite, LeagueMembership, Prediction, Result, Score, Season, SeasonScore,
 )
 from .scoring import publish_event_scores
 
@@ -74,6 +77,82 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(league.owner, self.owner);self.assertIsNone(league.legacy_key)
         self.owner.refresh_from_db();self.assertFalse(self.owner.is_staff)
         self.assertEqual(league.seasons.get().start_event, self.next_event)
+
+    def test_first_future_card_is_selected_after_current_deadline(self):
+        self.clock.return_value = self.event.deadline
+        response = self.client.get(reverse("league:friend_league_create"))
+        form = response.context["form"]
+        self.assertEqual(form.initial["start_event"], self.next_event.pk)
+        self.assertNotIn(self.event, form.fields["start_event"].queryset)
+        self.assertEqual(self.next_event.voting_state(), "soon")
+        response = self.client.post(reverse("league:friend_league_create"), {
+            "name": "Next race league", "start_event": self.next_event.pk, "ruleset": "classic"})
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(League.objects.get(name="Next race league").seasons.get().entries.get().first_event, self.next_event)
+
+    def test_new_calendar_card_without_season_settings_can_start_a_league(self):
+        event = Event.objects.create(name="New calendar", season_year=2028, round_number=1,
+            deadline=self.now+timedelta(days=400), race_datetime=self.now+timedelta(days=401))
+        self.assertFalse(Season.objects.filter(year=2028).exists())
+        response = self.client.get(reverse("league:friend_league_create"))
+        self.assertIn(event, response.context["form"].fields["start_event"].queryset)
+        self.assertFalse(Season.objects.filter(year=2028).exists(), "GET never creates calendar settings")
+        response = self.client.post(reverse("league:friend_league_create"), {
+            "name": "Fresh calendar", "start_event": event.pk, "ruleset": "classic"})
+        self.assertEqual(response.status_code, 302)
+        ls = League.objects.get(name="Fresh calendar").seasons.get()
+        self.assertEqual(ls.season.year, 2028)
+        self.assertEqual(ls.entries.get().first_event, event)
+        self.season.refresh_from_db();self.assertTrue(self.season.is_active)
+
+    def register_main(self):
+        import_module("league.migrations.0043_register_fastlap_main").register_main(apps, SimpleNamespace(connection=connection))
+
+    def test_main_registration_is_idempotent_and_preserves_original_scores(self):
+        primary = User.objects.create_user("trfnvg", is_staff=True, is_superuser=True)
+        self.enter()
+        Prediction.objects.create(user=self.player, event=self.event, p1="russell")
+        Score.objects.create(user=self.player, event=self.event, points=29, prediction_points=26, duel_adjustment=3)
+        Score.objects.create(user=self.player, event=self.next_event, points=7, prediction_points=10, duel_adjustment=-3)
+        SeasonScore.objects.create(user=self.player, season_year=2027, points=12)
+        before = (list(Prediction.objects.values()), list(Score.objects.values()), list(SeasonScore.objects.values()))
+        self.register_main();self.register_main()
+        main = League.objects.get(legacy_key="original-friends")
+        self.assertEqual(main.name, "Fastlap Main");self.assertEqual(main.owner, primary)
+        ls = main.seasons.get();self.assertTrue(ls.is_legacy)
+        self.assertEqual(set(ls.entries.values_list("membership__user_id", flat=True)), {primary.pk, self.player.pk})
+        self.assertEqual(before, (list(Prediction.objects.values()), list(Score.objects.values()), list(SeasonScore.objects.values())))
+        self.assertFalse(LeagueEventScore.objects.exists())
+        self.client.force_login(self.player)
+        index = self.client.get(reverse("league:friend_leagues"))
+        self.assertEqual(index.context["page"][0].league_id, main.pk)
+        self.assertEqual(index.context["page"][0].member_count, 1)
+        self.assertNotContains(index, "Ваша прежняя компания")
+        detail = self.client.get(reverse("league:friend_league", args=[main.pk]))
+        self.assertEqual(detail.status_code, 200)
+        entry = detail.context["page"][0]
+        self.assertEqual((entry.total, entry.rounds), (48, 2))
+        self.assertContains(detail, "Fastlap Main")
+        self.assertNotContains(detail, "История этой лиги ещё переносится")
+        response = self.client.get(reverse("league:friend_league_event", args=[main.pk, self.event.pk]))
+        self.assertRedirects(response, reverse("league:event_detail", args=[self.event.pk]), fetch_redirect_response=False)
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(reverse("league:friend_league", args=[main.pk])).status_code, 404)
+
+    def test_main_registration_never_guesses_owner_from_another_staff_account(self):
+        Prediction.objects.create(user=self.player, event=self.event, p1="russell")
+        self.register_main()
+        self.assertFalse(League.objects.filter(legacy_key="original-friends").exists())
+
+    def test_main_registration_reuses_previous_explicit_import_owner(self):
+        from .leagues import import_legacy_league
+        Prediction.objects.create(user=self.player, event=self.event, p1="russell")
+        original, _ = import_legacy_league(owner=self.owner, season_year=2027)
+        self.register_main()
+        original.league.refresh_from_db()
+        self.assertEqual(original.league.name, "Fastlap Main")
+        self.assertEqual(original.league.owner, self.owner)
+        self.assertEqual(League.objects.filter(legacy_key="original-friends").count(), 1)
 
     def test_foreign_uuid_event_year_and_membership_ids_are_rejected(self):
         for url in [self.url(league=self.b), self.url("friend_league_invites", league=self.b),

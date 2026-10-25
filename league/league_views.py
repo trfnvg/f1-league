@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models import Case, Count, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -22,7 +23,7 @@ from .leagues import (
 )
 from .models import (
     Event, League, LeagueCrazyDecision, LeagueEventScore,
-    LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction, Season,
+    LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction, Score, Season, SeasonScore,
 )
 
 
@@ -65,7 +66,11 @@ def index(request):
     seasons = LeagueSeason.objects.filter(league__memberships__user=request.user,
         league__memberships__is_active=True, league__archived_at__isnull=True
     ).select_related("league", "season", "start_event").annotate(
-        member_count=Count("entries", distinct=True)).order_by("-season__year", "-created_at")
+        member_count=Case(When(is_legacy=True, then=Count("entries", distinct=True,
+            filter=Q(entries__membership__user__is_staff=False, entries__membership__user__is_active=True))),
+            default=Count("entries", distinct=True), output_field=IntegerField()),
+        main_first=Case(When(league__legacy_key="original-friends", then=Value(0)), default=Value(1), output_field=IntegerField()),
+    ).order_by("main_first", "-season__year", "-created_at")
     page = Paginator(seasons, 12).get_page(request.GET.get("page"))
     return render(request, "leagues/index.html", {"page": page})
 
@@ -78,9 +83,13 @@ def create(request):
     if request.method == "POST" and form.is_valid():
         event = form.cleaned_data["start_event"]
         try:
-            season = create_league(owner=request.user, name=form.cleaned_data["name"],
-                season=get_object_or_404(Season, year=event.season_year), start_event=event,
-                ruleset=form.cleaned_data["ruleset"])
+            with transaction.atomic():
+                # Event cards use a year, not a Season FK. A newly added card
+                # must work before anyone has created the season settings row.
+                calendar, _ = Season.objects.get_or_create(year=event.season_year,
+                    defaults={"title": f"F1 Predictions {event.season_year}"})
+                season = create_league(owner=request.user, name=form.cleaned_data["name"],
+                    season=calendar, start_event=event, ruleset=form.cleaned_data["ruleset"])
         except ValidationError as exc:
             form.add_error(None, _error(exc))
         else:
@@ -95,10 +104,21 @@ def create(request):
 def detail(request, league_id):
     league = _league(request, league_id)
     season = _season(request, league)
-    entries = season.entries.select_related("membership__user__league_profile", "first_event").annotate(
-        total=Sum("leagueeventscore_records__points", default=0),
-        rounds=Count("leagueeventscore_records", distinct=True),
-    ).order_by("-total", "membership__user__username", "pk")
+    entries = season.entries.select_related("membership__user__league_profile", "first_event")
+    if season.is_legacy:
+        # Read the original totals including duel/wheel adjustments and season
+        # bonuses. Do not copy them into the objective/new scoring projections.
+        scores = Score.objects.filter(user_id=OuterRef("membership__user_id"),
+            event__season_year=season.season.year).values("user_id")
+        bonuses = SeasonScore.objects.filter(user_id=OuterRef("membership__user_id"),
+            season_year=season.season.year).values("points")[:1]
+        entries = entries.filter(membership__user__is_staff=False, membership__user__is_active=True).annotate(
+            total=Coalesce(Subquery(scores.annotate(value=Sum("points")).values("value")[:1]), 0)+Coalesce(Subquery(bonuses), 0),
+            rounds=Coalesce(Subquery(scores.annotate(value=Count("pk")).values("value")[:1]), 0))
+    else:
+        entries = entries.annotate(total=Sum("leagueeventscore_records__points", default=0),
+            rounds=Count("leagueeventscore_records", distinct=True))
+    entries = entries.order_by("-total", "membership__user__username", "pk")
     page = Paginator(entries, 50).get_page(request.GET.get("page"))
     for offset, entry in enumerate(page.object_list, page.start_index()):
         entry.rank = offset
@@ -184,6 +204,8 @@ def event_detail(request, league_id, event_id):
     event = get_object_or_404(Event, pk=event_id)
     season = get_object_or_404(league.seasons.select_related("season", "start_event", "league"), season__year=event.season_year,
         start_event__round_number__lte=event.round_number)
+    if season.is_legacy:
+        return redirect("league:event_detail", event_id=event.pk)
     own_entry = season.entries.filter(membership__user=request.user, membership__league=league,
         first_event__round_number__lte=event.round_number).first()
     now = timezone.now()

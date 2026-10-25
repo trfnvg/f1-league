@@ -1,7 +1,7 @@
 from django import forms
 from django.utils import timezone
 
-from .models import Event, LeagueSeason, Season
+from .models import Event, LeagueSeason
 
 
 class EventChoice(forms.ModelChoiceField):
@@ -17,7 +17,10 @@ class CreateLeagueForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["start_event"].queryset = Event.objects.filter(
+        events = Event.objects.filter(
             deadline__gt=timezone.now(), status=Event.Status.OPEN,
-            season_year__in=Season.objects.values("year"),
-        ).order_by("season_year", "round_number")
+        ).order_by("deadline", "season_year", "round_number")
+        self.fields["start_event"].queryset = events
+        first = events.first()
+        if first:
+            self.initial.setdefault("start_event", first.pk)

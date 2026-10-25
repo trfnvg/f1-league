@@ -9,15 +9,19 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
 const rendered=spawnSync(process.env.PYTHON_BIN||'python3',['-c',`
 import os,json
+from importlib import import_module
+from types import SimpleNamespace
 os.environ.setdefault('DJANGO_SETTINGS_MODULE','config.settings')
 import django
 django.setup()
 from django.core.management import call_command
 from django.test import Client,override_settings
 from django.contrib.auth.models import User
+from django.apps import apps
+from django.db import connection
 from django.utils import timezone
 from datetime import timedelta
-from league.models import Season,Event
+from league.models import Season,Event,Prediction,Score,League
 from league.leagues import create_league,create_invite,accept_invite
 from django.urls import reverse
 call_command('migrate',verbosity=0)
@@ -33,6 +37,14 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     urls={'/':reverse('league:friend_leagues'),'/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token])}
     pages={name:c.get(url).content.decode() for name,url in urls.items()}
     pages['/invites/']=c.post(reverse('league:friend_league_invites',args=[ls.league_id])).content.decode()
+    owner.username='trfnvg';owner.save(update_fields=['username'])
+    player=User.objects.get(username='George_Russell')
+    Prediction.objects.create(user=player,event=event,p1='russell')
+    Score.objects.create(user=player,event=event,points=245,prediction_points=242,duel_adjustment=3)
+    import_module('league.migrations.0043_register_fastlap_main').register_main(apps,SimpleNamespace(connection=connection))
+    main=League.objects.get(legacy_key='original-friends')
+    pages['/main/']=c.get(reverse('league:friend_league',args=[main.pk])).content.decode()
+    pages['/']=c.get(reverse('league:friend_leagues')).content.decode()
     print(json.dumps(pages))
 `],{cwd:root,encoding:'utf8',env:{...process.env,DATABASE_URL:'sqlite:///:memory:'},maxBuffer:8*1024*1024});
 assert.equal(rendered.status,0,rendered.stderr);
@@ -62,6 +74,11 @@ try{
         }));
         assert.ok(safe,`${width}: names and scores do not overlap`);
       }
+      if(url==='/')assert.equal(await page.locator('.leagues-card h3').first().innerText(),'Fastlap Main');
+      if(url==='/main/'){
+        assert.equal(await page.locator('.leagues-standing').count(),1);
+        assert.equal(await page.locator('.leagues-points').innerText(),'245');
+      }
       if(process.env.LEAGUE_PREVIEW_DIR&&['/','/detail/','/invites/'].includes(url)){
         await fs.mkdir(process.env.LEAGUE_PREVIEW_DIR,{recursive:true});
         await page.screenshot({path:path.join(process.env.LEAGUE_PREVIEW_DIR,`leagues-${width}-${url==='/'?'index':url.replaceAll('/','')}.png`),fullPage:true});
@@ -70,5 +87,5 @@ try{
     assert.deepEqual(errors,[],`${width}: browser runtime errors`);
     await page.close();
   }
-  console.log('Private leagues: 6 real Django pages × 5 desktop/mobile widths passed.');
+  console.log('Private leagues: 7 real Django pages × 5 desktop/mobile widths passed, including Fastlap Main.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
