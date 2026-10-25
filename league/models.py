@@ -158,6 +158,104 @@ class Event(models.Model):
         return "closed"
 
 
+class League(models.Model):
+    """A private group; ownership never grants site-wide Django staff rights."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField("Название лиги", max_length=80)
+    owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_leagues")
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+    archived_at = models.DateTimeField(null=True, blank=True)
+    legacy_key = models.CharField(max_length=40, unique=True, null=True, blank=True, editable=False)
+
+    class Meta:
+        ordering = ("created_at", "id")
+        verbose_name = "Лига друзей"
+        verbose_name_plural = "Лиги друзей"
+
+    def __str__(self):
+        return self.name
+
+
+class LeagueSeason(models.Model):
+    class Ruleset(models.TextChoices):
+        CLASSIC = "classic", "Классика"
+        PADDOCK = "paddock", "Паддок"
+
+    league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="seasons")
+    season = models.ForeignKey(Season, on_delete=models.PROTECT, related_name="friend_league_seasons")
+    start_event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="starting_league_seasons")
+    ruleset = models.CharField(max_length=12, choices=Ruleset.choices, default=Ruleset.CLASSIC)
+    rules_version = models.PositiveSmallIntegerField(default=1, editable=False)
+    is_legacy = models.BooleanField(default=False, editable=False)
+    created_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("league", "season"), name="league_season_unique"),
+            models.CheckConstraint(condition=Q(ruleset__in=("classic", "paddock")), name="league_ruleset_valid"),
+            models.CheckConstraint(condition=Q(rules_version__gte=1), name="league_rules_version_positive"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.start_event_id and self.season_id and self.start_event.season_year != self.season.year:
+            raise ValidationError({"start_event": "Стартовый этап должен относиться к выбранному сезону."})
+        if self.is_legacy and self.league_id and not self.league.legacy_key:
+            raise ValidationError({"is_legacy": "Исторический зачёт создаётся только при переносе старой лиги."})
+
+    def __str__(self):
+        return f"{self.league} · {self.season.year}"
+
+
+class LeagueMembership(models.Model):
+    class Role(models.TextChoices):
+        PLAYER = "player", "Игрок"
+        MODERATOR = "moderator", "Модератор"
+
+    league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="memberships")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="friend_league_memberships")
+    role = models.CharField(max_length=12, choices=Role.choices, default=Role.PLAYER)
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("league", "user"), name="league_member_unique"),
+            models.CheckConstraint(condition=Q(role__in=("player", "moderator")), name="league_member_role_valid"),
+        ]
+
+    def __str__(self):
+        return f"{self.league}: {self.user}"
+
+
+class LeagueSeasonEntry(models.Model):
+    """A persisted start boundary: old global predictions never backfill it."""
+
+    league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="entries")
+    membership = models.ForeignKey(LeagueMembership, on_delete=models.PROTECT, related_name="season_entries")
+    first_event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="first_league_entries")
+    entered_at = models.DateTimeField(default=timezone.now, editable=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("league_season", "membership"), name="league_entry_unique"),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.league_season_id and self.membership_id:
+            if self.membership.league_id != self.league_season.league_id:
+                raise ValidationError({"membership": "Участник должен принадлежать этой лиге."})
+        if self.league_season_id and self.first_event_id:
+            league_season = self.league_season
+            if (self.first_event.season_year != league_season.season.year
+                    or self.first_event.round_number < league_season.start_event.round_number):
+                raise ValidationError({"first_event": "Первый зачётный этап должен быть в сезоне, не раньше старта лиги."})
+            if not league_season.is_legacy and self.first_event.deadline <= self.entered_at:
+                raise ValidationError({"first_event": "Нельзя вступить в зачёт после дедлайна этапа."})
+
+
 class EventPhoto(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField("Фото", upload_to="event_photos/", max_length=255)
