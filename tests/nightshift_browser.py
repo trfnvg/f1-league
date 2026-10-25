@@ -82,6 +82,7 @@ def render_pages():
     pages["/profile/"] = client.get(reverse("league:player_profile", args=[player.pk])).content
     pages["/event-closed/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
     challenge = create_duel_challenge(event, player, User.objects.get(username="Очень_длинное_имя_участника"), 7)
+    pages["/home-duel/"] = home_page()
     pages["/duel-sent/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     client.force_login(challenge.opponent)
     pages["/duel-received/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
@@ -178,7 +179,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/league/", "/standings/", "/event/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/event/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -199,6 +200,15 @@ def run(output, widths, engine):
                         box = svg.bounding_box()
                         assert box["width"] > 190 and box["height"] > 150
                         assert page.locator(".ns-primary").is_visible()
+                        assert page.locator('.ns-stats').count() == 0
+                        assert page.locator('.ns-trackdrawing .circuit-label').all_text_contents() == ['START', 'S1', 'S2', 'S3']
+                    if route == '/home-duel/':
+                        notice = page.locator('.ns-duel-notice')
+                        assert notice.is_visible()
+                        assert 'Вызов отправлен' in notice.inner_text()
+                        assert 'Очень_длинное_имя_участника' in notice.inner_text()
+                        assert notice.locator('.ui-arrow').is_visible()
+                        assert notice.evaluate("e=>getComputedStyle(e).textDecorationLine==='none'")
                     if route == "/closed/":
                         assert page.locator(".ns-deadline").inner_text().startswith("ДО СТАРТА ГОНКИ")
                         assert "Время гонки." not in page.locator('#featured-gp-title').inner_text()
@@ -231,7 +241,7 @@ def run(output, widths, engine):
                         if width > 780:
                             assert page.locator('.nightshift-account-avatar img').evaluate('e=>e.complete && e.naturalWidth>0')
                         image = page.locator('.ns-calendar .event-media>img').first
-                        assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'contain'
+                        assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'fill'
                         assert page.locator('.ns-live .activity-news-item').count() == 5
                         assert page.locator('.ns-live .activity-news-item').evaluate_all('''items=>items.every(item=>{
                             const icon=item.querySelector('.activity-feed-icon'),copy=item.querySelector('.activity-news-copy');
@@ -252,10 +262,10 @@ def run(output, widths, engine):
                             image.scroll_into_view_if_needed()
                             image.wait_for(state='visible')
                             image.evaluate('e=>e.decode()')
-                            assert image.evaluate('''e=>{
+                            assert image.evaluate('''(e,fit)=>{
                                 const b=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();
-                                return e.complete && e.naturalWidth>0 && getComputedStyle(e).objectFit==='contain' && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
-                            }'''), (width, route, "cover cropped or outside its frame", image.evaluate("e=>({image:[e.clientWidth,e.clientHeight],frame:[e.parentElement.clientWidth,e.parentElement.clientHeight],fit:getComputedStyle(e).objectFit})"))
+                                return e.complete && e.naturalWidth>0 && getComputedStyle(e).objectFit===fit && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
+                            }''', 'fill' if route.startswith('/cover-') else 'contain'), (width, route, "cover cropped or outside its frame")
                             image.hover()
                             assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
                     if route.startswith('/duel-'):

@@ -990,10 +990,10 @@
   <link rel="stylesheet" href="{% static 'league/apex-night.css' %}">
   {% block extra_head %}{% endblock %}
   <link rel="stylesheet" href="{% static 'league/player-avatars.css' %}?v=20261025-crop">
-  <link rel="stylesheet" href="{% static 'league/circuit-visual.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'league/circuit-visual.css' %}?v=2">
   <link rel="stylesheet" href="{% static 'league/nightshift-theme.css' %}?v=20261026-race">
   <link rel="stylesheet" href="{% static 'league/brand-mark.css' %}?v=2">
-  <link rel="stylesheet" href="{% static 'league/nightshift-components.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'league/nightshift-components.css' %}?v=4">
 </head>
 
 <body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
@@ -1017,8 +1017,8 @@
     {% if user.is_staff %}<a class="nightshift-nav-item" href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 10 4.6-2 8-5 8-10V7zm-3 9 2 2 4-4"/></svg><span>Админка</span></a>{% url 'league:arcade_control' as nightshift_arcade_control_url %}{% if nightshift_arcade_control_url %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ nightshift_arcade_control_url }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M8 9v6m-3-3h6m5-1h.01M18 13h.01"/></svg><span>Управление аркадой</span></a>{% endif %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16m-9-2 2 2 4-4"/></svg><span>Paddock Jury</span></a>{% endif %}
   </nav>
   <div class="nightshift-sidebar-bottom">
-    {% if current_event %}<section class="nightshift-race-card"><div><i></i>БЛИЖАЙШИЙ ЭТАП</div><strong>{{ current_event.name }}</strong><p>{% if current_event.race_datetime %}Гонка {{ current_event.race_datetime|date:"d.m · H:i" }} МСК{% else %}Прогнозы до {{ current_event.deadline|date:"d.m · H:i" }} МСК{% endif %}</p><a href="{% url 'league:event_detail' event_id=current_event.id %}">Открыть этап <span>↗</span></a></section>{% endif %}
-    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{% if viewer_avatar_url %}<img src="{{ viewer_avatar_url }}" alt="" decoding="async">{% else %}{{ user.username|slice:":1"|upper }}{% endif %}</span><span><strong>{{ user.username }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">↗</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">↗</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
+    {% if current_event %}<section class="nightshift-race-card"><div><i></i>БЛИЖАЙШИЙ ЭТАП</div><strong>{{ current_event.name }}</strong><p>{% if current_event.race_datetime %}Гонка {{ current_event.race_datetime|date:"d.m · H:i" }} МСК{% else %}Прогнозы до {{ current_event.deadline|date:"d.m · H:i" }} МСК{% endif %}</p><a href="{% url 'league:event_detail' event_id=current_event.id %}">Открыть этап <span>{% include 'ui_arrow.html' %}</span></a></section>{% endif %}
+    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{% if viewer_avatar_url %}<img src="{{ viewer_avatar_url }}" alt="" decoding="async">{% else %}{{ user.username|slice:":1"|upper }}{% endif %}</span><span><strong>{{ user.username }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">{% include 'ui_arrow.html' %}</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">{% include 'ui_arrow.html' %}</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
   </div>
 </aside>
 
@@ -1096,7 +1096,7 @@
             {% csrf_token %}
             <button type="submit" class="menu-logout-btn">
               <span>Выйти</span>
-              <span class="menu-logout-arrow" aria-hidden="true">→</span>
+              <span class="menu-logout-arrow" aria-hidden="true">{% include 'ui_arrow.html' %}</span>
             </button>
           </form>
         </div>

@@ -1,5 +1,28 @@
 /* Current Nightshift components. Kept after legacy skins deliberately: these
    controls and panels must not inherit the old editorial/Western decorations. */
+.ui-arrow { display:inline-block; width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; vertical-align:middle; }
+body.apex-night-theme.editorial-theme :is(.ns-inline,.ns-secondary,.ns-bottomstrip a,.ns-rank-gap a,.nightshift-race-card a,.nightshift-account) { text-decoration:none!important; }
+.ns-bottomstrip a,.ns-inline { display:inline-flex; align-items:center; gap:8px; }
+body.apex-night-theme.editorial-theme .ns-rank-gap a { display:grid; place-items:center; min-width:36px; height:36px; border:1px solid #ffffff16; border-radius:8px; }
+body.apex-night-theme.editorial-theme .ns-duel-notice { display:grid; grid-template-columns:74px minmax(0,1fr) auto 36px; align-items:center; gap:18px; margin:20px 0 0; padding:22px 24px; border:1px solid #3b4552; border-radius:14px; background:#222933; color:#e2e8ef; box-shadow:none; text-decoration:none!important; }
+body.apex-night-theme.editorial-theme .ns-duel-notice:hover { border-color:#788391; background:#252e39; }
+.ns-duel-players { display:flex; align-items:center; }.ns-duel-players .mini-avatar { width:44px; height:44px; flex:0 0 44px; }.ns-duel-players .mini-avatar+.mini-avatar { margin-left:-12px; box-shadow:0 0 0 3px #222933; }
+body.apex-night-theme.editorial-theme .ns-duel-summary { display:block; min-width:0; }
+body.apex-night-theme.editorial-theme .ns-duel-summary>small { display:block; margin:0 0 6px; color:#aab5c3; font:500 10px/1.5 Inter,sans-serif; }
+body.apex-night-theme.editorial-theme .ns-duel-summary>strong { display:block; font:650 16px/1.4 Inter,sans-serif; overflow-wrap:anywhere; }
+.ns-duel-summary>strong>span { color:#8593a5; font-weight:400; font-size:12px; padding-inline:4px; }
+.ns-duel-summary>span { display:block; margin-top:5px; color:#8f9dae; font-size:11px; }
+.ns-duel-stake { display:flex; align-items:baseline; gap:7px; }.ns-duel-stake strong { font:650 22px/1.2 "SFMono-Regular",Consolas,monospace; }.ns-duel-stake small { color:#9ba8b9; font-size:10px; }
+body.apex-night-theme.editorial-theme .ns-duel-arrow { display:grid; place-items:center; width:36px; height:36px; border:1px solid #ffffff20; border-radius:50%; color:#cbd5e2; font-size:0; }
+body.apex-night-theme.editorial-theme .ns-home .ns-trackdrawing { mask-image:none; filter:none; }
+.ns-home .ns-social { margin-top:32px; }
+@media(max-width:600px) {
+  body.apex-night-theme.editorial-theme .ns-duel-notice { grid-template-columns:64px minmax(0,1fr) 30px; gap:12px; padding:18px; }
+  .ns-duel-players .mini-avatar { width:38px; height:38px; flex-basis:38px; }
+  body.apex-night-theme.editorial-theme .ns-duel-summary>strong { font-size:14px; }
+  .ns-duel-stake { grid-column:2; grid-row:2; }.ns-duel-stake strong { font-size:17px; }
+  body.apex-night-theme.editorial-theme .ns-duel-arrow { grid-column:3; grid-row:1/3; width:30px; height:30px; }
+}
 
 /* Primary action: stable geometry, no inset stripe or clipped glyph arrow. */
 body.apex-night-theme.editorial-theme .ns-primary {
@@ -55,7 +78,6 @@ body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>small:last-ch
 
 /* Equal calendar frames; contain preserves the entire uploaded artwork. */
 .ns-score b>.ns-rank-total { display:inline-flex; align-items:baseline; gap:6px; margin-left:9px; letter-spacing:0; }
-.event-cover-fill { position:absolute; inset:-12px; background-size:cover; background-position:center; filter:blur(12px) brightness(.65); pointer-events:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-editorial-grid { align-items:stretch; gap:20px; }
 body.apex-night-theme.editorial-theme .ns-calendar .gp-card { display:flex; flex-direction:column; height:100%; min-width:0; overflow:hidden; border:1px solid #39424d; border-radius:16px!important; background:#1d2229; box-shadow:none; transform:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .gp-card:hover { border-color:#67717f; box-shadow:0 8px 24px #00000014; transform:none; }
@@ -68,7 +90,7 @@ body.apex-night-theme.editorial-theme .ns-calendar .gp-card:hover { border-color
 body.apex-night-theme.editorial-theme .ns-calendar .event-media { position:relative; display:block; flex:none; width:100%; height:auto; min-height:0; aspect-ratio:16/9; overflow:hidden; background:#232932; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-media.has-cover { aspect-ratio:16/9; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-media::after { content:none; }
-body.apex-night-theme.editorial-theme .ns-calendar .event-media>img { position:absolute; inset:0; display:block; width:100%; height:100%; max-height:none; margin:0; object-fit:contain; object-position:center; transform:none!important; filter:none; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media>img { position:absolute; inset:0; display:block; width:100%; height:100%; max-height:none; margin:0; object-fit:fill; object-position:center; transform:none!important; filter:none; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { display:flex; flex-direction:column; flex:1; gap:0; padding:19px 18px 17px; }
 .gp-card-date { margin-bottom:9px; color:#98a3b1; font:550 10px/1.5 Inter,sans-serif; letter-spacing:.02em; }
 body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; height:2.6em; flex:none; margin:0 0 22px; color:#edf0f4; font:700 19px/1.3 Inter,"Segoe UI",Arial,sans-serif; letter-spacing:-.035em; }

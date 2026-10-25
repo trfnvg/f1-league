@@ -5,5 +5,9 @@
   <path class="circuit-trace" id="circuit-path-{{ track_id }}" d="{{ circuit.path }}" pathLength="1000"/>
   <circle class="circuit-start-ring" cx="{{ circuit.start_x|default:0 }}" cy="{{ circuit.start_y|default:0 }}" r="8"/>
   <circle class="circuit-start" cx="{{ circuit.start_x|default:0 }}" cy="{{ circuit.start_y|default:0 }}" r="3"/>
+  <g class="circuit-labels" aria-label="Старт и схематичные обозначения секторов">
+    <text class="circuit-label circuit-start-label" x="{{ circuit.start_label.x }}" y="{{ circuit.start_label.y }}">START</text>
+    {% for label in circuit.sector_labels %}<text class="circuit-label circuit-sector-label" x="{{ label.x }}" y="{{ label.y }}">{{ label.text }}</text>{% endfor %}
+  </g>
   {% if animated %}<circle class="circuit-runner-halo" r="9"><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#circuit-path-{{ track_id }}"/></animateMotion></circle><circle class="circuit-runner" r="4.5"><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#circuit-path-{{ track_id }}"/></animateMotion></circle>{% endif %}
 </svg>

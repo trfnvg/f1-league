@@ -21,6 +21,13 @@
       svg.setAttribute('aria-label', `Схема трассы ${data.circuitName}`);
       svg.setAttribute('data-circuit', select.value);
       svg.querySelector('title').textContent = data.circuitName;
+      const labels = JSON.parse(data.circuitLabels || '[]');
+      svg.querySelectorAll('.circuit-label').forEach((label, i) => {
+        if (!labels[i]) return;
+        label.setAttribute('x', labels[i].x);
+        label.setAttribute('y', labels[i].y);
+        label.textContent = labels[i].text;
+      });
       if (svg.setCurrentTime) svg.setCurrentTime(0);
       preview.querySelector('[data-circuit-caption]').textContent = data.circuitName;
       if (fillName && name && (!name.value.trim() || name.value === autoName)) {

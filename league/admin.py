@@ -1,5 +1,6 @@
 ﻿from django import forms
 from django.contrib import admin
+import json
 from django.db import transaction
 from django.template.response import TemplateResponse
 from django.utils import timezone
@@ -135,6 +136,7 @@ class CircuitSelect(forms.Select):
                 "data-circuit-start-y": circuit["start_y"],
                 "data-circuit-name": circuit["name"],
                 "data-circuit-gp": circuit["grand_prix"],
+                "data-circuit-labels": json.dumps([circuit["start_label"], *circuit["sector_labels"]]),
             })
         return option
 

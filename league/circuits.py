@@ -4,6 +4,7 @@ Paths are local, simplified geographic outlines: no map API, remote asset or
 client-side geometry calculation is needed to display a circuit.
 """
 import json
+import math
 import re
 import unicodedata
 from functools import lru_cache
@@ -49,6 +50,36 @@ CIRCUITS = {
     for key, source_id, gp, location, country, aliases in _DEFINITIONS
 }
 CIRCUIT_CHOICES = [(key, f"{value['grand_prix']} — {value['name']}") for key, value in CIRCUITS.items()]
+
+
+def _map_annotations(circuit):
+    """Schematic sector labels, not authoritative FIA timing-line positions."""
+    points = [(float(x), float(y)) for x, y in re.findall(r"[ML]([\d.]+),([\d.]+)", circuit["path"])]
+    distances = [math.dist(a, b) for a, b in zip(points, points[1:])]
+    length = sum(distances)
+    center = (sum(x for x, _ in points) / len(points), sum(y for _, y in points) / len(points))
+
+    def label_at(point, text):
+        dx, dy = point[0] - center[0], point[1] - center[1]
+        norm = math.hypot(dx, dy) or 1
+        return {"text": text, "x": round(max(25, min(595, point[0] + 28 * dx / norm)), 1),
+                "y": round(max(18, min(352, point[1] + 28 * dy / norm)), 1)}
+
+    labels = []
+    for index, fraction in enumerate((.18, .5, .82), 1):
+        remaining = length * fraction
+        for a, b, distance in zip(points, points[1:], distances):
+            if remaining <= distance and distance:
+                ratio = remaining / distance
+                point = (a[0] + (b[0] - a[0]) * ratio, a[1] + (b[1] - a[1]) * ratio)
+                labels.append(label_at(point, f"S{index}"))
+                break
+            remaining -= distance
+    return {"start_label": label_at((circuit["start_x"], circuit["start_y"]), "START"), "sector_labels": labels}
+
+
+for _circuit in CIRCUITS.values():
+    _circuit.update(_map_annotations(_circuit))
 
 
 def _normalise(value):

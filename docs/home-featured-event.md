@@ -51,8 +51,8 @@ circuit or round-number fallback, and no hidden/reveal animation dependency.
 Failed stage-cover requests reveal the fallback. Stage artwork fits inside a
 compact header thumbnail on mobile. Calendar cards use uniform 16:9 media frames and two-line
 title slots so that every card has equal dimensions at each viewport size.
-`object-fit:contain` keeps the full artwork visible inside these frames; a blurred
-extension of the same image fills any unused space behind it. Neither
+Calendar images use `object-fit:fill`: the complete image fills the entire frame
+without cropping or bars, adjusting its proportions when necessary. Neither
 surface zooms on hover. Round/status metadata sits outside the artwork. The
 calendar uses one card per row on phones and two/three on larger screens.
 
@@ -74,6 +74,13 @@ Browser coverage checks actual image and wrapper bounds, not just computed
 `object-fit`, and includes non-square portraits and covers in all duel states.
 
 ## Event page hierarchy
+
+The homepage omits the four statistical tiles. Duel notices show both players,
+the challenge status and stake, using the same SVG arrow as other navigation
+actions. Circuit diagrams use a layered road and START/S1/S2/S3 labels. START
+uses the catalogue start point; sector labels are schematic positions along the
+outline, not official FIA timing lines. Admin previews update all labels when
+the selected circuit changes.
 
 The event page has four progressively enhanced tabs: forecast, wildcard, duel
 and results. Open events default to forecast; closed/scored events to results.

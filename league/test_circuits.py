@@ -29,6 +29,9 @@ class CircuitCatalogueTests(SimpleTestCase):
                 self.assertGreater(len(points), 15)
                 self.assertTrue(all(0 <= float(x) <= 620 and 0 <= float(y) <= 370 for x, y in points))
                 self.assertEqual((float(points[0][0]), float(points[0][1])), (circuit["start_x"], circuit["start_y"]))
+                self.assertEqual([label["text"] for label in circuit["sector_labels"]], ["S1", "S2", "S3"])
+                for label in [circuit["start_label"], *circuit["sector_labels"]]:
+                    self.assertTrue(20 <= label["x"] <= 600 and 15 <= label["y"] <= 355)
 
     def test_existing_russian_and_english_cards_resolve_without_round_guesses(self):
         cases = {
