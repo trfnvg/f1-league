@@ -37,14 +37,23 @@ class HomeFeaturedEventTests(TestCase):
         self.assertFalse(response.context["featured_is_upcoming"])
         self.assertEqual(select_featured_event([self.next, self.current], now), self.current)
 
-    def test_scored_race_does_not_hide_the_next_race(self):
+    def test_scored_race_stays_until_the_two_hour_boundary(self):
         self.current.status = Event.Status.SCORED
         self.current.save(update_fields=["status"])
-        self.assertEqual(self.home_at(datetime(2026, 10, 25, 23, 59, 59, tzinfo=MSK)).context["featured_event"], self.next)
+        self.assertEqual(self.home_at(self.race+timedelta(hours=2)-timedelta(seconds=1)).context["featured_event"], self.current)
+        self.assertEqual(self.home_at(self.race+timedelta(hours=2)).context["featured_event"], self.next)
 
-    def test_exact_race_deadline_switches_to_next_gp(self):
-        self.assertEqual(self.home_at(self.race-timedelta(microseconds=1)).context["featured_event"], self.current)
-        self.assertEqual(self.home_at(self.race).context["featured_event"], self.next)
+    def test_race_start_plus_two_hours_switches_to_next_gp(self):
+        self.assertEqual(self.home_at(self.race).context["featured_event"], self.current)
+        self.assertEqual(self.home_at(self.race+timedelta(hours=2)-timedelta(microseconds=1)).context["featured_event"], self.current)
+        self.assertEqual(self.home_at(self.race+timedelta(hours=2)).context["featured_event"], self.next)
+
+    def test_sidebar_and_mobile_navigation_keep_the_same_gp_after_predictions_close(self):
+        for now in (self.race-timedelta(hours=1), self.race+timedelta(hours=1)):
+            response = self.home_at(now)
+            self.assertEqual(response.context["current_event"], self.current)
+            self.assertEqual(response.context["featured_event"], self.current)
+        self.assertEqual(self.home_at(self.race+timedelta(hours=2)).context["current_event"], self.next)
 
     def test_missing_race_uses_prediction_deadline_as_fallback(self):
         self.current.race_datetime = None

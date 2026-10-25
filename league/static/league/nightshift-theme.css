@@ -52,6 +52,8 @@ body.apex-night-theme.editorial-theme::before,body.apex-night-theme::after { con
 .nightshift-race-card a:hover { border-color:#737b85; background:#303741; }
 .nightshift-account { display:flex; align-items:center; gap:10px; min-width:0; padding:13px 6px 3px; border-top:1px solid var(--nightshift-stroke-soft); color:inherit!important; text-decoration:none!important; }
 .nightshift-account-avatar { width:35px; height:35px; flex:0 0 35px; display:grid; place-items:center; border-radius:50%; background:#303842; color:#fff; font-size:13px; font-weight:800; }
+.nightshift-account-avatar { overflow:hidden; border:0; padding:0; }
+.nightshift-account-avatar img { display:block; width:100%; height:100%; border:0; border-radius:50%; object-fit:cover; object-position:center; }
 .nightshift-account strong,.nightshift-account small { display:block; max-width:145px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .nightshift-account strong { font-size:11px; }.nightshift-account small { margin-top:3px; color:var(--nightshift-dim); font-size:9px; }.nightshift-account-arrow { margin-left:auto; color:var(--nightshift-dim); }
 .nightshift-account-row { padding-top:10px; border-top:1px solid var(--nightshift-stroke-soft); }.nightshift-account-row .nightshift-account { padding:2px 6px 7px; border:0; }
@@ -177,16 +179,18 @@ body.apex-night-theme.editorial-theme footer .footer-brand strong { color:#c2c8d
 body.apex-night-theme.editorial-theme .f1-menu .nightshift-mobile-brand { display:block; }
 body.apex-night-theme.editorial-theme .event-hero-card { background:linear-gradient(110deg,#232932,#1d2229)!important; }
 body.apex-night-theme.editorial-theme .event-hero-card.card-accent-top::before { content:none; }
-body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-layout { display:grid; grid-template-columns:minmax(0,1fr) 36%; min-height:250px; }
-body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-copy { grid-column:1; grid-row:1; padding:30px 32px; background:transparent; }
-body.apex-night-theme.editorial-theme .nightshift-event-track { grid-column:2; grid-row:1; padding:18px; min-height:0; background:none; }
-body.apex-night-theme.editorial-theme .nightshift-event-track::before,body.apex-night-theme.editorial-theme .nightshift-event-track::after { content:none; }
-body.apex-night-theme.editorial-theme .nightshift-event-track .circuit-visual { position:static; width:100%; height:100%; min-height:200px; object-fit:contain; }
 @media(max-width:780px) { body.apex-night-theme.editorial-theme .league-dashboard-head-premium { padding:22px 18px; } }
 @media(max-width:780px) { body.apex-night-theme.editorial-theme footer .footer-inner { padding-inline:17px; } body.apex-night-theme.editorial-theme footer .footer-signature { flex-wrap:wrap; font-size:8px; } }
-@media(max-width:600px) {
-  body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-layout { grid-template-columns:1fr; }
-  body.apex-night-theme.editorial-theme .event-hero-card:has(.nightshift-event-track) .event-hero-copy { padding:24px 22px 0; }
-  body.apex-night-theme.editorial-theme .nightshift-event-track { grid-column:1; grid-row:2; height:180px; padding:0 35px 15px; }
-  body.apex-night-theme.editorial-theme .nightshift-event-track .circuit-visual { min-height:0; }
-}
+
+/* Explicit stage layout: no :has(), reveal script or animated hidden state. */
+body.apex-night-theme.editorial-theme .event-stage-hero { display:block; opacity:1; visibility:visible; overflow:hidden; }
+.event-stage-layout { display:grid; grid-template-columns:minmax(0,1fr) 38%; min-height:250px; }
+.event-stage-copy { grid-column:1; grid-row:1; padding:30px 32px; min-width:0; }
+.event-stage-media { position:relative; grid-column:2; grid-row:1; min-height:240px; overflow:hidden; background:#232932; }
+.event-stage-track { position:absolute; inset:12px; }
+.event-stage-image { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; background:#232932; }
+.event-stage-image[hidden] { display:none; }
+.event-stage-fallback { height:100%; min-height:240px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#8a919b; background:radial-gradient(ellipse at center,#dd2f2a0d,transparent 70%); }
+.event-stage-fallback>span { font:700 9px/1.5 Inter,sans-serif; letter-spacing:.2em; }
+.event-stage-fallback>strong { margin-top:12px; color:#c4cbd5; font:700 55px/1 monospace; letter-spacing:-.07em; }
+@media(max-width:600px) { .event-stage-layout { grid-template-columns:1fr; }.event-stage-copy { padding:24px 22px; }.event-stage-media { grid-column:1; grid-row:2; min-height:0; height:auto; aspect-ratio:16/9; }.event-stage-fallback { min-height:0; }.event-stage-track { inset:8px 26px; } }

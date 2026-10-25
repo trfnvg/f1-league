@@ -75,6 +75,7 @@ try{
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     for(const url of Object.keys(pages)){
       await page.goto(`http://127.0.0.1:${server.address().port}${url}`,{waitUntil:'networkidle'});
+      assert.equal(await page.evaluate(()=>document.compatMode),'CSS1Compat',`${width} ${url}: document must use standards mode`);
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width} ${url}: horizontal page overflow`);
       if(!['/avatars/','/overview/'].includes(url))assert.equal(await page.locator('.leagues-page').count(),1);
       if(url==='/overview/'){

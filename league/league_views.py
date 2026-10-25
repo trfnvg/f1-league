@@ -17,6 +17,7 @@ from .forms import PredictionForm
 from .league_forms import CreateLeagueForm, LeagueDayForm, LeagueProfileForm
 from .league_management import decide_crazy, decide_day, delete_league, require_manager, update_profile
 from .league_standings import standings
+from .home_events import select_current_event
 from .prediction_submission import save_shared_prediction
 from .leagues import (
     accept_invite, create_invite, create_league, invite_for_token, membership_for,
@@ -123,9 +124,7 @@ def detail(request, league_id):
     data["rows"] = [r for r in data["rows"] if r["user"].pk in visible]
     data["leaderboard_chart"]["series"] = [s for s in data["leaderboard_chart"]["series"] if s["user_id"] in visible]
     now = timezone.now()
-    next_event = next((e for e in data["events"] if e.status != Event.Status.SCORED
-        and ((e.race_datetime is not None and e.race_datetime > now)
-             or (e.race_datetime is None and e.deadline > now))), None)
+    next_event = select_current_event(data["events"], now)
     prediction_open = bool(next_event and next_event.voting_state() == "open" and now < next_event.deadline)
     prediction_soon = bool(next_event and next_event.voting_state() == "soon")
     choices = LeagueSeason.objects.filter(league__memberships__user=request.user,

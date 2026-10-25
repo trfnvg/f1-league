@@ -233,7 +233,7 @@ class LeagueManagementTests(TestCase):
         with self.assertRaises(ValidationError):invite_for_token(token)
         self.b.league.refresh_from_db();self.assertIsNone(self.b.league.archived_at)
 
-    def test_current_gp_remains_after_predictions_close_until_race_start(self):
+    def test_current_gp_remains_after_predictions_close_until_two_hours_after_race_start(self):
         from unittest.mock import patch
         later=Event.objects.create(name="Later GP",season_year=2027,round_number=2,
             deadline=self.now+timedelta(days=8),race_datetime=self.now+timedelta(days=9))
@@ -244,6 +244,9 @@ class LeagueManagementTests(TestCase):
         self.assertContains(response,"Прогнозы закрыты");self.assertContains(response,"Смотреть прогнозы")
         with patch("django.utils.timezone.now",return_value=self.event.race_datetime):
             response=self.client.get(self.url("friend_league"))
+        self.assertEqual(response.context["next_event"],self.event)
+        with patch("django.utils.timezone.now",return_value=self.event.race_datetime+timedelta(hours=2)):
+            response=self.client.get(self.url("friend_league"))
         self.assertEqual(response.context["next_event"],later)
 
     def test_current_gp_without_race_time_falls_back_to_prediction_deadline(self):
@@ -252,6 +255,8 @@ class LeagueManagementTests(TestCase):
         self.assertEqual(response.context["next_event"],self.event)
         self.assertContains(response,"Время уточняется")
         self.event.deadline=self.now-timedelta(seconds=1);self.event.save(update_fields=("deadline",))
+        self.assertEqual(self.client.get(self.url("friend_league")).context["next_event"],self.event)
+        self.event.deadline=self.now-timedelta(hours=2);self.event.save(update_fields=("deadline",))
         self.assertIsNone(self.client.get(self.url("friend_league")).context["next_event"])
 
     def test_duel_is_removed_from_desktop_and_mobile_navigation(self):

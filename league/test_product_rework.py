@@ -264,14 +264,14 @@ class InterfaceRefinementTests(TestCase):
         self.assertNotContains(response, "profile-avatar-overlay")
         self.assertNotContains(response, 'class="avatar-editor"')
 
-    def test_home_countdown_uses_the_actual_prediction_deadline(self):
+    def test_home_countdown_uses_the_race_start_not_prediction_deadline(self):
         from django.utils.formats import date_format
         event = Event.objects.create(name="Гран-при США", round_number=19,
             deadline=timezone.now()+timedelta(days=2), race_datetime=timezone.now()+timedelta(days=3))
         response = self.client.get(reverse("league:home"))
         self.assertEqual(response.context["featured_event"], event)
-        self.assertContains(response, 'data-deadline="' + date_format(timezone.localtime(event.deadline), "c") + '"')
-        self.assertContains(response, "data-countdown")
+        self.assertContains(response, 'data-race-start="' + date_format(timezone.localtime(event.race_datetime), "c") + '"')
+        self.assertContains(response, 'data-clock="seconds"')
 
     def test_account_menu_and_footer_use_refined_layout(self):
         user = User.objects.create_user("menu-owner", password="test")

@@ -147,7 +147,8 @@ class Event(models.Model):
 
     def voting_state(self):
         """
-        returns: 'soon' | 'open' | 'closed' | 'scored'
+        A published event card accepts predictions until its deadline.
+        returns: 'open' | 'closed' | 'scored'
         """
         if self.status == self.Status.SCORED:
             return "scored"
@@ -156,16 +157,9 @@ class Event(models.Model):
 
         now = timezone.now()
 
-        # if race_datetime not set, fallback to deadline
-        base = self.race_datetime or self.deadline
-        if base is None or self.deadline is None:
+        if self.deadline is None:
             return "closed"
-
-        open_at = base - timedelta(days=7)
-
-        if now < open_at:
-            return "soon"
-        if now <= self.deadline:
+        if now < self.deadline:
             return "open"
         return "closed"
 

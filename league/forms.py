@@ -6,9 +6,9 @@ from .duels import available_opponents
 from .models import Prediction, SeasonPrediction, UserProfile
 
 
-def _set_empty_select_option(field):
+def _set_empty_select_option(field, empty_label=""):
     cleaned_choices = [(value, label) for value, label in field.choices if value != ""]
-    field.choices = [("", "")] + cleaned_choices
+    field.choices = [("", empty_label)] + cleaned_choices
 
 
 class PredictionForm(forms.ModelForm):
@@ -61,7 +61,7 @@ class PredictionForm(forms.ModelForm):
             "driver_of_day",
         ):
             if field_name in self.fields:
-                _set_empty_select_option(self.fields[field_name])
+                _set_empty_select_option(self.fields[field_name], "Выберите пилота")
 
         if event and not event.has_sprint:
             self.fields.pop("sprint_qualifying_winner", None)

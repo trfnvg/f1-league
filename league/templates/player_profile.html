@@ -470,8 +470,9 @@
   </div>
 
   <div class="col-12 col-xl-4">
-    <section class="glass-panel p-3 p-md-4" style="animation: card-enter 320ms ease-out both;">
+    <section id="season-predictions" class="glass-panel p-3 p-md-4" style="animation: card-enter 320ms ease-out both;">
       <h2 class="profile-section-title">Сезонные предикты</h2>
+      {% if season_prediction_editable %}<a class="btn btn-outline-primary mb-3" href="{% url 'league:season_predictions' %}?season={{ season.year }}">Заполнить или изменить прогноз</a>{% endif %}
 
       <div class="d-flex flex-column gap-3">
         {% for row in season_cards %}

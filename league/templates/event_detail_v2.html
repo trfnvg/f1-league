@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
@@ -222,23 +222,16 @@
   <a href="{% url 'league:home' %}" class="text-decoration-none">&larr; Назад к этапам</a>
 </div>
 
-<div class="card event-hero-card mb-4 card-accent-top" style="animation: card-enter 280ms ease-out both;">
-  <div class="event-hero-layout">
-    <div class="event-hero-media{% if event.circuit_visual %} nightshift-event-track{% endif %}">
-      {% if event.circuit_visual %}
-        {% include 'circuit_track.html' with circuit=event.circuit_visual track_id='event' animated=True %}
-      {% elif event.cover_image %}
-        <img src="{{ event.cover_image.url }}" class="event-hero-image" alt="{{ event.name }}">
-      {% else %}
-        <div class="event-detail-placeholder" aria-hidden="true"><span>R{{ event.round_number }}</span></div>
-      {% endif %}
+<div class="card event-hero-card event-stage-hero mb-4">
+  <div class="event-stage-layout">
+    <div class="event-stage-media">
+      {% if event.circuit_visual %}<div class="event-stage-track">{% include 'circuit_track.html' with circuit=event.circuit_visual track_id='event' animated=True %}</div>{% else %}<div class="event-stage-fallback"><span>GRAND PRIX</span><strong>R{{ event.round_number|stringformat:'02d' }}</strong></div>{% endif %}
+      {% if event.cover_image %}<img src="{{ event.cover_image.url }}" class="event-stage-image" alt="{{ event.name }}" decoding="async" data-stage-cover>{% endif %}
     </div>
-    <div class="card-body event-hero-copy">
+    <div class="card-body event-stage-copy">
       <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
         <span class="badge text-bg-light">R{{ event.round_number }}</span>
-        {% if state == "soon" %}
-          <span class="event-status-badge is-soon">Скоро откроется</span>
-        {% elif state == "open" and prediction %}
+        {% if state == "open" and prediction %}
           <span class="event-status-badge is-saved">Прогноз сохранён ✓</span>
         {% elif state == "open" %}
           <span class="event-status-badge is-open">Доступно для прогноза</span>
@@ -426,8 +419,6 @@
         </div>
       </form>
     </div>
-  {% elif state == "soon" %}
-    <div class="wildcard-empty-state"><span class="wildcard-empty-mark">⌁</span><div><strong>Колода ещё закрыта</strong><p>Карты станут доступны вместе с прогнозами — за 7 дней до гонки.</p></div></div>
   {% elif state == "open" %}
     <div class="wildcard-empty-state"><span class="wildcard-empty-mark">?</span><div><strong>Колода готовится</strong><p>{{ wildcard_offer_error|default:"Для этого этапа нужно добавить минимум три активные карты." }}</p></div></div>
   {% else %}
@@ -549,9 +540,7 @@
       </div>
     {% elif state != "open" %}
       <div class="voting-status mb-0">
-        {% if state == "soon" %}
-          Голосование еще не началось. Откроется за 7 дней до гонки.
-        {% elif state == "closed" %}
+        {% if state == "closed" %}
           Дедлайн прошел, редактирование закрыто.
         {% else %}
           Очки посчитаны, этап завершен.
@@ -879,4 +868,11 @@
   </div>
 {% endif %}
 <script src="{% static 'league/wildcard.js' %}"></script>
+<script>
+  document.querySelectorAll('[data-stage-cover]').forEach((image) => {
+    const fallback = () => { image.hidden = true; };
+    image.addEventListener('error', fallback, { once: true });
+    if (image.complete && !image.naturalWidth) fallback();
+  });
+</script>
 {% endblock %}

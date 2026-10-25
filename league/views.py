@@ -51,7 +51,7 @@ from .models import (
     UserProfile,
     WildcardSettings,
 )
-from .home_events import select_featured_event
+from .home_events import event_display_until, select_featured_event
 from .prediction_submission import save_shared_prediction
 from .services import (
     build_achievements,
@@ -975,6 +975,7 @@ def home(request):
     season = get_selected_season(request)
     _award_legacy_flappy_trophy(season.year, now=now)
     events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
+    request._navigation_events = events
     upcoming_events = []
     past_events = []
 
@@ -1020,9 +1021,14 @@ def home(request):
         and featured_event.ui_state in ("open", "saved")
     )
     featured_race_upcoming = bool(
-        featured_event and featured_event.status != Event.Status.SCORED
+        featured_event
         and (featured_event.race_datetime or featured_event.deadline) > now
     )
+    featured_display_active = bool(featured_event and event_display_until(featured_event) > now)
+    featured_race_in_progress = bool(
+        featured_display_active and featured_event.race_datetime and featured_event.race_datetime <= now
+    )
+    seconds_to_race = max(0, int((featured_event.race_datetime-now).total_seconds())) if featured_event and featured_event.race_datetime else 0
     featured_prediction = (
         Prediction.objects.filter(event=featured_event, user=request.user).first()
         if request.user.is_authenticated and featured_event
@@ -1075,6 +1081,7 @@ def home(request):
             "total": total,
             "player_count": len(home_board["rows"]),
             "leader_gap": max(0, leader_total - total),
+            "leader_name": home_board["rows"][0]["user"].username if home_board["rows"] else "",
             "leader_progress": min(100, max(0, round(100 * total / leader_total))) if leader_total > 0 else 0,
             "submitted": len(saved_event_ids),
             "wins": wins,
@@ -1103,6 +1110,12 @@ def home(request):
             "featured_prediction": featured_prediction,
             "featured_is_upcoming": featured_is_upcoming,
             "featured_race_upcoming": featured_race_upcoming,
+            "featured_display_active": featured_display_active,
+            "featured_race_in_progress": featured_race_in_progress,
+            "featured_switch_at": event_display_until(featured_event) if featured_display_active else None,
+            "countdown_parts": {"days": seconds_to_race // 86400, "hours": seconds_to_race // 3600 % 24,
+                                "minutes": seconds_to_race // 60 % 60, "seconds": seconds_to_race % 60},
+            "page_server_time": now,
             "home_league": home_league,
             "home_rows": home_board["rows"][:5],
             "player_count": len(leaderboard_data["rows"]),
@@ -1382,9 +1395,7 @@ def event_detail(request, event_id: int):
         is_locked = state != "open"
 
         if is_locked:
-            if state == "soon":
-                messages.error(request, "Голосование еще не началось. Оно откроется за 7 дней до гонки.")
-            elif state == "scored":
+            if state == "scored":
                 messages.error(request, "Очки уже посчитаны, прогнозы зафиксированы.")
             else:
                 messages.error(request, "Дедлайн прошел, прогнозы закрыты.")
@@ -2058,6 +2069,7 @@ def player_profile(request, user_id: int):
                 not can_view_season_prediction
                 and SeasonPrediction.objects.filter(user=player, season_year=season.year).exists()
             ),
+            "season_prediction_editable": can_edit_avatar and now < season_deadline,
             "event_points_total": event_points_total,
             "season_points_total": season_points_total,
             "total_points": total_points,

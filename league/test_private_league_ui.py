@@ -86,7 +86,7 @@ class PrivateLeagueUITests(TestCase):
         form = response.context["form"]
         self.assertEqual(form.initial["start_event"], self.next_event.pk)
         self.assertNotIn(self.event, form.fields["start_event"].queryset)
-        self.assertEqual(self.next_event.voting_state(), "soon")
+        self.assertEqual(self.next_event.voting_state(), "open")
         response = self.client.post(reverse("league:friend_league_create"), {
             "name": "Next race league", "start_event": self.next_event.pk, "ruleset": "classic"})
         self.assertEqual(response.status_code, 302)

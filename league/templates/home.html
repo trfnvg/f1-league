@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Fastlap · Обзор сезона {{ season.year }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/nightshift-home.css' %}?v=20261025-circuits">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/nightshift-home.css' %}?v=20261026-race">{% endblock %}
 {% block content %}
-<div class="ns-home">
+<div class="ns-home" data-server-time="{{ page_server_time|date:'c' }}"{% if featured_switch_at %} data-stage-switch="{{ featured_switch_at|date:'c' }}"{% endif %}>
 <header class="ns-page-intro">
   <div><div class="ns-kicker">СЕЗОН {{ season.year }} · ТВОЙ КОМАНДНЫЙ ПУНКТ</div><h1>Гонка начинается<br><span>до старта.</span></h1><p>Предсказывай результат. Забирай очки. Напоминай друзьям, кто здесь лучше разбирается в гонках.</p></div>
   <a class="ns-secondary" href="{% url 'league:friend_league_create' %}"><span aria-hidden="true">＋</span> Создать лигу</a>
@@ -12,11 +12,11 @@
 <div class="ns-homegrid">
   <section class="ns-feature" aria-labelledby="featured-gp-title">
     <div class="ns-feature-inside">
-      <div class="ns-feature-eyebrow">{% if featured_event %}<span class="ns-round">R{{ featured_event.round_number|stringformat:'02d' }}</span>{% if featured_race_upcoming %}ТЕКУЩИЙ ГРАН-ПРИ{% else %}ПОСЛЕДНИЙ ЭТАП{% endif %}{% else %}FASTLAP / {{ season.year }}{% endif %}</div>
+      <div class="ns-feature-eyebrow">{% if featured_event %}<span class="ns-round">R{{ featured_event.round_number|stringformat:'02d' }}</span>{% if featured_display_active %}ТЕКУЩИЙ ГРАН-ПРИ{% else %}ПОСЛЕДНИЙ ЭТАП{% endif %}{% else %}FASTLAP / {{ season.year }}{% endif %}</div>
       {% if featured_event %}
         {% with circuit=featured_event.circuit_visual %}
-        <h2 id="featured-gp-title">{% if circuit %}{{ circuit.location }}<span>.</span>{% else %}{{ featured_event.name }}{% endif %}<br>{% if featured_is_upcoming %}Твой ход.{% elif featured_race_upcoming %}Время гонки.{% else %}Финиш.{% endif %}</h2>
-        <p>{{ featured_event.name }}. {% if featured_is_upcoming %}Один гоночный уик-энд. И шанс изменить расклад в своей лиге.{% elif featured_race_upcoming %}Прогнозы зафиксированы. Следи за гонкой и результатами своего паддока.{% else %}Посмотри результаты этапа и новую расстановку сил.{% endif %}</p>
+        <h2 id="featured-gp-title">{% if circuit %}{{ circuit.location }}<span>.</span>{% else %}{{ featured_event.name }}{% endif %}<br>{% if featured_is_upcoming %}Твой ход.{% elif featured_race_in_progress %}На трассе.{% elif featured_display_active %}Время гонки.{% else %}Финиш.{% endif %}</h2>
+        <p>{{ featured_event.name }}. {% if featured_is_upcoming %}Один гоночный уик-энд. И шанс изменить расклад в своей лиге.{% elif featured_display_active %}Прогнозы зафиксированы. Следи за гонкой и результатами своего паддока.{% else %}Посмотри результаты этапа и новую расстановку сил.{% endif %}</p>
         <a class="ns-primary" href="{% url 'league:event_detail' event_id=featured_event.id %}">{% if featured_is_upcoming %}{% if featured_prediction %}Изменить прогноз{% else %}Сделать прогноз{% endif %}{% elif featured_event.ui_state == 'scored' %}Результаты этапа{% else %}Открыть этап{% endif %}<span aria-hidden="true">→</span></a>
         <div class="ns-racebottom">{% if circuit %}<span>{{ circuit.country }}</span><span>{{ circuit.name }}</span>{% else %}<span>SEASON {{ season.year }}</span><span>ROUND {{ featured_event.round_number }}</span>{% endif %}</div>
         {% endwith %}
@@ -29,21 +29,25 @@
 
   <div class="ns-side-stack">
     <section class="ns-deadline">
-      {% if featured_is_upcoming %}
-        <div class="ns-eyebrow">Прогнозы закроются через</div><div class="ns-timer" data-deadline="{{ featured_event.deadline|date:'c' }}"><strong data-countdown>—</strong></div><div class="ns-dates"><span class="ns-status">OPEN</span><time datetime="{{ featured_event.deadline|date:'c' }}">{{ featured_event.deadline|date:'d.m · H:i' }} МСК</time></div>
-      {% elif featured_race_upcoming %}
-        <div class="ns-eyebrow">До старта гонки</div><div class="ns-timer" data-deadline="{{ featured_event.race_datetime|default:featured_event.deadline|date:'c' }}"><strong data-countdown>—</strong></div><div class="ns-dates"><span class="ns-status is-locked">{% if featured_event.ui_state == 'soon' %}СКОРО{% else %}RACE{% endif %}</span><time>{{ featured_event.race_datetime|default:featured_event.deadline|date:'d.m · H:i' }} МСК</time></div>
-      {% else %}
-        <div class="ns-eyebrow">Race control</div><div class="ns-timer"><strong>{% if featured_event %}Финиш{% else %}На старте{% endif %}</strong></div><div class="ns-dates">Ждём следующий Гран-при</div>
-      {% endif %}
-      <div class="ns-mini-bars" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="ns-eyebrow">{% if featured_race_upcoming and featured_event.race_datetime %}До старта гонки{% else %}Статус гонки{% endif %}</div>
+      <div class="ns-race-clock" data-race-start="{{ featured_event.race_datetime|date:'c' }}">
+        <div class="ns-countdown-grid" role="timer" aria-label="До старта гонки" aria-live="off" {% if not featured_race_upcoming or not featured_event.race_datetime %}hidden{% endif %}>
+          <div><strong data-clock="days">{{ countdown_parts.days|stringformat:'02d' }}</strong><small>дней</small></div>
+          <div><strong data-clock="hours">{{ countdown_parts.hours|stringformat:'02d' }}</strong><small>часов</small></div>
+          <div><strong data-clock="minutes">{{ countdown_parts.minutes|stringformat:'02d' }}</strong><small>минут</small></div>
+          <div><strong data-clock="seconds">{{ countdown_parts.seconds|stringformat:'02d' }}</strong><small>секунд</small></div>
+        </div>
+        <p class="ns-race-status" {% if featured_race_upcoming and featured_event.race_datetime %}hidden{% endif %}>{% if featured_race_in_progress %}Гонка идёт{% elif featured_event.race_datetime %}Гонка завершена{% else %}Время уточняется{% endif %}</p>
+      </div>
+      {% if featured_event.race_datetime %}<div class="ns-dates"><span>Старт</span><time datetime="{{ featured_event.race_datetime|date:'c' }}">{{ featured_event.race_datetime|date:'d.m · H:i' }} МСК</time></div>{% endif %}
+      {% if featured_event %}<div class="ns-prediction-status"><span class="{% if featured_is_upcoming %}is-open{% endif %}"><i aria-hidden="true"></i>{% if featured_is_upcoming %}Прогнозы открыты{% else %}Прогнозы закрыты{% endif %}</span>{% if featured_is_upcoming %}<small>до {{ featured_event.deadline|date:'d.m · H:i' }} МСК</small>{% endif %}</div>{% endif %}
     </section>
     <section class="ns-ranktile">
       <div class="ns-eyebrow">{% if home_league %}Твоя позиция / лига{% else %}Твоя позиция / общий рейтинг{% endif %}</div>
       {% if personal_dashboard %}
         <div class="ns-score"><b>{% if personal_dashboard.rank %}{{ personal_dashboard.rank|stringformat:'02d' }}<span>/{{ personal_dashboard.player_count|stringformat:'02d' }}</span>{% else %}—{% endif %}</b>{% if personal_dashboard.movement > 0 %}<small>↑ {{ personal_dashboard.movement }}</small>{% elif personal_dashboard.movement < 0 %}<small>↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</small>{% endif %}</div>
-        <p>{% if home_league %}{{ home_league.league.name }} · {% endif %}{% if not personal_dashboard.rank %}Твоя гонка ещё впереди.{% elif personal_dashboard.leader_gap %}До лидера {{ personal_dashboard.leader_gap }} очк.{% else %}Ты возглавляешь таблицу.{% endif %}</p>
-        <div class="ns-progress" aria-hidden="true"><span style="width:{{ personal_dashboard.leader_progress }}%"></span></div>
+        <p>{% if home_league %}{{ home_league.league.name }}{% else %}Общий рейтинг · {{ season.year }}{% endif %}</p>
+        <div class="ns-rank-gap">{% if not personal_dashboard.rank %}<span>Твоя гонка ещё впереди</span>{% elif personal_dashboard.leader_gap %}<span>До лидера <strong>{{ personal_dashboard.leader_gap }} очк.</strong></span>{% else %}<span>Ты лидируешь в зачёте</span>{% endif %}{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}" aria-label="Открыть таблицу лиги">↗</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}" aria-label="Открыть рейтинг">↗</a>{% endif %}</div>
       {% else %}
         <div class="ns-score"><b>Твой ход<span>.</span></b></div><p>Войди, чтобы увидеть свою позицию.</p><a class="ns-inline" href="{% url 'login' %}">Войти в Fastlap ↗</a>
       {% endif %}
@@ -51,6 +55,9 @@
   </div>
 </div>
 
+{% if personal_dashboard.next_duel %}
+<a class="ns-duel-notice" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}#event-duel"><span class="ns-duel-icon" aria-hidden="true">VS</span><span><strong>{% if personal_dashboard.next_duel.status == 'pending' and personal_dashboard.next_duel.opponent_id == user.id %}Тебе бросили вызов{% elif personal_dashboard.next_duel.status == 'pending' %}Вызов отправлен{% else %}Дуэль принята{% endif %}</strong><small>{{ personal_dashboard.next_event.name }} · ставка {{ personal_dashboard.next_duel.stake }} очк.</small></span><span class="ns-duel-arrow" aria-hidden="true">↗</span></a>
+{% endif %}
 <div class="ns-stats">
   {% if personal_dashboard %}
   <article class="ns-stat"><div>Очки за сезон <span aria-hidden="true">↗</span></div><strong>{{ personal_dashboard.total }}</strong><small>{% if personal_dashboard.latest_score %}<b>{{ personal_dashboard.latest_score.points|stringformat:"+d" }}</b> ЗА ПРОШЛЫЙ ЭТАП{% else %}ПЕРВЫЕ ОЧКИ ВПЕРЕДИ{% endif %}</small></article>
@@ -184,22 +191,6 @@
 
 </div>
 <script>
-  document.querySelectorAll("[data-deadline]").forEach((node) => {
-    const output = node.querySelector("[data-countdown]");
-    const deadline = new Date(node.dataset.deadline).getTime();
-    const render = () => {
-      const distance = Math.max(0, deadline - Date.now());
-      const days = Math.floor(distance / 86400000);
-      const hours = Math.floor((distance % 86400000) / 3600000);
-      const minutes = Math.floor((distance % 3600000) / 60000);
-      output.textContent = distance
-        ? `${days ? days + " д " : ""}${String(hours).padStart(2, "0")} ч ${String(minutes).padStart(2, "0")} м`
-        : "закрыто";
-    };
-    render();
-    window.setInterval(render, 60000);
-  });
-
   (() => {
     const list = document.getElementById("live-paddock-list");
     if (!list) return;
@@ -231,3 +222,5 @@
   })();
 </script>
 {% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'league/home-race-clock.js' %}?v=1" defer></script>{% endblock %}

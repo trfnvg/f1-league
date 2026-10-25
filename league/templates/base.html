@@ -1,4 +1,4 @@
-﻿{% load league_extras static %}
+{% load league_extras static %}
 <!doctype html>
 <html lang="ru">
 <head>
@@ -991,7 +991,8 @@
   {% block extra_head %}{% endblock %}
   <link rel="stylesheet" href="{% static 'league/player-avatars.css' %}">
   <link rel="stylesheet" href="{% static 'league/circuit-visual.css' %}?v=1">
-  <link rel="stylesheet" href="{% static 'league/nightshift-theme.css' %}?v=20261025-circuits">
+  <link rel="stylesheet" href="{% static 'league/nightshift-theme.css' %}?v=20261026-race">
+  <link rel="stylesheet" href="{% static 'league/brand-mark.css' %}?v=1">
 </head>
 
 <body class="summer-theme editorial-theme apex-night-theme d-flex flex-column min-vh-100">
@@ -999,25 +1000,24 @@
 
 <aside class="nightshift-sidebar" aria-label="Основная навигация">
   <a class="nightshift-brand" href="{% url 'league:home' %}" aria-label="Fastlap — обзор">
-    <span class="nightshift-brandmark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 5h18l-3 5H10l-2 3h8l-3 5H4l4-8H3z"/></svg></span>
-    <span><strong>fastlap<span>.</span></strong><small>RACE PREDICTION CLUB</small></span>
+    {% include 'brand_mark.html' %}
+    <span><strong>fastlap</strong><small>RACE PREDICTION CLUB</small></span>
   </a>
   <div class="nightshift-nav-label">ПАДДОК</div>
   <nav class="nightshift-nav">
     <a class="nightshift-nav-item {% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" href="{% url 'league:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3z"/></svg><span>Обзор</span></a>
-    {% if next_prediction_event %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:event_detail' event_id=next_prediction_event.id %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16m-11 4 2 2 4-4"/></svg><span>Прогнозы</span><small>R{{ next_prediction_event.round_number }}</small></a>{% else %}<a class="nightshift-nav-item" href="{% url 'league:home' %}#calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Календарь</span></a>{% endif %}
+    {% if current_event %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:event_detail' event_id=current_event.id %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16m-11 4 2 2 4-4"/></svg><span>Прогнозы</span><small>R{{ current_event.round_number }}</small></a>{% else %}<a class="nightshift-nav-item" href="{% url 'league:home' %}#calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Календарь</span></a>{% endif %}
     <a class="nightshift-nav-item {% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-11a3 3 0 0 0 0-6m1 10a5 5 0 0 1 3 5v2"/></svg><span>Мои лиги</span></a>
     <a class="nightshift-nav-item {% if '/arcade/' in request.path %}is-active{% endif %}" href="{% url 'league:arcade' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M8 9v6m-3-3h6m5-1h.01M18 13h.01"/></svg><span>Аркады</span></a>
     <a class="nightshift-nav-item {% if request.resolver_match.url_name == 'leaderboard' or request.resolver_match.url_name == 'global_leaderboard' %}is-active{% endif %}" href="{% url 'league:global_leaderboard' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0zm0 2H4v3a4 4 0 0 0 4 4m9-7h3v3a4 4 0 0 1-4 4m-4 1v5m-5 0h10"/></svg><span>Общий рейтинг</span></a>
   </nav>
-  <div class="nightshift-nav-label nightshift-secondary-label">ЕЩЁ</div>
+  {% if user.is_staff %}<div class="nightshift-nav-label nightshift-secondary-label">УПРАВЛЕНИЕ</div>{% endif %}
   <nav class="nightshift-nav nightshift-secondary-nav">
-    <a class="nightshift-nav-item {% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5zM8 7h8m-8 4h8m-8 4h5"/></svg><span>Предикты сезона</span></a>
     {% if user.is_staff %}<a class="nightshift-nav-item" href="{% url 'admin:index' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7v5c0 5 3.4 8 8 10 4.6-2 8-5 8-10V7zm-3 9 2 2 4-4"/></svg><span>Админка</span></a>{% url 'league:arcade_control' as nightshift_arcade_control_url %}{% if nightshift_arcade_control_url %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ nightshift_arcade_control_url }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="4"/><path d="M8 9v6m-3-3h6m5-1h.01M18 13h.01"/></svg><span>Управление аркадой</span></a>{% endif %}<a class="nightshift-nav-item {% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h16m-9-2 2 2 4-4"/></svg><span>Paddock Jury</span></a>{% endif %}
   </nav>
   <div class="nightshift-sidebar-bottom">
-    {% if next_prediction_event %}<section class="nightshift-race-card"><div><i></i>БЛИЖАЙШИЙ ЭТАП</div><strong>{{ next_prediction_event.name }}</strong><p>Прогнозы до {{ next_prediction_event.deadline|date:"d.m · H:i" }} МСК</p><a href="{% url 'league:event_detail' event_id=next_prediction_event.id %}">Открыть этап <span>↗</span></a></section>{% endif %}
-    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{{ user.username|slice:":1"|upper }}</span><span><strong>{{ user.username }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">↗</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">↗</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
+    {% if current_event %}<section class="nightshift-race-card"><div><i></i>БЛИЖАЙШИЙ ЭТАП</div><strong>{{ current_event.name }}</strong><p>{% if current_event.race_datetime %}Гонка {{ current_event.race_datetime|date:"d.m · H:i" }} МСК{% else %}Прогнозы до {{ current_event.deadline|date:"d.m · H:i" }} МСК{% endif %}</p><a href="{% url 'league:event_detail' event_id=current_event.id %}">Открыть этап <span>↗</span></a></section>{% endif %}
+    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{% if viewer_avatar_url %}<img src="{{ viewer_avatar_url }}" alt="" decoding="async">{% else %}{{ user.username|slice:":1"|upper }}{% endif %}</span><span><strong>{{ user.username }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">↗</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">↗</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
   </div>
 </aside>
 
@@ -1039,7 +1039,7 @@
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
         <span class="brand-f1">F1</span><span class="brand-text">Predictions <span class="brand-year">{{ current_season.year }}</span></span>
       </a>
-      <a class="nightshift-mobile-brand" href="{% url 'league:home' %}">fastlap<span>.</span></a>
+      <a class="nightshift-mobile-brand" href="{% url 'league:home' %}">{% include 'brand_mark.html' %}<span>fastlap</span></a>
       <div class="nightshift-crumb"><span>FASTLAP</span><i>/</i><strong>{% if request.resolver_match.url_name == 'home' %}Обзор сезона{% elif request.resolver_match.url_name == 'event_detail' %}Прогнозы / Гран-при{% elif '/leagues/' in request.path %}Лиги{% elif '/arcade/' in request.path %}Аркады{% elif request.resolver_match.url_name == 'leaderboard' or request.resolver_match.url_name == 'global_leaderboard' %}Общий рейтинг{% elif request.resolver_match.url_name == 'player_profile' %}Профиль участника{% elif request.resolver_match.url_name == 'season_predictions' %}Предикты сезона{% else %}Паддок{% endif %}</strong></div>
     </div>
 
@@ -1047,7 +1047,6 @@
       <a class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Этапы</a>
       <a class="{% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Лиги</a>
       <a class="{% if '/arcade/' in request.path %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркады</a>
-      <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
       {% if user.is_staff %}<a class="{% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury</a>{% endif %}
     </div>
 
@@ -1066,7 +1065,7 @@
 <div class="offcanvas offcanvas-start f1-menu" tabindex="-1" id="mainMenu" aria-labelledby="mainMenuLabel">
   <div class="offcanvas-header">
     <h5 class="offcanvas-title menu-brand" id="mainMenuLabel">
-      <span class="nightshift-mobile-brand">fastlap<span>.</span></span>
+      <span class="nightshift-mobile-brand">{% include 'brand_mark.html' %}<span>fastlap</span></span>
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Закрыть"></button>
   </div>
@@ -1081,7 +1080,6 @@
     {% endif %}
     <a class="menu-item {% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Лиги</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' or request.resolver_match.url_name == 'global_leaderboard' %}is-active{% endif %}" href="{% url 'league:global_leaderboard' %}">Общий рейтинг</a>
-    <a class="menu-item {% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонные предикты</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
     {% endif %}
@@ -1133,7 +1131,7 @@
 
 <nav class="nightshift-mobile-nav" aria-label="Основная навигация">
   <a class="{% if request.resolver_match.url_name == 'home' %}is-active{% endif %}" href="{% url 'league:home' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-7 9 7v9h-6v-6H9v6H3z"/></svg><span>Обзор</span></a>
-  {% if next_prediction_event %}<a class="{% if request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:event_detail' event_id=next_prediction_event.id %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Прогноз</span></a>{% else %}<a href="{% url 'league:home' %}#calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Гран-при</span></a>{% endif %}
+  {% if current_event %}<a class="{% if request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:event_detail' event_id=current_event.id %}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Прогноз</span></a>{% else %}<a href="{% url 'league:home' %}#calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4m8-4v4M4 9h16"/></svg><span>Гран-при</span></a>{% endif %}
   <a class="{% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2m2-11a3 3 0 0 0 0-6m1 10a5 5 0 0 1 3 5v2"/></svg><span>Лиги</span></a>
   <a class="{% if request.resolver_match.url_name == 'leaderboard' or request.resolver_match.url_name == 'global_leaderboard' %}is-active{% endif %}" href="{% url 'league:global_leaderboard' %}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0zm0 2H4v3a4 4 0 0 0 4 4m9-7h3v3a4 4 0 0 1-4 4m-4 1v5m-5 0h10"/></svg><span>Рейтинг</span></a>
 </nav>

@@ -105,3 +105,27 @@ body.apex-night-theme.editorial-theme .ns-calendar .event-card-action { border:1
   body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy { padding:12px 10px; }
   body.apex-night-theme.editorial-theme .ns-calendar .event-card-copy h3 { font-size:12px; }
 }
+
+/* Four labelled clock values replace the decorative progress bars. */
+.ns-race-clock { margin:22px 0 15px; min-height:62px; }
+.ns-countdown-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.ns-countdown-grid[hidden],.ns-race-status[hidden] { display:none; }
+.ns-countdown-grid>div { min-width:0; }
+.ns-countdown-grid strong { display:block; color:#f3f5f7; font:700 32px/1.2 var(--ns-mono); letter-spacing:-.075em; font-variant-numeric:tabular-nums; }
+.ns-countdown-grid small { display:block; margin-top:5px; color:#8a919b; font-size:8px; }
+.ns-race-status { margin:0; padding:12px 0; color:#f3f5f7; font:700 22px/1.3 Inter,sans-serif; letter-spacing:-.04em; }
+.ns-prediction-status { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:18px; padding-top:14px; border-top:1px solid #ffffff12; font-size:9px; color:#9fa8b4; }
+.ns-prediction-status>span { display:inline-flex; align-items:center; gap:6px; }
+.ns-prediction-status i { width:5px; height:5px; border-radius:50%; background:#89919c; }
+.ns-prediction-status .is-open { color:#b7cfbf; }.ns-prediction-status .is-open i { background:#91c7a0; }
+.ns-prediction-status small { font-size:9px; }
+.ns-rank-gap { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:14px; padding-top:13px; border-top:1px solid #ffffff12; color:#9fa8b4; font-size:10px; }
+.ns-rank-gap strong { color:#e2e6ec; font-weight:700; }.ns-rank-gap>a { color:#d5dbe3; font-size:17px; line-height:1; }
+.ns-duel-notice { display:flex; align-items:center; gap:13px; padding:15px 18px; margin-top:18px; border:1px solid #58413f; border-radius:12px; background:#dd2f2a09; }
+.ns-duel-icon { display:grid; place-items:center; width:32px; height:32px; border-radius:8px; background:#dd2f2a12; color:#efa49d; font:800 10px monospace; }
+.ns-duel-notice strong,.ns-duel-notice small { display:block; }.ns-duel-notice strong { color:#e9edf1; font-size:12px; }.ns-duel-notice small { color:#aab1bc; margin-top:4px; font-size:10px; }.ns-duel-arrow { margin-left:auto; color:#d8aaa6; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media { height:auto; aspect-ratio:16/9; background:#232932; }
+body.apex-night-theme.editorial-theme .ns-calendar .event-media>img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; object-position:center; filter:none; }
+body.apex-night-theme.editorial-theme .ns-calendar-track { position:absolute; inset:0; }
+@media(max-width:1350px) { .ns-countdown-grid { gap:6px; }.ns-countdown-grid strong { font-size:27px; } }
+@media(max-width:480px) { .ns-countdown-grid { gap:4px; }.ns-countdown-grid strong { font-size:21px; }.ns-countdown-grid small { font-size:7px; }.ns-race-clock { margin:19px 0 13px; min-height:50px; }.ns-race-status { font-size:19px; }.ns-prediction-status { gap:6px; margin-top:12px; padding-top:12px; font-size:8px; }.ns-prediction-status small { font-size:8px; }.ns-rank-gap { margin-top:12px; padding-top:11px; font-size:9px; } }

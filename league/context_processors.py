@@ -1,6 +1,7 @@
 from django.utils import timezone
 
 from .models import ArcadeSettings, Event, Season
+from .home_events import select_current_event
 
 
 def league_context(request):
@@ -14,15 +15,12 @@ def league_context(request):
     arcade_event = arcade_settings.competition_event if arcade_settings else None
     selected_year = (selected or active).year
     now = timezone.now()
-    next_prediction_event = (
-        Event.objects.filter(
-            season_year=selected_year,
-            status=Event.Status.OPEN,
-            deadline__gt=now,
-        )
-        .order_by("deadline", "round_number")
-        .first()
-    )
+    events = getattr(request, "_navigation_events", None)
+    if events is None:
+        events = Event.objects.filter(season_year=selected_year).order_by("round_number")
+    current_event = select_current_event(events, now)
+    viewer_profile = getattr(request.user, "league_profile", None) if request.user.is_authenticated else None
+    viewer_avatar_url = viewer_profile.avatar.url if viewer_profile and viewer_profile.avatar else ""
     arcade_running = bool(
         arcade_settings
         and arcade_settings.public_enabled
@@ -46,5 +44,7 @@ def league_context(request):
     return {
         "current_season": selected or active,
         "arcade_public_enabled": arcade_visible,
-        "next_prediction_event": next_prediction_event,
+        "current_event": current_event,
+        "next_prediction_event": current_event,
+        "viewer_avatar_url": viewer_avatar_url,
     }
