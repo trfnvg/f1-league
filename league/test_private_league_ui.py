@@ -154,6 +154,54 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(original.league.owner, self.owner)
         self.assertEqual(League.objects.filter(legacy_key="original-friends").count(), 1)
 
+    def repair_main(self):
+        import_module("league.migrations.0044_link_main_to_grisha").link_main(apps, SimpleNamespace(connection=connection))
+
+    def test_main_repair_uses_confirmed_production_login_without_staff_upgrade(self):
+        grisha = User.objects.create_user("Гриша")
+        Prediction.objects.create(user=grisha, event=self.event, p1="russell")
+        Score.objects.create(user=grisha, event=self.event, points=31, prediction_points=26, duel_adjustment=5)
+        before = (list(Prediction.objects.values()), list(Score.objects.values()))
+        self.register_main()
+        self.assertFalse(League.objects.filter(legacy_key="original-friends").exists())
+        self.repair_main();self.repair_main()
+        main = League.objects.get(legacy_key="original-friends")
+        self.assertEqual(main.name, "Fastlap Main")
+        self.assertEqual(main.owner, grisha)
+        self.assertEqual(main.memberships.filter(user=grisha).count(), 1)
+        self.assertEqual(main.seasons.get().entries.filter(membership__user=grisha).count(), 1)
+        self.assertEqual(before, (list(Prediction.objects.values()), list(Score.objects.values())))
+        grisha.refresh_from_db();self.assertFalse(grisha.is_staff);self.assertFalse(grisha.is_superuser)
+        self.client.force_login(grisha)
+        response = self.client.get(reverse("league:friend_leagues"))
+        self.assertEqual(response.context["page"][0].league_id, main.pk)
+        response = self.client.get(reverse("league:friend_league", args=[main.pk]))
+        self.assertEqual(response.context["page"][0].total, 31)
+
+    def test_main_repair_preserves_existing_owner_and_explicitly_links_grisha(self):
+        grisha = User.objects.create_user("Гриша")
+        primary = User.objects.create_user("trfnvg", is_staff=True)
+        Prediction.objects.create(user=self.player, event=self.event, p1="russell")
+        self.register_main()
+        main = League.objects.get(legacy_key="original-friends")
+        self.assertFalse(main.memberships.filter(user=grisha).exists())
+        self.repair_main();self.repair_main()
+        main.refresh_from_db();self.assertEqual(main.owner, primary)
+        self.assertEqual(main.memberships.filter(user=grisha).count(), 1)
+        self.assertEqual(League.objects.filter(legacy_key="original-friends").count(), 1)
+        self.client.force_login(grisha)
+        self.assertContains(self.client.get(reverse("league:friend_leagues")), "Fastlap Main")
+
+    def test_main_repair_does_not_guess_accounts_or_restore_disabled_membership(self):
+        Prediction.objects.create(user=self.player, event=self.event, p1="russell")
+        self.repair_main()
+        self.assertFalse(League.objects.filter(legacy_key="original-friends").exists())
+        grisha = User.objects.create_user("Гриша")
+        self.repair_main()
+        membership = LeagueMembership.objects.get(league__legacy_key="original-friends", user=grisha)
+        membership.is_active = False;membership.save(update_fields=("is_active",))
+        self.repair_main();membership.refresh_from_db();self.assertFalse(membership.is_active)
+
     def test_foreign_uuid_event_year_and_membership_ids_are_rejected(self):
         for url in [self.url(league=self.b), self.url("friend_league_invites", league=self.b),
                     self.url("friend_league_event", league=self.b, event_id=self.event.pk)]:
