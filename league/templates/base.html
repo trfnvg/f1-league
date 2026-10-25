@@ -1013,8 +1013,7 @@
 
     <div class="desktop-nav" aria-label="Основная навигация">
       <a class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'event_detail' %}is-active{% endif %}" href="{% url 'league:home' %}">Этапы</a>
-      <a class="{% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
-      {% if user.is_authenticated %}<a class="{% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Мои лиги</a>{% endif %}
+      <a class="{% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Лиги</a>
       <a class="{% if request.resolver_match.url_name == 'duel' %}is-active{% endif %}" href="{% url 'league:duel' %}">Дуэль</a>
       <a class="{% if '/arcade/' in request.path %}is-active{% endif %}" href="{% url 'league:arcade' %}">Аркады</a>
       <a class="{% if request.resolver_match.url_name == 'season_predictions' %}is-active{% endif %}" href="{% url 'league:season_predictions' %}">Сезонный прогноз</a>
@@ -1050,8 +1049,7 @@
       {% url 'league:arcade_control' as arcade_control_url %}
       {% if arcade_control_url %}<a class="menu-item d-none d-md-block {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ arcade_control_url }}">Аркада · управление</a>{% endif %}
     {% endif %}
-    <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' %}is-active{% endif %}" href="{% url 'league:leaderboard' %}">Таблица</a>
-    {% if user.is_authenticated %}<a class="menu-item {% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Мои лиги</a>{% endif %}
+    <a class="menu-item {% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Лиги</a>
     {% if user.is_staff %}
       <a class="menu-item" href="{% url 'admin:index' %}">Админка</a>
     {% endif %}

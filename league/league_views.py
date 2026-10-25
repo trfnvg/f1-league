@@ -4,8 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Case, Count, IntegerField, OuterRef, Q, Subquery, Sum, Value, When
-from django.db.models.functions import Coalesce
+from django.db.models import Case, Count, IntegerField, Q, Value, When
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -13,17 +12,19 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
-from .competition_scoring import judge_crazy_prediction, recalculate_league_event
+from .competition_scoring import recalculate_league_event
 from .forms import PredictionForm
-from .league_forms import CreateLeagueForm
+from .league_forms import CreateLeagueForm, LeagueDayForm, LeagueProfileForm
+from .league_management import decide_crazy, decide_day, require_manager, update_profile
+from .league_standings import standings
 from .prediction_submission import save_shared_prediction
 from .leagues import (
     accept_invite, create_invite, create_league, invite_for_token, membership_for,
     require_moderator, revoke_invite, set_member_role,
 )
 from .models import (
-    Event, League, LeagueCrazyDecision, LeagueEventScore,
-    LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction, Score, Season, SeasonScore,
+    Event, League, LeagueCrazyDecision, LeagueDayDecision, LeagueEventScore,
+    LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction, Season,
 )
 
 
@@ -48,7 +49,7 @@ def _season(request, league):
         if not 1900 <= year <= 9999:
             raise Http404("Сезон не найден.")
         return get_object_or_404(seasons, season__year=year)
-    selected = seasons.order_by("-season__year").first()
+    selected = seasons.filter(season__is_active=True).first() or seasons.order_by("-season__year").first()
     if selected is None:
         raise Http404("У лиги пока нет сезона.")
     return selected
@@ -56,7 +57,9 @@ def _season(request, league):
 
 def _rights(user, league):
     member = membership_for(user, league)
-    return {"is_owner": league.owner_id == user.pk, "can_manage": league.owner_id == user.pk or member.role == "moderator"}
+    return {"is_owner": league.owner_id == user.pk,
+        "can_configure": league.owner_id == user.pk or member.role == "manager",
+        "can_manage": league.owner_id == user.pk or member.role in ("moderator", "manager")}
 
 
 @login_required
@@ -71,6 +74,14 @@ def index(request):
             default=Count("entries", distinct=True), output_field=IntegerField()),
         main_first=Case(When(league__legacy_key="original-friends", then=Value(0)), default=Value(1), output_field=IntegerField()),
     ).order_by("main_first", "-season__year", "-created_at")
+    if request.GET.get("all") != "1" and not request.GET.get("page"):
+        remembered = request.session.get("active_friend_league")
+        remembered_year = request.session.get("active_friend_league_year")
+        selected = next((s for s in seasons if str(s.league_id) == remembered
+            and (remembered_year is None or s.season.year == remembered_year)), None) if remembered else None
+        selected = selected or seasons.filter(season__is_active=True).first() or seasons.first()
+        if selected:
+            return redirect("league:friend_league", league_id=selected.league_id)
     page = Paginator(seasons, 12).get_page(request.GET.get("page"))
     return render(request, "leagues/index.html", {"page": page})
 
@@ -104,32 +115,19 @@ def create(request):
 def detail(request, league_id):
     league = _league(request, league_id)
     season = _season(request, league)
-    entries = season.entries.select_related("membership__user__league_profile", "first_event")
-    if season.is_legacy:
-        # Read the original totals including duel/wheel adjustments and season
-        # bonuses. Do not copy them into the objective/new scoring projections.
-        scores = Score.objects.filter(user_id=OuterRef("membership__user_id"),
-            event__season_year=season.season.year).values("user_id")
-        bonuses = SeasonScore.objects.filter(user_id=OuterRef("membership__user_id"),
-            season_year=season.season.year).values("points")[:1]
-        entries = entries.filter(membership__user__is_staff=False, membership__user__is_active=True).annotate(
-            total=Coalesce(Subquery(scores.annotate(value=Sum("points")).values("value")[:1]), 0)+Coalesce(Subquery(bonuses), 0),
-            rounds=Coalesce(Subquery(scores.annotate(value=Count("pk")).values("value")[:1]), 0))
-    else:
-        entries = entries.annotate(total=Sum("leagueeventscore_records__points", default=0),
-            rounds=Count("leagueeventscore_records", distinct=True))
-    entries = entries.order_by("-total", "membership__user__username", "pk")
-    page = Paginator(entries, 50).get_page(request.GET.get("page"))
-    for offset, entry in enumerate(page.object_list, page.start_index()):
-        entry.rank = offset
-        entry.is_owner = entry.membership.user_id == league.owner_id
-    events = Event.objects.filter(season_year=season.season.year,
-        round_number__gte=season.start_event.round_number).order_by("round_number")
-    next_event = events.filter(deadline__gt=timezone.now(), status=Event.Status.OPEN).first()
-    context = dict(league=league, league_season=season, seasons=league.seasons.select_related("season").order_by("-season__year"),
-        page=page, events=events, next_event=next_event, **_rights(request.user, league))
+    request.session["active_friend_league"] = str(league.pk)
+    request.session["active_friend_league_year"] = season.season.year
+    data = standings(season)
+    page = Paginator(data.pop("entries"), 50).get_page(request.GET.get("page"))
+    visible = {entry.membership.user_id for entry in page}
+    data["rows"] = [r for r in data["rows"] if r["user"].pk in visible]
+    data["leaderboard_chart"]["series"] = [s for s in data["leaderboard_chart"]["series"] if s["user_id"] in visible]
+    next_event = next((e for e in data["events"] if e.deadline > timezone.now() and e.status == Event.Status.OPEN), None)
+    choices = LeagueSeason.objects.filter(league__memberships__user=request.user,
+        league__memberships__is_active=True, league__archived_at__isnull=True).select_related("league", "season").order_by("-season__year", "league__name")
+    context = dict(league=league, league_season=season, season=season.season, league_choices=choices,
+        page=page, next_event=next_event, **data, **_rights(request.user, league))
     return render(request, "leagues/detail.html", context)
-
 
 @login_required
 @never_cache
@@ -204,7 +202,7 @@ def event_detail(request, league_id, event_id):
     event = get_object_or_404(Event, pk=event_id)
     season = get_object_or_404(league.seasons.select_related("season", "start_event", "league"), season__year=event.season_year,
         start_event__round_number__lte=event.round_number)
-    if season.is_legacy:
+    if season.is_legacy and request.GET.get("manage") != "1":
         return redirect("league:event_detail", event_id=event.pk)
     own_entry = season.entries.filter(membership__user=request.user, membership__league=league,
         first_event__round_number__lte=event.round_number).first()
@@ -236,12 +234,16 @@ def event_detail(request, league_id, event_id):
         predictions = {p.user_id: p for p in Prediction.objects.filter(event=event, created_at__lt=event.deadline,
             user_id__in=season.entries.filter(first_event__round_number__lte=event.round_number).values("membership__user_id"))}
         scores = {s.entry_id: s for s in LeagueEventScore.objects.filter(event=event, entry__league_season=season)}
+        legacy_scores = standings(season)["scores_map"] if season.is_legacy else {}
         decisions = {d.entry_id: d for d in LeagueCrazyDecision.objects.filter(event=event, entry__league_season=season)}
         for entry in season.entries.filter(first_event__round_number__lte=event.round_number).select_related("membership__user"):
             p = predictions.get(entry.membership.user_id)
-            rows.append({"entry": entry, "prediction": p, "score": scores.get(entry.pk), "decision": decisions.get(entry.pk)})
+            score = legacy_scores.get((entry.membership.user_id, event.pk)) if season.is_legacy else scores.get(entry.pk)
+            rows.append({"entry": entry, "prediction": p, "score": score, "decision": decisions.get(entry.pk)})
+    day = LeagueDayDecision.objects.filter(league_season=season, event=event).first()
+    day_form = LeagueDayForm(initial={"use_official": day is None, "drivers": day.drivers if day else []})
     return render(request, "leagues/event.html", dict(league=league, league_season=season, event=event,
-        prediction=prediction, form=form, editable=editable, rows=rows, closed=now >= event.deadline,
+        prediction=prediction, form=form, editable=editable, rows=rows, closed=now >= event.deadline, day_form=day_form,
         **_rights(request.user, league)))
 
 
@@ -256,13 +258,55 @@ def judge(request, league_id, event_id, entry_id):
     try:
         if choice not in ("yes", "no"):
             raise ValidationError("Выберите решение по крейзи-предикту.")
-        judge_crazy_prediction(actor=request.user, league_season=entry.league_season, entry=entry,
+        decide_crazy(actor=request.user, season=entry.league_season, entry=entry,
             event=event, approved=choice == "yes")
     except ValidationError as exc:
         messages.error(request, _error(exc))
     else:
         messages.success(request, "Решение сохранено только в этой лиге.")
-    return redirect("league:friend_league_event", league_id=league.pk, event_id=event.pk)
+    return redirect(f"{reverse('league:friend_league_event', args=[league.pk, event.pk])}?manage=1")
+
+
+@login_required
+@never_cache
+@require_http_methods(["GET", "POST"])
+def settings(request, league_id):
+    league = _league(request, league_id)
+    require_manager(request.user, league)
+    season = _season(request, league)
+    form = LeagueProfileForm(request.POST or None, request.FILES or None, instance=league)
+    if request.method == "POST" and form.is_valid():
+        try:
+            update_profile(actor=request.user, league=league, **form.cleaned_data)
+        except ValidationError as exc:
+            form.add_error(None, _error(exc))
+        else:
+            messages.success(request, "Настройки лиги сохранены.")
+            return redirect(f"{reverse('league:friend_league', args=[league.pk])}?year={season.season.year}")
+    members = league.memberships.filter(is_active=True).select_related("user").order_by("user__username")
+    events = Event.objects.filter(season_year=season.season.year, round_number__gte=season.start_event.round_number).order_by("-round_number")
+    return render(request, "leagues/settings.html", dict(league=league, league_season=season, form=form,
+        members=members, events=events, **_rights(request.user, league)))
+
+
+@login_required
+@never_cache
+@require_POST
+def day_decision(request, league_id, event_id):
+    league = _league(request, league_id)
+    event = get_object_or_404(Event, pk=event_id)
+    season = get_object_or_404(league.seasons, season__year=event.season_year)
+    form = LeagueDayForm(request.POST)
+    try:
+        if not form.is_valid():
+            raise ValidationError("Проверьте выбор гонщика дня.")
+        decide_day(actor=request.user, season=season, event=event,
+            drivers=None if form.cleaned_data["use_official"] else form.cleaned_data["drivers"])
+    except ValidationError as exc:
+        messages.error(request, _error(exc))
+    else:
+        messages.success(request, "Гонщик дня сохранён только в этой лиге.")
+    return redirect(f"{reverse('league:friend_league_event', args=[league.pk, event.pk])}?manage=1")
 
 
 @login_required

@@ -163,6 +163,7 @@ class League(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField("Название лиги", max_length=80)
+    avatar = models.ImageField("Аватар лиги", upload_to="league_avatars/", blank=True)
     owner = models.ForeignKey(User, on_delete=models.PROTECT, related_name="owned_leagues")
     created_at = models.DateTimeField(default=timezone.now, editable=False)
     archived_at = models.DateTimeField(null=True, blank=True)
@@ -212,6 +213,7 @@ class LeagueMembership(models.Model):
     class Role(models.TextChoices):
         PLAYER = "player", "Игрок"
         MODERATOR = "moderator", "Модератор"
+        MANAGER = "manager", "Управляющий"
 
     league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="memberships")
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="friend_league_memberships")
@@ -222,7 +224,7 @@ class LeagueMembership(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=("league", "user"), name="league_member_unique"),
-            models.CheckConstraint(condition=Q(role__in=("player", "moderator")), name="league_member_role_valid"),
+            models.CheckConstraint(condition=Q(role__in=("player", "moderator", "manager")), name="league_member_role_valid"),
         ]
 
     def __str__(self):
@@ -322,6 +324,17 @@ class LeagueCrazyDecision(LeagueEventRecord):
         if self.prediction_id and self.entry_id:
             if self.prediction.event_id != self.event_id or self.prediction.user_id != self.entry.membership.user_id:
                 raise ValidationError("Решение относится к чужому прогнозу.")
+
+
+class LeagueDayDecision(models.Model):
+    league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="day_decisions")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="league_day_decisions")
+    drivers = models.JSONField(default=list)
+    reviewed_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="league_day_reviews")
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("league_season", "event"), name="league_day_event_unique")]
 
 
 class LeaguePodiumBonus(LeagueEventRecord):
@@ -438,6 +451,8 @@ class LeagueActivity(models.Model):
         ("created", "Создание лиги"), ("joined", "Вступление"),
         ("invite_created", "Создание приглашения"), ("invite_revoked", "Отзыв приглашения"),
         ("role_changed", "Изменение роли"),
+        ("profile_changed", "Настройки лиги"), ("day_decided", "Гонщик дня"),
+        ("crazy_decided", "Крейзи-предикт"),
     ])
     details = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)

@@ -2036,6 +2036,15 @@ def player_profile(request, user_id: int):
 
 def leaderboard(request):
     season = get_selected_season(request)
+    if request.user.is_authenticated:
+        from .models import LeagueSeason
+        original = LeagueSeason.objects.filter(season__year=season.year,
+            league__legacy_key="original-friends", league__memberships__user=request.user,
+            league__memberships__is_active=True, league__archived_at__isnull=True).first()
+        if original:
+            return redirect(f"{reverse('league:friend_league', args=[original.league_id])}?year={season.year}")
+        if request.user.friend_league_memberships.filter(is_active=True, league__archived_at__isnull=True).exists():
+            return redirect("league:friend_leagues")
     data = build_leaderboard(season.year)
 
     return render(

@@ -33,10 +33,15 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     _,token=create_invite(actor=owner,league_season=ls)
     for name in ['Аня','Очень_длинное_имя_участника','George_Russell']:
         accept_invite(user=User.objects.create_user(name),token=token)
+    for i in range(7,29):
+        Event.objects.create(season_year=season.year,name=f'Гран-при {i}',round_number=i,deadline=timezone.now()+timedelta(days=i*7),race_datetime=timezone.now()+timedelta(days=i*7+1))
     c=Client();c.force_login(owner)
-    urls={'/':reverse('league:friend_leagues'),'/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token])}
+    urls={'/':reverse('league:friend_leagues')+'?all=1','/detail/':reverse('league:friend_league',args=[ls.league_id]),'/create/':reverse('league:friend_league_create'),'/event/':reverse('league:friend_league_event',args=[ls.league_id,event.pk]),'/join/':reverse('league:friend_league_join',args=[token]),'/settings/':reverse('league:friend_league_settings',args=[ls.league_id])}
     pages={name:c.get(url).content.decode() for name,url in urls.items()}
     pages['/invites/']=c.post(reverse('league:friend_league_invites',args=[ls.league_id])).content.decode()
+    Event.objects.filter(pk=event.pk).update(deadline=timezone.now()-timedelta(days=2),race_datetime=timezone.now()-timedelta(days=1))
+    pages['/review/']=c.get(reverse('league:friend_league_event',args=[ls.league_id,event.pk]),{'manage':'1'}).content.decode()
+    Event.objects.filter(pk=event.pk).update(deadline=event.deadline,race_datetime=event.race_datetime)
     owner.username='trfnvg';owner.save(update_fields=['username'])
     player=User.objects.get(username='George_Russell')
     Prediction.objects.create(user=player,event=event,p1='russell')
@@ -44,7 +49,7 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     import_module('league.migrations.0043_register_fastlap_main').register_main(apps,SimpleNamespace(connection=connection))
     main=League.objects.get(legacy_key='original-friends')
     pages['/main/']=c.get(reverse('league:friend_league',args=[main.pk])).content.decode()
-    pages['/']=c.get(reverse('league:friend_leagues')).content.decode()
+    pages['/']=c.get(reverse('league:friend_leagues'),{'all':'1'}).content.decode()
     print(json.dumps(pages))
 `],{cwd:root,encoding:'utf8',env:{...process.env,DATABASE_URL:'sqlite:///:memory:'},maxBuffer:8*1024*1024});
 assert.equal(rendered.status,0,rendered.stderr);
@@ -68,16 +73,29 @@ try{
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width} ${url}: horizontal page overflow`);
       assert.equal(await page.locator('.leagues-page').count(),1);
       if(url==='/detail/'){
-        assert.equal(await page.locator('.leagues-standing').count(),4);
-        const safe=await page.locator('.leagues-standing').evaluateAll(rows=>rows.every(row=>{
-          const name=row.querySelector('.leagues-player').getBoundingClientRect(),points=row.querySelector('.leagues-points').getBoundingClientRect();return name.right<=points.left;
+        assert.equal(await page.locator('.leaderboard-table tbody tr').count(),4);
+        const table=page.locator('.leaderboard-scroll-x');
+        await table.evaluate(node=>node.scrollLeft=node.scrollWidth);
+        const safe=await page.locator('.leaderboard-table tbody tr').evaluateAll(rows=>rows.every(row=>{
+          const name=row.querySelector('.col-player').getBoundingClientRect(),points=row.querySelector('.col-total').getBoundingClientRect();return name.right<=points.left+1;
         }));
-        assert.ok(safe,`${width}: names and scores do not overlap`);
+        assert.ok(safe,`${width}: pinned names and scores do not overlap after scrolling`);
+        await page.locator('.league-switch summary').click();
+        assert.ok(await page.locator('.league-switch a').last().isVisible());
+        await page.locator('.league-switch summary').click();
       }
       if(url==='/')assert.equal(await page.locator('.leagues-card h3').first().innerText(),'Fastlap Main');
       if(url==='/main/'){
-        assert.equal(await page.locator('.leagues-standing').count(),1);
-        assert.equal(await page.locator('.leagues-points').innerText(),'245');
+        assert.equal(await page.locator('.leaderboard-table tbody tr').count(),1);
+        assert.equal(await page.locator('.total-chip').innerText(),'245');
+      }
+      if(url==='/review/'){
+        await page.locator('.league-day-panel summary').click();
+        assert.equal(await page.locator('#id_drivers input').count(),22);
+        assert.equal(await page.locator('#id_drivers input:disabled').count(),22);
+        await page.locator('#id_use_official').uncheck();
+        assert.equal(await page.locator('#id_drivers input:disabled').count(),0);
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
       }
       if(process.env.LEAGUE_PREVIEW_DIR&&['/','/detail/','/invites/'].includes(url)){
         await fs.mkdir(process.env.LEAGUE_PREVIEW_DIR,{recursive:true});
@@ -87,5 +105,5 @@ try{
     assert.deepEqual(errors,[],`${width}: browser runtime errors`);
     await page.close();
   }
-  console.log('Private leagues: 7 real Django pages × 5 desktop/mobile widths passed, including Fastlap Main.');
+  console.log('Private leagues: 9 real Django pages × 5 desktop/mobile widths passed, including 23 GP columns, league switch, management and judging.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

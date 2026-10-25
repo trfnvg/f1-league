@@ -60,9 +60,11 @@ class PrivateLeagueUITests(TestCase):
         return Result.objects.create(event=self.event, **{k: v for k, v in self.values.items() if k != "crazy_prediction"})
 
     def test_index_detail_create_and_navigation_render_without_private_league_leak(self):
-        response = self.client.get(reverse("league:friend_leagues"))
+        response = self.client.get(reverse("league:friend_leagues"), {"all": "1"})
         self.assertContains(response, "Private Alpha");self.assertNotContains(response, "Secret Bravo")
         self.assertContains(response, "Мои лиги")
+        self.assertNotContains(response, '<h2>Мои лиги</h2>')
+        self.assertNotContains(response, 'class="leagues-breadcrumb"')
         self.assertEqual(self.client.get(self.url()).status_code, 200)
         self.assertEqual(self.client.get(reverse("league:friend_league_create")).status_code, 200)
         self.assertIn("no-store", response["Cache-Control"])
@@ -124,7 +126,7 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(before, (list(Prediction.objects.values()), list(Score.objects.values()), list(SeasonScore.objects.values())))
         self.assertFalse(LeagueEventScore.objects.exists())
         self.client.force_login(self.player)
-        index = self.client.get(reverse("league:friend_leagues"))
+        index = self.client.get(reverse("league:friend_leagues"), {"all": "1"})
         self.assertEqual(index.context["page"][0].league_id, main.pk)
         self.assertEqual(index.context["page"][0].member_count, 1)
         self.assertNotContains(index, "Ваша прежняя компания")
@@ -173,7 +175,7 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(before, (list(Prediction.objects.values()), list(Score.objects.values())))
         grisha.refresh_from_db();self.assertFalse(grisha.is_staff);self.assertFalse(grisha.is_superuser)
         self.client.force_login(grisha)
-        response = self.client.get(reverse("league:friend_leagues"))
+        response = self.client.get(reverse("league:friend_leagues"), {"all": "1"})
         self.assertEqual(response.context["page"][0].league_id, main.pk)
         response = self.client.get(reverse("league:friend_league", args=[main.pk]))
         self.assertEqual(response.context["page"][0].total, 31)
@@ -190,7 +192,7 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(main.memberships.filter(user=grisha).count(), 1)
         self.assertEqual(League.objects.filter(legacy_key="original-friends").count(), 1)
         self.client.force_login(grisha)
-        self.assertContains(self.client.get(reverse("league:friend_leagues")), "Fastlap Main")
+        self.assertContains(self.client.get(reverse("league:friend_leagues"), {"all": "1"}), "Fastlap Main")
 
     def test_main_repair_does_not_guess_accounts_or_restore_disabled_membership(self):
         Prediction.objects.create(user=self.player, event=self.event, p1="russell")
@@ -350,4 +352,4 @@ class PrivateLeagueUITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertLess(len(queries), 22)
         self.client.logout()
-        self.assertEqual(self.client.get(reverse("league:friend_leagues")).status_code, 302)
+        self.assertEqual(self.client.get(reverse("league:friend_leagues"), {"all": "1"}).status_code, 302)

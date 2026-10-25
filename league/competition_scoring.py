@@ -16,7 +16,7 @@ from django.utils import timezone
 from .leagues import membership_for, require_crazy_judge, require_moderator
 from .models import (
     DRIVER_CHOICES, ArcadeWheelSpin, CompetitionScoreAudit, Event, GlobalEventScore,
-    League, LeagueCrazyDecision, LeagueEventScore, LeaguePodiumBonus,
+    League, LeagueCrazyDecision, LeagueDayDecision, LeagueEventScore, LeaguePodiumBonus,
     LeagueScoreAdjustment, LeagueSeason, LeagueSeasonEntry, Prediction, Result,
 )
 from .prediction_rules import PREDICTION_FIELDS, RESULT_FIELDS, RULES_VERSION, calculate_base_points
@@ -135,6 +135,7 @@ def _league_rows(league_season, event, result):
     predictions = _predictions(event, [entry.membership.user_id for entry in entries])
     entry_ids = [entry.pk for entry in entries]
     decisions, bonuses, adjustments = {}, {}, {}
+    day = LeagueDayDecision.objects.filter(league_season=league_season, event=event).first()
     if league_season.ruleset == LeagueSeason.Ruleset.PADDOCK:
         decisions = {row.entry_id: row for row in LeagueCrazyDecision.objects.filter(event=event, entry_id__in=entry_ids)}
         bonuses = {row.entry_id: row for row in LeaguePodiumBonus.objects.filter(event=event, entry_id__in=entry_ids, used_at__isnull=False)}
@@ -168,6 +169,10 @@ def _league_rows(league_season, event, result):
             local["adjustments"].append(dict(kind=adjustment.kind, source_key=adjustment.source_key,
                                              points=adjustment.points, reason=adjustment.reason))
         other_adjustment = sum(item["points"] for item in local["adjustments"])
+        if day:
+            day_delta = (3 if (prediction.driver_of_day or "").strip().lower() in day.drivers else 0)-base_breakdown.get("Driver of the Day", 0)
+            other_adjustment += day_delta
+            local["driver_of_day"] = dict(drivers=day.drivers, reviewed_by=day.reviewed_by_id, delta=day_delta)
         data["local"] = local
         rows.append(dict(
             entry_id=entry.pk, prediction_id=prediction.pk, base_points=base_points,
