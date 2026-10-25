@@ -51,8 +51,8 @@ circuit or round-number fallback, and no hidden/reveal animation dependency.
 Failed stage-cover requests reveal the fallback. Stage artwork fits inside a
 compact header thumbnail on mobile. Calendar cards use uniform 16:9 media frames and two-line
 title slots so that every card has equal dimensions at each viewport size.
-Calendar images use `object-fit:fill`: the complete image fills the entire frame
-without cropping or bars, adjusting its proportions when necessary. Neither
+Calendar images use `object-fit:cover`: they scale proportionally to fill the
+frame, cropping excess edges rather than distorting the image. Neither
 surface zooms on hover. Round/status metadata sits outside the artwork. The
 calendar uses one card per row on phones and two/three on larger screens.
 

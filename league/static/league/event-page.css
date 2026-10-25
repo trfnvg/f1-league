@@ -120,3 +120,29 @@ body.apex-night-theme.editorial-theme .event-page .stage-duel-heading h2 { font-
   body.apex-night-theme.editorial-theme .event-page .event-stage-copy h1 { font-size:28px; }
 }
 @media(max-width:360px) { .event-page .event-stage-layout { grid-template-columns:minmax(0,1fr) 64px; gap:10px; }.event-page .stage-sections a { font-size:11px; } }
+
+/* Strategy cards: a technical race pass, shared with the site's charcoal UI. */
+body.apex-night-theme.editorial-theme .event-page .wildcard-module .wildcard-card-back { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:8px; align-items:stretch; padding:16px; background:linear-gradient(145deg,#2b3542,#171f29)!important; border-color:#566273; }
+.race-card-topline { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; border-bottom:1px solid #ffffff16; color:#dce4ee; font:650 9px/1.3 Inter,sans-serif; letter-spacing:.1em; }
+.race-card-topline>span:last-child { color:#ef766b; font-family:monospace; letter-spacing:0; }
+.race-card-art { display:block; min-height:0; height:100%; width:100%; }
+.race-card-art svg { display:block; width:100%; height:100%; }
+.race-card-guide { fill:none; stroke:#b3c2d1; stroke-width:.7; stroke-opacity:.12; stroke-dasharray:3 5; }
+.race-card-grid { fill:none; stroke:#77889c; stroke-width:1; stroke-opacity:.3; }
+.race-card-speedline { fill:none; stroke:#e05a51; stroke-width:2; stroke-opacity:.65; }
+.race-card-bottomline { display:block; padding-top:11px; border-top:1px solid #ffffff16; text-align:left; }
+.race-card-bottomline strong { display:block; color:#e0e7f0; font:600 9px/1.4 Inter,sans-serif; letter-spacing:.12em; }
+.race-card-bottomline small { display:block; margin-top:4px; color:#93a1b3; font:400 9px/1.5 Inter,sans-serif; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card-inner { border-radius:12px; box-shadow:0 8px 20px #00000020; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card.is-revealed .wildcard-card-inner { box-shadow:0 8px 20px #00000020; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card:focus-visible .wildcard-card-inner { box-shadow:0 0 0 3px #d67b7060; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-card-front { background:linear-gradient(145deg,#293340,#1b2430); border-top:3px solid #df5c51; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-kicker { color:#94a3b6; font-size:9px; font-weight:550; letter-spacing:.07em; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-question { font-weight:600; line-height:1.3; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-divider { font:500 9px/1.2 Inter,sans-serif; letter-spacing:.05em; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-divider::before,
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-divider::after { background:#ffffff18; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-option small { border:1px solid #ffffff20; background:#ffffff08; color:#aebccc; font-family:Inter,sans-serif; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-points { border-color:#ffffff20; background:#ffffff05; color:#c7d2e0; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-face-select { border:1px solid #ee7366; border-radius:7px; background:#cf4136; color:#fff; font:600 10px/1.4 Inter,sans-serif; text-transform:none; letter-spacing:0; }
+body.apex-night-theme.editorial-theme .event-page .wildcard-draw-prompt { color:#9ba9bb; font:400 12px/1.6 Inter,sans-serif; text-transform:none; letter-spacing:0; }

@@ -3,7 +3,7 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=2">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=3">{% endblock %}
 
 {% block content %}
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
@@ -201,9 +201,7 @@
       <article class="wildcard-card is-single is-revealed" aria-label="Твоя личная карта">
         <span class="wildcard-card-inner">
           <span class="wildcard-card-back">
-            <span class="wildcard-card-brand">FASTLAP</span>
-            <span class="wildcard-question-mark">?</span>
-            <span class="wildcard-card-round">R{{ event.round_number }}</span>
+            {% include 'wildcard_card_back.html' %}
           </span>
           <span class="wildcard-card-front">
             <span class="wildcard-face-content">
@@ -300,9 +298,7 @@
           >
             <span class="wildcard-card-inner">
               <span class="wildcard-card-back">
-                <span class="wildcard-card-brand">FASTLAP</span>
-                <span class="wildcard-question-mark">?</span>
-                <span class="wildcard-card-round">R{{ event.round_number }}</span>
+                {% include 'wildcard_card_back.html' %}
               </span>
               <span class="wildcard-card-front">
                 <span class="wildcard-face-content">

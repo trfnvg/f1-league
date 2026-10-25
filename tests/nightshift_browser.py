@@ -241,7 +241,7 @@ def run(output, widths, engine):
                         if width > 780:
                             assert page.locator('.nightshift-account-avatar img').evaluate('e=>e.complete && e.naturalWidth>0')
                         image = page.locator('.ns-calendar .event-media>img').first
-                        assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'fill'
+                        assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'cover'
                         assert page.locator('.ns-live .activity-news-item').count() == 5
                         assert page.locator('.ns-live .activity-news-item').evaluate_all('''items=>items.every(item=>{
                             const icon=item.querySelector('.activity-feed-icon'),copy=item.querySelector('.activity-news-copy');
@@ -265,7 +265,7 @@ def run(output, widths, engine):
                             assert image.evaluate('''(e,fit)=>{
                                 const b=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();
                                 return e.complete && e.naturalWidth>0 && getComputedStyle(e).objectFit===fit && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
-                            }''', 'fill' if route.startswith('/cover-') else 'contain'), (width, route, "cover cropped or outside its frame")
+                            }''', 'cover' if route.startswith('/cover-') else 'contain'), (width, route, "cover outside its frame")
                             image.hover()
                             assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
                     if route.startswith('/duel-'):
@@ -282,6 +282,8 @@ def run(output, widths, engine):
                         page.locator('.stage-sections a[href="#personal-wildcard"]').click()
                         assert page.locator('#personal-wildcard').is_visible()
                         assert page.locator('#stage-prediction').is_hidden()
+                        assert page.locator('.race-card-art svg').count() == 3
+                        page.screenshot(path=str(output/f'{width}-strategy-backs.png'), full_page=True)
                         page.locator('[data-wildcard-card]').first.click()
                         assert page.locator('[data-wildcard-card]').first.get_attribute('aria-expanded') == 'true'
                         page.locator('[data-wildcard-card]').first.evaluate('e=>Promise.all(e.getAnimations({subtree:true}).map(a=>a.finished))')
