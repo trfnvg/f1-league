@@ -2,10 +2,21 @@ from django.urls import path
 from . import views
 from . import arcade_library
 from . import jury_admin
+from . import league_views
 
 app_name = "league"
 
 urlpatterns = [
+    path("leagues/", league_views.index, name="friend_leagues"),
+    path("leagues/new/", league_views.create, name="friend_league_create"),
+    path("leagues/join/<str:token>/", league_views.join, name="friend_league_join"),
+    path("leagues/<uuid:league_id>/", league_views.detail, name="friend_league"),
+    path("leagues/<uuid:league_id>/invites/", league_views.invites, name="friend_league_invites"),
+    path("leagues/<uuid:league_id>/invites/<int:invite_id>/revoke/", league_views.revoke, name="friend_league_revoke"),
+    path("leagues/<uuid:league_id>/members/<int:membership_id>/role/", league_views.role, name="friend_league_role"),
+    path("leagues/<uuid:league_id>/events/<int:event_id>/", league_views.event_detail, name="friend_league_event"),
+    path("leagues/<uuid:league_id>/events/<int:event_id>/judge/<int:entry_id>/", league_views.judge, name="friend_league_judge"),
+    path("leagues/<uuid:league_id>/events/<int:event_id>/recalculate/", league_views.recalculate, name="friend_league_recalculate"),
     path("", views.home, name="home"),
     path("activity-feed/", views.activity_feed_updates, name="activity_feed"),
     path("events/<int:event_id>/crazy-vote/", views.cast_crazy_vote, name="crazy_prediction_vote"),
@@ -14,6 +25,7 @@ urlpatterns = [
     path("paddock-jury/<int:event_id>/close/", views.close_crazy_vote, name="close_crazy_vote"),
     path("arcade/", arcade_library.library, name="arcade"),
     path("arcade/control/", arcade_library.control, name="arcade_control"),
+    path("arcade/lab/minesweeper/", arcade_library.minesweeper_preview, name="arcade_minesweeper_preview"),
     path("arcade/play/<str:game_key>/", arcade_library.game, name="arcade_game"),
     path("arcade/doodle-jump/", arcade_library.doodle_page, name="arcade_doodle_jump"),
     path("arcade/doodle-jump/leaderboard/", arcade_library.leaderboard, {"game_key": "doodle_jump"}, name="doodle_leaderboard"),

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Управление аркадой · F1 Predictions{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/arcade.css' %}">{% endblock %}
+
+{% block content %}
+<main class="container py-4" style="max-width:1180px">
+  <header class="mb-4">
+    <p class="text-uppercase small text-danger fw-bold mb-1">ADMIN · ARCADE CONTROL</p>
+    <h1 class="h2">Управление аркадой</h1>
+    <p class="text-secondary mb-0">Ты сам выбираешь игру и этап, затем вручную открываешь аркаду участникам.</p>
+  </header>
+
+  {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>{% endfor %}{% endif %}
+
+  <section class="card bg-dark border-secondary mb-4">
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div><h2 class="h5 mb-1">Текущий режим</h2><p class="text-secondary mb-0">{{ arcade_settings.get_active_game_display }}</p></div>
+        {% if arcade_settings.public_enabled %}<span class="badge text-bg-success">Открыта участникам</span>{% else %}<span class="badge text-bg-secondary">Закрыта · видна только админу</span>{% endif %}
+      </div>
+      <form method="post" class="row g-3 align-items-end">
+        {% csrf_token %}
+        <div class="col-12 col-md-5">
+          <label class="form-label" for="arcade-game-select">Игра</label>
+          <select class="form-select" id="arcade-game-select" name="active_game">
+            {% for key, label in arcade_games %}<option value="{{ key }}"{% if key == arcade_settings.active_game %} selected{% endif %}>{{ label }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-5">
+          <label class="form-label" for="arcade-event-select">Этап, к которому привязать зачёт</label>
+          <select class="form-select" id="arcade-event-select" name="competition_event" required>
+            <option value="">Выбери этап</option>
+            {% if arcade_selected_event_expired %}<option value="{{ arcade_selected_event.id }}" selected disabled>{{ arcade_selected_event.name }} · дедлайн уже прошёл</option>{% endif %}
+            {% for event in arcade_events %}<option value="{{ event.id }}"{% if event.id == arcade_settings.competition_event_id %} selected{% endif %}>R{{ event.round_number }} · {{ event.name }} — дедлайн {{ event.deadline|date:'d.m.Y H:i' }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-12 col-md-auto"><button class="btn btn-outline-light" name="action" value="select">Сохранить выбор</button></div>
+        <div class="col-12 col-md-auto"><button class="btn btn-danger" name="action" value="publish"{% if arcade_settings.public_enabled %} disabled{% endif %}>Открыть участникам</button></div>
+        <div class="col-12 col-md-auto"><button class="btn btn-outline-warning" name="action" value="close"{% if not arcade_settings.public_enabled %} disabled{% endif %}>Закрыть доступ</button></div>
+      </form>
+    </div>
+  </section>
+
+  <section class="card bg-dark border-secondary mb-4">
+    <div class="card-body p-4">
+      <h2 class="h5">Правила выбранного зачёта</h2>
+      {% if arcade_selected_event %}<p class="mb-2">Сейчас выбран этап: <strong>R{{ arcade_selected_event.round_number }} · {{ arcade_selected_event.name }}</strong>, дедлайн {{ arcade_selected_event.deadline|date:'d.m.Y H:i' }}.</p>{% else %}<p class="mb-2">Этап ещё не выбран — открыть игру участникам пока нельзя.</p>{% endif %}
+      <p class="text-secondary mb-0">Зачёт начинается только после твоего нажатия «Открыть участникам». В таблицу победителя идут завершённые попытки с момента открытия до дедлайна выбранного этапа. В момент дедлайна результаты фиксируются; лидер получает колесо, доступное после дедлайна и до старта гонки. Сменить игру или этап можно после старта этой гонки, чтобы не лишить победителя колеса.</p>
+      {% if arcade_contest_locked %}<p class="small text-warning mt-3 mb-0">Текущий зачёт закреплён за этапом до старта гонки — это сохраняет победителю доступ к колесу.</p>{% endif %}
+    </div>
+  </section>
+
+  <section class="card bg-dark border-secondary mb-4">
+    <div class="card-body p-4 d-flex flex-wrap justify-content-between align-items-center gap-3">
+      <div><h2 class="h5 mb-1">Проверить игру</h2><p class="text-secondary mb-0">Тестовый запуск не переключает игру для участников и не создаёт их публичные результаты.</p></div>
+      <a class="btn btn-outline-info" href="{{ arcade_test_url }}">Открыть выбранную игру в тесте ↗</a>
+    </div>
+  </section>
+
+  {% include "arcade_wheel_test_panel.html" %}
+</main>
+{% endblock %}
+
+{% block extra_scripts %}<script src="{% static 'league/arcade-wheel-test.js' %}" defer></script>{% endblock %}

@@ -118,16 +118,22 @@ position. The dotted-piece toolbar button toggles it and stores the choice in
 
 `tetris-feedback.js` uses a separate transparent canvas at the same DPR as the
 board. Locked tiles gently compress by at most 5.5% for 150 ms, with a small
-grounding glint. Cleared rows contract/fade within the existing 180 ms clear
-window; their original colours become 80 tiny chips for a four-line clear,
-bounded at 120 live chips, which expire after 260–335 ms. Four lines trigger
-one finite pair of five-light rails outside the playfield, lasting <1 second.
+grounding glint. A fast hard drop leaves a narrow, faint 150 ms pixel trail
+(maximum seven cells long); short drops do not trigger it. Completed rows charge
+with a restrained cyan light pass (warm gold for four lines), then dissolve
+left-to-right within the existing 180 ms clear window. Their original colours
+become 80 rotating, edge-lit pixel fragments for a four-line clear, bounded at
+120 live fragments, which expire after 320–425 ms. Thin row echoes fade in
+300 ms and are capped at eight. Four lines trigger one finite pair of five-light
+rails and a soft golden frame impulse outside the playfield, lasting <1 second.
 Reward text sits above the score panel, not over falling pieces.
 
 Effects observe bounded lock/clear snapshots without changing collision, gravity,
 score, input or next-piece timing. Pause freezes both canvas effects and CSS
-lights; restart/game over clear them. Reduced motion disables squash, chips
-and animated lights (a steady short light indication remains). Settled effects
+lights and frame; restart/game over clear them. One cached gradient is reused
+for light passes: no per-frame blur filters, external textures, new assets or
+additional render loop. Reduced motion disables squash, trails, chips, echoes
+and animated lights (a steady row/frame indication remains). Settled effects
 do not force redraws, and HUD/next-piece rendering is skipped on effect-only frames.
 
 ### Soundtrack

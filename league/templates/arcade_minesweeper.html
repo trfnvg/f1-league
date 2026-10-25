@@ -5,6 +5,7 @@
 
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'league/arcade-minesweeper.css' %}">
+  <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -12,17 +13,17 @@
   <header class="minesweeper-heading">
     <div>
       <p class="minesweeper-kicker"><span aria-hidden="true"></span> F1 ARCADE · PITWALL SWEEP</p>
-      <p class="minesweeper-lede">Новое поле в каждой попытке. В недельный зачёт идёт лучшее время полного прохождения.</p>
+      <p class="minesweeper-lede">Новое поле в каждой попытке. В зачёт выбранного этапа идёт лучшее время полного прохождения.</p>
     </div>
     {% if user.is_staff %}
       <span class="minesweeper-admin-badge"><i aria-hidden="true"></i>{% if arcade_admin_preview %}Только администратор{% else %}Участникам доступна{% endif %}</span>
-      {% if perms.league.change_arcadesettings %}<a class="minesweeper-admin-badge" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
+      {% if user.is_staff %}<a class="minesweeper-admin-badge" href="{{ arcade_settings_admin_url }}">Управление аркадой →</a>{% endif %}
     {% else %}
-      <span class="minesweeper-week-badge"><i aria-hidden="true"></i> НЕДЕЛЯ С {{ minesweeper_week_start }}</span>
+      <span class="minesweeper-week-badge"><i aria-hidden="true"></i> R{{ wheel_event.round_number }} · {{ wheel_event.name }}</span>
     {% endif %}
   </header>
 
-  <section class="minesweeper-machine" id="minesweeper-machine" aria-label="Pitwall Sweep — сапёр в стиле Формулы-1">
+  {% if arcade_scoring_open %}<section class="minesweeper-machine" id="minesweeper-machine" aria-label="Pitwall Sweep — сапёр в стиле Формулы-1">
     <div class="minesweeper-game-screen" id="minesweeper-game-screen"
       data-start-url="{{ minesweeper_attempt_start_url }}"
       data-finish-url="{{ minesweeper_attempt_finish_url }}"
@@ -103,10 +104,11 @@
       <span><kbd>F</kbd> флаг · <kbd>ПРОБЕЛ</kbd> новая попытка</span>
     </footer>
   </section>
+  {% else %}<section class="minesweeper-machine" role="status"><div class="minesweeper-overlay-card"><h2>Зачёт игры закрыт</h2><p>{% if wheel_event and wheel_event.deadline <= now %}Результаты этапа зафиксированы. Победитель и колесо бонусов — ниже на этой странице.{% else %}Зачёт начнётся, когда администратор откроет игру для выбранного этапа.{% endif %}</p></div></section>{% endif %}
 
   <section class="minesweeper-leaderboard" aria-labelledby="minesweeper-leaderboard-title">
     <div class="minesweeper-leaderboard-heading">
-      <div><span class="minesweeper-section-kicker">PITWALL SWEEP · ЭТА НЕДЕЛЯ</span><h2 id="minesweeper-leaderboard-title">Таблица лидеров</h2></div>
+      <div><span class="minesweeper-section-kicker">PITWALL SWEEP · ЭТАП</span><h2 id="minesweeper-leaderboard-title">Таблица лидеров</h2></div>
       <p><span id="minesweeper-total-attempts">{{ minesweeper_total_attempts }}</span> попыток всего · побеждает лучшее время полного прохождения</p>
     </div>
     <ol class="minesweeper-leaderboard-list" id="minesweeper-leaderboard-list">
@@ -121,8 +123,10 @@
         <li class="minesweeper-board-empty" id="minesweeper-board-empty">Поле ещё никто не прошёл — первым рекордом можешь стать ты.</li>
       {% endfor %}
     </ol>
-    <p class="minesweeper-footnote">После попытки поле показывает, где были масло, колесо и карбон. В недельный рейтинг попадает самое быстрое полное прохождение.</p>
+    <p class="minesweeper-footnote">После попытки поле показывает, где были масло, колесо и карбон. В зачёт выбранного этапа попадает самое быстрое полное прохождение.</p>
   </section>
+
+  {% if not arcade_test_mode %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 
   <form hidden id="minesweeper-csrf-form">{% csrf_token %}</form>
 </section>
@@ -130,4 +134,5 @@
 
 {% block extra_scripts %}
   <script src="{% static 'league/arcade-minesweeper.js' %}" defer></script>
+  <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

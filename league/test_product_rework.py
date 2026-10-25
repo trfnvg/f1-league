@@ -423,6 +423,15 @@ class CompetitiveFeaturesTests(TestCase):
             round_number=1,
             deadline=deadline,
         )
+        ArcadeSettings.objects.update_or_create(
+            pk=1,
+            defaults={
+                "active_game": ArcadeSettings.Game.FLAPPY,
+                "public_enabled": True,
+                "competition_event": event,
+                "competition_opened_at": deadline - timedelta(days=3),
+            },
+        )
         create_prediction(winner, event)
         create_prediction(other, event)
 
@@ -455,7 +464,7 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertEqual(trophy.awarded_at, deadline)
         self.assertEqual(ArcadeTrophyAward.objects.count(), 1)
 
-    def test_arcade_takeover_is_saved_and_announced_with_attempt_count(self):
+    def test_free_play_updates_global_record_without_competition_news_or_trophy(self):
         previous_leader = User.objects.create_user("old-arcade-leader")
         new_leader = User.objects.create_user("new-arcade-leader", password="test")
         ArcadeRecord.objects.create(user=previous_leader, best_score=10, total_attempts=4)
@@ -474,15 +483,15 @@ class CompetitiveFeaturesTests(TestCase):
         )
 
         self.assertEqual(finished.status_code, 200)
-        lead_change = ArcadeLeadChange.objects.get(player=new_leader)
-        self.assertEqual(lead_change.best_score, 11)
-        self.assertEqual(lead_change.attempts, 8)
+        record = ArcadeRecord.objects.get(user=new_leader)
+        self.assertEqual(record.best_score, 11)
+        self.assertEqual(record.total_attempts, 8)
+        self.assertIsNone(ArcadeAttempt.objects.get(pk=attempt_id).competition_id)
+        self.assertFalse(ArcadeLeadChange.objects.exists())
         self.assertFalse(ArcadeTrophyAward.objects.exists())
 
         response = self.client.get(reverse("league:home"))
-        self.assertContains(response, "new-arcade-leader занял первое место в аркаде")
-        self.assertContains(response, "С 8 попытками")
-        self.assertContains(response, 'class="activity-feed-item activity-news-item is-arcade-leader"')
+        self.assertNotContains(response, "new-arcade-leader занял первое место в аркаде")
 
     def test_player_profile_accuracy_and_favorite_driver(self):
         player = User.objects.create_user("analytics-driver")

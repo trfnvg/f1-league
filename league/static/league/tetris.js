@@ -114,8 +114,10 @@
       if(!type)return;
       const scale=feedback.squash(x,y);
       const p=game.clearing.includes(y)?Math.min(1,game.clearClock/180):0;
-      const inset=reduceMotion?0:p*7;
-      ctx.globalAlpha=reduceMotion?1:1-p*p;
+      // Keep the row readable during its light pass, then dissolve left→right.
+      const dissolve=Math.max(0,(p-.42-x*.022)/(.58-x*.022));
+      const inset=reduceMotion?0:dissolve*3;
+      ctx.globalAlpha=reduceMotion?1:1-dissolve*dissolve;
       ctx.drawImage(block(type),x*32+inset,y*32+32*(1-scale)+inset,32-2*inset,32*scale-2*inset);
       ctx.globalAlpha=1;
     }));
@@ -174,7 +176,7 @@
     if(action==='rotate') game.turn();
     if(action==='rotateCCW') game.turn(-1);
     if(action==='down') game.down();
-    if(action==='drop') game.drop();
+    if(action==='drop') {feedback.trace(game.piece,game.landing());game.drop();}
     feedback.observe(game);
     schedule();
   }

@@ -3,14 +3,20 @@
 All mutations lock the league first, verify the actor's live membership, and
 choose eligibility on the server. UUIDs select a league, not authorize access.
 """
+import hashlib
+import re
+import secrets
+from datetime import timedelta
+
+from django.conf import settings
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from .models import (
-    Event, League, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction,
+    Event, League, LeagueActivity, LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction,
     Score, Season, SeasonPrediction, SeasonScore,
 )
 
@@ -82,6 +88,12 @@ def create_league(*, owner, name, season, start_event, ruleset=LeagueSeason.Rule
         raise ValidationError("Укажите название лиги.")
     now = timezone.now()
     start_event = Event.objects.select_for_update().get(pk=start_event.pk)
+    # Serialize per-account quotas even if concurrent requests pick other GPs.
+    User.objects.select_for_update().get(pk=owner.pk)
+    if League.objects.filter(owner=owner, archived_at__isnull=True).count() >= getattr(settings, "PRIVATE_LEAGUE_MAX_OWNED", 10):
+        raise ValidationError("Достигнут лимит активных лиг аккаунта.")
+    if League.objects.filter(owner=owner, created_at__gte=now-timedelta(minutes=10)).count() >= 3:
+        raise ValidationError("Слишком много новых лиг. Попробуйте через 10 минут.")
     if start_event.deadline <= now or start_event.status != Event.Status.OPEN:
         raise ValidationError("Выберите этап с открытым дедлайном.")
     league = League(name=name.strip(), owner=owner, created_at=now)
@@ -91,6 +103,7 @@ def create_league(*, owner, name, season, start_event, ruleset=LeagueSeason.Rule
     league_season.full_clean()
     league_season.save()
     _enroll(league_season, owner, now)
+    LeagueActivity.objects.create(league=league, actor=owner, action="created", details={"season": season.year, "ruleset": ruleset})
     return league_season
 
 
@@ -114,7 +127,12 @@ def set_member_role(*, actor, membership, role):
         raise ValidationError("Нельзя менять роль отключённого участника.")
     membership.role = role
     membership.full_clean()
+    previous = LeagueMembership.objects.get(pk=membership.pk).role
+    if previous == role:
+        return membership
     membership.save(update_fields=("role",))
+    LeagueActivity.objects.create(league=league, actor=actor, action="role_changed",
+        details={"user_id": membership.user_id, "before": previous, "after": role})
     return membership
 
 
@@ -163,3 +181,68 @@ def import_legacy_league(*, owner, season_year, name="Наша лига"):
         entry.full_clean()
         entry.save()
     return league_season, True
+
+
+def _invite_digest(token):
+    if not isinstance(token, str) or not re.fullmatch(r"[A-Za-z0-9_-]{43}", token):
+        raise ValidationError("Приглашение недоступно или срок его действия истёк.")
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def invite_for_token(token):
+    invite = LeagueInvite.objects.select_related("league_season__league", "league_season__season", "league_season__start_event").filter(token_digest=_invite_digest(token)).first()
+    if (invite is None or invite.revoked_at or invite.expires_at <= timezone.now()
+            or invite.league_season.league.archived_at or invite.league_season.is_legacy):
+        raise ValidationError("Приглашение недоступно или срок его действия истёк.")
+    return invite
+
+
+@transaction.atomic
+def create_invite(*, actor, league_season):
+    league_season = LeagueSeason.objects.select_related("league").get(pk=league_season.pk)
+    league = League.objects.select_for_update().get(pk=league_season.league_id)
+    require_moderator(actor, league)
+    if league_season.is_legacy:
+        raise ValidationError("Сначала нужно завершить перенос исторической лиги.")
+    now = timezone.now()
+    _next_event(league_season, now)
+    if league_season.invites.filter(revoked_at__isnull=True, expires_at__gt=now).count() >= 5:
+        raise ValidationError("Уже есть пять действующих приглашений. Отзовите ненужное.")
+    token = secrets.token_urlsafe(32)
+    invite = LeagueInvite.objects.create(league_season=league_season, token_digest=_invite_digest(token),
+        created_by=actor, expires_at=now+timedelta(days=7))
+    LeagueActivity.objects.create(league=league, actor=actor, action="invite_created", details={"invite_id": invite.pk})
+    return invite, token
+
+
+@transaction.atomic
+def revoke_invite(*, actor, invite):
+    invite = LeagueInvite.objects.select_related("league_season__league").get(pk=invite.pk)
+    league = League.objects.select_for_update().get(pk=invite.league_season.league_id)
+    require_moderator(actor, league)
+    invite = LeagueInvite.objects.select_for_update().get(pk=invite.pk)
+    if not invite.revoked_at:
+        invite.revoked_at = timezone.now();invite.save(update_fields=("revoked_at",))
+        LeagueActivity.objects.create(league=league, actor=actor, action="invite_revoked", details={"invite_id": invite.pk})
+
+
+@transaction.atomic
+def accept_invite(*, user, token):
+    _require_user(user)
+    invite = invite_for_token(token)
+    league = League.objects.select_for_update().get(pk=invite.league_season.league_id)
+    # Recheck expiry/revocation after waiting for a concurrent revoke/join.
+    invite = invite_for_token(token)
+    membership = LeagueMembership.objects.filter(league=league, user=user).first()
+    if membership and not membership.is_active:
+        raise PermissionDenied("Доступ к этой лиге отключён.")
+    if membership:
+        existing = LeagueSeasonEntry.objects.filter(league_season=invite.league_season, membership=membership).first()
+        if existing:
+            return existing
+    if not membership and league.memberships.filter(is_active=True).count() >= getattr(settings, "PRIVATE_LEAGUE_MAX_MEMBERS", 250):
+        raise ValidationError("В лиге достигнут лимит участников.")
+    entry = _enroll(invite.league_season, user, timezone.now())
+    LeagueInvite.objects.filter(pk=invite.pk).update(uses=F("uses")+1)
+    LeagueActivity.objects.create(league=league, actor=user, action="joined", details={"season": invite.league_season.season.year})
+    return entry

@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
-from .crazy_jury import vetoed_crazy_prediction_id
+from .crazy_jury import CRAZY_VOTE_DURATION, vetoed_crazy_prediction_id
 from .models import (
     DRIVER_CHOICES,
     ArcadeGameClosure,
@@ -511,7 +511,7 @@ def build_activity_feed(leaderboard, limit=10):
                 "occurred_at": closure.closed_at,
             }
     else:
-        arcade_lead = ArcadeLeadChange.objects.select_related("player").first()
+        arcade_lead = ArcadeLeadChange.objects.select_related("player").filter(player__is_staff=False).first()
         if arcade_lead:
             attempt_word = _russian_plural(
                 arcade_lead.attempts,
@@ -546,7 +546,7 @@ def build_activity_feed(leaderboard, limit=10):
             Q(status=Event.Status.SCORED)
             | Q(crazy_vote_veto_cancelled_at__isnull=False)
             | Q(crazy_vote_closed_at__isnull=False)
-            | Q(race_datetime__lte=now)
+            | Q(deadline__lte=now - CRAZY_VOTE_DURATION)
         )
         .distinct()
         .order_by("-round_number")
@@ -589,9 +589,12 @@ def build_activity_feed(leaderboard, limit=10):
             "source_event_id": jury_event.id,
             "anchor": "",
             "occurred_at": (
-                jury_event.crazy_vote_closed_at
-                or jury_event.race_datetime
-                or jury_event.deadline
+                max(
+                    jury_event.crazy_vote_closed_at,
+                    jury_event.deadline + CRAZY_VOTE_DURATION,
+                )
+                if jury_event.crazy_vote_closed_at
+                else jury_event.deadline + CRAZY_VOTE_DURATION
             ),
         }
         break

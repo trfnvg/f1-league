@@ -169,6 +169,18 @@ def doodle_page(request):
     return game(request, "doodle_jump")
 
 
+@login_required
+@require_GET
+def minesweeper_preview(request):
+    """Keep the old prototype in the lab, never publish it accidentally."""
+    if not request.user.is_active or not request.user.is_staff:
+        return HttpResponseForbidden()
+    from .views import arcade
+    request.GET = request.GET.copy()
+    request.GET["admin_test"] = ArcadeSettings.Game.MINESWEEPER
+    return arcade(request)
+
+
 @require_GET
 def leaderboard(request, game_key="flappy"):
     return JsonResponse(board(request.user, game_key))
@@ -254,12 +266,22 @@ def control(request):
                 settings.public_enabled = False
                 settings.save(update_fields=("public_enabled", "updated_at"))
                 messages.success(request, "Соревновательный зачёт приостановлен. Глобальные рекорды продолжают сохраняться.")
+            elif request.POST.get("action") not in {"select", "publish"}:
+                messages.error(request, "Неизвестное действие.")
             elif key not in GAMES or not event:
                 messages.error(request, "Выбери игру и этап с будущим дедлайном.")
             elif locked and (previous.game_key != key or previous.event_id != event.pk):
                 messages.error(request, "Сменить текущий зачёт можно после старта его гонки: победителю нужен доступ к колесу.")
             elif ArcadeCompetition.objects.filter(event=event).exclude(game_key=key).exists():
                 messages.error(request, "К этому этапу уже привязана другая игра.")
+            elif request.POST.get("action") == "select":
+                changed = settings.active_game != key or settings.competition_event_id != event.pk
+                settings.active_game, settings.competition_event = key, event
+                if changed or not previous:
+                    settings.competition_opened_at = None
+                    settings.public_enabled = False
+                settings.save()
+                messages.success(request, "Выбор сохранён. Нажми «Открыть участникам», когда будешь готов.")
             else:
                 contest, _ = ArcadeCompetition.objects.get_or_create(event=event, defaults={"game_key": key, "opened_at": now})
                 settings.active_game, settings.competition_event = key, event

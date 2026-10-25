@@ -1,0 +1,11 @@
+{% extends 'leagues/base.html' %}
+{% block league_content %}
+<header class="leagues-heading"><p class="leagues-kicker">НОВЫЙ ПАДДОК</p><h1>Создать лигу</h1><p>Выберите стартовый этап и правила. Уже прошедшие Гран-при в новый зачёт не попадут.</p></header>
+<div class="leagues-create-grid"><form method="post" class="leagues-panel leagues-form">{% csrf_token %}{{ form.non_field_errors }}
+  <label for="{{ form.name.id_for_label }}">Название лиги</label>{{ form.name }}{{ form.name.errors }}
+  <label for="{{ form.start_event.id_for_label }}">Первый зачётный Гран-при</label>{{ form.start_event }}{{ form.start_event.errors }}
+  <p class="leagues-help">В списке только этапы с открытым дедлайном. Если этапов нет, администратору нужно добавить календарь.</p>
+  <fieldset><legend>Правила</legend>{{ form.ruleset }}{{ form.ruleset.errors }}</fieldset>
+  <button class="leagues-button" type="submit">Создать и пригласить друзей ↗</button>
+</form><aside class="leagues-panel leagues-explainer"><span class="leagues-kicker">КАК ЭТО РАБОТАЕТ</span><h2>Прогноз один.<br>Соперники — ваши.</h2><dl><dt>Классика</dt><dd>Только объективные прогнозы. Честное сравнение без дополнительных бонусов.</dd><dt>Паддок</dt><dd>Те же прогнозы плюс крейзи: модератор вашей лиги решает, засчитать ли дополнительные 5 очков.</dd><dt>Вступили позже?</dt><dd>Ваш зачёт начнётся с первого доступного этапа после вступления — без прошлых очков.</dd></dl><p class="leagues-help">Дуэли и колесо в новые лиги перенесём отдельно. В прежней компании они продолжают работать.</p></aside></div>
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends 'leagues/base.html' %}
+{% block league_content %}
+<header class="leagues-hero"><div><p class="leagues-kicker">FASTLAP · PRIVATE PADDOCK</p><h1>Своя компания.<br><em>Своя борьба.</em></h1><p>Один прогноз на Гран-при. Несколько лиг с друзьями — и отдельный зачёт в каждой.</p></div><a class="leagues-button" href="{% url 'league:friend_league_create' %}">Создать лигу <span>↗</span></a></header>
+<div class="leagues-section-title"><h2>Мои лиги</h2><span>Только для участников</span></div>
+<div class="leagues-grid">{% for item in page %}<a class="leagues-card" href="{% url 'league:friend_league' item.league_id %}?year={{ item.season.year }}">
+  <div class="leagues-card-meta"><span>{{ item.season.year }}</span><span>{{ item.get_ruleset_display }}</span></div><div class="leagues-mark" aria-hidden="true">{{ item.league.name|first|upper }}</div><h3>{{ item.league.name }}</h3><p>Участников: {{ item.member_count }} · старт с R{{ item.start_event.round_number }}</p><div class="leagues-card-foot"><span>{{ item.start_event.name }}</span><span>Открыть ↗</span></div>
+</a>{% empty %}<section class="leagues-empty"><span class="leagues-empty-mark" aria-hidden="true">01</span><h2>Ваша первая лига</h2><p>Создайте свой паддок или попросите друга прислать приглашение. Начать можно с любого будущего Гран-при.</p><a class="leagues-button" href="{% url 'league:friend_league_create' %}">Собрать друзей ↗</a></section>{% endfor %}</div>
+{% if page.has_other_pages %}<nav class="leagues-pagination" aria-label="Страницы лиг">{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}">← Назад</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?page={{ page.next_page_number }}">Далее →</a>{% endif %}</nav>{% endif %}
+<aside class="leagues-note">Ваша прежняя компания продолжает играть как раньше — в разделе «Таблица». Здесь создаются новые независимые лиги.</aside>
+{% endblock %}

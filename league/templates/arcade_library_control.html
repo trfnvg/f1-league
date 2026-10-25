@@ -20,8 +20,8 @@
   {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
   <form method="post" class="card bg-dark p-4 my-4">
     {% csrf_token %}
-    <label for="game">Игра</label>
-    <select name="active_game" id="game" class="form-select mb-3">
+    <label for="arcade-game-select">Игра</label>
+    <select name="active_game" id="arcade-game-select" class="form-select mb-3">
       {% for key, game in games %}<option value="{{ key }}"{% if settings.active_game == key %} selected{% endif %}>{{ game.title }}</option>{% endfor %}
     </select>
     <label for="event">Этап</label>
@@ -30,7 +30,8 @@
       {% for event in events %}<option value="{{ event.pk }}"{% if event.pk == settings.competition_event_id %} selected{% endif %}>R{{ event.round_number }} · {{ event.name }} · {{ event.deadline|date:'d.m H:i' }}</option>{% endfor %}
     </select>
     <div class="d-flex flex-wrap gap-3">
-      <button class="btn btn-danger" name="action" value="publish">Открыть соревнование</button>
+      <button class="btn btn-outline-light" name="action" value="select">Сохранить выбор</button>
+      <button class="btn btn-danger" name="action" value="publish">Открыть участникам</button>
       <button class="btn btn-outline-light" name="action" value="close">Приостановить зачёт</button>
     </div>
   </form>
@@ -42,6 +43,7 @@
   </article>
   {% endfor %}
   <h2>Тестировать без записи результатов</h2>
+  <p><a href="{% url 'league:arcade_minesweeper_preview' %}">Сапёр · прежний прототип ↗</a></p>
   <div class="d-flex flex-wrap gap-3">
     {% for key, game in games %}<a class="btn btn-outline-info" href="{% url 'league:arcade_game' key %}?admin_test=1&flight=1">{{ game.title }} ↗</a>{% endfor %}
   </div>

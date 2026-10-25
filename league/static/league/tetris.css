@@ -60,12 +60,16 @@
 .tetris-track-lights > div + div { left: auto; right: -10px; }
 .tetris-track-lights i { width: 5px; height: 5px; display: block; border-radius: 50%; background: #613035; }
 .tetris-track-lights.is-celebrating { opacity: 1; }
+.tetris-track-lights::before { content: ''; position: absolute; inset: -2px; border: 1px solid #f4d396; opacity: 0; pointer-events: none; }
+.tetris-track-lights.is-celebrating::before { animation: tetris-pole-frame 850ms ease-out both; }
+@keyframes tetris-pole-frame { 0% { opacity: 0; } 16% { opacity: .85; box-shadow: 0 0 12px #e9bc6640,inset 0 0 8px #e9bc6624; } 100% { opacity: 0; box-shadow: none; } }
 .is-celebrating i { animation: tetris-race-light 780ms ease-out both; }
 .is-celebrating i:nth-child(2) { animation-delay: 45ms; }
 .is-celebrating i:nth-child(3) { animation-delay: 90ms; }
 .is-celebrating i:nth-child(4) { animation-delay: 135ms; }
 .is-celebrating i:nth-child(5) { animation-delay: 180ms; }
 .tetris-track-lights.is-paused i { animation-play-state: paused; }
+.tetris-track-lights.is-paused::before { animation-play-state: paused; }
 @keyframes tetris-race-light { 0%{background:#613035;box-shadow:none} 18%,65%{background:#ff7770;box-shadow:0 0 5px #ee5458,0 0 10px #ee545866} 100%{background:#613035;box-shadow:none} }
 .tetris-telemetry { width: 108px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; gap: 12px; }
 .tetris-stat { background: #090d14; border: 1px solid #303946; border-radius: 4px; padding: 10px; }
@@ -139,3 +143,4 @@ body.tetris-fullscreen { overflow: hidden; }
 @media (prefers-reduced-motion:reduce) { .tetris-line-message.is-visible { animation: none; opacity: 1; } }
 @media (prefers-reduced-motion:reduce) { .tetris-scenery > div, .tetris-route i { transition: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating i { animation: none; background: #db7773; box-shadow: none; } }
+@media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating::before { animation: none; opacity: .35; box-shadow: none; } }

@@ -28,15 +28,10 @@
       <div>
         <span class="jury-admin-label">ГОЛОСОВАНИЕ</span>
         <strong>{% if vote_is_open %}Идёт{% elif vote_is_final %}Завершено{% else %}Не началось{% endif %}</strong>
-        <small>R{{ jury_event.round_number }} · {{ jury_event.name }} · {{ vote_total }} голосов</small>
+        <small>R{{ jury_event.round_number }} · {{ jury_event.name }} · {{ vote_total }} голосов{% if vote_is_open %} · автозавершение {{ jury_event.deadline|date:"d.m.Y H:i" }} + 12 ч{% endif %}</small>
       </div>
       {% if vote_is_open %}
-        <form method="post" action="{% url 'league:close_crazy_vote' event_id=jury_event.id %}" onsubmit="return confirm('Завершить голосование Paddock Jury сейчас? После этого изменить решение будет нельзя.');">
-          {% csrf_token %}
-          <button class="jury-admin-close-button" type="submit">Завершить голосование</button>
-        </form>
-      {% elif jury_event.crazy_vote_closed_at %}
-        <span class="jury-admin-closed-note">Закрыто администратором · {{ jury_event.crazy_vote_closed_at|date:"d.m.Y H:i" }}</span>
+        <span class="jury-admin-closed-note">Итог посчитается автоматически через 12 часов после дедлайна.</span>
       {% endif %}
     </section>
 

@@ -59,18 +59,35 @@ async function checkFeedback(page,name) {
     for(let y=16;y<20;y++){g.board[y].fill('J');g.board[y][5]=null;}
     g.piece={type:'I',matrix:[[1],[1],[1],[1]],x:5,y:16};
     g.score=0;g.lines=0;g.level=1;g.clearSerial=0;g.lockSerial=0;g.lastLock=null;
-    window.__feedback.reset();g.revision++;
+    window.__holdClear=true;window.__feedback.reset();g.revision++;
   });
   await page.locator('#tetris-canvas').focus();await page.keyboard.press('Enter');
+  await page.waitForFunction(()=>window.__game.phase==='clearing' && window.__feedback.charge?.rows.length===4);
+  await page.evaluate(()=>{window.__game.clearClock=90;window.__game.revision++;});await nextFrame();
+  const sweep=await page.evaluate(()=>{
+    const c=document.getElementById('tetris-feedback'),ctx=c.getContext('2d');
+    const alpha=(x,y)=>ctx.getImageData(Math.floor(x*c.width/320),Math.floor(y*c.height/640),1,1).data[3];
+    return {row:alpha(180,530),top:alpha(180,300),score:window.__game.score,clock:window.__feedback.charge.age};
+  });
+  assert.ok(sweep.row>20,`${name}: real canvas light pass illuminates the completed row`);
+  assert.equal(sweep.top,0,'No full-screen flash over the falling-piece area');
+  assert.equal(sweep.score,0);assert.equal(sweep.clock,90,'Visuals do not resolve the game early');
+  if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-line-sweep-${name}.png`)});
+  await page.evaluate(()=>{window.__holdClear=false;});
   await page.waitForFunction(()=>window.__game.clearSerial===1 && window.__feedback.chips.length>0);
   await page.evaluate(()=>{
     window.__freezeFeedback=true;window.__feedback.chips.forEach(chip=>chip.age=85);
+    window.__feedback.echoes.forEach(echo=>echo.age=85);
     window.__feedback.dirty=true;window.dispatchEvent(new Event('resize'));
   });
   assert.equal(await page.evaluate(()=>window.__game.score),1200);
   assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>node.classList.contains('is-celebrating')),true);
   assert.equal(await page.locator('#tetris-track-lights i').count(),10);
   assert.equal(await page.locator('#tetris-feedback').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
+  assert.match(await page.locator('#tetris-track-lights').evaluate(node=>getComputedStyle(node,'::before').animationName),/tetris-pole-frame/);
+  await page.evaluate(()=>{window.__game.pause();window.__feedback.observe(window.__game);});
+  assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>getComputedStyle(node,'::before').animationPlayState),'paused');
+  await page.evaluate(()=>{window.__game.pause();window.__feedback.observe(window.__game);});
   const rails=await page.evaluate(()=>{
     const r=node=>node.getBoundingClientRect();
     const machine=r(document.getElementById('tetris-machine')),board=r(document.getElementById('tetris-board'));
@@ -215,6 +232,8 @@ try {
     await page.evaluate(()=>{
       const start=window.PitStack.Game.prototype.start;
       window.PitStack.Game.prototype.start=function(){window.__game=this;return start.call(this);};
+      const update=window.PitStack.Game.prototype.update;
+      window.PitStack.Game.prototype.update=function(...args){if(!(window.__holdClear && this.phase==='clearing'))return update.apply(this,args);};
       const play=window.PitStackAudio.prototype.setPlaying;
       window.PitStackAudio.prototype.setPlaying=function(...args){
         window.__sound=this;(window.__audioEvents??=[]).push({args,stack:new Error().stack});

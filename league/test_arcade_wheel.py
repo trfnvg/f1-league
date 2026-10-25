@@ -29,6 +29,7 @@ from .models import (
     Season,
 )
 from .scoring import _build_event_score_rows
+from .arcade_library import selected_contest
 
 
 TEST_STORAGES = {
@@ -52,6 +53,10 @@ class ArcadeWheelTests(TestCase):
             deadline=self.now - timedelta(hours=1),
             qualifying_datetime=self.now - timedelta(minutes=30),
             race_datetime=self.now + timedelta(hours=2),
+        )
+        ArcadeSettings.objects.filter(pk=1).update(
+            competition_event=self.event,
+            competition_opened_at=self.event.deadline - timedelta(days=2),
         )
         self.winner = User.objects.create_user("arcade-winner")
         self.challenger = User.objects.create_user("challenger")
@@ -77,11 +82,15 @@ class ArcadeWheelTests(TestCase):
         return Prediction.objects.create(event=self.event, user=user, **values)
 
     def _attempt(self, user, score, finished_at):
-        return ArcadeAttempt.objects.create(
+        _, contest = selected_contest()
+        attempt = ArcadeAttempt.objects.create(
             user=user,
+            competition=contest,
             score=score,
             finished_at=finished_at,
         )
+        ArcadeAttempt.objects.filter(pk=attempt.pk).update(started_at=finished_at-timedelta(seconds=30))
+        return attempt
 
     def _result(self):
         return Result.objects.create(
@@ -109,39 +118,49 @@ class ArcadeWheelTests(TestCase):
         self.assertNotEqual(leader, unfinished)
 
     def test_arcade_page_renders_wheel_configuration_and_entry(self):
-        response = self.client.get(reverse("league:arcade"))
+        response = self.client.get(reverse("league:arcade_game", args=["flappy"]))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'id="arcade-canvas"')
-        self.assertContains(response, "Заезды завершены")
+        self.assertContains(response, 'id="arcade-canvas"')
         self.assertContains(response, "Pit Lane")
-        self.assertContains(response, "Сектора колеса")
-        self.assertContains(response, "25% шанс")
+        self.assertContains(response, 'id="arcade-wheel-disc"')
         self.assertContains(response, "arcade-wheel-config")
         self.assertEqual(len(response.context["wheel_sectors"]), 6)
         self.assertEqual(response.context["wheel_sectors"][4]["title"], "Руль в говне")
 
-    def test_game_accepts_runs_before_deadline_and_closes_after_it(self):
+    def test_wheel_remains_available_after_manual_game_close_until_race(self):
+        self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=10))
+        ArcadeSettings.objects.filter(pk=1).update(public_enabled=False)
+        self.client.force_login(self.winner)
+
+        response = self.client.get(reverse("league:arcade_game", args=["flappy"]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["can_spin_wheel"])
+
+    def test_game_closes_contest_after_deadline_but_preserves_global_play(self):
         self.event.deadline = self.now + timedelta(days=1)
         self.event.save(update_fields=("deadline",))
         self.client.force_login(self.winner)
 
-        response = self.client.get(reverse("league:arcade"))
+        response = self.client.get(reverse("league:arcade_game", args=["flappy"]))
         self.assertContains(response, 'id="arcade-canvas"')
         started = self.client.post(reverse("league:arcade_run_start"))
         self.assertEqual(started.status_code, 200)
+        self.assertIsNotNone(ArcadeAttempt.objects.get(pk=started.json()["attempt_id"]).competition_id)
 
         self.event.deadline = self.now - timedelta(seconds=1)
         self.event.save(update_fields=("deadline",))
         response = self.client.get(reverse("league:arcade"))
-        self.assertContains(response, "Заезды завершены")
+        self.assertContains(response, "ЗАЧЁТ ЗАВЕРШЁН")
         self.assertNotContains(response, 'id="arcade-canvas"')
 
-        rejected = self.client.post(reverse("league:arcade_run_start"))
-        self.assertEqual(rejected.status_code, 410)
-        self.assertEqual(ArcadeAttempt.objects.count(), 1)
+        free_play = self.client.post(reverse("league:arcade_run_start"))
+        self.assertEqual(free_play.status_code, 200)
+        self.assertIsNone(ArcadeAttempt.objects.get(pk=free_play.json()["attempt_id"]).competition_id)
+        self.assertEqual(ArcadeAttempt.objects.count(), 2)
 
-    def test_old_deadline_does_not_close_game_before_next_event_deadline(self):
+    def test_game_does_not_switch_to_another_event_automatically(self):
         self.event.race_datetime = self.now - timedelta(minutes=10)
         self.event.save(update_fields=("race_datetime",))
         next_event = Event.objects.create(
@@ -156,17 +175,20 @@ class ArcadeWheelTests(TestCase):
 
         response = self.client.get(reverse("league:arcade"))
 
-        self.assertContains(response, 'id="arcade-canvas"')
+        self.assertEqual(response.status_code, 200)
+        settings = ArcadeSettings.objects.get(pk=1)
+        self.assertEqual(settings.competition_event, self.event)
         self.assertFalse(ArcadeGameClosure.objects.exists())
 
         next_event.deadline = self.now - timedelta(seconds=1)
         next_event.save(update_fields=("deadline",))
         response = self.client.get(reverse("league:arcade"))
 
-        self.assertNotContains(response, 'id="arcade-canvas"')
-        self.assertEqual(response.context["arcade_closed_event"], next_event)
+        self.assertEqual(response.status_code, 200)
+        settings.refresh_from_db()
+        self.assertEqual(settings.competition_event, self.event)
 
-    def test_closure_fixes_deadline_winner_and_rejects_late_result(self):
+    def test_closure_fixes_deadline_winner_while_late_results_are_global_only(self):
         valid_run = self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=5))
         ArcadeAttempt.objects.filter(pk=valid_run.pk).update(
             started_at=self.event.deadline - timedelta(minutes=8),
@@ -175,7 +197,8 @@ class ArcadeWheelTests(TestCase):
         ArcadeAttempt.objects.filter(pk=late_run.pk).update(
             started_at=self.event.deadline - timedelta(minutes=2),
         )
-        unfinished = ArcadeAttempt.objects.create(user=self.winner)
+        _, contest = selected_contest()
+        unfinished = ArcadeAttempt.objects.create(user=self.winner, competition=contest)
         ArcadeAttempt.objects.filter(pk=unfinished.pk).update(
             started_at=self.event.deadline - timedelta(seconds=20),
         )
@@ -184,29 +207,24 @@ class ArcadeWheelTests(TestCase):
 
         response = self.client.get(reverse("league:arcade"))
 
-        self.assertContains(response, "Заезды завершены")
-        self.assertContains(response, "ПОБЕДИТЕЛЬ")
-        self.assertContains(response, "arcade-winner")
-        self.assertContains(response, ">12 ворот")
-        self.assertContains(response, "Лучшие заезды до дедлайна")
-        self.assertEqual(
-            [row["username"] for row in response.context["arcade_records"]],
-            ["arcade-winner"],
-        )
-        self.assertEqual(response.context["arcade_records"][0]["attempts"], 2006)
-        self.assertEqual(response.context["arcade_total_attempts"], 2006)
-        award = ArcadeTrophyAward.objects.get(event=self.event, game_key="pit_lane_flight")
-        self.assertEqual(award.player, self.winner)
-        self.assertEqual(award.attempts, 2006)
+        self.assertContains(response, "ЗАЧЁТ ЗАВЕРШЁН")
+        contest.refresh_from_db()
+        self.assertIsNotNone(contest.frozen_at)
+        self.assertEqual([row["username"] for row in contest.standings], ["arcade-winner"])
+        self.assertEqual(contest.standings[0]["score"], 12)
+        self.assertEqual(contest.standings[0]["attempts"], 2)
+        self.assertEqual(contest.total_attempts, 3)
 
         rejected = self.client.post(
             reverse("league:arcade_run_finish"),
-            data='{"attempt_id": %d, "score": 20}' % unfinished.pk,
+            data='{"attempt_id": %d, "score": 0}' % unfinished.pk,
             content_type="application/json",
         )
-        self.assertEqual(rejected.status_code, 410)
+        self.assertEqual(rejected.status_code, 200)
         unfinished.refresh_from_db()
-        self.assertIsNone(unfinished.score)
+        self.assertEqual(unfinished.score, 0)
+        contest.refresh_from_db()
+        self.assertEqual(contest.standings[0]["score"], 12)
 
     def test_closed_game_does_not_reopen_for_a_later_event(self):
         self._attempt(self.winner, 12, self.event.deadline - timedelta(minutes=5))
@@ -247,14 +265,12 @@ class ArcadeWheelTests(TestCase):
 
         response = self.client.get(reverse("league:arcade"))
 
-        self.assertEqual(response.context["arcade_closed_event"], self.event)
-        closure = ArcadeGameClosure.objects.get(game_key="pit_lane_flight", season_year=2026)
-        self.assertEqual(closure.event, self.event)
-        self.assertEqual(closure.winner, self.winner)
-        self.assertEqual(ArcadeGameClosure.objects.count(), 1)
+        contest = response.context["contest"]
+        self.assertEqual(contest.event, self.event)
+        self.assertEqual(contest.standings[0]["user_id"], self.winner.pk)
         self.assertFalse(ArcadeTrophyAward.objects.filter(event=next_event).exists())
         self.assertEqual(
-            [row["username"] for row in response.context["arcade_records"]],
+            [row["username"] for row in contest.standings],
             ["arcade-winner"],
         )
 

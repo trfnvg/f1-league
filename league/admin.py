@@ -7,7 +7,6 @@ from django.utils.html import format_html
 
 from .models import (
     ArcadeRecord,
-    ArcadeSettings,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
@@ -838,19 +837,6 @@ class ArcadeRecordAdmin(admin.ModelAdmin):
     def reset_selected_records(self, request, queryset):
         count = queryset.update(best_score=0, updated_at=timezone.now())
         self.message_user(request, f"Обнулено рекордов: {count}.")
-
-
-@admin.register(ArcadeSettings)
-class ArcadeSettingsAdmin(admin.ModelAdmin):
-    list_display = ("active_game", "public_enabled", "updated_at")
-    fields = ("active_game", "public_enabled", "updated_at")
-    readonly_fields = ("updated_at",)
-
-    def has_add_permission(self, request):
-        return not ArcadeSettings.objects.filter(pk=1).exists()
-
-    def has_delete_permission(self, request, obj=None):
-        return False
 
 
 @admin.register(MinesweeperAttempt)

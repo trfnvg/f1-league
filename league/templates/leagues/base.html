@@ -1,0 +1,8 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Мои лиги · Fastlap{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/private-leagues.css' %}?v=private-leagues-v1"><meta name="robots" content="noindex,nofollow">{% endblock %}
+{% block content %}<div class="leagues-page">
+  <nav class="leagues-breadcrumb"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a>{% if league %}<span>/</span><a href="{% url 'league:friend_league' league.id %}{% if league_season %}?year={{ league_season.season.year }}{% endif %}">{{ league.name }}</a>{% endif %}</nav>
+  {% block league_content %}{% endblock %}
+</div>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/private-leagues.js' %}?v=private-leagues-v1" defer></script>{% endblock %}

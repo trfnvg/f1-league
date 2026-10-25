@@ -8,6 +8,8 @@ from django.utils import timezone
 from .crazy_jury import (
     CrazyVoteError,
     cast_crazy_prediction_vote,
+    crazy_vote_closes_at,
+    crazy_vote_is_finished,
     crazy_vote_is_open,
     vetoed_crazy_prediction_id,
 )
@@ -54,10 +56,15 @@ class CrazyJuryTests(TestCase):
         self.prediction_a = make_prediction(self.owner_a, self.event, "Test crazy idea Alpha")
         self.prediction_b = make_prediction(self.owner_b, self.event, "Test crazy idea Bravo")
 
-    def test_vote_window_is_only_after_deadline_before_race(self):
+    def test_vote_window_closes_exactly_twelve_hours_after_deadline(self):
+        closes_at = crazy_vote_closes_at(self.event)
         self.assertTrue(crazy_vote_is_open(self.event, self.now))
         self.assertFalse(crazy_vote_is_open(self.event, self.event.deadline - timedelta(seconds=1)))
-        self.assertFalse(crazy_vote_is_open(self.event, self.event.race_datetime))
+        self.assertTrue(crazy_vote_is_open(self.event, closes_at - timedelta(seconds=1)))
+        self.assertTrue(crazy_vote_is_open(self.event, self.event.race_datetime))
+        self.assertFalse(crazy_vote_is_open(self.event, closes_at))
+        self.assertFalse(crazy_vote_is_finished(self.event, closes_at - timedelta(seconds=1)))
+        self.assertTrue(crazy_vote_is_finished(self.event, closes_at))
 
     def test_home_vote_is_anonymous_and_author_mapping_is_hidden_during_vote(self):
         self.client.force_login(self.voter)
@@ -100,25 +107,19 @@ class CrazyJuryTests(TestCase):
         self.assertContains(response, self.owner_a.username)
         self.assertContains(response, self.voter.username)
 
-    def test_admin_can_close_vote_and_freeze_veto_before_race(self):
-        admin = User.objects.create_superuser("jury-admin", "admin@example.com", "test")
+    def test_vote_is_automatically_finalized_and_news_published_after_twelve_hours(self):
         CrazyPredictionVote.objects.create(
             event=self.event,
             voter=self.voter,
             target_prediction=self.prediction_a,
         )
-        self.client.force_login(admin)
-
-        response = self.client.post(
-            reverse("league:close_crazy_vote", args=(self.event.id,)),
-        )
-
-        self.assertEqual(response.status_code, 302)
+        self.event.deadline = timezone.now() - timedelta(hours=12, seconds=1)
+        self.event.save(update_fields=("deadline",))
         self.event.refresh_from_db()
-        self.assertIsNotNone(self.event.crazy_vote_closed_at)
-        self.assertFalse(crazy_vote_is_open(self.event, self.now))
+        self.assertIsNone(self.event.crazy_vote_closed_at)
+        self.assertFalse(crazy_vote_is_open(self.event, timezone.now()))
         self.assertEqual(
-            vetoed_crazy_prediction_id(self.event, now=self.now),
+            vetoed_crazy_prediction_id(self.event, now=timezone.now()),
             self.prediction_a.id,
         )
 
@@ -137,6 +138,8 @@ class CrazyJuryTests(TestCase):
         self.assertContains(event_page, self.owner_a.username)
         self.assertContains(event_page, self.voter.username)
 
+        admin = User.objects.create_superuser("jury-admin", "admin@example.com", "test")
+        self.client.force_login(admin)
         audit = self.client.get(reverse("league:paddock_jury_admin"), {"event": self.event.id})
         self.assertContains(audit, "Завершено")
         self.assertContains(audit, "Исключён предикт")
@@ -163,7 +166,7 @@ class CrazyJuryTests(TestCase):
         CrazyPredictionVote.objects.create(event=self.event, voter=self.voter, target_prediction=self.prediction_a)
         CrazyPredictionVote.objects.create(event=self.event, voter=voter_b, target_prediction=self.prediction_b)
 
-        closed_at = self.event.race_datetime
+        closed_at = crazy_vote_closes_at(self.event)
         self.assertIsNone(vetoed_crazy_prediction_id(self.event, now=closed_at))
 
         CrazyPredictionVote.objects.create(event=self.event, voter=voter_c, target_prediction=self.prediction_a)
@@ -196,7 +199,8 @@ class CrazyJuryTests(TestCase):
 
         self.event.status = Event.Status.LOCKED
         self.event.race_datetime = self.now - timedelta(seconds=1)
-        self.event.save(update_fields=("status", "race_datetime"))
+        self.event.deadline = self.now - timedelta(hours=12, seconds=1)
+        self.event.save(update_fields=("status", "race_datetime", "deadline"))
         rows, outcomes = _build_event_score_rows(self.event)
         row_a = next(row for row in rows if row["user_id"] == self.owner_a.id)
         self.assertEqual(row_a["breakdown"]["Crazy Prediction · вето паддока"], 0)

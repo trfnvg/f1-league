@@ -1,10 +1,19 @@
 import random
+from datetime import timedelta
 
 from django.db import transaction
 from django.db.models import Count
 from django.utils import timezone
 
 from .models import CrazyPredictionVote, Event, Prediction
+
+CRAZY_VOTE_DURATION = timedelta(hours=12)
+
+
+def crazy_vote_closes_at(event):
+    if not event or not event.deadline:
+        return None
+    return event.deadline + CRAZY_VOTE_DURATION
 
 
 class CrazyVoteError(ValueError):
@@ -17,10 +26,8 @@ def crazy_vote_is_open(event, now=None):
     now = now or timezone.now()
     return bool(
         event
-        and event.status != Event.Status.SCORED
-        and not event.crazy_vote_closed_at
-        and event.race_datetime
-        and event.deadline <= now < event.race_datetime
+        and event.deadline
+        and event.deadline <= now < crazy_vote_closes_at(event)
     )
 
 
@@ -30,11 +37,8 @@ def crazy_vote_is_finished(event, now=None):
     now = now or timezone.now()
     return bool(
         event
-        and (
-            event.status == Event.Status.SCORED
-            or event.crazy_vote_closed_at
-            or (event.race_datetime and now >= event.race_datetime)
-        )
+        and event.deadline
+        and now >= crazy_vote_closes_at(event)
     )
 
 
@@ -85,7 +89,7 @@ def cast_crazy_prediction_vote(event, voter, target_prediction_id, now=None):
     now = now or timezone.now()
     locked_event = Event.objects.select_for_update().get(pk=event.pk)
     if not crazy_vote_is_open(locked_event, now):
-        raise CrazyVoteError("Голосование закрыто: оно проходит после дедлайна и до старта гонки.")
+        raise CrazyVoteError("Голосование закрыто: оно длится ровно 12 часов после дедлайна предиктов.")
     if not voter.is_active or voter.is_staff:
         raise CrazyVoteError("Голосовать могут только участники лиги.")
 
@@ -159,6 +163,7 @@ def crazy_jury_context(event, user, now=None):
 
     return {
         "event": event,
+        "closes_at": crazy_vote_closes_at(event),
         "is_open": is_open,
         "eligible": eligible,
         "candidate_count": len(all_candidates),

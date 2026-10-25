@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count, F, Min, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
@@ -50,6 +51,7 @@ from .models import (
     WildcardSettings,
 )
 from .home_events import select_featured_event
+from .prediction_submission import save_shared_prediction
 from .services import (
     build_achievements,
     build_activity_feed,
@@ -69,7 +71,6 @@ from .arcade_rewards import (
     WHEEL_PRIZE_BY_KEY,
     WHEEL_SECTORS,
     activate_event_wheel_prize,
-    arcade_wheel_event,
     available_va_bank_fields,
     best_event_arcade_attempt,
     award_due_arcade_trophies,
@@ -142,8 +143,138 @@ def _get_arcade_settings():
     return ArcadeSettings.objects.filter(pk=1).first() or ArcadeSettings()
 
 
+def _award_legacy_flappy_trophy(season_year, now=None):
+    """Keep old Pit Lane Flight trophy records without awarding them for other games."""
+    if _get_arcade_settings().active_game == ArcadeSettings.Game.FLAPPY:
+        return award_due_arcade_trophies(season_year, now=now)
+    return 0
+
+
 def _arcade_is_visible_to_user(request, arcade_settings):
-    return bool(arcade_settings.public_enabled or request.user.is_staff)
+    if request.user.is_staff:
+        return True
+    event = _arcade_competition_event(
+        get_selected_season(request).year,
+        arcade_settings,
+        timezone.now(),
+    )
+    now = timezone.now()
+    if not event or (event.race_datetime and event.race_datetime <= now):
+        return False
+    if arcade_settings.public_enabled:
+        return True
+    return bool(
+        arcade_settings.competition_opened_at
+        and event.deadline <= now
+        and wheel_window_is_open(event, now)
+    )
+
+
+def _arcade_competition_event(season_year, arcade_settings, now=None):
+    """Use only the event explicitly selected by an administrator."""
+    event = arcade_settings.competition_event
+    return (
+        event
+        if event
+        and event.season_year == season_year
+        and arcade_settings.competition_opened_at
+        else None
+    )
+
+
+def _arcade_is_admin_test(request):
+    test_game = request.GET.get("admin_test", "")
+    return bool(
+        request.user.is_staff
+        and (test_game == "1" or test_game in ArcadeSettings.Game.values)
+    )
+
+
+def _arcade_game_access_allowed(request, arcade_settings, game_key):
+    if _arcade_is_admin_test(request):
+        return True
+    return (
+        _arcade_is_visible_to_user(request, arcade_settings)
+        and arcade_settings.active_game == game_key
+    )
+
+
+def _arcade_scoring_is_open(request):
+    if _arcade_is_admin_test(request):
+        return True
+    now = timezone.now()
+    arcade_settings = _get_arcade_settings()
+    if not arcade_settings.public_enabled and request.user.is_staff:
+        return True
+    event = _arcade_competition_event(
+        get_selected_season(request).year,
+        arcade_settings,
+        now,
+    )
+    return bool(
+        arcade_settings.public_enabled
+        and event
+        and arcade_settings.competition_opened_at
+        and arcade_settings.competition_opened_at <= now < event.deadline
+    )
+
+
+def _arcade_wheel_context(request, season, now, game_key, wheel_event=None):
+    wheel_event = wheel_event or _arcade_competition_event(season.year, _get_arcade_settings(), now)
+    wheel_leader = best_event_arcade_attempt(
+        wheel_event,
+        through=now,
+        game_key=game_key,
+        opened_at=_get_arcade_settings().competition_opened_at,
+    ) if wheel_event else None
+    wheel_spin = (
+        ArcadeWheelSpin.objects.select_related("winner", "target_user")
+        .filter(event=wheel_event)
+        .first()
+        if wheel_event else None
+    )
+    wheel_targets = []
+    crazy_targets = []
+    wheel_prediction_fields = []
+    if wheel_event and request.user.is_authenticated:
+        wheel_targets = list(
+            Prediction.objects.filter(
+                event=wheel_event,
+                user__is_active=True,
+                user__is_staff=False,
+            )
+            .exclude(user=request.user)
+            .select_related("user")
+            .order_by("user__username")
+        )
+        crazy_targets = [item for item in wheel_targets if (item.crazy_prediction or "").strip()]
+        wheel_prediction_fields = available_va_bank_fields(wheel_event, request.user, now=now)
+    wheel_open = wheel_window_is_open(wheel_event, now)
+    return {
+        "wheel_event": wheel_event,
+        "arcade_game_key": game_key,
+        "wheel_leader": wheel_leader,
+        "wheel_spin": wheel_spin,
+        "wheel_prize": WHEEL_PRIZE_BY_KEY.get(wheel_spin.prize) if wheel_spin else None,
+        "wheel_sectors": list(WHEEL_SECTORS),
+        "wheel_targets": wheel_targets,
+        "crazy_targets": crazy_targets,
+        "wheel_prediction_fields": wheel_prediction_fields,
+        "wheel_open": wheel_open,
+        "can_spin_wheel": bool(
+            wheel_open and wheel_event and wheel_event.deadline <= now
+            and wheel_leader and request.user.is_authenticated
+            and wheel_leader.user_id == request.user.id and wheel_spin is None
+        ),
+        "can_activate_wheel": bool(
+            wheel_spin and request.user.is_authenticated
+            and wheel_spin.winner_id == request.user.id
+            and not wheel_spin.activated_at and wheel_open
+        ),
+        "podium_edit_open": bool(wheel_event and podium_edit_is_open(wheel_event, now)),
+        "driver_choices": DRIVER_CHOICES,
+        "now": now,
+    }
 
 
 def _current_arcade_week_start():
@@ -155,7 +286,7 @@ def _minesweeper_leaderboard_data(user, week_start=None):
     week_start = week_start or _current_arcade_week_start()
     attempts = MinesweeperAttempt.objects.filter(week_start=week_start)
     records = list(
-        attempts.values("user_id", "user__username")
+        attempts.filter(user__is_staff=False).values("user_id", "user__username")
         .annotate(
             attempts=Count("id"),
             wins=Count("id", filter=Q(completed=True)),
@@ -185,7 +316,7 @@ def _minesweeper_leaderboard_data(user, week_start=None):
         "attempts": own_attempts.count(),
         "wins": own_attempts.filter(completed=True).count(),
         "best_time_ms": own_attempts.aggregate(best=Min("elapsed_ms"))["best"],
-        "total_attempts": attempts.count(),
+        "total_attempts": attempts.filter(user__is_staff=False).count(),
         "week_start": week_start.isoformat(),
     }
 
@@ -194,9 +325,9 @@ def minesweeper_leaderboard(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
-    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
+    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER and not _arcade_is_admin_test(request):
         return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
     return JsonResponse(_minesweeper_leaderboard_data(request.user))
 
@@ -205,45 +336,89 @@ def arcade(request):
     arcade_settings = _get_arcade_settings()
     if not _arcade_is_visible_to_user(request, arcade_settings):
         return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
+    requested_test_game = request.GET.get("admin_test", "")
+    arcade_admin_test = bool(
+        request.user.is_staff
+        and requested_test_game in ArcadeSettings.Game.values
+    )
+    if arcade_admin_test:
+        arcade_settings.active_game = requested_test_game
+    arcade_settings_admin_url = reverse("league:arcade_control")
+    season = get_selected_season(request)
+    now = timezone.now()
 
     if arcade_settings.active_game == ArcadeSettings.Game.MINESWEEPER:
         board_data = _minesweeper_leaderboard_data(request.user)
+        wheel_context = _arcade_wheel_context(
+            request, season, now, ArcadeSettings.Game.MINESWEEPER,
+            _arcade_competition_event(season.year, arcade_settings, now),
+        ) if not arcade_admin_test else {}
         return render(request, "arcade_minesweeper.html", {
             "minesweeper_attempts": board_data["attempts"],
             "minesweeper_records": board_data["records"],
             "minesweeper_total_attempts": board_data["total_attempts"],
             "minesweeper_week_start": board_data["week_start"],
-            "arcade_admin_preview": not arcade_settings.public_enabled,
-            "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
-            "minesweeper_attempt_start_url": reverse("league:minesweeper_attempt_start"),
-            "minesweeper_attempt_finish_url": reverse("league:minesweeper_attempt_finish"),
-            "minesweeper_leaderboard_url": reverse("league:minesweeper_leaderboard"),
+            "arcade_admin_preview": not arcade_settings.public_enabled or arcade_admin_test,
+            "arcade_test_mode": arcade_admin_test,
+            "arcade_scoring_open": _arcade_scoring_is_open(request),
+            "arcade_settings_admin_url": arcade_settings_admin_url,
+            "arcade_game_key": ArcadeSettings.Game.MINESWEEPER,
+            "minesweeper_attempt_start_url": reverse("league:minesweeper_attempt_start") + ("?admin_test=1" if arcade_admin_test else ""),
+            "minesweeper_attempt_finish_url": reverse("league:minesweeper_attempt_finish") + ("?admin_test=1" if arcade_admin_test else ""),
+            "minesweeper_leaderboard_url": reverse("league:minesweeper_leaderboard") + ("?admin_test=1" if arcade_admin_test else ""),
+            **wheel_context,
         })
 
     if arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP:
         doodle_board = _doodle_leaderboard_data(request.user)
+        wheel_context = _arcade_wheel_context(
+            request, season, now, ArcadeSettings.Game.DOODLE_JUMP,
+            _arcade_competition_event(season.year, arcade_settings, now),
+        ) if not arcade_admin_test else {}
         return render(request, "arcade_doodle_jump.html", {
-            "arcade_admin_preview": not arcade_settings.public_enabled,
-            "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+            "arcade_admin_preview": not arcade_settings.public_enabled or arcade_admin_test,
+            "arcade_test_mode": arcade_admin_test,
+            "arcade_scoring_open": _arcade_scoring_is_open(request),
+            "arcade_settings_admin_url": arcade_settings_admin_url,
+            "arcade_game_key": ArcadeSettings.Game.DOODLE_JUMP,
             "doodle_records": doodle_board["records"],
             "doodle_total_attempts": doodle_board["total_attempts"],
-            "doodle_attempt_start_url": reverse("league:doodle_attempt_start"),
-            "doodle_attempt_finish_url": reverse("league:doodle_attempt_finish"),
-            "doodle_leaderboard_url": reverse("league:doodle_leaderboard"),
+            "doodle_attempt_start_url": reverse("league:doodle_attempt_start") + ("?admin_test=1" if arcade_admin_test else ""),
+            "doodle_attempt_finish_url": reverse("league:doodle_attempt_finish") + ("?admin_test=1" if arcade_admin_test else ""),
+            "doodle_leaderboard_url": reverse("league:doodle_leaderboard") + ("?admin_test=1" if arcade_admin_test else ""),
+            **wheel_context,
         })
 
-    season = get_selected_season(request)
-    now = timezone.now()
-    award_due_arcade_trophies(season.year, now=now)
+    if not arcade_admin_test and arcade_settings.active_game == ArcadeSettings.Game.FLAPPY:
+        award_due_arcade_trophies(season.year, now=now)
     board_data = _arcade_leaderboard_data(request.user)
-    arcade_closure, _ = get_or_create_arcade_game_closure(season.year, now=now)
-    arcade_closed_event = arcade_closure.event if arcade_closure else None
+    wheel_event = _arcade_competition_event(season.year, arcade_settings, now)
+    arcade_closure = None
+    if not arcade_admin_test:
+        arcade_closure, _ = get_or_create_arcade_game_closure(season.year, now=now)
+    arcade_closed_event = (
+        arcade_closure.event
+        if arcade_closure
+        and arcade_settings.active_game == ArcadeSettings.Game.FLAPPY
+        and wheel_event
+        and arcade_closure.event_id == wheel_event.id
+        else None
+    )
     arcade_own_closed_record = None
     if arcade_closed_event:
-        board_data = closed_event_arcade_leaderboard(arcade_closed_event, request.user)
+        board_data = closed_event_arcade_leaderboard(
+            arcade_closed_event,
+            request.user,
+            opened_at=arcade_settings.competition_opened_at,
+        )
         arcade_own_closed_record = board_data["own_record"]
-    wheel_event = arcade_closed_event or arcade_wheel_event(season.year, now)
-    wheel_leader = best_event_arcade_attempt(wheel_event, through=now) if wheel_event else None
+    arcade_scoring_open = _arcade_scoring_is_open(request)
+    wheel_leader = best_event_arcade_attempt(
+        wheel_event,
+        through=now,
+        game_key=arcade_settings.active_game,
+        opened_at=arcade_settings.competition_opened_at,
+    ) if wheel_event else None
     wheel_spin = (
         ArcadeWheelSpin.objects.select_related("winner", "target_user")
         .filter(event=wheel_event)
@@ -293,15 +468,15 @@ def arcade(request):
         "arcade_own_record": own_record,
         "arcade_own_rank": board_data["rank"],
         "arcade_total_attempts": board_data["total_attempts"],
-        "arcade_closure": arcade_closure,
-        "arcade_closed_event": arcade_closed_event,
-        "arcade_own_closed_record": arcade_own_closed_record,
         "now": now,
         "driver_choices": DRIVER_CHOICES,
         "wheel_event": wheel_event,
+        "arcade_closure": arcade_closure if arcade_closed_event else None,
+        "arcade_closed_event": arcade_closed_event,
+        "arcade_own_closed_record": arcade_own_closed_record,
         "arcade_next_deadline": (
             wheel_event
-            if not arcade_closed_event and wheel_event and wheel_event.deadline > now
+            if wheel_event and wheel_event.deadline > now
             else None
         ),
         "wheel_leader": wheel_leader,
@@ -321,37 +496,122 @@ def arcade(request):
             and wheel_open
         ),
         "podium_edit_open": bool(wheel_event and podium_edit_is_open(wheel_event, now)),
-        "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
+        "arcade_settings_admin_url": arcade_settings_admin_url,
+        "arcade_game_key": arcade_settings.active_game,
+        "arcade_admin_preview": not arcade_settings.public_enabled or arcade_admin_test,
+        "arcade_test_mode": arcade_admin_test,
+        "arcade_scoring_open": arcade_scoring_open,
     })
 
 
 @login_required
 def arcade_doodle_jump(request):
     arcade_settings = _get_arcade_settings()
-    if not request.user.is_staff and not (
+    if request.user.is_staff:
+        return redirect(f"{reverse('league:arcade')}?admin_test={ArcadeSettings.Game.DOODLE_JUMP}")
+    if not (
         arcade_settings.public_enabled
         and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
     ):
         return HttpResponseForbidden("Эта страница доступна только администраторам.")
-    doodle_board = _doodle_leaderboard_data(request.user)
-    return render(request, "arcade_doodle_jump.html", {
-        "arcade_admin_preview": not (
-            arcade_settings.public_enabled
-            and arcade_settings.active_game == ArcadeSettings.Game.DOODLE_JUMP
+    return redirect("league:arcade")
+
+
+@login_required
+def arcade_control(request):
+    if not request.user.is_staff:
+        return HttpResponseForbidden("Управление аркадой доступно только администраторам.")
+    settings, _ = ArcadeSettings.objects.get_or_create(pk=1)
+    season = get_selected_season(request)
+    now = timezone.now()
+    available_events = list(
+        Event.objects.filter(season_year=season.year, deadline__gt=now)
+        .exclude(status=Event.Status.SCORED)
+        .order_by("round_number")
+    )
+    if request.method == "POST":
+        action = request.POST.get("action")
+        game_key = request.POST.get("active_game", settings.active_game)
+        event_id = request.POST.get("competition_event", "")
+        event = next((item for item in available_events if str(item.pk) == event_id), None)
+        changed = (
+            game_key != settings.active_game
+            or (event.pk if event else None) != settings.competition_event_id
+        )
+        locked_event = settings.competition_event
+        contest_locked = bool(
+            settings.competition_opened_at
+            and locked_event
+            and (not locked_event.race_datetime or now < locked_event.race_datetime)
+        )
+        if game_key not in ArcadeSettings.Game.values:
+            messages.error(request, "Выбери игру из списка.")
+        elif action in ("select", "publish") and not event:
+            messages.error(request, "Выбери этап с ещё не наступившим дедлайном.")
+        elif action in ("select", "publish") and changed and contest_locked:
+            messages.error(
+                request,
+                "Текущий этап уже закреплён за открытой аркадой. Сменить игру или этап можно после старта гонки этого этапа, чтобы победитель не потерял доступ к колесу.",
+            )
+        elif action == "select":
+            if settings.public_enabled and changed:
+                messages.error(request, "Сначала закрой текущую аркаду участникам.")
+            else:
+                if changed:
+                    settings.competition_opened_at = None
+                settings.active_game = game_key
+                settings.competition_event = event
+                settings.save(update_fields=("active_game", "competition_event", "competition_opened_at", "updated_at"))
+                messages.success(request, "Игра и этап выбраны. Проверь игру в закрытом режиме перед открытием участникам.")
+        elif action == "publish":
+            if settings.public_enabled and changed:
+                messages.error(request, "Нельзя менять игру или этап в уже открытом зачёте. Сначала закрой его.")
+            elif event.deadline <= now:
+                messages.error(request, "Дедлайн этого этапа уже прошёл — выбери следующий этап.")
+            else:
+                same_contest = (
+                    settings.competition_event_id == event.pk
+                    and settings.active_game == game_key
+                )
+                settings.active_game = game_key
+                settings.competition_event = event
+                if not same_contest or not settings.competition_opened_at:
+                    settings.competition_opened_at = now
+                settings.public_enabled = True
+                settings.save(update_fields=("active_game", "competition_event", "competition_opened_at", "public_enabled", "updated_at"))
+                messages.success(request, f"Аркада открыта для всех. Попытки фиксируются до дедлайна этапа «{event.name}».")
+        elif action == "close":
+            settings.public_enabled = False
+            settings.save(update_fields=("public_enabled", "updated_at"))
+            messages.success(request, "Игра закрыта для новых попыток. После дедлайна победитель всё ещё сможет открыть колесо до старта гонки.")
+        else:
+            messages.error(request, "Неизвестное действие.")
+        return redirect("league:arcade_control")
+
+    selected_event = settings.competition_event
+    return render(request, "arcade_control.html", {
+        "arcade_settings": settings,
+        "arcade_games": ArcadeSettings.Game.choices,
+        "arcade_events": available_events,
+        "arcade_selected_event": selected_event,
+        "arcade_selected_event_expired": bool(
+            selected_event and selected_event.id not in {event.id for event in available_events}
         ),
-        "arcade_settings_admin_url": reverse("admin:league_arcadesettings_change", args=(1,)),
-        "doodle_records": doodle_board["records"],
-        "doodle_total_attempts": doodle_board["total_attempts"],
-        "doodle_attempt_start_url": reverse("league:doodle_attempt_start"),
-        "doodle_attempt_finish_url": reverse("league:doodle_attempt_finish"),
-        "doodle_leaderboard_url": reverse("league:doodle_leaderboard"),
+        "arcade_contest_locked": bool(
+            settings.competition_opened_at
+            and selected_event
+            and (not selected_event.race_datetime or now < selected_event.race_datetime)
+        ),
+        "arcade_test_url": f"{reverse('league:arcade')}?admin_test={settings.active_game}",
+        "arcade_wheel_sectors": list(WHEEL_SECTORS),
+        "driver_choices": DRIVER_CHOICES,
     })
 
 
 def _doodle_leaderboard_data(user):
     records = list(
         DoodleRecord.objects.select_related("user")
-        .filter(best_score__gt=0)
+        .filter(best_score__gt=0, user__is_staff=False)
         .order_by("-best_score", "updated_at", "user__username")[:10]
     )
     rows = [{
@@ -366,7 +626,7 @@ def _doodle_leaderboard_data(user):
         "records": rows,
         "record": own_record.best_score if own_record else 0,
         "attempts": own_record.total_attempts if own_record else 0,
-        "total_attempts": DoodleRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0,
+        "total_attempts": DoodleRecord.objects.filter(user__is_staff=False).aggregate(total=Sum("total_attempts"))["total"] or 0,
         "rank": next((row["rank"] for row in rows if row["is_current_user"]), None),
     }
 
@@ -375,7 +635,7 @@ def doodle_leaderboard(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.DOODLE_JUMP):
         return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
     return JsonResponse(_doodle_leaderboard_data(request.user))
 
@@ -385,8 +645,10 @@ def doodle_attempt_start(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.DOODLE_JUMP):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
     with transaction.atomic():
         DoodleAttempt.objects.filter(
             user=request.user,
@@ -403,8 +665,10 @@ def doodle_attempt_finish(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.DOODLE_JUMP):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id = int(payload.get("attempt_id"))
@@ -437,10 +701,7 @@ def arcade_wheel_test(request):
         return HttpResponseForbidden("Тест колеса доступен только администраторам.")
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
-    return render(request, "arcade_wheel_test.html", {
-        "wheel_sectors": list(WHEEL_SECTORS),
-        "driver_choices": DRIVER_CHOICES,
-    })
+    return redirect("league:arcade_control")
 
 
 @login_required
@@ -450,6 +711,13 @@ def arcade_wheel_spin(request):
     try:
         event_id = int(request.POST.get("event_id", ""))
         event = get_object_or_404(Event, pk=event_id)
+        arcade_settings = _get_arcade_settings()
+        active_event = _arcade_competition_event(
+            get_selected_season(request).year,
+            arcade_settings,
+        )
+        if not active_event or active_event.pk != event.pk:
+            raise ArcadeWheelError("Этот этап не выбран для текущего аркадного зачёта.")
         spin, created = spin_event_wheel(event, request.user)
     except (ValueError, TypeError, ArcadeWheelError) as exc:
         return JsonResponse({"error": str(exc)}, status=400)
@@ -467,6 +735,13 @@ def arcade_wheel_activate(request):
     try:
         event_id = int(request.POST.get("event_id", ""))
         event = get_object_or_404(Event, pk=event_id)
+        arcade_settings = _get_arcade_settings()
+        active_event = _arcade_competition_event(
+            get_selected_season(request).year,
+            arcade_settings,
+        )
+        if not active_event or active_event.pk != event.pk:
+            raise ArcadeWheelError("Этот этап не выбран для текущего аркадного зачёта.")
         spin = activate_event_wheel_prize(event, request.user, request.POST)
     except (ValueError, TypeError, ArcadeWheelError) as exc:
         return JsonResponse({"error": str(exc)}, status=400)
@@ -477,7 +752,8 @@ def arcade_leaderboard(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    game_key = arcade_settings.active_game
+    if not _arcade_game_access_allowed(request, arcade_settings, game_key):
         return HttpResponseForbidden("Аркада сейчас доступна только администраторам.")
     if arcade_settings.active_game == ArcadeSettings.Game.MINESWEEPER:
         return JsonResponse(_minesweeper_leaderboard_data(request.user))
@@ -487,16 +763,12 @@ def arcade_leaderboard(request):
         return JsonResponse({"records": [], "attempts": 0, "wins": 0, "best_time_ms": None})
     season = get_selected_season(request)
     now = timezone.now()
-    award_due_arcade_trophies(season.year, now=now)
-    closure, _ = get_or_create_arcade_game_closure(season.year, now=now)
-    if closure:
-        return JsonResponse(closed_event_arcade_leaderboard(closure.event, request.user))
     return JsonResponse(_arcade_leaderboard_data(request.user))
 
 
 def _arcade_leaderboard_data(user):
     records = list(
-        ArcadeRecord.objects.select_related("user").filter(best_score__gt=0)
+        ArcadeRecord.objects.select_related("user").filter(best_score__gt=0, user__is_staff=False)
         .order_by("-best_score", "updated_at", "user__username")[:10]
     )
     rows = [{
@@ -511,7 +783,7 @@ def _arcade_leaderboard_data(user):
         "records": rows,
         "record": own_record.best_score if own_record else 0,
         "attempts": own_record.total_attempts if own_record else 0,
-        "total_attempts": ArcadeRecord.objects.aggregate(total=Sum("total_attempts"))["total"] or 0,
+        "total_attempts": ArcadeRecord.objects.filter(user__is_staff=False).aggregate(total=Sum("total_attempts"))["total"] or 0,
         "rank": _arcade_rank(own_record) if own_record and own_record.best_score else None,
     }
 
@@ -522,17 +794,10 @@ def arcade_run_start(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.FLAPPY):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
-        return JsonResponse({"error": "Pit Lane Flight сейчас не выбрана как активная аркада."}, status=410)
-    now = timezone.now()
-    closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
-    if closure:
-        return JsonResponse(
-            {"error": "Pit Lane Flight закрыта после дедлайна — результаты зафиксированы."},
-            status=410,
-        )
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт закрыт: он действует только с ручного открытия до дедлайна выбранного этапа."}, status=410)
     with transaction.atomic():
         ArcadeAttempt.objects.filter(
             user=request.user,
@@ -551,17 +816,10 @@ def arcade_run_finish(request):
     if not request.user.is_authenticated:
         return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.FLAPPY):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if arcade_settings.active_game != ArcadeSettings.Game.FLAPPY:
-        return JsonResponse({"error": "Pit Lane Flight сейчас не выбрана как активная аркада."}, status=410)
-    now = timezone.now()
-    closure, _ = get_or_create_arcade_game_closure(get_selected_season(request).year, now=now)
-    if closure:
-        return JsonResponse(
-            {"error": "Pit Lane Flight закрыта после дедлайна — результаты зафиксированы."},
-            status=410,
-        )
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт закрыт: он действует только с ручного открытия до дедлайна выбранного этапа."}, status=410)
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id = int(payload.get("attempt_id"))
@@ -626,10 +884,10 @@ def minesweeper_attempt_start(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
-        return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
 
     attempt = MinesweeperAttempt.objects.create(
         user=request.user,
@@ -646,10 +904,10 @@ def minesweeper_attempt_finish(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
     arcade_settings = _get_arcade_settings()
-    if not _arcade_is_visible_to_user(request, arcade_settings):
+    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if arcade_settings.active_game != ArcadeSettings.Game.MINESWEEPER:
-        return JsonResponse({"error": "Сапёр сейчас не выбран как активная аркада."}, status=410)
+    if not _arcade_scoring_is_open(request):
+        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id = int(payload.get("attempt_id"))
@@ -694,7 +952,7 @@ def _arcade_rank(record):
         updated_at=record.updated_at,
         user__username__lt=record.user.username,
     )
-    return ArcadeRecord.objects.filter(best_score__gt=0).filter(ahead).count() + 1
+    return ArcadeRecord.objects.filter(best_score__gt=0, user__is_staff=False).filter(ahead).count() + 1
 
 
 def _wildcard_payload(assignment):
@@ -714,7 +972,7 @@ def _wildcard_payload(assignment):
 def home(request):
     now = timezone.now()
     season = get_selected_season(request)
-    award_due_arcade_trophies(season.year, now=now)
+    _award_legacy_flappy_trophy(season.year, now=now)
     events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
     upcoming_events = []
     past_events = []
@@ -820,7 +1078,7 @@ def activity_feed_updates(request):
     if request.method != "GET":
         return HttpResponseNotAllowed(["GET"])
     season = get_selected_season(request)
-    award_due_arcade_trophies(season.year, now=timezone.now())
+    _award_legacy_flappy_trophy(season.year, now=timezone.now())
     activity_feed = build_activity_feed(build_leaderboard(season.year))
     html = render_to_string(
         "activity_feed_items.html",
@@ -846,7 +1104,7 @@ def cast_crazy_vote(request, event_id):
     except CrazyVoteError as exc:
         messages.error(request, str(exc))
     else:
-        messages.success(request, "Голос принят. Итоги останутся скрыты до старта гонки.")
+        messages.success(request, "Голос принят. Итог автоматически откроется через 12 часов после дедлайна.")
     return redirect(f"{reverse('league:home')}?season={event.season_year}#crazy-jury")
 
 
@@ -863,7 +1121,7 @@ def paddock_jury_admin(request):
         Event.objects.filter(season_year=season.year)
         .filter(
             Q(crazy_prediction_votes__isnull=False)
-            | Q(deadline__lte=now, race_datetime__gt=now)
+            | Q(deadline__lte=now)
             | Q(crazy_vote_closed_at__isnull=False)
         )
         .distinct()
@@ -927,26 +1185,11 @@ def close_crazy_vote(request, event_id):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
 
-    with transaction.atomic():
-        event = get_object_or_404(Event.objects.select_for_update(), pk=event_id)
-        now = timezone.now()
-        if not crazy_vote_is_open(event, now):
-            messages.warning(request, "Голосование уже закрыто или ещё не началось.")
-        else:
-            event.crazy_vote_closed_at = now
-            event.save(update_fields=("crazy_vote_closed_at",))
-            vetoed_id = vetoed_crazy_prediction_id(event, now)
-            if vetoed_id:
-                target = Prediction.objects.select_related("user").get(pk=vetoed_id)
-                messages.success(
-                    request,
-                    f"Paddock Jury закрыт. Исключён предикт участника {target.user.username}.",
-                )
-            else:
-                messages.success(
-                    request,
-                    "Paddock Jury закрыт. Из-за ничьей или отсутствия голосов предикт не исключён.",
-                )
+    event = get_object_or_404(Event, pk=event_id)
+    messages.info(
+        request,
+        "Paddock Jury завершается автоматически ровно через 12 часов после дедлайна предиктов.",
+    )
 
     return redirect(
         f"{reverse('league:paddock_jury_admin')}?season={event.season_year}&event={event.pk}"
@@ -1107,12 +1350,12 @@ def event_detail(request, event_id: int):
                 messages.error(request, "Дедлайн прошел, прогнозы закрыты.")
             return redirect("league:event_detail", event_id=event.id)
 
-        form = PredictionForm(request.POST, instance=prediction, event=event)
-        if form.is_valid():
-            new_prediction = form.save(commit=False)
-            new_prediction.user = request.user
-            new_prediction.event = event
-            new_prediction.save()
+        try:
+            form, new_prediction = save_shared_prediction(user=request.user, event=event, data=request.POST)
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+            return redirect("league:event_detail", event_id=event.id)
+        if new_prediction:
             messages.success(request, "Прогноз сохранен.")
             return redirect("league:event_detail", event_id=event.id)
     else:
@@ -1665,7 +1908,7 @@ def player_profile(request, user_id: int):
     can_edit_avatar = request.user.is_authenticated and request.user.id == player.id
     season = get_selected_season(request)
     now = timezone.now()
-    award_due_arcade_trophies(season.year, now=now)
+    _award_legacy_flappy_trophy(season.year, now=now)
 
     avatar_form = None
     if request.method == "POST":

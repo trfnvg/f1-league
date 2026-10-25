@@ -256,6 +256,193 @@ class LeagueSeasonEntry(models.Model):
                 raise ValidationError({"first_event": "Нельзя вступить в зачёт после дедлайна этапа."})
 
 
+class GlobalEventScore(models.Model):
+    """Objective event projection; never reuses the legacy Score total."""
+
+    prediction = models.OneToOneField("Prediction", on_delete=models.PROTECT, related_name="global_event_score")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="global_scores")
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="global_event_scores")
+    points = models.PositiveIntegerField(default=0)
+    breakdown = models.JSONField(default=dict, blank=True)
+    rules_version = models.PositiveSmallIntegerField(default=1)
+    input_data = models.JSONField(default=dict, blank=True)
+    input_digest = models.CharField(max_length=64)
+    calculated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("event", "user"), name="global_score_event_user_uniq"),
+            models.CheckConstraint(condition=Q(rules_version__gte=1), name="global_score_version_positive"),
+        ]
+        indexes = [models.Index(fields=("event", "-points", "user"), name="global_score_event_rank_idx")]
+
+    def clean(self):
+        super().clean()
+        if self.prediction_id:
+            if self.user_id != self.prediction.user_id or self.event_id != self.prediction.event_id:
+                raise ValidationError("Общий результат должен соответствовать игроку и этапу базового прогноза.")
+
+
+class LeagueEventRecord(models.Model):
+    """Scope shared by local inputs and projections, not an HTTP permission."""
+
+    entry = models.ForeignKey(LeagueSeasonEntry, on_delete=models.PROTECT, related_name="%(class)s_records")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="%(class)s_records")
+
+    class Meta:
+        abstract = True
+
+    def clean(self):
+        super().clean()
+        if not self.entry_id or not self.event_id:
+            return
+        entry, event = self.entry, self.event
+        league_season = entry.league_season
+        if (entry.membership.league_id != league_season.league_id
+                or league_season.start_event.season_year != league_season.season.year
+                or event.season_year != league_season.season.year
+                or entry.first_event.season_year != event.season_year
+                or event.round_number < max(entry.first_event.round_number, league_season.start_event.round_number)
+                or (not league_season.is_legacy and entry.entered_at >= event.deadline)):
+            raise ValidationError("Игрок не участвует в этом этапе этой лиги.")
+
+
+class LeagueCrazyDecision(LeagueEventRecord):
+    prediction = models.ForeignKey("Prediction", on_delete=models.PROTECT, related_name="local_crazy_decisions")
+    approved = models.BooleanField(default=False)
+    text_digest = models.CharField(max_length=64)
+    reviewed_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="local_crazy_reviews")
+    reviewed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("entry", "event"), name="local_crazy_entry_event_uniq")]
+
+    def clean(self):
+        super().clean()
+        if self.prediction_id and self.entry_id:
+            if self.prediction.event_id != self.event_id or self.prediction.user_id != self.entry.membership.user_id:
+                raise ValidationError("Решение относится к чужому прогнозу.")
+
+
+class LeaguePodiumBonus(LeagueEventRecord):
+    """Trusted reward producers issue a grant; the player may only consume it."""
+
+    source_key = models.CharField(max_length=160)
+    granted_at = models.DateTimeField(default=timezone.now)
+    slot = models.CharField(max_length=2, choices=[("p1", "P1"), ("p2", "P2"), ("p3", "P3")], blank=True)
+    driver = models.CharField(max_length=50, choices=DRIVER_CHOICES, blank=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("entry", "event"), name="local_podium_entry_event_uniq"),
+            models.CheckConstraint(
+                condition=(Q(used_at__isnull=True, slot="", driver="")
+                           | (Q(used_at__isnull=False, slot__in=("p1", "p2", "p3")) & ~Q(driver=""))),
+                name="local_podium_used_consistent",
+            ),
+        ]
+
+
+class LeagueScoreAdjustment(LeagueEventRecord):
+    class Kind(models.TextChoices):
+        DUEL = "duel", "Дуэль"
+        ARCADE = "arcade", "Аркада"
+        WILDCARD = "wildcard", "Личная карта"
+
+    kind = models.CharField(max_length=12, choices=Kind.choices)
+    source_key = models.CharField(max_length=160)
+    points = models.IntegerField()
+    reason = models.CharField(max_length=200)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("entry", "event", "kind", "source_key"), name="local_adjustment_source_uniq"),
+            models.CheckConstraint(condition=Q(kind__in=("duel", "arcade", "wildcard")), name="local_adjustment_kind_valid"),
+        ]
+
+
+class LeagueEventScore(LeagueEventRecord):
+    prediction = models.ForeignKey("Prediction", on_delete=models.PROTECT, related_name="local_event_scores")
+    base_points = models.PositiveIntegerField(default=0)
+    podium_adjustment = models.IntegerField(default=0)
+    crazy_points = models.PositiveSmallIntegerField(default=0)
+    other_adjustment = models.IntegerField(default=0)
+    points = models.IntegerField(default=0)
+    breakdown = models.JSONField(default=dict, blank=True)
+    rules_version = models.PositiveSmallIntegerField(default=1)
+    input_data = models.JSONField(default=dict, blank=True)
+    input_digest = models.CharField(max_length=64)
+    calculated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("entry", "event"), name="local_score_entry_event_uniq"),
+            models.CheckConstraint(condition=Q(rules_version__gte=1), name="local_score_version_positive"),
+            models.CheckConstraint(condition=Q(crazy_points__in=(0, 5)), name="local_score_crazy_points_valid"),
+            models.CheckConstraint(condition=Q(points=F("base_points")+F("podium_adjustment")+F("crazy_points")+F("other_adjustment")), name="local_score_total_consistent"),
+        ]
+        indexes = [models.Index(fields=("event", "-points", "entry"), name="local_score_event_rank_idx")]
+
+    def clean(self):
+        super().clean()
+        if self.prediction_id and self.entry_id:
+            if self.prediction.event_id != self.event_id or self.prediction.user_id != self.entry.membership.user_id:
+                raise ValidationError("Результат относится к чужому прогнозу.")
+
+
+class CompetitionScoreAudit(models.Model):
+    class Action(models.TextChoices):
+        GLOBAL_PROJECTED = "global_projected", "Общий пересчёт"
+        LEAGUE_PROJECTED = "league_projected", "Локальный пересчёт"
+        CRAZY_DECIDED = "crazy_decided", "Решение по крейзи"
+        PODIUM_APPLIED = "podium_applied", "Локальный апдейт подиума"
+
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="competition_score_audits")
+    league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, null=True, blank=True, related_name="score_audits")
+    entry = models.ForeignKey(LeagueSeasonEntry, on_delete=models.PROTECT, null=True, blank=True, related_name="score_audits")
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="competition_score_actions")
+    action = models.CharField(max_length=20, choices=Action.choices)
+    before = models.JSONField(null=True, blank=True)
+    after = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.CheckConstraint(
+            condition=(Q(action="global_projected", entry__isnull=True, league_season__isnull=True)
+                       | Q(action__in=("league_projected", "crazy_decided", "podium_applied"), entry__isnull=False, league_season__isnull=False)),
+            name="competition_audit_scope_valid",
+        )]
+
+    def clean(self):
+        super().clean()
+        if self.entry_id and self.league_season_id and self.entry.league_season_id != self.league_season_id:
+            raise ValidationError("Запись аудита относится к чужой лиге.")
+
+
+class LeagueInvite(models.Model):
+    league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="invites")
+    token_digest = models.CharField(max_length=64, unique=True, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="league_invites")
+    created_at = models.DateTimeField(default=timezone.now)
+    expires_at = models.DateTimeField()
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    uses = models.PositiveIntegerField(default=0)
+
+
+class LeagueActivity(models.Model):
+    league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="activity")
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="league_actions")
+    action = models.CharField(max_length=24, choices=[
+        ("created", "Создание лиги"), ("joined", "Вступление"),
+        ("invite_created", "Создание приглашения"), ("invite_revoked", "Отзыв приглашения"),
+        ("role_changed", "Изменение роли"),
+    ])
+    details = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+
 class EventPhoto(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="photos")
     image = models.ImageField("Фото", upload_to="event_photos/", max_length=255)

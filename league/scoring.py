@@ -1,5 +1,6 @@
 ﻿from django.db import transaction
 from collections import defaultdict
+from functools import partial
 
 from django.db.models import Max
 from django.utils import timezone
@@ -19,6 +20,7 @@ from .models import (
 from .arcade_rewards import va_bank_answer_is_correct
 from .crazy_jury import vetoed_crazy_prediction_id
 from .wildcards import unresolved_wildcard_questions
+from .prediction_rules import calculate_base_points
 
 SEASON_SCORING_WEIGHTS = {
     "hungary_driver_championship_leader": ("Лидер пилотского зачета после Венгрии", 12),
@@ -41,64 +43,11 @@ def _normalize(value):
     return str(value).strip().lower()
 
 
-def _driver_of_day_actual_values(result):
-    values = getattr(result, "driver_of_day_multiple", None)
-    if isinstance(values, list):
-        normalized = {_normalize(v) for v in values if _normalize(v)}
-        if normalized:
-            return normalized
-
-    legacy_value = _normalize(getattr(result, "driver_of_day", ""))
-    if legacy_value:
-        return {legacy_value}
-    return set()
-
-
 def calculate_points(pred, res, *, crazy_blocked=False, crazy_vetoed=False):
-    points = 0
-    breakdown = {}
-    is_sprint_weekend = bool(getattr(getattr(res, "event", None), "has_sprint", False))
-
-    def add(label, pts):
-        nonlocal points
-        points += pts
-        breakdown[label] = pts
-
-    actual_podium = {
-        "p1": _normalize(res.p1),
-        "p2": _normalize(res.p2),
-        "p3": _normalize(res.p3),
-    }
-    actual_top3 = {value for value in actual_podium.values() if value}
-
-    for field_name, label, exact_points in (("p1", "P1", 10), ("p2", "P2", 6), ("p3", "P3", 4)):
-        predicted_value = _normalize(getattr(pred, field_name))
-        if not predicted_value:
-            continue
-
-        if predicted_value == actual_podium[field_name]:
-            add(label, exact_points)
-        elif predicted_value in actual_top3:
-            add(f"{label} (Top-3)", 3)
-    if _normalize(res.pole) and _normalize(pred.pole) == _normalize(res.pole):
-        add("Pole Position", 4)
-    if (
-        is_sprint_weekend
-        and _normalize(res.sprint_qualifying_winner)
-        and _normalize(pred.sprint_qualifying_winner) == _normalize(res.sprint_qualifying_winner)
-    ):
-        add("Sprint Qualifying Winner", 3)
-    if (
-        is_sprint_weekend
-        and _normalize(res.sprint_winner)
-        and _normalize(pred.sprint_winner) == _normalize(res.sprint_winner)
-    ):
-        add("Sprint Winner", 5)
-    if _normalize(res.fastest_lap) and _normalize(pred.fastest_lap) == _normalize(res.fastest_lap):
-        add("Fastest Lap", 3)
-    predicted_driver_of_day = _normalize(pred.driver_of_day)
-    if predicted_driver_of_day and predicted_driver_of_day in _driver_of_day_actual_values(res):
-        add("Driver of the Day", 3)
+    # Legacy adapter: preserve the old extra rules and breakdown order. The
+    # public projection uses calculate_base_points directly, never this adapter.
+    points, breakdown = calculate_base_points(pred, res)
+    counts = {key: breakdown.pop(key) for key in ("Safety Car Count", "DNF Count") if key in breakdown}
     if crazy_vetoed and crazy_blocked:
         breakdown["Crazy Prediction · вето паддока и блок колеса"] = 0
     elif crazy_vetoed:
@@ -106,12 +55,9 @@ def calculate_points(pred, res, *, crazy_blocked=False, crazy_vetoed=False):
     elif pred.crazy_prediction_approved and crazy_blocked:
         breakdown["Crazy Prediction · заблокирован"] = 0
     elif pred.crazy_prediction_approved:
-        add("Crazy Prediction", 5)
-    if pred.safety_car_count == res.safety_car_count:
-        add("Safety Car Count", 5)
-    if pred.dnf_count == res.dnf_count:
-        add("DNF Count", 5)
-
+        points += 5
+        breakdown["Crazy Prediction"] = 5
+    breakdown.update(counts)
     return points, breakdown
 
 
@@ -398,6 +344,11 @@ def publish_event_scores(event, user=None):
     result.published_at = timezone.now()
     result.published_by = user if getattr(user, "is_authenticated", False) else None
     result.save(update_fields=("published_at", "published_by"))
+    # New private standings are an isolated post-commit projection. A stale
+    # local input must never break the existing company's score publication.
+    from .competition_scoring import sync_published_event
+    transaction.on_commit(partial(sync_published_event, event.pk,
+        user.pk if getattr(user, "is_authenticated", False) else None), robust=True)
     return revision, rows
 
 

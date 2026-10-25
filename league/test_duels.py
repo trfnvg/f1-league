@@ -157,7 +157,7 @@ class DuelChallengeTests(TestCase):
         )
         create_duel_challenge(self.event, self.challenger, self.opponent, 5)
 
-        with self.assertRaisesMessage(DuelActionError, "нельзя выбирать одного и того же соперника"):
+        with self.assertRaisesMessage(DuelActionError, "Нельзя выбирать одного и того же соперника"):
             create_duel_challenge(next_event, self.challenger, self.opponent, 5)
 
         opponent_ids = set(available_opponents(next_event, self.challenger).values_list("id", flat=True))

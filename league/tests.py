@@ -502,23 +502,22 @@ class SafeScorePublicationTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class ArcadeDoodleJumpAccessTests(TestCase):
-    def test_prototype_is_login_and_staff_only(self):
+    def test_released_cowboy_is_public_but_admin_preview_stays_isolated(self):
         url = reverse("league:arcade_doodle_jump")
-        self.assertEqual(self.client.get(url).status_code, 302)
+        self.assertEqual(self.client.get(url).status_code, 200)
 
         player = User.objects.create_user(username="runner-player", password="test")
         self.client.force_login(player)
-        self.assertEqual(self.client.get(url).status_code, 403)
+        self.assertEqual(self.client.get(url).status_code, 200)
 
         admin = User.objects.create_user(username="runner-admin", password="test", is_staff=True)
         self.client.force_login(admin)
-        response = self.client.get(url, follow=True)
+        response = self.client.get(url, {"admin_test": "1"})
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Cowboy GP")
-        self.assertContains(response, "Только для администраторов")
+        self.assertTrue(response.context["arcade_test_mode"])
         self.assertContains(response, "western-game-sprite-atlas-v1.png")
-        self.assertContains(response, "western-loop-background-v1.png")
-        self.assertContains(response, "Касайся или удерживай левую / правую половину поля")
+        self.assertContains(response, "western-russell-toy-hero-v3.webp")
         self.assertNotContains(response, "data-doodle-action")
-        self.assertContains(response, reverse("league:arcade_doodle_jump"))
+        self.assertContains(response, reverse("league:doodle_attempt_start"))
