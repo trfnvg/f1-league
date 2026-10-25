@@ -111,6 +111,26 @@ class LeagueManagementTests(TestCase):
             self.a.league.refresh_from_db();self.assertEqual(self.a.league.avatar.name,old)
             self.assertEqual(self.a.league.name,"Alpha")
 
+    def test_transparent_league_logo_keeps_alpha_and_all_edges(self):
+        with TemporaryDirectory(prefix="fastlap-avatar-test-") as directory, override_settings(MEDIA_ROOT=directory):
+            source = Image.new("RGBA", (512, 256), (0, 0, 0, 0))
+            # Opposite edges detect accidental centre cropping; a semitransparent
+            # centre detects RGB conversion or compositing onto a solid colour.
+            source.putpixel((0, 128), (255, 0, 0, 255))
+            source.putpixel((511, 128), (0, 255, 0, 255))
+            source.putpixel((256, 128), (0, 0, 255, 128))
+            buffer = BytesIO();source.save(buffer, "PNG")
+            upload = SimpleUploadedFile("logo.png", buffer.getvalue(), content_type="image/png")
+            self.assertEqual(self.client.post(self.url(), {"name": "Alpha", "avatar": upload}).status_code, 302)
+            self.a.league.refresh_from_db()
+            with self.a.league.avatar.open("rb") as content, Image.open(content) as stored:
+                image = stored.convert("RGBA")
+                self.assertEqual(image.size, (512, 512))
+                self.assertEqual(image.getpixel((0, 0))[3], 0)
+                self.assertEqual(image.getpixel((0, 256)), (255, 0, 0, 255))
+                self.assertEqual(image.getpixel((511, 256)), (0, 255, 0, 255))
+                self.assertEqual(image.getpixel((256, 256)), (0, 0, 255, 128))
+
     def test_driver_day_changes_only_this_league_and_can_restore_official(self):
         self.publish()
         before_a=standings(self.a)["rows"][0]["total"]

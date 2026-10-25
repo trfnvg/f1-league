@@ -54,6 +54,7 @@ with override_settings(ALLOWED_HOSTS=['testserver'],STORAGES={'default':{'BACKEN
     main=League.objects.get(legacy_key='original-friends')
     pages['/main/']=c.get(reverse('league:friend_league',args=[main.pk])).content.decode()
     pages['/']=c.get(reverse('league:friend_leagues'),{'all':'1'}).content.decode()
+    pages['/avatars/']=c.get(reverse('league:player_profile',args=[owner.pk])).content.decode()
     print(json.dumps(pages))
 `],{cwd:root,encoding:'utf8',env:{...process.env,DATABASE_URL:'sqlite:///:memory:'},maxBuffer:8*1024*1024});
 assert.equal(rendered.status,0,rendered.stderr);
@@ -75,7 +76,39 @@ try{
     for(const url of Object.keys(pages)){
       await page.goto(`http://127.0.0.1:${server.address().port}${url}`,{waitUntil:'networkidle'});
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width} ${url}: horizontal page overflow`);
-      assert.equal(await page.locator('.leagues-page').count(),1);
+      if(url!=='/avatars/')assert.equal(await page.locator('.leagues-page').count(),1);
+      if(url==='/avatars/'){
+        // Exercise every historical avatar variant under the actual profile
+        // page's inline styles, including the blue opponent and editable state.
+        await page.evaluate(()=>{
+          const fixture=document.createElement('div');fixture.className='duel-player-b';
+          for(const name of ['mini-avatar','table-avatar','western-avatar','duel-avatar','round-winner-avatar','leagues-avatar']){
+            const avatar=document.createElement('span');avatar.className=name;
+            avatar.style.cssText='display:inline-flex;width:64px;height:64px';fixture.append(avatar);
+          }
+          document.querySelector('main').append(fixture);
+        });
+      }
+      const avatarSelector='.mini-avatar,.table-avatar,.profile-avatar,.western-avatar,.duel-avatar,.round-winner-avatar,.leagues-avatar';
+      await page.locator(avatarSelector).evaluateAll(avatars=>{
+        const svg='<svg xmlns="http://www.w3.org/2000/svg" width="180" height="100"><path fill="#4ba" d="M0 0h180v100H0z"/><circle fill="#fc8" cx="90" cy="50" r="35"/></svg>';
+        for(const avatar of avatars){
+          const img=document.createElement('img');img.src='data:image/svg+xml,'+encodeURIComponent(svg);
+          avatar.replaceChildren(img);
+        }
+      });
+      const checkAvatars=async()=>assert.deepEqual(await page.locator(avatarSelector).evaluateAll(avatars=>avatars.flatMap(avatar=>{
+        const style=getComputedStyle(avatar),image=getComputedStyle(avatar.querySelector('img')),box=avatar.getBoundingClientRect();
+        const valid=style.borderRadius==='50%'&&style.boxShadow==='none'&&['Top','Right','Bottom','Left'].every(side=>style[`border${side}Width`]==='0px'&&style[`padding${side}`]==='0px')&&Math.abs(box.width-box.height)<1&&image.objectFit==='cover'&&image.objectPosition==='50% 50%';
+        return valid?[]:[{className:avatar.className,border:style.border,shadow:style.boxShadow,width:box.width,height:box.height}];
+      })),[],`${width} ${url}: player avatars have no frames and share a circular centre-cover crop`);
+      await checkAvatars();
+      if(url==='/avatars/'){
+        assert.equal(await page.locator('.profile-avatar-editable').count(),1);
+        await page.locator('.profile-avatar-editable').hover();await checkAvatars();
+        await page.locator('.profile-avatar-editable').evaluate(node=>node.setAttribute('aria-expanded','true'));
+        await checkAvatars();
+      }
       if(url==='/detail/'){
         assert.equal(await page.locator('.leaderboard-table tbody tr').count(),4);
         const table=page.locator('.leaderboard-scroll-x');
@@ -118,5 +151,5 @@ try{
     assert.deepEqual(errors,[],`${width}: browser runtime errors`);
     await page.close();
   }
-  console.log('Private leagues: 11 real Django pages × 5 desktop/mobile widths passed, including 23 GP columns, current GP after predictions close and deletion confirmation.');
+  console.log('Private leagues: 12 real Django pages × 5 desktop/mobile widths passed, including all player avatar variants, 23 GP columns, current GP after predictions close and deletion confirmation.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

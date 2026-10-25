@@ -485,7 +485,7 @@ def build_duel(player_a, player_b, season_year, leaderboard=None):
     }
 
 
-def build_activity_feed(leaderboard, limit=10):
+def build_activity_feed(leaderboard, limit=5):
     season_year = leaderboard["season_year"]
     closure = (
         ArcadeGameClosure.objects.select_related("winner", "event")

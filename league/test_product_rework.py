@@ -605,6 +605,32 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Последние события")
         self.assertContains(response, "Alice стал новым лидером чемпионата")
 
+    def test_activity_feed_keeps_five_latest_items_on_home_and_poll(self):
+        alice = User.objects.create_user("Alice")
+        bob = User.objects.create_user("Bob")
+        now = timezone.now()
+        for index in range(7):
+            event = Event.objects.create(
+                name=f"GP {index}", season_year=2026, round_number=index + 1,
+                deadline=now + timedelta(days=index + 1),
+            )
+            DuelChallenge.objects.create(
+                event=event, challenger=alice, opponent=bob, stake=1,
+                status=DuelChallenge.Status.ACCEPTED,
+                responded_at=now - timedelta(minutes=7 - index),
+            )
+        leaderboard = build_leaderboard(2026)
+        full_feed = build_activity_feed(leaderboard, limit=20)
+        self.assertEqual(len(full_feed), 7)
+        feed = build_activity_feed(leaderboard)
+        self.assertEqual(feed, full_feed[:5])
+        home = self.client.get(reverse("league:home"), {"season": 2026})
+        self.assertEqual(home.context["activity_feed"], feed)
+        poll = self.client.get(reverse("league:activity_feed"), {"season": 2026})
+        self.assertEqual(poll.json()["html"].count('class="activity-feed-item '), 5)
+        self.assertEqual(home.context["activity_feed"][0]["occurred_at"],
+                         max(item["occurred_at"] for item in full_feed))
+
     def test_activity_feed_waits_for_complete_publication(self):
         alice = User.objects.create_user("Alice")
         bob = User.objects.create_user("Bob")

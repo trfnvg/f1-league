@@ -1,0 +1,36 @@
+/* One crop for player photos everywhere. Keep the original uploaded image;
+   page themes must not introduce rings or shrink the photo with padding. */
+body.apex-night-theme :is(.mini-avatar, .table-avatar, .profile-avatar,
+  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar) {
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50% !important;
+  border: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  object-fit: cover !important;
+  object-position: 50% 50% !important;
+}
+
+body.apex-night-theme :is(.mini-avatar, .table-avatar, .profile-avatar,
+  .western-avatar, .duel-avatar, .round-winner-avatar, .leagues-avatar) img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: inherit;
+  box-shadow: none !important;
+  object-fit: cover !important;
+  object-position: 50% 50% !important;
+}
+
+/* Keyboard-only focus is functional, not a decorative avatar frame. */
+body.apex-night-theme .profile-avatar-editable:focus-visible {
+  outline: 2px solid var(--apex-ink, #fff);
+  outline-offset: 4px;
+}

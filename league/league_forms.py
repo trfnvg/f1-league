@@ -47,8 +47,15 @@ class LeagueProfileForm(forms.ModelForm):
             with Image.open(upload) as original:
                 if original.format not in {"JPEG", "PNG", "WEBP"} or max(original.size) > 4096:
                     raise ValueError
-                image = ImageOps.fit(ImageOps.exif_transpose(original).convert("RGB"), (512, 512))
-                output = BytesIO();image.save(output, "WEBP", quality=92)
+                # Logos need their complete silhouette and PNG transparency,
+                # not the centre-cover crop used for player portraits.
+                logo = ImageOps.contain(
+                    ImageOps.exif_transpose(original).convert("RGBA"),
+                    (512, 512), Image.Resampling.LANCZOS,
+                )
+                image = Image.new("RGBA", (512, 512), (0, 0, 0, 0))
+                image.alpha_composite(logo, ((512 - logo.width) // 2, (512 - logo.height) // 2))
+                output = BytesIO();image.save(output, "WEBP", lossless=True)
             return ContentFile(output.getvalue(), name=f"{uuid4().hex}.webp")
         except (OSError, ValueError, Image.DecompressionBombError):
             raise forms.ValidationError("Загрузите PNG, JPEG или WebP размером до 4096 × 4096.")
