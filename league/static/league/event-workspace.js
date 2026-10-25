@@ -12,7 +12,6 @@
     tab.setAttribute('aria-controls', panels[i].id);
     panels[i].setAttribute('role', 'tabpanel');
     panels[i].setAttribute('aria-labelledby', tab.id);
-    panels[i].tabIndex = 0;
   });
   function activate(index, updateHash = false) {
     tabs.forEach((tab, i) => {

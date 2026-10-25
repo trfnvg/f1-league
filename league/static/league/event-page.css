@@ -79,7 +79,8 @@ body.apex-night-theme.editorial-theme .event-page .community-table :is(th,td) { 
 
 /* A single workspace; only the selected panel is shown when JS is available. */
 .event-page [role="tabpanel"][hidden] { display:none!important; }
-.event-page [role="tabpanel"]:focus-visible,.stage-sections a:focus-visible { outline:2px solid #9eabbc; outline-offset:4px; }
+.event-page [role="tabpanel"]:focus { outline:none; box-shadow:none; }
+.stage-sections a:focus-visible { outline:2px solid #9eabbc; outline-offset:4px; }
 .event-page .stage-sections { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; padding:5px; border:1px solid #343d49; border-radius:12px; background:#1b2129; margin:18px 0 24px; }
 .event-page .stage-sections a { justify-content:center; gap:7px; min-height:45px; border:0; border-radius:8px; color:#9ca8b7; font-size:13px; }
 .event-page .stage-sections a[aria-selected="true"] { background:#303a47; color:#f3f5f8!important; box-shadow:0 2px 5px #00000015; }
@@ -141,7 +142,6 @@ body.apex-night-theme.editorial-theme .event-page .prediction-workbench.is-build
 .prediction-podium,.prediction-native-podium { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
 .prediction-native-podium label { font-size:12px; }
 .prediction-podium-slot { appearance:none; min-width:0; min-height:112px; padding:14px 12px; border:1px solid #46515f; border-radius:10px; background:#2a323e; color:#e4eaf2; text-align:left; }
-.prediction-podium-slot[aria-pressed="true"] { background:#3b2c32; border-color:#e55e53; }
 .prediction-podium-slot small { display:block; color:#f0998f; font:600 9px/1.5 Inter,sans-serif; text-transform:uppercase; }
 .prediction-podium-slot strong { display:block; margin:10px 0 7px; font-size:13px; overflow-wrap:anywhere; }
 .prediction-podium-slot>span { color:#a1adbc; font-size:10px; }

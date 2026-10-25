@@ -223,6 +223,7 @@ def run(output, widths, engine):
                         assert page.locator(".event-stage-hero").is_visible(), (route, "empty stage header")
                         assert page.locator(".prediction-workbench form").is_visible(), (route, "forecast missing")
                         assert page.locator(".prediction-podium-slot").count() == 3
+                        assert page.locator('.prediction-podium-slot[aria-pressed="true"]').count() == 0
                         assert page.locator(".prediction-podium-slot").first.get_attribute('aria-haspopup') == 'dialog'
                         assert page.locator("#personal-wildcard").is_hidden(), "Optional mechanics must not overwhelm the forecast"
                         assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
@@ -284,6 +285,9 @@ def run(output, widths, engine):
                         for index, key in enumerate(['norris', 'piastri', 'russell']):
                             page.locator('.prediction-podium-slot').nth(index).click()
                             assert page.locator('#driver-picker-dialog').is_visible()
+                            assert 'ПИЛОТЫ ·' not in page.locator('#driver-picker-dialog').inner_text()
+                            assert 'Поиск по фамилии, команде или номеру' not in page.locator('#driver-picker-dialog').inner_text()
+                            assert page.locator('#stage-prediction').evaluate("e=>getComputedStyle(e).outlineStyle") == 'none'
                             if index == 0:
                                 page.locator('[data-picker-search]').fill('63')
                                 assert page.locator('[data-picker-options] button').count() == 1

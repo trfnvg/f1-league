@@ -21,7 +21,6 @@
   const fields = [...form.querySelectorAll('select,input,textarea')].filter(field => summaryLabels[field.name]);
   const initialValues = fields.map(field => field.value);
   const savedBadge = form.closest('.event-page').querySelector('.event-status-badge.is-saved');
-  let active = Math.max(0, podium.findIndex(field => !field.value));
   function element(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -36,7 +35,7 @@
     const button = element('button', 'prediction-podium-slot');
     button.type = 'button';
     button.append(element('small', '', `P${index + 1} / ${labels[index]}`), element('strong'), element('span'));
-    button.addEventListener('click', () => { active = index; render(); openPicker(field); });
+    button.addEventListener('click', () => openPicker(field));
     button.setAttribute('aria-haspopup', 'dialog');
     button.setAttribute('aria-controls', dialog.id);
     slots.append(button);
@@ -124,9 +123,8 @@
   });
   function render() {
     slotButtons.forEach((button, index) => {
-      button.setAttribute('aria-pressed', String(active === index));
       button.querySelector('strong').textContent = valueText(podium[index]) === '—' ? 'Выбери пилота' : valueText(podium[index]);
-      button.querySelector('span').textContent = active === index ? 'Выбираешь сейчас' : podium[index].value ? 'Выбрано' : 'Не выбрано';
+      button.querySelector('span').textContent = podium[index].value ? 'Выбрано' : 'Не выбрано';
     });
     categoryButtons.forEach((button, name) => {
       const field = form.elements.namedItem(name);
@@ -155,11 +153,11 @@
     const missing = podium.findIndex(field => !field.value);
     if (missing >= 0 || new Set(podium.map(field => field.value)).size !== 3) {
       event.preventDefault();
-      active = missing >= 0 ? missing : 0;
+      const focusIndex = missing >= 0 ? missing : 0;
       error.textContent = 'Выбери трёх разных пилотов для подиума.';
       error.hidden = false;
       render();
-      slotButtons[active].focus();
+      slotButtons[focusIndex].focus();
     } else {
       const missingField = requiredFields.find(field => !field.value);
       if (missingField) {

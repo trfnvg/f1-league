@@ -41,8 +41,8 @@
 </form>
 {{ driver_picker_profiles|json_script:"driver-picker-profiles" }}
 <dialog class="driver-picker-dialog" id="driver-picker-dialog" aria-labelledby="driver-picker-title">
-  <header class="driver-picker-header"><div><small>ПИЛОТЫ · {{ event.season_year }}</small><h2 id="driver-picker-title">Выбери гонщика</h2><p data-picker-category></p></div><button type="button" class="driver-picker-close" data-picker-close aria-label="Закрыть выбор гонщика">×</button></header>
-  <div class="driver-picker-search"><label for="driver-picker-search">Поиск по фамилии, команде или номеру</label><input id="driver-picker-search" type="search" autocomplete="off" placeholder="Найти гонщика…" data-picker-search></div>
+  <header class="driver-picker-header"><div><h2 id="driver-picker-title">Выбери гонщика</h2><p data-picker-category></p></div><button type="button" class="driver-picker-close" data-picker-close aria-label="Закрыть выбор гонщика">×</button></header>
+  <div class="driver-picker-search"><input id="driver-picker-search" type="search" autocomplete="off" placeholder="Найти гонщика…" aria-label="Поиск гонщика" data-picker-search></div>
   <div class="driver-picker-options" data-picker-options></div>
   <p class="driver-picker-empty" data-picker-empty hidden>Ничего не найдено. Попробуй другую фамилию или команду.</p>
   <footer><a href="{% url 'league:drivers' %}?season={{ event.season_year }}" target="_blank" rel="noopener">Профили всех гонщиков {% include 'ui_arrow.html' %}</a></footer>
