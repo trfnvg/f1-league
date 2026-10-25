@@ -95,8 +95,9 @@ touch targets. Prediction, wildcard and duel permissions and endpoints remain
 unchanged.
 
 The open forecast uses the reference's two-column builder: three podium slots,
-driver buttons and a live answer summary. Buttons derive names and teams from
-the real form choices, and use initials rather than unverified racing numbers.
+category buttons and a live answer summary. Driver choices open a shared modal
+with season-specific profiles, official portraits, teams, numbers and search.
+See `driver-profiles.md` for sources, admin editing and fallback behaviour.
 Podium controls write into the original named Django fields, prevent duplicate
 drivers, and keep server validation authoritative. The expandable remaining
 questions retain exact numerical Safety Car/DNF answers and sprint fields.

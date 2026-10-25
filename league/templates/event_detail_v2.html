@@ -3,7 +3,7 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=4">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=5"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=1">{% endblock %}
 
 {% block content %}
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
@@ -463,7 +463,7 @@
 </div>
 </div>
 <script src="{% static 'league/event-workspace.js' %}?v=1" defer></script>
-<script src="{% static 'league/prediction-builder.js' %}?v=1" defer></script>
+<script src="{% static 'league/prediction-builder.js' %}?v=2" defer></script>
 <script src="{% static 'league/wildcard.js' %}"></script>
 <script>
   document.querySelectorAll('[data-stage-cover]').forEach((image) => {

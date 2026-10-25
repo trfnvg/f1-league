@@ -15,10 +15,6 @@
         <div class="prediction-podium" data-podium-slots hidden></div>
         {{ form.p1.errors }}{{ form.p2.errors }}{{ form.p3.errors }}
         <p class="prediction-builder-error" data-podium-error role="alert" hidden></p>
-        <div class="prediction-driver-picker" data-driver-picker hidden>
-          <h3>Выбери гонщика</h3><p class="prediction-help" data-active-place aria-live="polite"></p>
-          <div class="prediction-driver-grid" data-driver-grid></div>
-        </div>
       </div>
     </section>
     <details class="prediction-form-panel prediction-more" data-more-predictions open>
@@ -43,3 +39,11 @@
     <div class="prediction-summary-action"><button type="submit" class="prediction-state-button">{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button><small>До {{ event.deadline|date:'d.m · H:i' }} МСК ответы можно менять.</small></div>
   </aside>
 </form>
+{{ driver_picker_profiles|json_script:"driver-picker-profiles" }}
+<dialog class="driver-picker-dialog" id="driver-picker-dialog" aria-labelledby="driver-picker-title">
+  <header class="driver-picker-header"><div><small>ПИЛОТЫ · {{ event.season_year }}</small><h2 id="driver-picker-title">Выбери гонщика</h2><p data-picker-category></p></div><button type="button" class="driver-picker-close" data-picker-close aria-label="Закрыть выбор гонщика">×</button></header>
+  <div class="driver-picker-search"><label for="driver-picker-search">Поиск по фамилии, команде или номеру</label><input id="driver-picker-search" type="search" autocomplete="off" placeholder="Найти гонщика…" data-picker-search></div>
+  <div class="driver-picker-options" data-picker-options></div>
+  <p class="driver-picker-empty" data-picker-empty hidden>Ничего не найдено. Попробуй другую фамилию или команду.</p>
+  <footer><a href="{% url 'league:drivers' %}?season={{ event.season_year }}" target="_blank" rel="noopener">Профили всех гонщиков {% include 'ui_arrow.html' %}</a></footer>
+</dialog>

@@ -5,7 +5,15 @@
   const podium = names.map(name => form.elements.namedItem(name));
   if (podium.some(field => !field)) return;
   const slots = form.querySelector('[data-podium-slots]');
-  const grid = form.querySelector('[data-driver-grid]');
+  const dialog = document.getElementById('driver-picker-dialog');
+  if (!dialog || !dialog.showModal) return;
+  const profiles = new Map(JSON.parse(document.getElementById('driver-picker-profiles').textContent).map(driver => [driver.key, driver]));
+  const options = dialog.querySelector('[data-picker-options]');
+  const search = dialog.querySelector('[data-picker-search]');
+  const driverFields = [...form.querySelectorAll('select')];
+  const requiredFields = driverFields.filter(field => field.required);
+  const categoryButtons = new Map();
+  let targetField = null;
   const more = form.querySelector('[data-more-predictions]');
   const error = form.querySelector('[data-podium-error]');
   const labels = ['Победитель', 'Второе место', 'Третье место'];
@@ -28,29 +36,83 @@
     const button = element('button', 'prediction-podium-slot');
     button.type = 'button';
     button.append(element('small', '', `P${index + 1} / ${labels[index]}`), element('strong'), element('span'));
-    button.addEventListener('click', () => { active = index; render(); });
+    button.addEventListener('click', () => { active = index; render(); openPicker(field); });
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-controls', dialog.id);
     slots.append(button);
     return button;
   });
-  const driverButtons = [...podium[0].options].filter(option => option.value).map(option => {
-    const button = element('button', 'prediction-driver-option');
+  function portrait(profile, fallbackName) {
+    const wrapper = element('span', 'driver-choice-photo');
+    wrapper.append(element('span', '', (profile?.surname || fallbackName).slice(0, 2).toUpperCase()));
+    if (profile?.photo) {
+      const image = element('img');
+      image.src = profile.photo;
+      image.alt = '';
+      image.loading = 'lazy';
+      image.referrerPolicy = 'no-referrer';
+      image.addEventListener('error', () => { image.hidden = true; });
+      wrapper.append(image);
+    }
+    return wrapper;
+  }
+  function openPicker(field) {
+    targetField = field;
+    search.value = '';
+    dialog.querySelector('[data-picker-category]').textContent = summaryLabels[field.name];
+    filterDrivers();
+    dialog.showModal();
+    document.documentElement.classList.add('driver-picker-open');
+    if (window.matchMedia('(pointer:fine)').matches) search.focus();
+  }
+  function filterDrivers() {
+    const query = search.value.trim().toLocaleLowerCase().replace(/^#/, '');
+    options.replaceChildren();
+    for (const option of targetField.options) {
+      if (!option.value) continue;
+      const profile = profiles.get(option.value);
+      const match = option.textContent.match(/^(.*?)\s*\((.*?)\)$/);
+      const surname = profile?.surname || (match ? match[1] : option.textContent);
+      const team = profile?.team || (match ? match[2] : '');
+      if (query && ![profile?.name, surname, team, profile?.number, option.value].join(' ').toLocaleLowerCase().includes(query)) continue;
+      const button = element('button', 'driver-choice');
+      button.type = 'button';
+      button.dataset.driver = option.value;
+      const index = names.includes(targetField.name) ? podium.findIndex(field => field !== targetField && field.value === option.value) : -1;
+      button.disabled = index >= 0;
+      button.setAttribute('aria-pressed', String(targetField.value === option.value));
+      const meta = element('span', 'driver-choice-meta');
+      meta.append(element('strong', '', surname), element('small', '', team));
+      if (index >= 0) meta.append(element('small', '', 'Уже выбран на P' + (index + 1)));
+      button.append(portrait(profile, surname), meta, element('span', 'driver-choice-number', profile ? '#' + profile.number : ''));
+      button.addEventListener('click', () => {
+        targetField.value = option.value;
+        targetField.dispatchEvent(new Event('change', {bubbles: true}));
+        dialog.close();
+      });
+      options.append(button);
+    }
+    dialog.querySelector('[data-picker-empty]').hidden = options.childElementCount > 0;
+  }
+  search.addEventListener('input', filterDrivers);
+  dialog.querySelector('[data-picker-close]').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('close', () => { if (!dialog.open) document.documentElement.classList.remove('driver-picker-open'); });
+  dialog.addEventListener('click', event => { if (event.target === dialog) {
+    const box = dialog.getBoundingClientRect();
+    if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
+  }});
+  driverFields.filter(field => !names.includes(field.name)).forEach(field => {
+    const button = element('button', 'prediction-category-choice');
     button.type = 'button';
-    button.dataset.driver = option.value;
-    const match = option.textContent.match(/^(.*?)\s*\((.*?)\)$/);
-    const name = match ? match[1] : option.textContent;
-    const team = match ? match[2] : '';
-    const meta = element('span', 'prediction-driver-meta');
-    meta.append(element('strong', '', name), element('small', '', team));
-    button.append(element('span', 'prediction-driver-monogram', name.slice(0, 2).toUpperCase()), meta, element('span', 'prediction-driver-mark'));
-    button.addEventListener('click', () => {
-      podium[active].value = option.value;
-      podium[active].dispatchEvent(new Event('change', {bubbles: true}));
-      const next = podium.findIndex(field => !field.value);
-      if (next >= 0) { active = next; slotButtons[next].focus({preventScroll: true}); }
-      render();
-    });
-    grid.append(button);
-    return button;
+    button.dataset.driverField = field.name;
+    button.id = field.id + '-picker';
+    const label = form.querySelector(`label[for="${field.id}"]`);
+    if (label) label.htmlFor = button.id;
+    button.setAttribute('aria-haspopup', 'dialog');
+    button.setAttribute('aria-controls', dialog.id);
+    button.addEventListener('click', () => openPicker(field));
+    field.insertAdjacentElement('afterend', button);
+    categoryButtons.set(field.name, button);
   });
   const summary = form.querySelector('[data-summary-lines]');
   const summaryValues = fields.map(field => {
@@ -66,12 +128,11 @@
       button.querySelector('strong').textContent = valueText(podium[index]) === '—' ? 'Выбери пилота' : valueText(podium[index]);
       button.querySelector('span').textContent = active === index ? 'Выбираешь сейчас' : podium[index].value ? 'Выбрано' : 'Не выбрано';
     });
-    form.querySelector('[data-active-place]').textContent = `Сейчас выбираешь: ${labels[active].toLowerCase()}`;
-    driverButtons.forEach(button => {
-      const taken = podium.findIndex(field => field.value === button.dataset.driver);
-      button.disabled = taken >= 0 && taken !== active;
-      button.setAttribute('aria-pressed', String(taken === active));
-      button.querySelector('.prediction-driver-mark').textContent = taken >= 0 ? `P${taken + 1}` : '';
+    categoryButtons.forEach((button, name) => {
+      const field = form.elements.namedItem(name);
+      const profile = profiles.get(field.value);
+      button.replaceChildren(portrait(profile, valueText(field)), element('span', '', field.value ? valueText(field) : 'Выбери гонщика'));
+      if (field.value) button.removeAttribute('aria-invalid');
     });
     let filled = 0;
     fields.forEach((field, i) => {
@@ -99,13 +160,23 @@
       error.hidden = false;
       render();
       slotButtons[active].focus();
+    } else {
+      const missingField = requiredFields.find(field => !field.value);
+      if (missingField) {
+        event.preventDefault();
+        more.open = true;
+        const button = categoryButtons.get(missingField.name);
+        button.setAttribute('aria-invalid', 'true');
+        button.focus();
+        openPicker(missingField);
+      }
     }
   });
   render();
-  podium.forEach(field => { field.required = false; });
+  driverFields.forEach(field => { field.required = false; field.hidden = true; });
   form.querySelector('[data-native-podium]').hidden = true;
   slots.hidden = false;
-  form.querySelector('[data-driver-picker]').hidden = false;
+
   form.querySelector('[data-live-summary]').hidden = false;
   form.querySelector('[data-fallback-submit]').hidden = true;
   if (!form.querySelector('.errorlist,.alert-danger') && !fields.some(field => !names.includes(field.name) && field.tagName === 'SELECT' && field.value)) more.open = false;

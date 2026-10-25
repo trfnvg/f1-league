@@ -12,6 +12,31 @@ from django.utils import timezone
 
 from .circuits import CIRCUIT_CHOICES, resolve_circuit
 
+class DriverProfile(models.Model):
+    season_year = models.PositiveSmallIntegerField("Сезон")
+    key = models.SlugField("Ключ гонщика", max_length=50)
+    name = models.CharField("Имя и фамилия", max_length=100)
+    surname = models.CharField("Фамилия", max_length=60)
+    team = models.CharField("Команда", max_length=80)
+    number = models.PositiveSmallIntegerField("Гоночный номер")
+    portrait_url = models.URLField("Официальный портрет", max_length=500, blank=True)
+    portrait = models.ImageField("Свой портрет", upload_to="driver_portraits/", blank=True)
+    source_url = models.URLField("Официальный профиль", max_length=300, blank=True)
+
+    class Meta:
+        ordering = ("-season_year", "team", "number")
+        constraints = [models.UniqueConstraint(fields=("season_year", "key"), name="driver_profile_season_key")]
+        verbose_name = "Профиль гонщика"
+        verbose_name_plural = "Профили гонщиков"
+
+    @property
+    def photo_url(self):
+        return self.portrait.url if self.portrait else self.portrait_url
+
+    def __str__(self):
+        return f"{self.name} · {self.season_year} · #{self.number}"
+
+
 DRIVER_CHOICES = [
     ("norris", "Норрис (McLaren)"),
     ("piastri", "Пиастри (McLaren)"),

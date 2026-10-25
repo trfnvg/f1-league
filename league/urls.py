@@ -3,10 +3,13 @@ from . import views
 from . import arcade_library
 from . import jury_admin
 from . import league_views
+from . import driver_profiles
 
 app_name = "league"
 
 urlpatterns = [
+    path("drivers/", driver_profiles.directory, name="drivers"),
+    path("drivers/<int:year>/<slug:key>/", driver_profiles.detail, name="driver_profile"),
     path("leagues/", league_views.index, name="friend_leagues"),
     path("leagues/new/", league_views.create, name="friend_league_create"),
     path("leagues/join/<str:token>/", league_views.join, name="friend_league_join"),

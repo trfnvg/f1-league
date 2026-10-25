@@ -11,6 +11,7 @@ from .models import (
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
+    DriverProfile,
     DuelChallenge,
     DuelSettings,
     Event,
@@ -44,6 +45,13 @@ from .scoring import (
     restore_score_revision,
 )
 from .wildcards import unresolved_wildcard_questions
+
+
+@admin.register(DriverProfile)
+class DriverProfileAdmin(admin.ModelAdmin):
+    list_display = ("name", "season_year", "team", "number")
+    list_filter = ("season_year", "team")
+    search_fields = ("name", "surname", "key")
 
 
 class ResultAdminForm(forms.ModelForm):

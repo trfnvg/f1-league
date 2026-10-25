@@ -79,6 +79,8 @@ def render_pages():
     pages["/league/"] = client.get(reverse("league:friend_league", args=[league.league_id])).content
     pages["/standings/"] = client.get(reverse("league:global_leaderboard")).content
     pages["/event/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
+    pages["/drivers/"] = client.get(reverse("league:drivers")+'?season=2026').content
+    pages["/driver-profile/"] = client.get(reverse("league:driver_profile", args=(2026, "russell"))).content
     pages["/profile/"] = client.get(reverse("league:player_profile", args=[player.pk])).content
     pages["/event-closed/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
     challenge = create_duel_challenge(event, player, User.objects.get(username="Очень_длинное_имя_участника"), 7)
@@ -179,7 +181,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/event/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -221,7 +223,7 @@ def run(output, widths, engine):
                         assert page.locator(".event-stage-hero").is_visible(), (route, "empty stage header")
                         assert page.locator(".prediction-workbench form").is_visible(), (route, "forecast missing")
                         assert page.locator(".prediction-podium-slot").count() == 3
-                        assert page.locator("[data-driver-grid]").is_visible()
+                        assert page.locator(".prediction-podium-slot").first.get_attribute('aria-haspopup') == 'dialog'
                         assert page.locator("#personal-wildcard").is_hidden(), "Optional mechanics must not overwhelm the forecast"
                         assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
                         if width < 781:
@@ -279,26 +281,44 @@ def run(output, widths, engine):
                         if route == '/duel-accepted/':
                             assert page.locator('.stage-duel-locked').is_visible()
                     if route == '/event/':
-                        page.locator('[data-driver="norris"]').click()
-                        page.locator('[data-driver="piastri"]').click()
-                        page.locator('[data-driver="russell"]').click()
+                        for index, key in enumerate(['norris', 'piastri', 'russell']):
+                            page.locator('.prediction-podium-slot').nth(index).click()
+                            assert page.locator('#driver-picker-dialog').is_visible()
+                            if index == 0:
+                                page.locator('[data-picker-search]').fill('63')
+                                assert page.locator('[data-picker-options] button').count() == 1
+                                assert page.locator('[data-driver="russell"]').is_visible()
+                                page.locator('[data-picker-search]').fill('невозможный поиск')
+                                assert page.locator('[data-picker-empty]').is_visible()
+                                page.locator('[data-picker-search]').fill('')
+                                page.locator('[data-picker-options] img').first.evaluate('e=>e.decode()')
+                                page.screenshot(path=str(output/f'{width}-driver-picker.png'), full_page=True)
+                            if index == 1:
+                                assert page.locator('[data-driver="norris"]').is_disabled()
+                            page.locator(f'[data-driver="{key}"]').click()
+                            assert page.locator('#driver-picker-dialog').is_hidden()
                         assert page.locator('#id_p1').input_value() == 'norris'
                         assert page.locator('#id_p2').input_value() == 'piastri'
                         assert page.locator('#id_p3').input_value() == 'russell'
-                        assert page.locator('[data-driver="norris"]').is_disabled()
                         assert 'Норрис' in page.locator('[data-summary-lines]').inner_text()
                         page.locator('[data-more-predictions] summary').click()
                         for name in ['pole', 'fastest_lap', 'driver_of_day']:
-                            page.locator(f'#id_{name}').select_option('norris')
+                            page.locator(f'[data-driver-field="{name}"]').click()
+                            assert page.locator('[data-driver="norris"]').is_enabled()
+                            page.locator('[data-driver="norris"]').click()
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
                         assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
                         assert page.locator('#race-prediction-form').evaluate('f=>f.checkValidity()')
                         assert page.locator('#race-prediction-form').evaluate("f=>new FormData(f).get('p1')") == 'norris'
-                        page.locator('#id_pole').select_option('')
+                        page.locator('#id_pole').evaluate("e=>{e.value='';e.dispatchEvent(new Event('change',{bubbles:true}));}")
                         page.locator('[data-more-predictions] summary').click()
                         page.locator('.prediction-summary-action button').click()
                         assert page.locator('[data-more-predictions]').get_attribute('open') is not None
-                        page.locator('#id_pole').select_option('norris')
+                        assert page.locator('#driver-picker-dialog').is_visible()
+                        page.locator('[data-driver="norris"]').click()
+                        page.locator('[data-driver-field="pole"]').click()
+                        page.keyboard.press('Escape')
+                        assert page.locator('#driver-picker-dialog').is_hidden()
                         page.locator('.stage-sections a[href="#personal-wildcard"]').click()
                         assert page.locator('#personal-wildcard').is_visible()
                         assert page.locator('#stage-prediction').is_hidden()
