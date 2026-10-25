@@ -14,8 +14,10 @@ on 2026-10-26:
 
 Official portraits are served from F1's media CDN in the browser. An uploaded
 portrait takes precedence. If an image fails, the picker remains usable with
-initials. Faces use a top-aligned crop because the official source is a full
-driver portrait, not a square headshot.
+initials. The official source is a full driver portrait; the photo getter asks
+the same CDN for a 440×440 face-centred crop. The original source URL is retained
+in the database. Uploaded portraits use a square CSS crop. Picker, category and
+profile images all use square frames.
 
 Staff manage profiles under **Профили гонщиков** in Django admin. A new season
 gets its own rows; missing historical portraits are not substituted with a

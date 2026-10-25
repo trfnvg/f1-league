@@ -16,6 +16,7 @@ class DriverProfilesTests(TestCase):
         self.assertEqual({driver["key"] for driver in profiles}, {key for key, _ in DRIVER_CHOICES})
         self.assertEqual(len({driver["number"] for driver in profiles}), 22)
         self.assertTrue(all('/2026/' in driver['photo'] for driver in profiles))
+        self.assertTrue(all('g_face,w_440,h_440' in driver['photo'] for driver in profiles))
 
     def test_profiles_are_public_and_season_specific(self):
         driver = DriverProfile.objects.get(season_year=2026, key="russell")

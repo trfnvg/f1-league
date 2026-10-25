@@ -99,11 +99,11 @@ category buttons and a live answer summary. Driver choices open a shared modal
 with season-specific profiles, official portraits, teams, numbers and search.
 See `driver-profiles.md` for sources, admin editing and fallback behaviour.
 Podium controls write into the original named Django fields, prevent duplicate
-drivers, and keep server validation authoritative. The expandable remaining
+drivers, and keep server validation authoritative. The always-visible remaining
 questions retain exact numerical Safety Car/DNF answers and sprint fields.
 Progress counts zero as an answer and adapts to the actual fields. With JS
-disabled, native selects and the full form remain usable. Invalid fields open
-the remaining-questions section before the browser focuses them.
+disabled, native selects and the full form remain usable. Every driver category displays
+the chosen square portrait and team, with shared control sizing and colours.
 
 ## Desktop blank-page regression
 

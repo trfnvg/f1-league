@@ -296,28 +296,38 @@ def run(output, widths, engine):
                                 assert page.locator('[data-picker-empty]').is_visible()
                                 page.locator('[data-picker-search]').fill('')
                                 page.locator('[data-picker-options] img').first.evaluate('e=>e.decode()')
+                                assert page.locator('[data-picker-options] img').first.evaluate('e=>e.naturalWidth===e.naturalHeight')
                                 page.screenshot(path=str(output/f'{width}-driver-picker.png'), full_page=True)
                             if index == 1:
                                 assert page.locator('[data-driver="norris"]').is_disabled()
                             page.locator(f'[data-driver="{key}"]').click()
                             assert page.locator('#driver-picker-dialog').is_hidden()
+                            assert page.locator('.prediction-podium-slot').nth(index).locator('img').is_visible()
                         assert page.locator('#id_p1').input_value() == 'norris'
                         assert page.locator('#id_p2').input_value() == 'piastri'
                         assert page.locator('#id_p3').input_value() == 'russell'
                         assert 'Норрис' in page.locator('[data-summary-lines]').inner_text()
-                        page.locator('[data-more-predictions] summary').click()
+                        assert page.locator('[data-more-predictions]').is_visible()
+                        assert page.locator('[data-more-predictions] summary').count() == 0
                         for name in ['pole', 'fastest_lap', 'driver_of_day']:
                             page.locator(f'[data-driver-field="{name}"]').click()
                             assert page.locator('[data-driver="norris"]').is_enabled()
                             page.locator('[data-driver="norris"]').click()
+                            assert page.locator(f'[data-driver-field="{name}"] img').is_visible()
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
                         assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
                         assert page.locator('#race-prediction-form').evaluate('f=>f.checkValidity()')
                         assert page.locator('#race-prediction-form').evaluate("f=>new FormData(f).get('p1')") == 'norris'
+                        page.mouse.move(0, 0)
+                        assert page.locator('.prediction-podium-slot,.prediction-category-choice').evaluate_all('''buttons=>{
+                            const styles=buttons.map(b=>getComputedStyle(b));
+                            return new Set(styles.map(s=>s.height)).size===1 && new Set(styles.map(s=>s.backgroundColor)).size===1;
+                        }'''), (width, 'Driver categories must share their height and background')
+                        assert page.locator('.prediction-podium-slot .driver-choice-photo,.prediction-category-choice .driver-choice-photo').evaluate_all('items=>items.every(e=>Math.abs(e.clientWidth-e.clientHeight)<1)')
+                        assert page.locator('#id_safety_car_count').evaluate('e=>getComputedStyle(e).backgroundColor') == page.locator('.prediction-podium-slot').first.evaluate('e=>getComputedStyle(e).backgroundColor')
                         page.locator('#id_pole').evaluate("e=>{e.value='';e.dispatchEvent(new Event('change',{bubbles:true}));}")
-                        page.locator('[data-more-predictions] summary').click()
                         page.locator('.prediction-summary-action button').click()
-                        assert page.locator('[data-more-predictions]').get_attribute('open') is not None
+                        assert page.locator('[data-more-predictions]').is_visible()
                         assert page.locator('#driver-picker-dialog').is_visible()
                         page.locator('[data-driver="norris"]').click()
                         page.locator('[data-driver-field="pole"]').click()

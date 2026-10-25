@@ -14,7 +14,6 @@
   const requiredFields = driverFields.filter(field => field.required);
   const categoryButtons = new Map();
   let targetField = null;
-  const more = form.querySelector('[data-more-predictions]');
   const error = form.querySelector('[data-podium-error]');
   const labels = ['Победитель', 'Второе место', 'Третье место'];
   const summaryLabels = {p1: 'Первое место', p2: 'Второе место', p3: 'Третье место', pole: 'Поул', fastest_lap: 'Быстрый круг', driver_of_day: 'Гонщик дня', safety_car_count: 'Safety Car', dnf_count: 'Сходы (DNF)', crazy_prediction: 'Crazy Prediction', sprint_qualifying_winner: 'Квалификация к спринту', sprint_winner: 'Победитель спринта'};
@@ -34,11 +33,12 @@
   const slotButtons = podium.map((field, index) => {
     const button = element('button', 'prediction-podium-slot');
     button.type = 'button';
-    button.append(element('small', '', `P${index + 1} / ${labels[index]}`), element('strong'), element('span'));
     button.addEventListener('click', () => openPicker(field));
     button.setAttribute('aria-haspopup', 'dialog');
     button.setAttribute('aria-controls', dialog.id);
-    slots.append(button);
+    const wrapper = element('div', 'prediction-podium-field');
+    wrapper.append(element('span', 'form-label', `P${index + 1} · ${labels[index]}`), button);
+    slots.append(wrapper);
     return button;
   });
   function portrait(profile, fallbackName) {
@@ -123,13 +123,12 @@
   });
   function render() {
     slotButtons.forEach((button, index) => {
-      button.querySelector('strong').textContent = valueText(podium[index]) === '—' ? 'Выбери пилота' : valueText(podium[index]);
-      button.querySelector('span').textContent = podium[index].value ? 'Выбрано' : 'Не выбрано';
+      renderDriverButton(button, podium[index]);
+      button.setAttribute('aria-label', `${labels[index]}: ${valueText(podium[index])}`);
     });
     categoryButtons.forEach((button, name) => {
       const field = form.elements.namedItem(name);
-      const profile = profiles.get(field.value);
-      button.replaceChildren(portrait(profile, valueText(field)), element('span', '', field.value ? valueText(field) : 'Выбери гонщика'));
+      renderDriverButton(button, field);
       if (field.value) button.removeAttribute('aria-invalid');
     });
     let filled = 0;
@@ -146,9 +145,15 @@
     if (savedBadge) savedBadge.textContent = fields.some((field, i) => field.value !== initialValues[i]) ? 'Есть изменения' : 'Прогноз сохранён';
     if (podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
   }
+  function renderDriverButton(button, field) {
+    const profile = profiles.get(field.value);
+    const name = field.value ? valueText(field) : 'Выбери гонщика';
+    const meta = element('span', 'driver-choice-meta');
+    meta.append(element('strong', '', name), element('small', '', profile?.team || (field.value ? 'Выбрано' : 'Не выбрано')));
+    button.replaceChildren(portrait(profile, valueText(field)), meta);
+  }
   form.addEventListener('input', render);
   form.addEventListener('change', render);
-  form.addEventListener('invalid', () => { more.open = true; }, true);
   form.addEventListener('submit', event => {
     const missing = podium.findIndex(field => !field.value);
     if (missing >= 0 || new Set(podium.map(field => field.value)).size !== 3) {
@@ -162,7 +167,6 @@
       const missingField = requiredFields.find(field => !field.value);
       if (missingField) {
         event.preventDefault();
-        more.open = true;
         const button = categoryButtons.get(missingField.name);
         button.setAttribute('aria-invalid', 'true');
         button.focus();
@@ -177,5 +181,4 @@
 
   form.querySelector('[data-live-summary]').hidden = false;
   form.querySelector('[data-fallback-submit]').hidden = true;
-  if (!form.querySelector('.errorlist,.alert-danger') && !fields.some(field => !names.includes(field.name) && field.tagName === 'SELECT' && field.value)) more.open = false;
 })();

@@ -17,20 +17,19 @@
         <p class="prediction-builder-error" data-podium-error role="alert" hidden></p>
       </div>
     </section>
-    <details class="prediction-form-panel prediction-more" data-more-predictions open>
-      <summary><span><small>02 / ГОНОЧНЫЙ УИК-ЭНД</small><strong>Ещё несколько прогнозов</strong></span><span class="prediction-more-arrow" aria-hidden="true">+</span></summary>
+    <section class="prediction-form-panel prediction-more" data-more-predictions>
+      <header class="prediction-panel-head"><span>02 / ГОНОЧНЫЙ УИК-ЭНД</span><h2>Ещё несколько прогнозов</h2><p>Выбери остальные исходы перед сохранением.</p></header>
       <div class="prediction-panel-body">
-        <p class="prediction-help">Подиум — только начало. Выбери остальные исходы перед сохранением.</p>
         <div class="row g-3">
           {% for field in form %}{% if field.name != 'p1' and field.name != 'p2' and field.name != 'p3' %}
-            <div class="{% if field.name == 'crazy_prediction' %}col-12{% else %}col-md-6{% endif %}">
+            <div class="{% if field.name == 'crazy_prediction' %}col-12{% else %}col-6 col-md-4{% endif %}">
               <label class="form-label" for="{{ field.id_for_label }}">{% if field.name == 'pole' %}Поул{% elif field.name == 'fastest_lap' %}Быстрый круг{% elif field.name == 'driver_of_day' %}Гонщик дня{% elif field.name == 'safety_car_count' %}Выезды Safety Car{% elif field.name == 'dnf_count' %}Количество сходов{% else %}{{ field.label }}{% endif %}</label>
               {{ field }}{{ field.errors }}
             </div>
           {% endif %}{% endfor %}
         </div>
       </div>
-    </details>
+    </section>
     <button type="submit" class="prediction-state-button prediction-fallback-submit" data-fallback-submit>{% if prediction %}Сохранить изменения{% else %}Сохранить прогноз{% endif %}</button>
   </div>
   <aside class="prediction-form-panel prediction-live-summary" data-live-summary hidden aria-label="Сводка твоего прогноза">

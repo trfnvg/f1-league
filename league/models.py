@@ -31,7 +31,13 @@ class DriverProfile(models.Model):
 
     @property
     def photo_url(self):
-        return self.portrait.url if self.portrait else self.portrait_url
+        if self.portrait:
+            return self.portrait.url
+        return self.portrait_url.replace(
+            "https://media.formula1.com/image/upload/c_lfill,w_440/",
+            "https://media.formula1.com/image/upload/c_thumb,g_face,w_440,h_440/",
+            1,
+        )
 
     def __str__(self):
         return f"{self.name} · {self.season_year} · #{self.number}"
