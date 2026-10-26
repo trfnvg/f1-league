@@ -33,6 +33,19 @@ class DriverProfilesTests(TestCase):
         driver.portrait = "driver_portraits/russell.webp"
         self.assertEqual(driver.photo_url, "/media/driver_portraits/russell.webp")
 
+    def test_picker_team_accents_follow_profile_team_not_driver(self):
+        profiles = {driver["key"]: driver for driver in picker_profiles(2026)}
+        self.assertEqual(profiles["russell"]["team_color"], "#62dfcd")
+        self.assertEqual(profiles["leclerc"]["team_color"], "#ff8585")
+        self.assertEqual(profiles["norris"]["team_color"], "#ffad61")
+        for driver in profiles.values():
+            self.assertRegex(driver["team_color"], r"^#[0-9a-f]{6}$")
+            self.assertNotEqual(driver["team_color"], "#b5c0ce")
+        DriverProfile.objects.filter(season_year=2026, key="russell").update(team=" McLaren ")
+        self.assertEqual(next(d for d in picker_profiles(2026) if d["key"] == "russell")["team_color"], "#ffad61")
+        DriverProfile.objects.filter(season_year=2026, key="russell").update(team="Новая команда")
+        self.assertEqual(next(d for d in picker_profiles(2026) if d["key"] == "russell")["team_color"], "#b5c0ce")
+
     def test_staff_can_manage_driver_profiles(self):
         admin = User.objects.create_superuser("drivers-admin", "drivers@example.com", "test")
         self.client.force_login(admin)

@@ -272,9 +272,19 @@ def run(output, widths, engine):
                             assert image.evaluate('''(e,fit)=>{
                                 const b=e.getBoundingClientRect(),p=e.parentElement.getBoundingClientRect();
                                 return e.complete && e.naturalWidth>0 && getComputedStyle(e).objectFit===fit && Math.abs(b.width-p.width)<1 && Math.abs(b.height-p.height)<1;
-                            }''', 'cover' if route.startswith('/cover-') else 'contain'), (width, route, "cover outside its frame")
-                            image.hover()
+                            }''', 'cover'), (width, route, "cover outside its frame")
+                            if route.startswith('/cover-'):
+                                image.hover()
+                            else:
+                                page.locator('.event-stage-hero').hover()
                             assert image.evaluate("e=>getComputedStyle(e).transform==='none'"), (width, route, "cover zooms and clips on hover")
+                        if not route.startswith('/cover-'):
+                            assert page.locator('.event-stage-hero').evaluate('''hero=>{
+                                const media=hero.querySelector('.event-stage-media'),copy=hero.querySelector('.event-stage-copy');
+                                const h=hero.getBoundingClientRect(),m=media.getBoundingClientRect(),c=copy.getBoundingClientRect();
+                                const photo=media.querySelector('img'),style=getComputedStyle(photo);
+                                return Math.abs(h.width-m.width)<3 && Math.abs(h.height-m.height)<3 && c.left>=m.left && c.right<=m.right+1 && c.top>=m.top && c.bottom<=m.bottom+1 && Number(style.opacity)>0 && Number(style.opacity)<1 && getComputedStyle(copy).opacity==='1' && getComputedStyle(media,'::after').backgroundImage!=='none';
+                            }'''), (width, route, 'Cover must fill the hero behind readable text')
                     if route.startswith('/duel-'):
                         page.locator('.stage-sections a[href="#event-duel"]').click()
                         assert page.locator('#event-duel.stage-duel').is_visible()
@@ -292,6 +302,9 @@ def run(output, widths, engine):
                             assert 'Поиск по фамилии, команде или номеру' not in page.locator('#driver-picker-dialog').inner_text()
                             assert page.locator('#stage-prediction').evaluate("e=>getComputedStyle(e).outlineStyle") == 'none'
                             if index == 0:
+                                assert page.locator('[data-driver="russell"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(98, 223, 205)'
+                                assert page.locator('[data-driver="leclerc"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(255, 133, 133)'
+                                assert page.locator('[data-driver="norris"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(255, 173, 97)'
                                 page.locator('[data-picker-search]').fill('63')
                                 assert page.locator('[data-picker-options] button').count() == 1
                                 assert page.locator('[data-driver="russell"]').is_visible()
@@ -309,6 +322,7 @@ def run(output, widths, engine):
                         assert page.locator('#id_p1').input_value() == 'norris'
                         assert page.locator('#id_p2').input_value() == 'piastri'
                         assert page.locator('#id_p3').input_value() == 'russell'
+                        assert page.locator('.prediction-podium-slot').nth(2).locator('.driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(98, 223, 205)'
                         assert 'Норрис' in page.locator('[data-summary-lines]').inner_text()
                         assert page.locator('[data-more-predictions]').is_visible()
                         assert page.locator('[data-more-predictions] summary').count() == 0
@@ -317,6 +331,7 @@ def run(output, widths, engine):
                             assert page.locator('[data-driver="norris"]').is_enabled()
                             page.locator('[data-driver="norris"]').click()
                             assert page.locator(f'[data-driver-field="{name}"] img').is_visible()
+                            assert page.locator(f'[data-driver-field="{name}"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(255, 173, 97)'
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
                         assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
                         assert page.locator('#race-prediction-form').evaluate('f=>f.checkValidity()')

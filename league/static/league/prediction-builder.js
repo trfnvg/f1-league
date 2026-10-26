@@ -30,6 +30,11 @@
     if (!field.value.trim()) return '—';
     return field.tagName === 'SELECT' ? field.selectedOptions[0].textContent.replace(/\s*\([^)]*\)$/, '') : field.value;
   }
+  function teamLabel(profile, fallback) {
+    const label = element('small', profile?.team ? 'driver-team-name' : '', profile?.team || fallback);
+    if (profile?.team_color) label.style.color = profile.team_color;
+    return label;
+  }
   const slotButtons = podium.map((field, index) => {
     const button = element('button', 'prediction-podium-slot');
     button.type = 'button';
@@ -81,7 +86,7 @@
       button.disabled = index >= 0;
       button.setAttribute('aria-pressed', String(targetField.value === option.value));
       const meta = element('span', 'driver-choice-meta');
-      meta.append(element('strong', '', surname), element('small', '', team));
+      meta.append(element('strong', '', surname), teamLabel(profile, team));
       if (index >= 0) meta.append(element('small', '', 'Уже выбран на P' + (index + 1)));
       button.append(portrait(profile, surname), meta, element('span', 'driver-choice-number', profile ? '#' + profile.number : ''));
       button.addEventListener('click', () => {
@@ -149,7 +154,7 @@
     const profile = profiles.get(field.value);
     const name = field.value ? valueText(field) : 'Выбери гонщика';
     const meta = element('span', 'driver-choice-meta');
-    meta.append(element('strong', '', name), element('small', '', profile?.team || (field.value ? 'Выбрано' : 'Не выбрано')));
+    meta.append(element('strong', '', name), teamLabel(profile, field.value ? 'Выбрано' : 'Не выбрано'));
     button.replaceChildren(portrait(profile, valueText(field)), meta);
   }
   form.addEventListener('input', render);

@@ -3,7 +3,7 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=6"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=2">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=7"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=2">{% endblock %}
 
 {% block content %}
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
@@ -14,9 +14,9 @@
 
 <div class="card event-hero-card event-stage-hero mb-4">
   <div class="event-stage-layout">
-    <div class="event-stage-media{% if event.cover_image %} has-cover{% endif %}">
+    <div class="event-stage-media{% if event.cover_image %} has-cover{% endif %}" aria-hidden="true">
       {% if event.circuit_visual %}<div class="event-stage-track">{% include 'circuit_track.html' with circuit=event.circuit_visual track_id='event' animated=True %}</div>{% else %}<div class="event-stage-fallback"><span>GRAND PRIX</span><strong>R{{ event.round_number|stringformat:'02d' }}</strong></div>{% endif %}
-      {% if event.cover_image %}<img src="{{ event.cover_image.url }}" class="event-stage-image" alt="{{ event.name }}" decoding="async" data-stage-cover>{% endif %}
+      {% if event.cover_image %}<img src="{{ event.cover_image.url }}" class="event-stage-image" alt="" decoding="async" data-stage-cover>{% endif %}
     </div>
     <div class="card-body event-stage-copy">
       <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
@@ -463,7 +463,7 @@
 </div>
 </div>
 <script src="{% static 'league/event-workspace.js' %}?v=2" defer></script>
-<script src="{% static 'league/prediction-builder.js' %}?v=4" defer></script>
+<script src="{% static 'league/prediction-builder.js' %}?v=5" defer></script>
 <script src="{% static 'league/wildcard.js' %}"></script>
 <script>
   document.querySelectorAll('[data-stage-cover]').forEach((image) => {
