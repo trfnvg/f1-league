@@ -5,7 +5,7 @@
       <span class="classification-kicker">СЕЗОН {{ season.year }}</span>
       {% if league %}<h2 id="classification-title">Результаты лиги</h2>{% else %}<h1 id="classification-title">Общий рейтинг</h1>{% endif %}
       <p>{% if latest_event %}После R{{ latest_event.round_number|stringformat:'02d' }} · {{ latest_event.name }}{% else %}Результаты появятся после первого этапа.{% endif %}</p>
-      {% if round_winners and latest_event %}<p class="classification-last-winner">Победитель последнего этапа: {% for winner in round_winners %}<a href="{% url 'league:player_profile' winner.user.id %}?season={{ season.year }}">{{ winner.user.username }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+      {% if round_winners and latest_event %}<p class="classification-last-winner">Победитель последнего этапа: {% for winner in round_winners %}<a href="{% url 'league:player_profile' winner.user.id %}?season={{ season.year }}">{{ winner.user|player_name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
     </div>
     <span class="classification-count">{% if page %}{{ page.paginator.count }}{% else %}{{ rows|length }}{% endif %}<small>Участников</small></span>
   </header>
@@ -34,10 +34,10 @@
         {% for r in rows %}
         <tr class="classification-entry">
           <th scope="row" class="classification-identity">
-            <a class="classification-player" href="{% url 'league:player_profile' r.user.id %}?season={{ season.year }}" title="{{ r.user.username }}">
+            <a class="classification-player" href="{% url 'league:player_profile' r.user.id %}?season={{ season.year }}" title="{{ r.user|player_name }}">
               <span class="classification-position"><strong><span class="visually-hidden">Место </span>{{ r.rank|stringformat:'02d' }}</strong><span class="classification-movement" {% if r.movement > 0 %}aria-label="Поднялся на {{ r.movement }}"{% elif r.movement < 0 %}aria-label="Опустился на {{ r.movement|stringformat:'d'|slice:'1:' }}"{% else %}aria-label="Без изменения позиции"{% endif %}>{% if r.movement > 0 %}↑{{ r.movement }}{% elif r.movement < 0 %}↓{{ r.movement|stringformat:'d'|slice:'1:' }}{% else %}—{% endif %}</span></span>
-              <span class="table-avatar classification-avatar">{% if r.avatar_url %}<img src="{{ r.avatar_url }}" alt="" loading="lazy" width="32" height="32">{% else %}{{ r.user.username|slice:':1'|upper }}{% endif %}</span>
-              <span class="classification-player-copy"><span class="classification-name">{{ r.user.username }}</span>{% if r.user.id == user.id %}<small>Вы</small>{% endif %}</span>
+              <span class="table-avatar classification-avatar">{% if r.avatar_url %}<img src="{{ r.avatar_url }}" alt="" loading="lazy" width="32" height="32">{% else %}{{ r.user|player_name|slice:':1'|upper }}{% endif %}</span>
+              <span class="classification-player-copy"><span class="classification-name">{{ r.user|player_name }}</span>{% if r.user.id == user.id %}<small>Вы</small>{% endif %}</span>
             </a>
           </th>
           <td class="classification-pinned-total"><strong class="classification-total">{{ r.total }}</strong></td>

@@ -1,0 +1,20 @@
+.account-shell { max-width: 500px; margin: 24px auto 48px; }
+.account-card { padding: 32px; border: 1px solid #3b414a; border-radius: 14px; background: #20252d; }
+.account-eyebrow { color: #9fa8b6; font: 500 10px/1.5 monospace; letter-spacing: .12em; }
+body.apex-night-theme .account-card h1 { margin: 12px 0; color: #f2f3f5; font: 700 28px/1.2 Inter,sans-serif; letter-spacing: -.04em; }
+.account-note { margin: 0 0 26px; color: #a8b0bd; font-size: 13px; line-height: 1.7; }
+.account-field { margin-bottom: 18px; }
+.account-field label { display: block; margin-bottom: 8px; color: #e0e4eb; font-size: 12px; font-weight: 550; }
+body.apex-night-theme .account-field input { display: block; width: 100%; min-height: 48px; padding: 12px; border: 1px solid #474f5d; border-radius: 8px; background: #191e26; color: #f1f4f8; font: 400 15px/1.5 Inter,sans-serif; box-shadow: none; }
+.account-handle { position: relative; }
+.account-handle>span { position: absolute; left: 14px; top: 13px; color: #9aa7ba; font-size: 15px; }
+body.apex-night-theme .account-handle input { padding-left: 34px; }
+.account-help { margin-top: 7px; color: #98a4b6; font-size: 11px; line-height: 1.6; }
+.account-help ul { padding-left: 18px; margin: 0; }
+.account-error { margin: 8px 0; color: #f3a199; font-size: 12px; line-height: 1.5; }
+.account-error ul { list-style: none; padding: 0; margin: 0; }
+body.apex-night-theme .account-submit { display: flex; width: 100%; min-height: 48px; justify-content: center; align-items: center; margin-top: 8px; padding: 12px; border: 1px solid #f5665c; border-radius: 8px; background: #ed4b44; color: white; font: 650 13px/1.5 Inter,sans-serif; text-decoration: none; box-shadow: none; }
+.account-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px; margin: 22px 0 0; color: #a4afbf; font-size: 12px; line-height: 1.6; }
+body.apex-night-theme .account-links a { color: #d0d9e7; text-underline-offset: 4px; }
+body.apex-night-theme .account-card :is(a,button,input):focus-visible { outline: 2px solid #afc0d7 !important; outline-offset: 2px; }
+@media(max-width:600px) { .account-shell { margin: 10px auto 24px; } .account-card { padding: 24px 18px; } body.apex-night-theme .account-card h1 { font-size: 25px; } body.apex-night-theme .account-field input { font-size: 16px; } }

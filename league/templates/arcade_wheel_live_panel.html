@@ -34,7 +34,7 @@
         {% if wheel_leader %}
           <div class="arcade-wheel-leader">
             <span>{% if wheel_event.deadline > now %}Текущий лидер этапа{% else %}Победитель этапа{% endif %}</span>
-            <strong>{{ wheel_leader.user.get_full_name|default:wheel_leader.user.username }}</strong>
+            <strong>{{ wheel_leader.user.get_full_name|default:wheel_leader.user|player_name }}</strong>
             <small>{% if arcade_game_key == "minesweeper" %}{{ wheel_leader.score }} мс · лучшее время с открытия зачёта{% elif arcade_game_key == "doodle_jump" %}{{ wheel_leader.score }} очк. · лучший забег с открытия зачёта{% else %}{{ wheel_leader.score }} очк. · лучший заезд с открытия зачёта{% endif %}</small>
           </div>
         {% else %}
@@ -75,9 +75,9 @@
               {% elif wheel_spin.prize == "va_bank" %}
                 <label>Твой прогноз на кону<select name="field" required><option value="">Выбери сохранённый ответ</option>{% for item in wheel_prediction_fields %}<option value="{{ item.key }}">{{ item.label }}</option>{% endfor %}</select></label>
               {% elif wheel_spin.prize == "ruel_v_govne" %}
-                <label>Кому достанется «Руль в говне»?<select name="target_user" required><option value="">Выбери участника</option>{% for item in wheel_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user.username }}</option>{% endfor %}</select></label>
+                <label>Кому достанется «Руль в говне»?<select name="target_user" required><option value="">Выбери участника</option>{% for item in wheel_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user|player_name }}</option>{% endfor %}</select></label>
               {% elif wheel_spin.prize == "crazy_block" %}
-                <label>Чей Crazy Prediction блокируем?<select name="target_user" required><option value="">Выбери участника</option>{% for item in crazy_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user.username }}</option>{% endfor %}</select></label>
+                <label>Чей Crazy Prediction блокируем?<select name="target_user" required><option value="">Выбери участника</option>{% for item in crazy_targets %}<option value="{{ item.user_id }}">{{ item.user.get_full_name|default:item.user|player_name }}</option>{% endfor %}</select></label>
               {% endif %}
               <button class="arcade-wheel-action" type="submit">Активировать на этом этапе</button>
             </form>

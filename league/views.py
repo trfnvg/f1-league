@@ -9,13 +9,15 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Count, F, Min, Q, Sum
 from django.http import HttpResponseForbidden, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
+from .identity import display_name
 
 from .duels import (
     DuelActionError,
@@ -1081,7 +1083,7 @@ def home(request):
             "total": total,
             "player_count": len(home_board["rows"]),
             "leader_gap": max(0, leader_total - total),
-            "leader_name": home_board["rows"][0]["user"].username if home_board["rows"] else "",
+            "leader_name": display_name(home_board["rows"][0]["user"]) if home_board["rows"] else "",
             "leader_progress": min(100, max(0, round(100 * total / leader_total))) if leader_total > 0 else 0,
             "submitted": len(saved_event_ids),
             "wins": wins,
@@ -1334,14 +1336,21 @@ def season_predictions(request):
 
 
 def register(request):
+    if request.user.is_authenticated:
+        return redirect("league:home")
     next_url = request.GET.get("next") or request.POST.get("next") or "league:home"
 
     if request.method == "POST":
         form = RegisterForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            if next_url.startswith("/"):
+            try:
+                with transaction.atomic():
+                    user = form.save()
+            except IntegrityError:
+                form.add_error("username", "Этот логин уже занят. Выбери другой.")
+                return render(request, "registration/register.html", {"form": form, "next": next_url})
+            login(request, user, backend="league.identity.HandleBackend")
+            if url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
                 return redirect(next_url)
             return redirect("league:home")
     else:
@@ -1907,7 +1916,7 @@ def create_event_duel(request, event_id: int):
     else:
         messages.success(
             request,
-            f"Вызов отправлен игроку {duel.opponent.username}. Ставка — {duel.stake} очков.",
+            f"Вызов отправлен игроку {display_name(duel.opponent)}. Ставка — {duel.stake} очков.",
         )
     return redirect(f"{reverse('league:event_detail', args=(event.id,))}#event-duel")
 

@@ -1,0 +1,8 @@
+{% extends "registration/auth_base.html" %}
+{% block title %}Настройки аккаунта · Fastlap{% endblock %}
+{% block auth_heading %}Настройки аккаунта{% endblock %}
+{% block auth_note %}Имя: {{ user|player_name }}. Здесь можно изменить @логин и указать почту для восстановления. Для сохранения нужен текущий пароль.{% endblock %}
+{% block auth_body %}
+<form method="post" novalidate>{% csrf_token %}{% include 'registration/fields.html' %}<button class="account-submit" type="submit">Сохранить</button></form>
+<p class="account-links"><a href="{% url 'league:player_profile' user.id %}">Вернуться в профиль</a></p>
+{% endblock %}

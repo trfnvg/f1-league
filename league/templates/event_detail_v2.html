@@ -379,7 +379,7 @@
             <div class="crazy-jury-excluded-summary is-tied"><small>ИТОГ</small><strong>Исключение отменено</strong><span>решение администратора · голоса сохранены</span></div>
           {% elif vetoed_crazy_prediction_id %}
             {% for row in crazy_vote_results %}
-              {% if row.is_excluded %}<div class="crazy-jury-excluded-summary"><small>ИСКЛЮЧЁН</small><strong>{{ row.prediction.user.username }}</strong><span>предикт №{{ row.number }}</span></div>{% endif %}
+              {% if row.is_excluded %}<div class="crazy-jury-excluded-summary"><small>ИСКЛЮЧЁН</small><strong>{{ row.prediction.user|player_name }}</strong><span>предикт №{{ row.number }}</span></div>{% endif %}
             {% endfor %}
           {% elif crazy_vote_total %}
             <div class="crazy-jury-excluded-summary is-tied"><small>ИТОГ</small><strong>Ничья</strong><span>исключения нет</span></div>
@@ -394,8 +394,8 @@
                 <div class="crazy-jury-result-top"><span>ПРЕДИКТ №{{ row.number }}</span><strong>{{ row.vote_count }} {{ row.vote_word }}</strong></div>
                 {% if row.is_excluded %}<span class="crazy-jury-result-status">Снят Paddock Jury</span>{% endif %}
                 <p class="crazy-jury-result-text">{{ row.prediction.crazy_prediction }}</p>
-                <div class="crazy-jury-result-author">Автор: <strong>{{ row.prediction.user.username }}</strong></div>
-                <div class="crazy-jury-result-voters"><small>Голосовали</small><div>{% for voter in row.voters %}<span>{{ voter.username }}</span>{% endfor %}</div></div>
+                <div class="crazy-jury-result-author">Автор: <strong>{{ row.prediction.user|player_name }}</strong></div>
+                <div class="crazy-jury-result-voters"><small>Голосовали</small><div>{% for voter in row.voters %}<span>{{ voter|player_name }}</span>{% endfor %}</div></div>
               </article>
             {% endfor %}
           </div>
@@ -413,7 +413,7 @@
           {% for row in community_predictions %}
             <tr{% if row.is_winner %} class="community-round-winner"{% endif %}>
               <td>
-                <a class="player-link fw-bold" href="{% url 'league:player_profile' user_id=row.prediction.user.id %}?season={{ event.season_year }}">{{ row.prediction.user.username }}</a>
+                <a class="player-link fw-bold" href="{% url 'league:player_profile' user_id=row.prediction.user.id %}?season={{ event.season_year }}">{{ row.prediction.user|player_name }}</a>
                 {% if row.is_winner %}<span class="community-winner-label">Победитель этапа</span>{% endif %}
               </td>
               <td{% if row.correct.p1 %} class="community-prediction-correct"{% endif %}>{{ row.prediction.get_p1_display }}</td>

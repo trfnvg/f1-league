@@ -1018,7 +1018,7 @@
   </nav>
   <div class="nightshift-sidebar-bottom">
     {% if current_event %}<section class="nightshift-race-card"><div><i></i>БЛИЖАЙШИЙ ЭТАП</div><strong>{{ current_event.name }}</strong><p>{% if current_event.race_datetime %}Гонка {{ current_event.race_datetime|date:"d.m · H:i" }} МСК{% else %}Прогнозы до {{ current_event.deadline|date:"d.m · H:i" }} МСК{% endif %}</p><a href="{% url 'league:event_detail' event_id=current_event.id %}">Открыть этап <span>{% include 'ui_arrow.html' %}</span></a></section>{% endif %}
-    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{% if viewer_avatar_url %}<img src="{{ viewer_avatar_url }}" alt="" decoding="async">{% else %}{{ user.username|slice:":1"|upper }}{% endif %}</span><span><strong>{{ user.username }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">{% include 'ui_arrow.html' %}</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">{% include 'ui_arrow.html' %}</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
+    {% if user.is_authenticated %}<div class="nightshift-account-row"><a class="nightshift-account" href="{% url 'league:player_profile' user_id=user.id %}"><span class="nightshift-account-avatar">{% if viewer_avatar_url %}<img src="{{ viewer_avatar_url }}" alt="" decoding="async">{% else %}{{ user|player_name|slice:":1"|upper }}{% endif %}</span><span><strong>{{ user|player_name }}</strong><small>Профиль участника</small></span><span class="nightshift-account-arrow">{% include 'ui_arrow.html' %}</span></a><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="nightshift-logout" type="submit">Выйти</button></form></div>{% else %}<a class="nightshift-account nightshift-guest" href="{% url 'login' %}"><span class="nightshift-account-avatar">{% include 'ui_arrow.html' %}</span><span><strong>Войти в Fastlap</strong><small>Прогнозы и таблицы</small></span></a>{% endif %}
   </div>
 </aside>
 
@@ -1053,7 +1053,7 @@
 
     <div class="site-header-actions">
       {% if user.is_authenticated %}
-        <a class="nav-chip nav-chip-primary" href="{% url 'league:player_profile' user_id=user.id %}">{{ user.username }}</a>
+        <a class="nav-chip nav-chip-primary" href="{% url 'league:player_profile' user_id=user.id %}">{{ user|player_name }}</a>
         {% if user.is_staff %}<a class="nav-chip nav-chip-admin d-none d-lg-inline-flex" href="{% url 'admin:index' %}">Админка</a>{% endif %}
       {% else %}
         <a class="nav-chip nav-chip-primary" href="{% url 'login' %}">Войти</a>
@@ -1091,7 +1091,7 @@
       <div class="menu-account">
         <div class="menu-meta">Вошли как</div>
         <div class="menu-account-row">
-          <div class="menu-user">{{ user.username }}</div>
+          <div class="menu-user">{{ user|player_name }}</div>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="menu-logout-btn">

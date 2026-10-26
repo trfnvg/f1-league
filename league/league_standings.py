@@ -3,6 +3,7 @@ from collections import defaultdict
 from types import SimpleNamespace
 from django.db.models import F
 
+from .identity import display_name
 from .competition_scoring import _text_digest
 from .models import (Event, LeagueCrazyDecision, LeagueDayDecision, LeagueEventScore,
     Prediction, Score, SeasonScore)
@@ -47,9 +48,9 @@ def standings(season):
         totals[user_id] += score.points;scored_ids.add(event_id)
     scored = [e for e in events if e.pk in scored_ids]
     latest = scored[-1] if scored else None
-    previous = sorted(entries, key=lambda e: (-(totals[e.membership.user_id]-getattr(scores_map.get((e.membership.user_id, latest.pk if latest else None)), "points", 0)), e.membership.user.username.lower()))
+    previous = sorted(entries, key=lambda e: (-(totals[e.membership.user_id]-getattr(scores_map.get((e.membership.user_id, latest.pk if latest else None)), "points", 0)), display_name(e.membership.user).lower()))
     previous_rank = {e.pk: i for i, e in enumerate(previous, 1)}
-    entries.sort(key=lambda e: (-totals[e.membership.user_id], e.membership.user.username.lower()))
+    entries.sort(key=lambda e: (-totals[e.membership.user_id], display_name(e.membership.user).lower()))
     latest_points = [s.points for (uid, eid), s in scores_map.items() if latest and eid == latest.pk]
     best = max(latest_points, default=None)
     rows = []

@@ -1,53 +1,12 @@
-{% extends "base.html" %}
-
-{% block title %}Регистрация — F1 Predictions {{ current_season.year }}{% endblock %}
-
-{% block content %}
-<div class="auth-shell py-3 py-md-4">
-  <div class="auth-card card card-accent-top">
-    <div class="card-body p-4 p-md-5">
-      <h1 class="auth-title">Регистрация</h1>
-      <p class="auth-note">Создай аккаунт, чтобы участвовать в прогнозах сезона.</p>
-
-      <form method="post" novalidate>
-        {% csrf_token %}
-
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.username.id_for_label }}">Логин</label>
-          {{ form.username }}
-          {% if form.username.errors %}
-            <div class="text-danger small mt-1">{{ form.username.errors|striptags }}</div>
-          {% endif %}
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.password1.id_for_label }}">Пароль</label>
-          {{ form.password1 }}
-          {% if form.password1.errors %}
-            <div class="text-danger small mt-1">{{ form.password1.errors|striptags }}</div>
-          {% endif %}
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label" for="{{ form.password2.id_for_label }}">Повтори пароль</label>
-          {{ form.password2 }}
-          {% if form.password2.errors %}
-            <div class="text-danger small mt-1">{{ form.password2.errors|striptags }}</div>
-          {% endif %}
-        </div>
-
-        {% if next %}
-          <input type="hidden" name="next" value="{{ next }}">
-        {% endif %}
-
-        <button class="btn btn-primary w-100" type="submit">Создать аккаунт</button>
-      </form>
-
-      <div class="small mt-3 text-center">
-        Уже есть аккаунт?
-        <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Войти</a>
-      </div>
-    </div>
-  </div>
-</div>
+{% extends "registration/auth_base.html" %}
+{% block title %}Регистрация · Fastlap{% endblock %}
+{% block auth_heading %}Создать аккаунт{% endblock %}
+{% block auth_note %}Имя увидят другие игроки. Уникальный @логин нужен для входа.{% endblock %}
+{% block auth_body %}
+<form method="post" novalidate>
+  {% csrf_token %}{% include 'registration/fields.html' %}
+  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+  <button class="account-submit" type="submit">Зарегистрироваться</button>
+</form>
+<p class="account-links">Уже есть аккаунт? <a href="{% url 'login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Войти</a></p>
 {% endblock %}

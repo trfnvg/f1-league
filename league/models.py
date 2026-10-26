@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import F, Q
+from django.db.models.functions import Lower
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -602,6 +603,7 @@ class WildcardCardTemplate(models.Model):
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="league_profile")
+    handle = models.CharField("Логин", max_length=30, unique=True, null=True, blank=True)
     avatar = models.ImageField("Аватар", upload_to="avatars/", blank=True, null=True, max_length=255)
     is_world_predict_champion = models.BooleanField("World Predict Champion", default=False)
     telegram_chat_id = models.BigIntegerField("Telegram chat ID", null=True, blank=True)
@@ -616,6 +618,16 @@ class UserProfile(models.Model):
 
     class Meta:
         ordering = ("user__username",)
+        constraints = [models.UniqueConstraint(Lower("handle"), name="unique_player_handle_ci")]
+
+    def clean(self):
+        super().clean()
+        if self.handle:
+            from .identity import clean_handle
+            try:
+                self.handle = clean_handle(self.handle, self.user)
+            except ValidationError as exc:
+                raise ValidationError({"handle": exc.messages})
 
     def __str__(self):
         return f"Профиль {self.user.username}"
@@ -624,7 +636,16 @@ class UserProfile(models.Model):
 @receiver(post_save, sender=User)
 def ensure_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.get_or_create(user=instance)
+        import re
+        candidate = re.sub(r"[^a-z0-9]", "", instance.username.lower())[:30]
+        if len(candidate) < 3:
+            candidate = f"player{instance.pk}"
+        attempt = 0
+        while (UserProfile.objects.filter(handle__iexact=candidate).exists()
+               or User.objects.filter(username__iexact=candidate).exclude(pk=instance.pk).exists()):
+            attempt += 1
+            candidate = f"player{instance.pk}x{attempt}"
+        UserProfile.objects.get_or_create(user=instance, defaults={"handle": candidate})
 
 
 class Prediction(models.Model):

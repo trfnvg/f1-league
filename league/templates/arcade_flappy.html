@@ -43,7 +43,7 @@
       <p>{% if arcade_closed_event %}Результаты мини-игры зафиксированы после дедлайна прогнозов этапа <strong>{{ arcade_closed_event.name }}</strong>.{% elif wheel_event %}Участники смогут играть, когда администратор вручную откроет зачёт для этапа <strong>{{ wheel_event.name }}</strong>. Результаты зафиксируются в его дедлайн.{% else %}Администратор выберет этап и вручную откроет аркаду участникам.{% endif %}</p>
     </div>
     <div class="arcade-closed-winner is-empty">
-      {% if arcade_closed_event and arcade_closure.winner %}<span>ПОБЕДИТЕЛЬ</span><strong>{{ arcade_closure.winner.get_full_name|default:arcade_closure.winner.username }}</strong>{% if arcade_closure.winner_score %}<small>{{ arcade_closure.winner_score }} ворот · {{ arcade_closure.attempts }} попыток</small>{% endif %}{% else %}<span>ПОБЕДИТЕЛЬ НЕДЕЛИ</span><small>Итоговый лидер и кнопка колеса указаны в блоке Pit Lane Power-Up.</small>{% endif %}
+      {% if arcade_closed_event and arcade_closure.winner %}<span>ПОБЕДИТЕЛЬ</span><strong>{{ arcade_closure.winner.get_full_name|default:arcade_closure.winner|player_name }}</strong>{% if arcade_closure.winner_score %}<small>{{ arcade_closure.winner_score }} ворот · {{ arcade_closure.attempts }} попыток</small>{% endif %}{% else %}<span>ПОБЕДИТЕЛЬ НЕДЕЛИ</span><small>Итоговый лидер и кнопка колеса указаны в блоке Pit Lane Power-Up.</small>{% endif %}
     </div>
   </section>
   {% else %}

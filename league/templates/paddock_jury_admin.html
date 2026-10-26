@@ -46,7 +46,7 @@
       <div class="jury-admin-outcome {% if vetoed_prediction_id %}has-veto{% endif %}">
         {% if jury_event.crazy_vote_veto_cancelled_at %}
           <strong>Исключение отменено администратором</strong>
-          <span>Все Crazy Prediction остаются в зачёте. Голоса сохранены. {{ jury_event.crazy_vote_veto_cancelled_at|date:"d.m.Y H:i" }} · {{ jury_event.crazy_vote_veto_cancelled_by.username|default:"Администратор" }}</span>
+          <span>Все Crazy Prediction остаются в зачёте. Голоса сохранены. {{ jury_event.crazy_vote_veto_cancelled_at|date:"d.m.Y H:i" }} · {{ jury_event.crazy_vote_veto_cancelled_by|player_name|default:"Администратор" }}</span>
         {% elif vetoed_prediction_id %}
           <strong>Исключён предикт №{% for row in candidate_rows %}{% if row.prediction.id == vetoed_prediction_id %}{{ row.number }}{% endif %}{% endfor %}</strong>
           <span>Уникальный лидер голосования; прогноз больше не принесёт очки за Crazy Prediction.</span>
@@ -68,13 +68,13 @@
             <strong>{{ row.votes|length }} голосов</strong>
           </header>
           <blockquote>{{ row.prediction.crazy_prediction }}</blockquote>
-          <div class="jury-admin-author">Автор прогноза: <strong>{{ row.prediction.user.username }}</strong></div>
+          <div class="jury-admin-author">Автор прогноза: <strong>{{ row.prediction.user|player_name }}</strong></div>
           <div class="jury-admin-voters">
             <span class="jury-admin-label">КТО ГОЛОСОВАЛ ЗА ЭТОТ ПРЕДИКТ</span>
             {% if row.votes %}
               <ul>
                 {% for vote in row.votes %}
-                  <li><strong>{{ vote.voter.username }}</strong><time datetime="{{ vote.updated_at|default:vote.created_at|date:'c' }}">{{ vote.updated_at|default:vote.created_at|date:"d.m · H:i" }}</time></li>
+                  <li><strong>{{ vote.voter|player_name }}</strong><time datetime="{{ vote.updated_at|default:vote.created_at|date:'c' }}">{{ vote.updated_at|default:vote.created_at|date:"d.m · H:i" }}</time></li>
                 {% endfor %}
               </ul>
             {% else %}

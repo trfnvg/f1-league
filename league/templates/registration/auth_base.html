@@ -1,0 +1,10 @@
+{% extends "base.html" %}{% load static %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/account.css' %}?v=1">{% endblock %}
+{% block content %}
+<div class="account-shell"><section class="account-card">
+  <span class="account-eyebrow">FASTLAP / АККАУНТ</span>
+  <h1>{% block auth_heading %}{% endblock %}</h1>
+  <div class="account-note">{% block auth_note %}{% endblock %}</div>
+  {% block auth_body %}{% endblock %}
+</section></div>
+{% endblock %}

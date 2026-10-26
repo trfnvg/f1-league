@@ -5,6 +5,7 @@ from functools import partial
 from django.db.models import Max
 from django.utils import timezone
 
+from .identity import display_name
 from .models import (
     ArcadeWheelSpin,
     DuelChallenge,
@@ -220,7 +221,7 @@ def _build_event_score_rows(event):
         rows.append(
             {
                 "user_id": user_id,
-                "username": player.username,
+                "username": display_name(player),
                 "prediction_points": base_points,
                 "duel_prediction_points": base_points,
                 "wildcard_points": personal_points,

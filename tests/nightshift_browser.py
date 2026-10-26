@@ -148,6 +148,20 @@ def render_pages():
     draw.line((100, 0, 100, 300), fill="#efe8da", width=4)
     image.save(avatar, format="PNG")
     pages["/media/avatars/test.png"] = avatar.getvalue()
+    from django.contrib.auth.tokens import default_token_generator
+    from django.utils.encoding import force_bytes
+    from django.utils.http import urlsafe_base64_encode
+    client.logout()
+    for route, name in (("/register/", "league:register"), ("/login/", "login"),
+                        ("/password-reset/", "password_reset"), ("/password-reset-done/", "password_reset_done"),
+                        ("/password-reset-complete/", "password_reset_complete")):
+        pages[route] = client.get(reverse(name)).content
+    token_url = reverse("password_reset_confirm", kwargs={"uidb64": urlsafe_base64_encode(force_bytes(player.pk)),
+        "token": default_token_generator.make_token(player)})
+    token_response = client.get(token_url)
+    pages["/new-password/"] = client.get(token_response.url).content
+    client.force_login(player)
+    pages["/account-settings/"] = client.get(reverse("league:account_settings")).content
     assert all(b"Server Error" not in html for html in pages.values())
     return pages
 
@@ -194,7 +208,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -210,6 +224,15 @@ def run(output, widths, engine):
                     assert sidebar_visible == (width > 780), (width, route, page.locator(".nightshift-sidebar").evaluate("e=>({display:getComputedStyle(e).display,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})"))
                     if route in ('/', '/closed/', '/guest/'):
                         assert page.locator('.ns-home a', has_text='Создать лигу').count() == (2 if route == '/guest/' else 0)
+                    if route in ('/register/', '/login/', '/password-reset/', '/password-reset-done/', '/password-reset-complete/', '/new-password/', '/account-settings/'):
+                        assert page.locator('.account-card').is_visible()
+                        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                    if route == '/register/':
+                        assert page.locator('#id_first_name,#id_username,#id_email,#id_password1,#id_password2').count() == 5
+                        assert page.locator('.account-handle>span').inner_text() == '@'
+                        assert page.locator('#id_password2').get_attribute('autocomplete') == 'new-password'
+                    if route == '/login/':
+                        assert page.locator('a[href="/accounts/password_reset/"]').is_visible()
                     if route in ('/league/', '/standings/', '/league-long/', '/standings-long/'):
                         assert page.locator('.classification').is_visible()
                         assert page.locator('#pointsChart,script[src*="leaderboard-chart"],#leaderboard-chart-data').count() == 0
@@ -492,7 +515,7 @@ def run(output, widths, engine):
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)
             browser.close()
         assert not errors, errors
-        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 25 real pages, newest-first results, stable horizontal scrolling, neutral rows, consistent avatars, live feed, duel states and 27 admin choices. Screenshots: {output}")
+        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 32 real pages, account forms and recovery, newest-first results, stable horizontal scrolling, neutral rows, consistent avatars, live feed, duel states and 27 admin choices. Screenshots: {output}")
     finally:
         server.shutdown()
 

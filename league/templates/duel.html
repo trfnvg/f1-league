@@ -12,11 +12,11 @@
   <form method="get" class="duel-selector">
     <input type="hidden" name="season" value="{{ season.year }}">
     <label><span>Первый участник</span><select name="player_a" class="form-select">
-      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_a_id %} selected{% endif %}>{{ user.username }}</option>{% endfor %}
+      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_a_id %} selected{% endif %}>{{ user|player_name }}</option>{% endfor %}
     </select></label>
     <span class="duel-selector-vs">VS</span>
     <label><span>Второй участник</span><select name="player_b" class="form-select">
-      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_b_id %} selected{% endif %}>{{ user.username }}</option>{% endfor %}
+      {% for user in candidates %}<option value="{{ user.id }}"{% if user.id == player_b_id %} selected{% endif %}>{{ user|player_name }}</option>{% endfor %}
     </select></label>
     <button type="submit" class="duel-submit">Сравнить →</button>
   </form>
@@ -27,8 +27,8 @@
 {% if duel %}
   <section class="duel-scoreboard mb-4">
     <article class="duel-player duel-player-a">
-      <span class="duel-avatar">{% if duel.player_a.avatar_url %}<img src="{{ duel.player_a.avatar_url }}" alt="">{% else %}{{ duel.player_a.user.username|slice:":1"|upper }}{% endif %}</span>
-      <div><small>{% if duel.player_a.rank %}P{{ duel.player_a.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_a.user.username }}</h2><span>Среднее {{ duel.player_a.average }} за этап</span></div>
+      <span class="duel-avatar">{% if duel.player_a.avatar_url %}<img src="{{ duel.player_a.avatar_url }}" alt="">{% else %}{{ duel.player_a.user|player_name|slice:":1"|upper }}{% endif %}</span>
+      <div><small>{% if duel.player_a.rank %}P{{ duel.player_a.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_a.user|player_name }}</h2><span>Среднее {{ duel.player_a.average }} за этап</span></div>
       <strong>{{ duel.player_a.total }}</strong>
     </article>
     <div class="duel-head-to-head">
@@ -38,8 +38,8 @@
     </div>
     <article class="duel-player duel-player-b">
       <strong>{{ duel.player_b.total }}</strong>
-      <div><small>{% if duel.player_b.rank %}P{{ duel.player_b.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_b.user.username }}</h2><span>Среднее {{ duel.player_b.average }} за этап</span></div>
-      <span class="duel-avatar">{% if duel.player_b.avatar_url %}<img src="{{ duel.player_b.avatar_url }}" alt="">{% else %}{{ duel.player_b.user.username|slice:":1"|upper }}{% endif %}</span>
+      <div><small>{% if duel.player_b.rank %}P{{ duel.player_b.rank }} в чемпионате{% else %}Без позиции{% endif %}</small><h2>{{ duel.player_b.user|player_name }}</h2><span>Среднее {{ duel.player_b.average }} за этап</span></div>
+      <span class="duel-avatar">{% if duel.player_b.avatar_url %}<img src="{{ duel.player_b.avatar_url }}" alt="">{% else %}{{ duel.player_b.user|player_name|slice:":1"|upper }}{% endif %}</span>
     </article>
   </section>
 
@@ -47,7 +47,7 @@
     <section class="duel-panel mb-4">
       <div class="duel-panel-head"><div><span class="eyebrow">Race trace</span><h2>График очной борьбы</h2></div><span>Накопительные очки</span></div>
       <div class="duel-chart-wrap"><svg id="duelChart" class="duel-chart" viewBox="0 0 920 330" role="img" aria-label="График дуэли"></svg></div>
-      <div class="duel-chart-legend"><span style="--series-color:#E6392F">{{ duel.player_a.user.username }}</span><span style="--series-color:#1473E6">{{ duel.player_b.user.username }}</span></div>
+      <div class="duel-chart-legend"><span style="--series-color:#E6392F">{{ duel.player_a.user|player_name }}</span><span style="--series-color:#1473E6">{{ duel.player_b.user|player_name }}</span></div>
     </section>
   {% endif %}
 

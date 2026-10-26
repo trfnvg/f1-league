@@ -4,6 +4,7 @@ from . import arcade_library
 from . import jury_admin
 from . import league_views
 from . import driver_profiles
+from . import auth_views
 
 app_name = "league"
 
@@ -49,6 +50,7 @@ urlpatterns = [
     path("duel/", views.duel, name="duel"),
     path("season-predictions/", views.season_predictions, name="season_predictions"),
     path("register/", views.register, name="register"),
+    path("account/settings/", auth_views.account_settings, name="account_settings"),
     path("events/<int:event_id>/", views.event_detail, name="event_detail"),
     path("events/<int:event_id>/wildcard/draw/", views.draw_event_wildcard, name="draw_event_wildcard"),
     path("events/<int:event_id>/wildcard/answer/", views.answer_event_wildcard, name="answer_event_wildcard"),

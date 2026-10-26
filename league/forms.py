@@ -146,15 +146,83 @@ class SeasonPredictionForm(forms.ModelForm):
 
 
 class RegisterForm(UserCreationForm):
+    error_messages = {"password_mismatch": "Пароли не совпадают."}
+    username = forms.CharField(label="Логин", min_length=3, max_length=30,
+        help_text="От 3 до 30 латинских букв и цифр. Без пробелов и спецсимволов.",
+        widget=forms.TextInput(attrs={"autocomplete": "username", "autocapitalize": "none", "spellcheck": "false", "pattern": "[a-zA-Z0-9]{3,30}"}))
+    first_name = forms.CharField(label="Имя", max_length=150,
+        widget=forms.TextInput(attrs={"autocomplete": "given-name"}))
+    email = forms.EmailField(label="Почта", max_length=254,
+        help_text="На неё придёт ссылка, если ты забудешь пароль.",
+        widget=forms.EmailInput(attrs={"autocomplete": "email"}))
+
     class Meta:
         model = User
-        fields = ("username",)
+        fields = ("first_name", "username", "email")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].widget.attrs.update({"class": "form-control"})
-        self.fields["password1"].widget.attrs.update({"class": "form-control"})
-        self.fields["password2"].widget.attrs.update({"class": "form-control"})
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+        self.fields["password1"].min_length = 8
+        self.fields["password1"].label = "Пароль"
+        self.fields["password1"].help_text = "Не менее 8 символов. В пароле можно использовать спецсимволы."
+        self.fields["password2"].label = "Повтори пароль"
+        self.fields["password2"].help_text = "Введи тот же пароль ещё раз."
+        self.fields["username"].widget.attrs.pop("autofocus", None)
+        self.fields["password1"].widget.attrs["minlength"] = 8
+
+    def clean_username(self):
+        from .identity import clean_handle
+        return clean_handle(self.cleaned_data["username"])
+
+    def clean_first_name(self):
+        value = " ".join(self.cleaned_data["first_name"].split())
+        if not value or not all(char.isalpha() or char == " " for char in value):
+            raise forms.ValidationError("В имени можно использовать только буквы и пробелы.")
+        return value
+
+    def clean_email(self):
+        value = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise forms.ValidationError("Эта почта уже используется. Войди или восстанови пароль.")
+        return value
+
+    def clean_password1(self):
+        password = self.cleaned_data["password1"]
+        if len(password) < 8:
+            raise forms.ValidationError("Пароль должен содержать не менее 8 символов.")
+        return password
+
+
+class AccountSettingsForm(forms.Form):
+    handle = forms.CharField(label="Логин", max_length=30)
+    email = forms.EmailField(label="Почта для восстановления", max_length=254)
+    password = forms.CharField(label="Текущий пароль", widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
+
+    def __init__(self, *args, user, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs["class"] = "form-control"
+
+        self.fields["handle"].widget.attrs.update({"autocomplete": "username", "autocapitalize": "none", "spellcheck": "false"})
+        self.fields["email"].widget.attrs["autocomplete"] = "email"
+
+    def clean_handle(self):
+        from .identity import clean_handle
+        return clean_handle(self.cleaned_data["handle"], self.user)
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.filter(email__iexact=email).exclude(pk=self.user.pk).exists():
+            raise forms.ValidationError("Эта почта уже используется.")
+        return email
+
+    def clean_password(self):
+        if not self.user.check_password(self.cleaned_data["password"]):
+            raise forms.ValidationError("Неверный текущий пароль.")
+        return self.cleaned_data["password"]
 
 
 class AvatarUploadForm(forms.ModelForm):
@@ -195,4 +263,6 @@ class DuelChallengeForm(forms.Form):
 
     def __init__(self, *args, event, user, **kwargs):
         super().__init__(*args, **kwargs)
+        from .identity import display_name
+        self.fields["opponent"].label_from_instance = display_name
         self.fields["opponent"].queryset = available_opponents(event, user)

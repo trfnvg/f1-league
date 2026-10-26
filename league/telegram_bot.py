@@ -14,6 +14,7 @@ from django.db import IntegrityError
 from django.urls import reverse
 from django.utils import timezone
 
+from .identity import display_name
 from .models import Event, Prediction, Score, Season, TelegramBotState, TelegramReminder, UserProfile
 from .services import build_leaderboard
 
@@ -219,7 +220,7 @@ def _handle_start(chat_id, token):
     profile.save(update_fields=("telegram_chat_id", "telegram_notifications", "telegram_link_token", "updated_at"))
     send_message(
         chat_id,
-        f"Готово, {profile.user.username}! Telegram подключён к твоему аккаунту. "
+        f"Готово, {display_name(profile.user)}! Telegram подключён к твоему аккаунту. "
         "Я напомню за сутки и за 3 часа до дедлайна, если предикт ещё не отправлен.\n\n"
         "Команды: /next — следующий этап, /status — статус предикта, "
         "/table — топ-5, /stop — отключить уведомления.",
@@ -328,7 +329,7 @@ def _handle_command(chat_id, command, argument=""):
             return
         lines = [f"🏆 Топ-5 · сезон {season.year}"]
         for row in rows:
-            lines.append(f"{row['rank']}. {row['user'].username} — {row['total']} очков")
+            lines.append(f"{row['rank']}. {display_name(row['user'])} — {row['total']} очков")
         send_message(chat_id, "\n".join(lines))
     elif command == "/stop":
         updated = UserProfile.objects.filter(telegram_chat_id=chat_id).update(telegram_notifications=False)
@@ -498,7 +499,7 @@ def notify_duel_challenge(duel):
     return _send_duel_notification(
         profile,
         "🤠 Тебе бросили вызов на дуэль!\n\n"
-        f"{duel.challenger.username} вызывает тебя на этапе «{duel.event.name}».\n"
+        f"{display_name(duel.challenger)} вызывает тебя на этапе «{duel.event.name}».\n"
         f"На кону: {duel.stake} {points_label}.\n\n"
         "Прими вызов или отклони его и предложи свою ставку.\n"
         f"Ответить нужно до {_deadline_text(duel.event)}.",
@@ -512,7 +513,7 @@ def notify_duel_accepted(duel):
     return _send_duel_notification(
         profile,
         "⚔️ Твой вызов принят!\n\n"
-        f"{duel.opponent.username} принял дуэль на этапе «{duel.event.name}».\n"
+        f"{display_name(duel.opponent)} принял дуэль на этапе «{duel.event.name}».\n"
         f"Ставка зафиксирована: {duel.stake} {points_label}.\n\n"
         "Победит тот, кто наберёт больше чистых очков за этап.",
         duel.event,

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
-{% block title %}{{ player.username }} · Fastlap {{ season.year }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/player-profile.css' %}?v=1">{% endblock %}
+{% block title %}{{ player|player_name }} · Fastlap {{ season.year }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/player-profile.css' %}?v=2">{% endblock %}
 {% block content %}
 <div class="player-page">
   <div class="player-topline"><a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Общий рейтинг</a><span>СЕЗОН {{ season.year }}</span>{% if can_edit_avatar %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="profile-logout-btn" type="submit">Выйти</button></form>{% endif %}</div>
@@ -10,14 +10,14 @@
       {% if can_edit_avatar %}
       <form method="post" enctype="multipart/form-data" class="player-avatar-form" id="avatarUploadForm">
         {% csrf_token %}
-        <button class="profile-avatar profile-avatar-editable" type="button" id="avatarMenuButton" aria-haspopup="menu" aria-expanded="false" aria-controls="avatarUploadMenu" title="Изменить аватар">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">{% else %}<span>{{ player.username|slice:":1"|upper }}</span>{% endif %}</button>
+        <button class="profile-avatar profile-avatar-editable" type="button" id="avatarMenuButton" aria-haspopup="menu" aria-expanded="false" aria-controls="avatarUploadMenu" title="Изменить аватар">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player|player_name }}">{% else %}<span>{{ player|player_name|slice:":1"|upper }}</span>{% endif %}</button>
         <div class="player-avatar-menu" id="avatarUploadMenu" role="menu" hidden><button id="avatarUploadAction" type="button" role="menuitem">Загрузить аватар<small>JPG, PNG или WebP</small></button></div>
         {{ avatar_form.avatar }}
       </form>
-      {% else %}<div class="profile-avatar">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">{% else %}{{ player.username|slice:":1"|upper }}{% endif %}</div>{% endif %}
-      <div class="player-name-block"><span class="player-kicker">FASTLAP / УЧАСТНИК</span><div class="player-name-row"><h1>{{ player.username }}</h1>{% if profile_obj.is_world_predict_champion %}<span class="wpc-badge" title="World Predict Champion">WPC</span>{% endif %}</div><p>{% if can_edit_avatar %}Твой сезон. Твои прогнозы.{% else %}Прогнозы и результаты участника.{% endif %}</p></div>
+      {% else %}<div class="profile-avatar">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player|player_name }}">{% else %}{{ player|player_name|slice:":1"|upper }}{% endif %}</div>{% endif %}
+      <div class="player-name-block"><span class="player-kicker">FASTLAP / УЧАСТНИК</span><div class="player-name-row"><h1>{{ player|player_name }}</h1>{% if profile_obj.is_world_predict_champion %}<span class="wpc-badge" title="World Predict Champion">WPC</span>{% endif %}</div><p>@{{ profile_obj.handle }}</p></div>
     </div>
-    {% if can_edit_avatar %}<button class="player-outline-button" type="button" data-change-avatar>Изменить аватар</button>{% endif %}
+    {% if can_edit_avatar %}<div class="player-account-actions"><a class="player-outline-button" href="{% url 'league:account_settings' %}">Настройки аккаунта</a><button class="player-outline-button" type="button" data-change-avatar>Изменить аватар</button></div>{% endif %}
   </header>
   {% if avatar_form.avatar.errors %}<div class="player-upload-error" role="alert">{{ avatar_form.avatar.errors }}</div>{% endif %}
   <section class="player-season-strip" aria-label="Результаты сезона">

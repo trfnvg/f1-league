@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.utils import timezone
 
+from .identity import display_name
 from .crazy_jury import CRAZY_VOTE_DURATION, vetoed_crazy_prediction_id
 from .models import (
     DRIVER_CHOICES,
@@ -102,7 +103,7 @@ def build_leaderboard(season_year):
         event_ids_with_scores.add(score.event_id)
 
     users = list(User.objects.filter(is_staff=False, is_active=True))
-    users_sorted = sorted(users, key=lambda user: (-totals[user.id], user.username.lower()))
+    users_sorted = sorted(users, key=lambda user: (-totals[user.id], display_name(user).lower()))
     profiles = {
         profile.user_id: profile
         for profile in UserProfile.objects.filter(user_id__in=[user.id for user in users])
@@ -116,7 +117,7 @@ def build_leaderboard(season_year):
             previous_totals[score.user_id] += score.points
     previous_order = sorted(
         users,
-        key=lambda user: (-previous_totals[user.id], user.username.lower()),
+        key=lambda user: (-previous_totals[user.id], display_name(user).lower()),
     )
     previous_ranks = {user.id: index for index, user in enumerate(previous_order, start=1)}
 
@@ -170,7 +171,7 @@ def build_leaderboard(season_year):
         chart_series.append(
             {
                 "user_id": user.id,
-                "name": user.username,
+                "name": display_name(user),
                 "color": color,
                 "points": points,
             }
@@ -478,8 +479,8 @@ def build_duel(player_a, player_b, season_year, leaderboard=None):
         "graph": {
             "events": graph_events,
             "series": [
-                {"name": player_a.username, "color": "#E6392F", "points": graph_a},
-                {"name": player_b.username, "color": "#1473E6", "points": graph_b},
+                {"name": display_name(player_a), "color": "#E6392F", "points": graph_a},
+                {"name": display_name(player_b), "color": "#1473E6", "points": graph_b},
             ],
         },
     }
@@ -499,7 +500,7 @@ def build_activity_feed(leaderboard, limit=5):
             score_word = _russian_plural(closure.winner_score or 0, ("очко", "очка", "очков"))
             arcade_news = {
                 "type": "arcade-winner",
-                "text": f"{closure.winner.username} выиграл аркаду",
+                "text": f"{display_name(closure.winner)} выиграл аркаду",
                 "meta": (
                     f"Pit Lane Flight · {closure.attempts} {attempt_word} · "
                     f"рекорд {closure.winner_score or 0} {score_word}"
@@ -523,7 +524,7 @@ def build_activity_feed(leaderboard, limit=5):
             )
             arcade_news = {
                 "type": "arcade-leader",
-                "text": f"{arcade_lead.player.username} занял первое место в аркаде",
+                "text": f"{display_name(arcade_lead.player)} занял первое место в аркаде",
                 "meta": (
                     f"С {arcade_lead.attempts} {attempt_word} · "
                     f"рекорд {arcade_lead.best_score} {score_word}"
@@ -579,7 +580,7 @@ def build_activity_feed(leaderboard, limit=5):
         vote_word = _russian_plural(vote_count, ("голос", "голоса", "голосов"))
         jury_news = {
             "type": "crazy-veto",
-            "text": f"Crazy Prediction игрока {excluded_prediction.user.username} исключён",
+            "text": f"Crazy Prediction игрока {display_name(excluded_prediction.user)} исключён",
             "meta": (
                 f"R{jury_event.round_number} · {jury_event.name} · "
                 f"Paddock Jury · {vote_count} {vote_word}"
@@ -614,7 +615,7 @@ def build_activity_feed(leaderboard, limit=5):
         duel_news.append(
             {
                 "type": "duel-accepted",
-                "text": f"Дуэль {duel.challenger.username} — {duel.opponent.username} принята",
+                "text": f"Дуэль {display_name(duel.challenger)} — {display_name(duel.opponent)} принята",
                 "meta": f"R{duel.event.round_number} · ставка {duel.stake} {stake_word}",
                 "user_id": duel.opponent_id,
                 "event_id": duel.event_id,
@@ -627,10 +628,10 @@ def build_activity_feed(leaderboard, limit=5):
             duel_news.append(
                 {
                     "type": "duel-result",
-                    "text": f"{duel.winner.username} выиграл дуэль",
+                    "text": f"{display_name(duel.winner)} выиграл дуэль",
                     "meta": (
-                        f"R{duel.event.round_number} · {duel.challenger.username} — "
-                        f"{duel.opponent.username} · +{duel.stake} {stake_word}"
+                        f"R{duel.event.round_number} · {display_name(duel.challenger)} — "
+                        f"{display_name(duel.opponent)} · +{duel.stake} {stake_word}"
                     ),
                     "user_id": duel.winner_id,
                     "event_id": duel.event_id,
@@ -733,7 +734,7 @@ def build_activity_feed(leaderboard, limit=5):
                         entries,
                         event=event,
                         activity_type="winner",
-                        text=f"{winner.username} выиграл этап",
+                        text=f"{display_name(winner)} выиграл этап",
                         meta=f"R{event.round_number} · {event.name} · {best_points} очков",
                         user_id=winner.id,
                         link_to_event=True,
@@ -749,7 +750,7 @@ def build_activity_feed(leaderboard, limit=5):
                     entries,
                     event=event,
                     activity_type="record",
-                    text=f"{user.username} обновил личный рекорд",
+                    text=f"{display_name(user)} обновил личный рекорд",
                     meta=f"R{event.round_number} · {event.name} · {score.points} очков",
                     user_id=user.id,
                 )
@@ -770,7 +771,7 @@ def build_activity_feed(leaderboard, limit=5):
                         entries,
                         event=event,
                         activity_type="perfect-podium",
-                        text=f"{user.username} идеально угадал подиум",
+                        text=f"{display_name(user)} идеально угадал подиум",
                         meta=f"R{event.round_number} · {event.name} · P1, P2 и P3 точно",
                         user_id=user.id,
                         link_to_event=True,
@@ -799,7 +800,7 @@ def build_activity_feed(leaderboard, limit=5):
             ranking_rows,
             key=lambda row: (
                 -(row["total"] - (row["latest_points"] or 0)),
-                row["user"].username.lower(),
+                display_name(row["user"]).lower(),
             ),
         )
         previous_leader = (
@@ -820,7 +821,7 @@ def build_activity_feed(leaderboard, limit=5):
                 feed,
                 event=latest_published_event,
                 activity_type="leader",
-                text=f"{current_leader['user'].username} стал новым лидером чемпионата",
+                text=f"{display_name(current_leader['user'])} стал новым лидером чемпионата",
                 meta=f"После R{latest_published_event.round_number} · {current_leader['total']} очков",
                 user_id=current_leader["user"].id,
             )
@@ -844,7 +845,7 @@ def build_activity_feed(leaderboard, limit=5):
                 feed,
                 event=latest_published_event,
                 activity_type="movement",
-                text=f"{mover['user'].username} поднялся на {movement} {place_word}",
+                text=f"{display_name(mover['user'])} поднялся на {movement} {place_word}",
                 meta=f"После R{latest_published_event.round_number} · теперь P{mover['rank']}",
                 user_id=mover["user"].id,
             )
