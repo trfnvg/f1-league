@@ -250,11 +250,29 @@ def run(output, widths, engine):
                         image = page.locator('.ns-calendar .event-media>img').first
                         assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'cover'
                         assert page.locator('.ns-live .activity-news-item').count() == 5
-                        assert page.locator('.ns-live .activity-news-item').evaluate_all('''items=>items.every(item=>{
+                        assert page.locator('.ns-live .activity-news-item:visible').count() == 3
+                        radio = page.locator('.ns-live')
+                        assert radio.bounding_box()['height'] < 390, (width, 'Radio takes too much vertical space')
+                        page.locator('.paddock-radio-toggle').click()
+                        assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                        assert page.locator('.ns-live .activity-news-item:visible').count() == 5
+                        assert page.locator('.ns-live .activity-news-item:visible').evaluate_all('''items=>items.every(item=>{
                             const icon=item.querySelector('.activity-feed-icon'),copy=item.querySelector('.activity-news-copy');
                             const a=icon.getBoundingClientRect(),b=copy.getBoundingClientRect();
-                            return Math.abs(a.width-32)<1 && Math.abs(a.height-32)<1 && a.right+8<=b.left && a.y>=item.getBoundingClientRect().y && getComputedStyle(icon,'::before').content==='none' && !!icon.querySelector('svg');
+                            return Math.abs(a.width-24)<1 && Math.abs(a.height-24)<1 && a.right+8<=b.left && a.y>=item.getBoundingClientRect().y && getComputedStyle(icon,'::before').content==='none' && !!icon.querySelector('svg');
                         })'''), (width, "feed icons overlap copy")
+                        feed_url = page.locator('#live-paddock-list').get_attribute('data-feed-url')
+                        updated_feed = page.locator('#live-paddock-list').inner_html().replace('Аня возглавляет чемпионат', 'Аня возглавляет чемпионат · обновлено')
+                        page.route('**'+feed_url, lambda route: route.fulfill(json={'html': updated_feed}))
+                        with page.expect_response('**'+feed_url):
+                            page.evaluate("document.activeElement.blur();document.dispatchEvent(new Event('visibilitychange'))")
+                        page.locator('.ns-live .activity-news-copy strong').first.get_by_text('Аня возглавляет чемпионат · обновлено', exact=True).wait_for()
+                        assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                        assert page.locator('.ns-live .activity-news-item:visible').count() == 5
+                        page.locator('.paddock-radio-toggle').click()
+                        assert page.locator('.ns-live .activity-news-item:visible').count() == 3
+                        radio.screenshot(path=str(output/f'{width}-paddock-radio.png'))
+                        page.unroute('**'+feed_url)
                         action=page.locator('.ns-primary')
                         assert action.evaluate("e=>getComputedStyle(e).clipPath==='none' && getComputedStyle(e).transform==='none'")
                         assert action.locator('svg').is_visible()

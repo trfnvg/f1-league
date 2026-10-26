@@ -605,7 +605,7 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertFalse(any("Opening GP" in item["meta"] for item in feed))
 
         response = self.client.get(reverse("league:home"))
-        self.assertContains(response, "На связи с твоим паддоком")
+        self.assertContains(response, "FASTLAP / TEAM RADIO")
         self.assertContains(response, "Alice стал новым лидером чемпионата")
 
     def test_activity_feed_keeps_five_latest_items_on_home_and_poll(self):
@@ -629,6 +629,8 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertEqual(feed, full_feed[:5])
         home = self.client.get(reverse("league:home"), {"season": 2026})
         self.assertEqual(home.context["activity_feed"], feed)
+        self.assertContains(home, 'aria-controls="live-paddock-list"')
+        self.assertContains(home, 'league/paddock-radio.js')
         poll = self.client.get(reverse("league:activity_feed"), {"season": 2026})
         self.assertEqual(poll.json()["html"].count('class="activity-feed-item '), 5)
         self.assertEqual(home.context["activity_feed"][0]["occurred_at"],
@@ -867,7 +869,7 @@ class CompetitiveFeaturesTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("Дуэль duel-sender — duel-acceptor принята", response.json()["html"])
-        self.assertIn("Вызов принят", response.json()["html"])
+        self.assertIn('is-duel-accepted', response.json()["html"])
 
     def test_saved_scored_and_round_winner_states_are_rendered(self):
         winner = User.objects.create_user("Winner", password="test")

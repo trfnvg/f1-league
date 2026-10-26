@@ -8,7 +8,7 @@
     {% endif %}
   >
     <span class="activity-feed-icon" aria-hidden="true">{% include 'activity_icon.html' with kind=item.type %}</span>
-    <span class="activity-news-copy"><small class="activity-news-label">{% if item.type == "leader" %}Лидер чемпионата{% elif item.type == "winner" %}Результаты гонки{% elif item.type == "movement" %}Смена позиции{% elif item.type == "arcade-leader" %}Рекорд аркады{% elif item.type == "arcade-winner" %}Победитель аркады{% elif item.type == "duel-accepted" %}Вызов принят{% elif item.type == "duel-result" %}Итоги дуэли{% elif item.type == "crazy-veto" %}Paddock Jury{% else %}Сообщение паддока{% endif %}</small><strong>{{ item.text }}</strong><small>{{ item.meta }}</small></span>
+    <span class="activity-news-copy"><strong>{{ item.text }}</strong><small class="paddock-radio-meta"><span class="activity-news-label">{% if item.type == "leader" %}Лидер{% elif item.type == "winner" %}Гонка{% elif item.type == "movement" %}Позиции{% elif item.type == "arcade-leader" or item.type == "arcade-winner" %}Аркада{% elif item.type == "duel-accepted" or item.type == "duel-result" %}Дуэль{% elif item.type == "crazy-veto" %}Paddock Jury{% else %}Паддок{% endif %}</span>{% if item.meta %}<span class="paddock-radio-context">{{ item.meta }}</span>{% endif %}</small></span>
     <span class="paddock-radio-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
   </a>
 {% empty %}
