@@ -411,7 +411,7 @@ class EventAdmin(admin.ModelAdmin):
 
     class Media:
         css = {"all": ("league/admin-wildcards.css", "league/circuit-visual.css", "league/admin-circuits.css")}
-        js = ("league/admin-wildcards.js", "league/admin-circuits.js")
+        js = ("league/admin-wildcards.js", "league/admin-circuits.js", "league/circuit-peloton.js")
 
     @admin.display(description="Схема трассы")
     def circuit_preview(self, obj):

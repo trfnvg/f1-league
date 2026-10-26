@@ -52,6 +52,15 @@ class CircuitCatalogueTests(SimpleTestCase):
 
 @override_settings(STORAGES=STORAGES)
 class CircuitEventTests(TestCase):
+    def test_every_circuit_renders_full_roster_without_draw_animation(self):
+        from django.template.loader import render_to_string
+        for key, circuit in CIRCUITS.items():
+            html = render_to_string("circuit_track.html", {"circuit":circuit, "track_id":key, "animated":True})
+            self.assertEqual(html.count('class="circuit-car"'), 22)
+            self.assertIn('data-racer="russell"', html)
+            self.assertIn('data-racer="bottas"', html)
+            self.assertNotIn('animateMotion', html)
+
     def setUp(self):
         self.now = timezone.now()
         self.season, _ = Season.objects.update_or_create(year=2026, defaults={"is_active": True})
@@ -67,7 +76,8 @@ class CircuitEventTests(TestCase):
         self.assertContains(response, 'id="circuit-path-home"')
         self.assertContains(response, 'data-circuit="austin"')
         self.assertContains(response, "До старта гонки")
-        self.assertContains(response, 'repeatCount="indefinite"')
+        self.assertContains(response, 'class="circuit-car"', count=22)
+        self.assertContains(response, 'league/circuit-peloton.js')
         self.assertNotContains(response, 'class="home-command')
 
     def test_admin_select_saves_circuit_and_fills_empty_name(self):

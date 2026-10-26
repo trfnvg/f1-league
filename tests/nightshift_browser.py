@@ -529,13 +529,21 @@ def run(output, widths, engine):
             page.goto(base+"/admin-edit/", wait_until="networkidle")
             assert page.locator("#id_circuit").input_value() == "austin"
             page.goto(base+"/", wait_until="networkidle")
-            position = "el => { const m=el.getScreenCTM(); return [m.e,m.f]; }"
-            runner = page.locator(".ns-trackdrawing .circuit-runner")
-            first = runner.evaluate(position)
+            position = "nodes => nodes.map(el => [el.getAttribute('cx'),el.getAttribute('cy')])"
+            runners = page.locator(".ns-trackdrawing .circuit-car")
+            assert runners.count() == 22
+            assert runners.evaluate_all("nodes => new Set(nodes.map(el => el.dataset.racer)).size") == 22
+            assert runners.evaluate_all("nodes => new Set(nodes.map(el => el.getAttribute('fill'))).size") == 11
+            assert page.locator('.ns-trackdrawing .circuit-peloton').is_visible()
+            first = runners.evaluate_all(position)
             page.wait_for_timeout(350)
-            assert runner.evaluate(position) != first, "Track runner is not moving"
+            assert runners.evaluate_all(position) != first, "Peloton is not moving"
             page.emulate_media(reduced_motion="reduce")
-            assert not runner.is_visible()
+            page.wait_for_timeout(100)  # Browser delivers the media change asynchronously.
+            first = runners.evaluate_all(position)
+            page.wait_for_timeout(350)
+            assert runners.evaluate_all(position) == first, "Reduced motion must freeze the peloton"
+            assert runners.first.is_visible()
             assert page.locator("#circuit-path-home").evaluate("el => getComputedStyle(el).animationName") == "none"
             page.goto(base+"/circuits/", wait_until="networkidle")
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)

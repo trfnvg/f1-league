@@ -17,10 +17,17 @@ custom races keep a neutral fallback rather than another circuit's geometry.
 An ambiguous Spanish GP means Barcelona before 2026 and Madrid from 2026; an
 explicit city/name or selected circuit takes priority.
 
-The SVG is rendered on the server with local paths. The main circuit draws in
-and a white marker laps the circuit using SVG motion. Calendar miniatures are
-static. Reduced-motion preferences remove the moving marker and drawing effect.
-There is no video, map SDK, runtime network request or high-resolution bitmap.
+The SVG is rendered on the server with complete local paths, without a drawing
+intro. Animated previews show the season's DriverProfile roster (22 drivers in
+2026) in the same team palette as the driver picker. The preview falls back to
+2026 when the next season has no configured roster. Initial order is shuffled;
+slightly different speeds and two offset racing lines produce decorative
+overtakes, not live standings. Names and numbers are in each marker's SVG title.
+Calendar miniatures remain static. Reduced motion freezes the markers in place.
+One animation loop serves visible tracks only; it pauses in hidden tabs and
+uses precomputed path samples rather than querying path geometry every frame.
+Admin circuit changes invalidate those samples. There is no video, map SDK,
+runtime network request or high-resolution bitmap.
 
 ## Geometry and attribution
 

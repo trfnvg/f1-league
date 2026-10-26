@@ -8,11 +8,6 @@
 .circuit-label { fill:#b9c1cc; font:500 12px/1 "SFMono-Regular",Consolas,monospace; text-anchor:middle; dominant-baseline:middle; paint-order:stroke; stroke:#222933; stroke-width:4px; stroke-linejoin:round; }
 .circuit-start-label { fill:#e7ecf2; font-size:11px; }
 .ns-calendar-track .circuit-labels,.event-stage-track .circuit-labels { display:none; }
-.circuit-runner { fill:#fff; }
-.circuit-runner-halo { fill:#ff7467; fill-opacity:.24; }
-.circuit-visual.is-animated .circuit-trace { stroke-dasharray:1000; stroke-dashoffset:0; animation:circuit-draw 2.6s cubic-bezier(.2,.8,.3,1) both; }
-@keyframes circuit-draw { from { stroke-dashoffset:1000; } to { stroke-dashoffset:0; } }
-@media(prefers-reduced-motion:reduce) {
-  .circuit-visual.is-animated .circuit-trace { animation:none; }
-  .circuit-runner,.circuit-runner-halo { display:none; }
-}
+.circuit-peloton { visibility:hidden; }
+.circuit-peloton.is-ready { visibility:visible; }
+.circuit-car { stroke:#141a22; stroke-width:1.25; }

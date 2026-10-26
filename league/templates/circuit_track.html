@@ -1,4 +1,4 @@
-<svg class="circuit-visual{% if animated %} is-animated{% endif %}" viewBox="0 0 620 370" role="img" aria-label="Схема трассы {{ circuit.name }}" data-circuit="{{ circuit.key }}" xmlns="http://www.w3.org/2000/svg">
+{% load circuit_extras %}<svg class="circuit-visual{% if animated %} is-animated{% endif %}" viewBox="0 0 620 370" role="img" aria-label="Схема трассы {{ circuit.name }}" data-circuit="{{ circuit.key }}" xmlns="http://www.w3.org/2000/svg">
   <title>{{ circuit.name }}</title>
   <path class="circuit-road" d="{{ circuit.path }}"/>
   <path class="circuit-edge" d="{{ circuit.path }}"/>
@@ -9,5 +9,5 @@
     <text class="circuit-label circuit-start-label" x="{{ circuit.start_label.x }}" y="{{ circuit.start_label.y }}">START</text>
     {% for label in circuit.sector_labels %}<text class="circuit-label circuit-sector-label" x="{{ label.x }}" y="{{ label.y }}">{{ label.text }}</text>{% endfor %}
   </g>
-  {% if animated %}<circle class="circuit-runner-halo" r="9"><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#circuit-path-{{ track_id }}"/></animateMotion></circle><circle class="circuit-runner" r="4.5"><animateMotion dur="14s" repeatCount="indefinite"><mpath href="#circuit-path-{{ track_id }}"/></animateMotion></circle>{% endif %}
+  {% if animated %}{% circuit_drivers as racers %}<g class="circuit-peloton"><desc>Декоративная гонка со случайным порядком, не реальные позиции пилотов.</desc>{% for racer in racers %}<circle class="circuit-car" r="4" fill="{{ racer.color }}" data-racer="{{ racer.key }}" data-team="{{ racer.team }}"><title>{{ racer.name }} · №{{ racer.number }} · {{ racer.team }}</title></circle>{% endfor %}</g>{% endif %}
 </svg>

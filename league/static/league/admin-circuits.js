@@ -29,6 +29,7 @@
         label.textContent = labels[i].text;
       });
       if (svg.setCurrentTime) svg.setCurrentTime(0);
+      svg.dispatchEvent(new Event('circuit:changed'));
       preview.querySelector('[data-circuit-caption]').textContent = data.circuitName;
       if (fillName && name && (!name.value.trim() || name.value === autoName)) {
         name.value = data.circuitGp; autoName = data.circuitGp;
