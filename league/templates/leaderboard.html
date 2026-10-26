@@ -2,7 +2,7 @@
 {% load league_extras static %}
 
 {% block title %}Таблица сезона {{ season.year }} · F1 Predictions{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=1">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=2">{% endblock %}
 
 {% block content %}
 
@@ -22,3 +22,4 @@
 
 {% include 'leagues/standings.html' %}
 {% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/standings.js' %}?v=1" defer></script>{% endblock %}

@@ -1,6 +1,6 @@
 {% extends 'leagues/base.html' %}
 {% load static %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=1">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=2">{% endblock %}
 {% block league_breadcrumb %}{% endblock %}
 {% block league_content %}
 <header class="league-dashboard-head league-dashboard-head-premium">
@@ -24,3 +24,4 @@
 {% include 'leagues/standings.html' %}
 {% if page.has_other_pages %}<nav class="leagues-pagination" aria-label="Страницы участников">{% if page.has_previous %}<a href="?year={{ season.year }}&page={{ page.previous_page_number }}">← Назад</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?year={{ season.year }}&page={{ page.next_page_number }}">Далее →</a>{% endif %}</nav>{% endif %}
 {% endblock %}
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/standings.js' %}?v=1" defer></script>{% endblock %}

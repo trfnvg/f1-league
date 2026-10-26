@@ -177,7 +177,10 @@ class LeaderboardStandingsTests(TestCase):
         self.assertEqual([event.round_number for event in response.context["events"]], [1, 2, 3])
         self.assertEqual([row["user"].username for row in response.context["rows"]], ["Борис", "Алексей"])
         self.assertEqual([row["total"] for row in response.context["rows"]], [22, 14])
-        self.assertContains(response, 'class="classification-breakdown"', count=2)
+        self.assertContains(response, '<table class="classification-table"')
+        self.assertContains(response, 'scope="row" class="classification-identity"', count=2)
+        self.assertContains(response, 'class="classification-score"', count=6)
+        self.assertContains(response, 'data-round-select', count=3)
         self.assertNotContains(response, 'id="pointsChart"')
         self.assertNotContains(response, "league/leaderboard-chart.js")
         self.assertNotContains(response, "leaderboard-chart-data")
@@ -192,9 +195,10 @@ class LeaderboardStandingsTests(TestCase):
         html = render_to_string("leagues/standings.html", {"season": {"year": 2026},
             "rows": [{"user": player, "rank": 1, "total": -4, "latest_points": 0}],
             "events": events, "scores_map": {(player.pk, events[0].pk): zero, (player.pk, events[1].pk): penalty}})
-        self.assertIn('<strong>0</strong>', html)
-        self.assertIn('<strong>-4</strong>', html)
-        self.assertEqual(html.count('classification-round is-unscored'), 1)
+        self.assertIn('<span class="classification-score">0</span>', html)
+        self.assertIn('<span class="classification-score">-4</span>', html)
+        self.assertEqual(html.count('classification-result is-unscored'), 1)
+        self.assertEqual(html.count('classification-result is-penalty'), 1)
 
 
 @override_settings(STORAGES=TEST_STORAGES)
