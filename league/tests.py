@@ -199,6 +199,9 @@ class PlayerProfileOrderingTests(TestCase):
             round_number=2,
             deadline=now + timedelta(days=8),
         )
+        Prediction.objects.create(user=player, event=older)
+        Prediction.objects.create(user=player, event=newer)
+        Event.objects.create(name="Пустой будущий этап", round_number=3, deadline=now + timedelta(days=15))
 
         response = self.client.get(reverse("league:player_profile", args=[player.id]))
 

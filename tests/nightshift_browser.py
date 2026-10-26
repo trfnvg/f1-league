@@ -33,7 +33,7 @@ from PIL import Image, ImageDraw
 from league.circuits import CIRCUITS
 from league.leagues import import_legacy_league
 from league.duels import create_duel_challenge, respond_to_duel
-from league.models import Event, Prediction, Score, Season, UserProfile, EventWildcardQuestion, EventWildcardDeck, EventWildcardDeckCard
+from league.models import Event, Prediction, Score, Season, UserProfile, EventWildcardQuestion, EventWildcardDeck, EventWildcardDeckCard, ArcadeTrophyAward
 
 
 def render_pages():
@@ -81,6 +81,9 @@ def render_pages():
     pages["/event/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     pages["/drivers/"] = client.get(reverse("league:drivers")+'?season=2026').content
     pages["/driver-profile/"] = client.get(reverse("league:driver_profile", args=(2026, "russell"))).content
+    ArcadeTrophyAward.objects.create(player=player, event=past, game_key='pit_lane_flight', game_name='Pit Lane Flight', trophy_name='Банана Леклер', attempts=7)
+    ArcadeTrophyAward.objects.create(player=player, event=past, game_key='doodle_jump', game_name='Cowboy GP', trophy_name='Космический ковбой', attempts=12, image='test-cowboy.png')
+    pages['/media/test-cowboy.png'] = Path(finders.find('league/images/russell-cowboy-pixel-reward-v1.png')).read_bytes()
     pages["/profile/"] = client.get(reverse("league:player_profile", args=[player.pk])).content
     pages["/event-closed/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
     challenge = create_duel_challenge(event, player, User.objects.get(username="Очень_длинное_имя_участника"), 7)
@@ -353,6 +356,20 @@ def run(output, widths, engine):
                         page.locator('.stage-sections a[href="#stage-prediction"]').click()
                     if route == "/profile/":
                         assert page.locator("#season-predictions").is_visible()
+                        assert page.locator('#playerTrend').count() == 0
+                        assert page.locator('.player-trophy-card').count() == 2
+                        assert page.locator('.player-trophy-content dl').first.is_visible()
+                        page.locator('#avatarMenuButton').click()
+                        assert page.locator('#avatarUploadMenu').is_visible()
+                        page.keyboard.press('Escape')
+                        assert page.locator('#avatarUploadMenu').is_hidden()
+                        with page.expect_file_chooser():
+                            page.locator('[data-change-avatar]').click()
+                        page.locator('.player-event summary').first.click()
+                        assert page.locator('.player-event-content').first.is_visible()
+                        assert page.locator('#player-history .player-event').count() == 2
+                        page.evaluate('document.activeElement.blur(); window.scrollTo(0,0)')
+                        page.wait_for_timeout(250)
                     page.screenshot(path=str(output/f"{width}-{route.strip('/') or 'home'}.png"), full_page=True)
                 page.close()
             fallback_page = browser.new_page(viewport={"width": 390, "height": 1000}, java_script_enabled=False)

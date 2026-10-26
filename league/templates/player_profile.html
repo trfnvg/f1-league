@@ -1,591 +1,74 @@
 {% extends "base.html" %}
 {% load static %}
-
-{% block title %}{{ player.username }} · F1 Predictions {{ season.year }}{% endblock %}
-
+{% block title %}{{ player.username }} · Fastlap {{ season.year }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/player-profile.css' %}?v=1">{% endblock %}
 {% block content %}
-<style>
-  .profile-hero {
-    position: relative;
-    border-radius: 22px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background:
-      radial-gradient(540px 200px at 100% 0%, rgba(225, 6, 0, 0.28), transparent 68%),
-      linear-gradient(145deg, rgba(34, 46, 62, 0.96), rgba(18, 25, 35, 0.98));
-    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
-    overflow: hidden;
-  }
-
-  .profile-hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(110deg, rgba(255, 255, 255, 0.1), transparent 40%);
-    opacity: 0.35;
-  }
-
-  .profile-user {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.8rem;
-  }
-
-  .profile-avatar {
-    width: 84px;
-    height: 84px;
-    border-radius: 50%;
-    overflow: hidden;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    font-size: 1.45rem;
-    background: linear-gradient(180deg, rgba(225, 6, 0, 0.84), rgba(140, 7, 5, 0.9));
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    color: #ffffff;
-  }
-
-  .profile-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  .profile-name {
-    font-size: clamp(1.5rem, 2.2vw, 2rem);
-    font-weight: 800;
-    margin: 0;
-    letter-spacing: 0.01em;
-  }
-
-  .profile-name-row {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-
-  .avatar-editor {
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.75rem;
-  }
-
-  .avatar-editor-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    gap: 0.6rem;
-  }
-
-  .avatar-editor .form-control {
-    min-width: 230px;
-    max-width: 380px;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
-    gap: 0.7rem;
-  }
-
-  .stat-box {
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.06);
-    padding: 0.7rem 0.85rem;
-  }
-
-  .stat-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .stat-value {
-    font-size: 1.2rem;
-    font-weight: 800;
-    margin-top: 0.15rem;
-  }
-
-  .profile-section-title {
-    font-size: 1.12rem;
-    font-weight: 800;
-    margin-bottom: 0.7rem;
-  }
-
-  .prediction-card {
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(180deg, rgba(30, 40, 54, 0.9), rgba(18, 24, 33, 0.95));
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    overflow: hidden;
-  }
-
-  .prediction-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.6rem;
-    padding: 0.85rem 0.95rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .prediction-round {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: rgba(255, 255, 255, 0.72);
-  }
-
-  .prediction-event {
-    font-weight: 700;
-    margin-top: 0.1rem;
-  }
-
-  .score-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    min-width: 40px;
-    padding: 0.2rem 0.58rem;
-    border-radius: 999px;
-    border: 1px solid rgba(120, 204, 161, 0.45);
-    background: rgba(120, 204, 161, 0.16);
-    color: #b8f3d8;
-    font-weight: 800;
-    font-size: 0.88rem;
-  }
-
-  .prediction-body {
-    padding: 0.9rem 0.95rem 1rem;
-  }
-
-  .prediction-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.55rem;
-  }
-
-  .prediction-item {
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    background: rgba(255, 255, 255, 0.04);
-    padding: 0.5rem 0.62rem;
-  }
-
-  .prediction-item-label {
-    font-size: 0.73rem;
-    color: rgba(255, 255, 255, 0.68);
-    margin-bottom: 0.1rem;
-  }
-
-  .prediction-item-value {
-    font-weight: 700;
-    font-size: 0.9rem;
-  }
-
-  .prediction-empty {
-    color: rgba(255, 255, 255, 0.68);
-    font-size: 0.92rem;
-  }
-
-  .season-fact {
-    margin-top: 0.1rem;
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.62);
-  }
-
-  @media (max-width: 992px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, minmax(120px, 1fr));
-    }
-  }
-
-  @media (max-width: 576px) {
-    .prediction-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .profile-avatar {
-      width: 68px;
-      height: 68px;
-      font-size: 1.2rem;
-    }
-  }
-</style>
-
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <a href="{% url 'league:leaderboard' %}?season={{ season.year }}" class="text-decoration-none">&larr; Назад к таблице</a>
-  {% if can_edit_avatar %}
-    <div class="profile-page-controls">
-      <form method="post" action="{% url 'logout' %}">
-        {% csrf_token %}
-        <button type="submit" class="profile-logout-btn" aria-label="Выйти из аккаунта">Выйти</button>
-      </form>
-    </div>
-  {% endif %}
-</div>
-
-<section class="profile-hero profile-race-card p-3 p-md-4 mb-4" style="animation: card-enter 240ms ease-out both;">
-  <div class="profile-race-card-grid">
-    <div class="profile-race-identity">
-      <div class="profile-user">
+<div class="player-page">
+  <div class="player-topline"><a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Общий рейтинг</a><span>СЕЗОН {{ season.year }}</span>{% if can_edit_avatar %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="profile-logout-btn" type="submit">Выйти</button></form>{% endif %}</div>
+  <header class="player-identity">
+    <div class="player-identity-main">
       {% if can_edit_avatar %}
-        <form method="post" enctype="multipart/form-data" class="profile-avatar-form" id="avatarUploadForm">
-          {% csrf_token %}
-          <button class="profile-avatar profile-avatar-editable"
-                  type="button"
-                  id="avatarMenuButton"
-                  aria-haspopup="menu"
-                  aria-expanded="false"
-                  aria-controls="avatarUploadMenu"
-                  title="Открыть меню аватара">
-            {% if profile_obj.avatar %}
-              <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
-            {% else %}
-              <span>{{ player.username|slice:":1"|upper }}</span>
-            {% endif %}
-          </button>
-          <div class="profile-avatar-menu" id="avatarUploadMenu" role="menu" hidden>
-            <button class="profile-avatar-menu-action" id="avatarUploadAction" type="button" role="menuitem">
-              <span class="profile-avatar-menu-icon" aria-hidden="true">↑</span>
-              <span>
-                <strong>Загрузить аватар</strong>
-                <small>JPG, PNG или WebP</small>
-              </span>
-            </button>
-          </div>
-          {{ avatar_form.avatar }}
-        </form>
-      {% else %}
-        <div class="profile-avatar">
-          {% if profile_obj.avatar %}
-            <img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">
-          {% else %}
-            {{ player.username|slice:":1"|upper }}
-          {% endif %}
-        </div>
-      {% endif %}
-        <div>
-          <div class="profile-name-row">
-            <h1 class="profile-name">{{ player.username }}</h1>
-            {% if profile_obj.is_world_predict_champion %}
-              <span class="wpc-badge">WPC</span>
-            {% endif %}
-          </div>
-          <div class="profile-race-subtitle">F1 Predictions · сезон {{ season.year }}</div>
-          {% if can_edit_avatar %}<div class="profile-avatar-hint">Нажми на аватар, чтобы открыть меню</div>{% endif %}
-          {% if avatar_form.avatar.errors %}<div class="avatar-upload-error">{{ avatar_form.avatar.errors }}</div>{% endif %}
-        </div>
-      </div>
+      <form method="post" enctype="multipart/form-data" class="player-avatar-form" id="avatarUploadForm">
+        {% csrf_token %}
+        <button class="profile-avatar profile-avatar-editable" type="button" id="avatarMenuButton" aria-haspopup="menu" aria-expanded="false" aria-controls="avatarUploadMenu" title="Изменить аватар">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">{% else %}<span>{{ player.username|slice:":1"|upper }}</span>{% endif %}</button>
+        <div class="player-avatar-menu" id="avatarUploadMenu" role="menu" hidden><button id="avatarUploadAction" type="button" role="menuitem">Загрузить аватар<small>JPG, PNG или WebP</small></button></div>
+        {{ avatar_form.avatar }}
+      </form>
+      {% else %}<div class="profile-avatar">{% if profile_obj.avatar %}<img src="{{ profile_obj.avatar.url }}" alt="Аватар {{ player.username }}">{% else %}{{ player.username|slice:":1"|upper }}{% endif %}</div>{% endif %}
+      <div class="player-name-block"><span class="player-kicker">FASTLAP / УЧАСТНИК</span><div class="player-name-row"><h1>{{ player.username }}</h1>{% if profile_obj.is_world_predict_champion %}<span class="wpc-badge" title="World Predict Champion">WPC</span>{% endif %}</div><p>{% if can_edit_avatar %}Твой сезон. Твои прогнозы.{% else %}Прогнозы и результаты участника.{% endif %}</p></div>
     </div>
-    <div class="profile-race-performance">
-      <div class="profile-race-kpi">
-        <small>Место в чемпионате</small>
-        <strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong>
-        {% if player_statistics.movement %}<span class="profile-race-movement {% if player_statistics.movement < 0 %}is-down{% endif %}">{% if player_statistics.movement > 0 %}▲{% else %}▼{% endif %} {{ player_statistics.movement|cut:"-" }} после этапа</span>{% endif %}
-      </div>
-      <div class="profile-race-kpi profile-race-kpi-points">
-        <small>Очки за этапы</small>
-        <strong>{{ player_statistics.total }}</strong>
-        <span>{{ player_statistics.average }} в среднем за этап</span>
-      </div>
-      <div class="profile-race-form">
-        <div class="profile-race-form-head"><small>Последние результаты</small><span>до 5 этапов</span></div>
-        <div class="profile-form-pills">
-          {% for item in player_statistics.recent_form %}
-            <span class="profile-form-pill {% if item.points > 0 %}is-positive{% elif item.points < 0 %}is-negative{% endif %}" aria-label="R{{ item.round }}: {{ item.points }} очков"><small>R{{ item.round }}</small><strong>{{ item.points }}</strong></span>
-          {% empty %}
-            <span class="profile-form-empty">Пока нет этапов</span>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="profile-race-footer">
-    <span><small>Лучший этап</small>{% if player_statistics.best_event_name %}<strong>R{{ player_statistics.best_event_round }} · {{ player_statistics.best_event_name }}</strong>{{ player_statistics.best }} очков{% else %}Пока нет результата{% endif %}</span>
-    <span><small>Победы на этапах</small><strong>{{ player_statistics.stage_wins }}</strong></span>
-    <span><small>Точные попадания</small><strong>{{ player_statistics.exact_hits }}</strong></span>
-  </div>
-</section>
+    {% if can_edit_avatar %}<button class="player-outline-button" type="button" data-change-avatar>Изменить аватар</button>{% endif %}
+  </header>
+  {% if avatar_form.avatar.errors %}<div class="player-upload-error" role="alert">{{ avatar_form.avatar.errors }}</div>{% endif %}
+  <section class="player-season-strip" aria-label="Результаты сезона">
+    <div><span>Общий зачёт</span><strong>{% if player_statistics.rank %}P{{ player_statistics.rank }}{% else %}—{% endif %}</strong></div>
+    <div><span>Очки за этапы</span><strong>{{ event_points_total }}</strong></div>
+    <div><span>Победы на этапах</span><strong>{{ player_statistics.stage_wins }}</strong></div>
+    <div><span>Лучший результат</span><strong>{{ player_statistics.best }}<small> очк.</small></strong></div>
+  </section>
+  {% if player_statistics.recent_form %}
+  <div class="player-recent"><span>Последние этапы</span><div>{% for item in player_statistics.recent_form %}<span class="player-recent-score"><small>R{{ item.round }}</small><strong>{{ item.points }}</strong></span>{% endfor %}</div></div>
+  {% endif %}
+  <nav class="player-section-links" aria-label="Разделы профиля"><a href="#player-awards">Награды</a><a href="#player-history">Этапы</a><a href="#season-predictions">Прогноз сезона</a></nav>
 
-{% if arcade_trophies %}
-<section class="profile-arcade-trophycase mb-4" aria-label="Коллекция трофеев аркады">
-  <h2 class="profile-arcade-trophycase-title">Трофеи аркады</h2>
-  <div class="profile-arcade-trophycase-stage">
-    <span class="profile-arcade-trophycase-glow" aria-hidden="true"></span>
-    <img class="profile-arcade-trophycase-shelf" src="{% static 'league/images/arcade-trophy-shelf.png' %}" alt="" aria-hidden="true">
-    <div class="profile-arcade-trophycase-row">
+  <section class="player-section" id="player-awards">
+    <div class="player-section-heading"><div><span class="player-kicker">КОЛЛЕКЦИЯ</span><h2>Награды и достижения</h2></div>{% if arcade_trophies %}<span class="player-section-count">Трофеи аркады · {{ arcade_trophies|length }}</span>{% endif %}</div>
+    {% if arcade_trophies %}
+    <div class="player-trophy-grid" aria-label="Коллекция трофеев аркады">
       {% for trophy in arcade_trophies %}
-      <div class="profile-arcade-trophycase-item">
-        {% if trophy.image_url %}
-        <img class="profile-arcade-trophycase-figure" src="{{ trophy.image_url }}" alt="{{ trophy.trophy_name }} — показать сведения о награде" tabindex="0" aria-describedby="arcade-trophy-details-{{ forloop.counter }}">
-        {% else %}
-        <img class="profile-arcade-trophycase-figure" src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="{{ trophy.trophy_name }} — показать сведения о награде" tabindex="0" aria-describedby="arcade-trophy-details-{{ forloop.counter }}">
-        {% endif %}
-        <div class="profile-arcade-trophycase-tooltip" id="arcade-trophy-details-{{ forloop.counter }}" role="tooltip">
-          <strong>{{ trophy.trophy_name }}</strong>
-          <span><small>Дата получения</small><b>{% if trophy.is_test %}Тестовый доступ{% elif trophy.awarded_at %}{{ trophy.awarded_at|date:"d.m.Y" }}{% else %}—{% endif %}</b></span>
-          <span><small>Игра</small><b>{{ trophy.game_name }}</b></span>
-          <span><small>Попытки</small><b>{{ trophy.attempts }}</b></span>
-        </div>
-      </div>
+      <article class="player-trophy-card">
+        <div class="player-trophy-art">{% if trophy.image_url %}<img src="{{ trophy.image_url }}" alt="{{ trophy.trophy_name }}" loading="lazy" decoding="async">{% else %}<img src="{% static 'league/images/banana-leclerc-pixel-reward.png' %}" alt="{{ trophy.trophy_name }}" loading="lazy" decoding="async">{% endif %}</div>
+        <div class="player-trophy-content"><small>ПОБЕДИТЕЛЬ АРКАДЫ{% if trophy.is_test %} · ПРЕДПРОСМОТР{% endif %}</small><h3>{{ trophy.trophy_name }}</h3><p>{{ trophy.game_name }}</p><dl><div><dt>Получен</dt><dd>{% if trophy.is_test %}Тестовый доступ{% elif trophy.awarded_at %}{{ trophy.awarded_at|date:"d.m.Y" }}{% else %}—{% endif %}</dd></div><div><dt>Попытки</dt><dd><b>{{ trophy.attempts }}</b></dd></div></dl></div>
+      </article>
       {% endfor %}
     </div>
-  </div>
-</section>
-{% endif %}
+    {% endif %}
+    {% if achievements %}<div class="player-achievements">{% for item in achievements %}<article><img src="{% static item.icon %}" alt="" loading="lazy" decoding="async"><div><h3>{{ item.title }}</h3><p>{{ item.description }}</p></div></article>{% endfor %}</div>{% elif not arcade_trophies %}<p class="player-empty">Здесь появятся награды за победы и точные прогнозы.</p>{% endif %}
+  </section>
 
-<section class="profile-analytics-shell mb-4">
-  <div class="profile-analytics-head">
-    <div>
-      <div class="achievement-kicker">Prediction intelligence</div>
-      <h2 class="profile-section-title mb-1">Точность прогнозов</h2>
-      <p>Проценты считаются только по завершённым этапам с опубликованным результатом.</p>
-    </div>
-  </div>
-  <div class="profile-analytics-grid">
-    <article class="accuracy-card" style="--accuracy: {{ player_statistics.winner_accuracy }}%;">
-      <div class="accuracy-ring"><strong>{{ player_statistics.winner_accuracy }}%</strong></div>
-      <div><small>Победитель гонки</small><span>Точное попадание в P1</span></div>
-    </article>
-    <article class="accuracy-card" style="--accuracy: {{ player_statistics.podium_accuracy }}%;">
-      <div class="accuracy-ring"><strong>{{ player_statistics.podium_accuracy }}%</strong></div>
-      <div><small>Пилоты подиума</small><span>Пилот оказался в топ-3</span></div>
-    </article>
-    <article class="accuracy-card" style="--accuracy: {{ player_statistics.pole_accuracy }}%;">
-      <div class="accuracy-ring"><strong>{{ player_statistics.pole_accuracy }}%</strong></div>
-      <div><small>Поул-позиция</small><span>Точный обладатель поула</span></div>
-    </article>
-    <article class="insight-card insight-favorite">
-      <small>Любимый пилот</small>
-      <strong>{{ player_statistics.favorite_driver }}</strong>
-      <span>Чаще всего появляется в прогнозах</span>
-    </article>
-    <article class="insight-card insight-strong">
-      <small>Сильнейшая категория</small>
-      {% if player_statistics.strongest_category %}
-        <strong>{{ player_statistics.strongest_category.label }}</strong>
-        <span>{{ player_statistics.strongest_category.rate }}% · {{ player_statistics.strongest_category.hits }}/{{ player_statistics.strongest_category.attempts }}</span>
-      {% else %}<strong>—</strong><span>Нужны завершённые этапы</span>{% endif %}
-    </article>
-  </div>
-</section>
-
-<div class="row g-4 mb-4">
-  <div class="col-12 col-xl-7">
-    <section class="glass-panel p-3 p-md-4 h-100">
-      <div class="achievement-kicker">Driver telemetry</div>
-      <h2 class="profile-section-title">Динамика сезона</h2>
-      {% if player_statistics.trend %}
-        <svg class="mini-trend" id="playerTrend" viewBox="0 0 700 200" role="img" aria-label="Динамика очков {{ player.username }}"></svg>
-        {{ player_statistics.trend|json_script:"player-trend-data" }}
-      {% else %}
-        <div class="prediction-empty">График появится после первого подсчитанного этапа.</div>
-      {% endif %}
-    </section>
-  </div>
-  <div class="col-12 col-xl-5">
-    <section class="glass-panel p-3 p-md-4 h-100">
-      <div class="achievement-kicker">Trophy cabinet</div>
-      <h2 class="profile-section-title">Достижения</h2>
-      {% if achievements %}
-        <div class="achievement-grid">
-          {% for item in achievements %}
-            <article class="achievement-card">
-              <span class="achievement-icon"><img src="{% static item.icon %}" alt="" loading="lazy" decoding="async"></span>
-              <span><strong>{{ item.title }}</strong><small>{{ item.description }}</small></span>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <div class="prediction-empty">Первый трофей появится после яркого результата.</div>
-      {% endif %}
-    </section>
-  </div>
-</div>
-
-<div class="row g-4">
-  <div class="col-12 col-xl-8">
-    <section class="glass-panel p-3 p-md-4" style="animation: card-enter 280ms ease-out both;">
-      <h2 class="profile-section-title">Предикты по этапам</h2>
-
-      <div class="d-flex flex-column gap-3">
-        {% for row in event_cards %}
-          <article class="prediction-card">
-            <div class="prediction-head">
-              <div>
-                <div class="prediction-round">R{{ row.event.round_number }}</div>
-                <div class="prediction-event">{{ row.event.name }}</div>
-              </div>
-              {% if row.score %}
-                <span class="score-pill">{{ row.score.points }}</span>
-              {% else %}
-                <span class="deadline-chip">-</span>
-              {% endif %}
-            </div>
-            <div class="prediction-body">
-              {% if row.prediction %}
-                <div class="prediction-grid">
-                  <div class="prediction-item"><div class="prediction-item-label">P1</div><div class="prediction-item-value">{{ row.prediction.get_p1_display }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">P2</div><div class="prediction-item-value">{{ row.prediction.get_p2_display }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">P3</div><div class="prediction-item-value">{{ row.prediction.get_p3_display }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">Поул</div><div class="prediction-item-value">{{ row.prediction.get_pole_display }}</div></div>
-                  {% if row.event.has_sprint %}
-                    <div class="prediction-item"><div class="prediction-item-label">Квалификация к спринту</div><div class="prediction-item-value">{{ row.prediction.get_sprint_qualifying_winner_display }}</div></div>
-                    <div class="prediction-item"><div class="prediction-item-label">Победитель спринта</div><div class="prediction-item-value">{{ row.prediction.get_sprint_winner_display }}</div></div>
-                  {% endif %}
-                  <div class="prediction-item"><div class="prediction-item-label">Fastest Lap</div><div class="prediction-item-value">{{ row.prediction.get_fastest_lap_display }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">Driver of the Day</div><div class="prediction-item-value">{{ row.prediction.get_driver_of_day_display }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">Safety Car</div><div class="prediction-item-value">{{ row.prediction.safety_car_count }}</div></div>
-                  <div class="prediction-item"><div class="prediction-item-label">DNF</div><div class="prediction-item-value">{{ row.prediction.dnf_count }}</div></div>
-                  <div class="prediction-item" style="grid-column: 1 / -1;">
-                    <div class="prediction-item-label">Crazy Prediction</div>
-                    <div class="prediction-item-value">{% if row.crazy_prediction_hidden %}Скрыто до завершения анонимного голосования{% else %}{{ row.prediction.crazy_prediction|default:"-" }}{% endif %}</div>
-                  </div>
-                </div>
-              {% elif row.prediction_hidden %}
-                <div class="prediction-empty">🔒 Предикт скрыт до дедлайна этапа.</div>
-              {% else %}
-                <div class="prediction-empty">Прогноз на этот этап не отправлен.</div>
-              {% endif %}
-            </div>
-          </article>
-        {% empty %}
-          <div class="prediction-empty">Этапов пока нет.</div>
-        {% endfor %}
+  <div class="player-results-layout">
+    <section class="player-section" id="player-history">
+      <div class="player-section-heading"><div><span class="player-kicker">СЕЗОН {{ season.year }}</span><h2>Предикты по этапам</h2></div><span class="player-section-count">Отправлено · {{ submitted_events_count }}</span></div>
+      <div class="player-event-list">
+      {% for row in event_cards %}
+        <details class="player-event">
+          <summary><span class="player-event-round">R{{ row.event.round_number|stringformat:'02d' }}</span><span class="player-event-title"><strong>{{ row.event.name }}</strong><small>{% if row.prediction_hidden %}Скрыто до дедлайна{% elif row.prediction %}{% if row.score %}Этап завершён{% else %}Прогноз сохранён{% endif %}{% else %}Прогноз не отправлен{% endif %}</small></span><span class="player-event-points{% if row.score.points < 0 %} is-negative{% endif %}">{% if row.score %}{{ row.score.points }}<small> очк.</small>{% else %}—{% endif %}</span><span class="player-expand" aria-hidden="true">+</span></summary>
+          <div class="player-event-content">{% if row.prediction %}{% include 'player_profile_event_answers.html' %}{% elif row.prediction_hidden %}<p class="player-empty">Предикт скрыт до дедлайна этапа.</p>{% else %}<p class="player-empty">Прогноз на этот этап не отправлен.</p>{% endif %}<a class="player-event-link" href="{% url 'league:event_detail' row.event.id %}">Открыть этап {% include 'ui_arrow.html' %}</a></div>
+        </details>
+      {% empty %}<p class="player-empty">Пока нет прогнозов на этапы.</p>{% endfor %}
       </div>
     </section>
+    <aside class="player-section player-accuracy">
+      <span class="player-kicker">СТАТИСТИКА</span><h2>Точность прогнозов</h2><p class="player-muted">По завершённым этапам с опубликованными результатами.</p>
+      <dl><div><dt>Победитель гонки</dt><dd>{{ player_statistics.winner_accuracy }}%</dd></div><div><dt>Пилоты в топ-3</dt><dd>{{ player_statistics.podium_accuracy }}%</dd></div><div><dt>Поул-позиция</dt><dd>{{ player_statistics.pole_accuracy }}%</dd></div></dl>
+      <div class="player-insight"><small>Любимый пилот</small><strong>{{ player_statistics.favorite_driver }}</strong></div>
+      <div class="player-insight"><small>Лучший этап</small><strong>{% if player_statistics.best_event_name %}R{{ player_statistics.best_event_round }} · {{ player_statistics.best_event_name }}{% else %}Пока нет результата{% endif %}</strong></div>
+    </aside>
   </div>
-
-  <div class="col-12 col-xl-4">
-    <section id="season-predictions" class="glass-panel p-3 p-md-4" style="animation: card-enter 320ms ease-out both;">
-      <h2 class="profile-section-title">Сезонные предикты</h2>
-      {% if season_prediction_editable %}<a class="btn btn-outline-primary mb-3" href="{% url 'league:season_predictions' %}?season={{ season.year }}">Заполнить или изменить прогноз</a>{% endif %}
-
-      <div class="d-flex flex-column gap-3">
-        {% for row in season_cards %}
-          <article class="prediction-card">
-            <div class="prediction-head">
-              <div>
-                <div class="prediction-round">Сезон {{ row.prediction.season_year }}</div>
-                <div class="prediction-event">Сезонный прогноз</div>
-              </div>
-              {% if row.score %}
-                <span class="score-pill">{{ row.score.points }}</span>
-              {% else %}
-                <span class="deadline-chip">-</span>
-              {% endif %}
-            </div>
-            <div class="prediction-body">
-              <div class="prediction-grid">
-                <div class="prediction-item"><div class="prediction-item-label">Лидер пилотов после Венгрии</div><div class="prediction-item-value">{{ row.prediction.get_hungary_driver_championship_leader_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_hungary_driver_championship_leader_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Лидер конструкторов после Венгрии</div><div class="prediction-item-value">{{ row.prediction.get_hungary_constructor_championship_leader_display }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.get_hungary_constructor_championship_leader_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Лучший финиш Хаджара</div><div class="prediction-item-value">{{ row.prediction.hadjar_best_finish }}</div>{% if row.result %}<div class="season-fact">Факт: {{ row.result.hadjar_best_finish }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Чемпион пилотов</div><div class="prediction-item-value">{{ row.prediction.get_world_drivers_champion_display }}</div>{% if row.result.world_drivers_champion %}<div class="season-fact">Факт: {{ row.result.get_world_drivers_champion_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Чемпион конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_champion_display }}</div>{% if row.result.constructors_champion %}<div class="season-fact">Факт: {{ row.result.get_constructors_champion_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">2 место конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_second_display }}</div>{% if row.result.constructors_second %}<div class="season-fact">Факт: {{ row.result.get_constructors_second_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">3 место конструкторов</div><div class="prediction-item-value">{{ row.prediction.get_constructors_third_display }}</div>{% if row.result.constructors_third %}<div class="season-fact">Факт: {{ row.result.get_constructors_third_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Победитель последней гонки</div><div class="prediction-item-value">{{ row.prediction.get_last_race_winner_display }}</div>{% if row.result.last_race_winner %}<div class="season-fact">Факт: {{ row.result.get_last_race_winner_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Pole-sitter сезона</div><div class="prediction-item-value">{{ row.prediction.get_season_pole_sitter_display }}</div>{% if row.result.season_pole_sitter %}<div class="season-fact">Факт: {{ row.result.get_season_pole_sitter_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Смена пилота</div><div class="prediction-item-value">{{ row.prediction.get_driver_change_happened_display }}</div>{% if row.result.driver_change_happened %}<div class="season-fact">Факт: {{ row.result.get_driver_change_happened_display }}</div>{% endif %}</div>
-                <div class="prediction-item"><div class="prediction-item-label">Команда-лидер по DNF</div><div class="prediction-item-value">{{ row.prediction.get_team_most_dnf_display }}</div>{% if row.result.team_most_dnf %}<div class="season-fact">Факт: {{ row.result.get_team_most_dnf_display }}</div>{% endif %}</div>
-              </div>
-            </div>
-          </article>
-        {% empty %}
-          <div class="prediction-empty">{% if season_prediction_hidden %}🔒 Сезонный прогноз скрыт до дедлайна.{% else %}Сезонный предикт пока не отправлен.{% endif %}</div>
-        {% endfor %}
-      </div>
-    </section>
-  </div>
+  <section class="player-section" id="season-predictions">
+    <div class="player-section-heading"><div><span class="player-kicker">ДЛИННАЯ ДИСТАНЦИЯ</span><h2>Сезонные предикты</h2></div>{% if season_prediction_editable %}<a class="player-outline-button" href="{% url 'league:season_predictions' %}?season={{ season.year }}">Заполнить или изменить прогноз</a>{% endif %}</div>
+    {% for row in season_cards %}<details class="player-event"><summary><span class="player-event-title"><strong>Сезон {{ row.prediction.season_year }}</strong><small>Прогноз на чемпионат</small></span><span class="player-event-points">{% if row.score %}{{ row.score.points }}<small> очк.</small>{% else %}—{% endif %}</span><span class="player-expand" aria-hidden="true">+</span></summary><div class="player-event-content">{% include 'player_profile_season_answers.html' %}</div></details>{% empty %}<p class="player-empty">{% if season_prediction_hidden %}Сезонный прогноз скрыт до дедлайна.{% else %}Сезонный предикт пока не отправлен.{% endif %}</p>{% endfor %}
+  </section>
 </div>
-
-{% if player_statistics.trend %}
-<script>
-  (() => {
-    const svg = document.getElementById("playerTrend");
-    const data = JSON.parse(document.getElementById("player-trend-data").textContent);
-    if (!svg || !data.length) return;
-    const ns = "http://www.w3.org/2000/svg";
-    const width = 700, height = 200, padX = 42, padY = 28;
-    const minPoints = Math.min(...data.map((item) => item.points), 0);
-    const maxPoints = Math.max(...data.map((item) => item.points), 1);
-    const x = (index) => data.length === 1 ? width / 2 : padX + index * (width - padX * 2) / (data.length - 1);
-    const y = (value) => height - padY - (value - minPoints) * (height - padY * 2) / (maxPoints - minPoints);
-    [0, .5, 1].forEach((ratio) => {
-      const line = document.createElementNS(ns, "line");
-      const lineY = padY + ratio * (height - padY * 2);
-      line.setAttribute("x1", padX); line.setAttribute("x2", width - padX);
-      line.setAttribute("y1", lineY); line.setAttribute("y2", lineY);
-      line.setAttribute("stroke", "rgba(218,228,239,.18)"); line.setAttribute("stroke-dasharray", "4 7");
-      svg.appendChild(line);
-      const label = document.createElementNS(ns, "text");
-      label.setAttribute("x", padX - 8); label.setAttribute("y", lineY + 4);
-      label.setAttribute("text-anchor", "end"); label.setAttribute("fill", "#929eab");
-      label.setAttribute("font-size", "12");
-      label.textContent = Math.round(maxPoints - ratio * (maxPoints - minPoints));
-      svg.appendChild(label);
-    });
-    const polyline = document.createElementNS(ns, "polyline");
-    polyline.setAttribute("points", data.map((item, index) => `${x(index)},${y(item.points)}`).join(" "));
-    svg.appendChild(polyline);
-    data.forEach((item, index) => {
-      const dot = document.createElementNS(ns, "circle");
-      dot.setAttribute("cx", x(index)); dot.setAttribute("cy", y(item.points)); dot.setAttribute("r", 5);
-      dot.setAttribute("fill", "#fff"); dot.setAttribute("stroke", "#f0442f"); dot.setAttribute("stroke-width", 3);
-      const title = document.createElementNS(ns, "title"); title.textContent = `R${item.round}: ${item.points} очков`;
-      dot.appendChild(title); svg.appendChild(dot);
-    });
-  })();
-</script>
-{% endif %}
-{% if can_edit_avatar %}
-<script>
-  (() => {
-    const input = document.getElementById("{{ avatar_form.avatar.id_for_label }}");
-    const form = document.getElementById("avatarUploadForm");
-    const button = document.getElementById("avatarMenuButton");
-    const menu = document.getElementById("avatarUploadMenu");
-    const uploadAction = document.getElementById("avatarUploadAction");
-    if (!input || !form || !button || !menu || !uploadAction) return;
-
-    const setMenuOpen = (isOpen) => {
-      menu.hidden = !isOpen;
-      button.setAttribute("aria-expanded", String(isOpen));
-    };
-
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      setMenuOpen(menu.hidden);
-    });
-    menu.addEventListener("click", (event) => event.stopPropagation());
-    uploadAction.addEventListener("click", () => {
-      setMenuOpen(false);
-      input.click();
-    });
-    document.addEventListener("click", () => setMenuOpen(false));
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && !menu.hidden) {
-        setMenuOpen(false);
-        button.focus();
-      }
-    });
-    input.addEventListener("change", () => {
-      if (input.files && input.files.length) form.submit();
-    });
-  })();
-</script>
-{% endif %}
+{% if can_edit_avatar %}<script src="{% static 'league/player-profile.js' %}?v=1" defer></script>{% endif %}
 {% endblock %}

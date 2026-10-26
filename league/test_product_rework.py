@@ -396,11 +396,12 @@ class CompetitiveFeaturesTests(TestCase):
         self.assertContains(response, "Золотой шлем")
         self.assertContains(response, ">7</b>")
         self.assertContains(response, ">12</b>")
-        self.assertEqual(response.content.count(b"profile-arcade-trophycase-item"), 2)
+        self.assertEqual(response.content.count(b"player-trophy-card"), 2)
         self.assertContains(response, timezone.localtime(first_event.deadline).strftime("%d.%m.%Y"))
         self.assertContains(response, "Pit Lane Flight")
         self.assertContains(response, "banana-leclerc-pixel-reward.png")
-        self.assertContains(response, "arcade-trophy-shelf.png")
+        self.assertNotContains(response, "arcade-trophy-shelf.png")
+        self.assertNotContains(response, "playerTrend")
 
     def test_current_all_time_leader_does_not_get_period_trophy_but_admin_can_preview(self):
         leader = User.objects.create_user("new-current-leader")

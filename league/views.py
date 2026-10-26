@@ -2062,7 +2062,7 @@ def player_profile(request, user_id: int):
         "player_profile.html",
         {
             "player": player,
-            "event_cards": event_cards,
+            "event_cards": [row for row in event_cards if row["prediction"] or row["prediction_hidden"] or row["score"]],
             "season_cards": season_cards,
             "season_prediction_hidden": (
                 not can_view_season_prediction

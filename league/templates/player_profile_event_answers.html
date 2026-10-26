@@ -1,0 +1,18 @@
+<div class="player-answer-grid">
+                  <div class="player-answer"><div class="player-answer-label">P1</div><div class="player-answer-value">{{ row.prediction.get_p1_display }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">P2</div><div class="player-answer-value">{{ row.prediction.get_p2_display }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">P3</div><div class="player-answer-value">{{ row.prediction.get_p3_display }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">Поул</div><div class="player-answer-value">{{ row.prediction.get_pole_display }}</div></div>
+                  {% if row.event.has_sprint %}
+                    <div class="player-answer"><div class="player-answer-label">Квалификация к спринту</div><div class="player-answer-value">{{ row.prediction.get_sprint_qualifying_winner_display }}</div></div>
+                    <div class="player-answer"><div class="player-answer-label">Победитель спринта</div><div class="player-answer-value">{{ row.prediction.get_sprint_winner_display }}</div></div>
+                  {% endif %}
+                  <div class="player-answer"><div class="player-answer-label">Быстрый круг</div><div class="player-answer-value">{{ row.prediction.get_fastest_lap_display|default:'—' }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">Гонщик дня</div><div class="player-answer-value">{{ row.prediction.get_driver_of_day_display|default:'—' }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">Safety Car</div><div class="player-answer-value">{{ row.prediction.safety_car_count }}</div></div>
+                  <div class="player-answer"><div class="player-answer-label">DNF</div><div class="player-answer-value">{{ row.prediction.dnf_count }}</div></div>
+                  <div class="player-answer" style="grid-column: 1 / -1;">
+                    <div class="player-answer-label">Crazy Prediction</div>
+                    <div class="player-answer-value">{% if row.crazy_prediction_hidden %}Скрыто до завершения анонимного голосования{% else %}{{ row.prediction.crazy_prediction|default:"-" }}{% endif %}</div>
+                  </div>
+                </div>
