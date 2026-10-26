@@ -1,69 +1,54 @@
 {% load league_extras %}
 <section class="classification" aria-labelledby="classification-title">
   <header class="classification-head">
-    <div><span class="classification-kicker">FASTLAP / {{ season.year }}</span>{% if league %}<h2 id="classification-title">Зачёт лиги</h2>{% else %}<h1 id="classification-title">Общий рейтинг</h1>{% endif %}<p>{% if latest_event %}После R{{ latest_event.round_number|stringformat:'02d' }} · {{ latest_event.name }}{% else %}Результаты появятся после первого этапа.{% endif %}</p></div>
+    <div>
+      <span class="classification-kicker">СЕЗОН {{ season.year }}</span>
+      {% if league %}<h2 id="classification-title">Результаты лиги</h2>{% else %}<h1 id="classification-title">Общий рейтинг</h1>{% endif %}
+      <p>{% if latest_event %}После R{{ latest_event.round_number|stringformat:'02d' }} · {{ latest_event.name }}{% else %}Результаты появятся после первого этапа.{% endif %}</p>
+      {% if round_winners and latest_event %}<p class="classification-last-winner">Победитель последнего этапа: {% for winner in round_winners %}<a href="{% url 'league:player_profile' winner.user.id %}?season={{ season.year }}">{{ winner.user.username }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>{% endif %}
+    </div>
     <span class="classification-count">{% if page %}{{ page.paginator.count }}{% else %}{{ rows|length }}{% endif %}<small>Участников</small></span>
   </header>
-
-  {% if round_winners and latest_event %}
-  <div class="classification-winners">
-    <span class="classification-winner-label"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3h8v5a4 4 0 0 1-8 0V3ZM6 5H3v2a4 4 0 0 0 4 4m7-6h3v2a4 4 0 0 1-4 4m-3 1v4m-3 1h6"/></svg>Победитель последнего этапа</span>
-    <div class="classification-winner-names">{% for winner in round_winners %}<a href="{% url 'league:player_profile' winner.user.id %}?season={{ season.year }}"><span>{{ winner.user.username }}</span><b>{{ winner.latest_points }} <small>очк.</small></b></a>{% endfor %}</div>
-  </div>
-  {% endif %}
-
   {% if rows %}
-  <div class="classification-workspace" hidden>
-    <div class="classification-modes" role="group" aria-label="Вид таблицы">
-      <button type="button" data-table-mode="overview" aria-pressed="true">Общий зачёт</button>
-      <button type="button" data-table-mode="rounds" aria-pressed="false">Все этапы</button>
-    </div>
-    <label class="classification-round-picker"><span>Сравнить этап</span><select data-round-picker aria-label="Этап для сравнения">{% for e in events %}<option value="{{ e.id }}" {% if e.id == latest_event.id %}selected{% endif %}>R{{ e.round_number|stringformat:'02d' }} · {{ e.name }}</option>{% endfor %}</select></label>
-  </div>
   <div class="classification-toolbar">
-    <span>Очки по этапам</span>
+    <span>Очки по этапам <small>От последнего к первому</small></span>
     <div class="classification-controls" hidden>
-      {% if latest_event %}<button type="button" class="classification-jump" data-latest-round="{{ latest_event.id }}">К R{{ latest_event.round_number|stringformat:'02d' }}</button>{% endif %}
-      <button type="button" data-table-step="-1" aria-label="Предыдущие этапы"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5-5 5 5 5"/></svg></button>
-      <button type="button" data-table-step="1" aria-label="Следующие этапы"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg></button>
+      <button type="button" data-table-step="-1" aria-label="К более новым этапам"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5-5 5 5 5"/></svg></button>
+      <button type="button" data-table-step="1" aria-label="К более ранним этапам"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 5 5 5-5 5"/></svg></button>
     </div>
   </div>
   <div class="classification-viewport" tabindex="0" role="region" aria-label="Очки игроков по этапам" aria-describedby="classification-instructions">
-    <table class="classification-table" style="--classification-events:{{ events|length }}">
-      <caption class="visually-hidden">Зачёт сезона {{ season.year }}{% if league %}: {{ league.name }}{% endif %}. Общий счёт и результаты каждого игрока по этапам.</caption>
-      <colgroup><col class="classification-identity-col"><col class="classification-total-col"><col class="classification-summary-col">{% for e in events %}<col class="classification-event-col">{% endfor %}</colgroup>
+    <table class="classification-table" style="--classification-events:{{ result_events|length }}">
+      <caption class="visually-hidden">Зачёт сезона {{ season.year }}{% if league %}: {{ league.name }}{% endif %}. Этапы от последнего завершённого к первому.</caption>
+      <colgroup><col class="classification-identity-col"><col class="classification-total-col">{% for e in result_events %}<col class="classification-event-col">{% endfor %}</colgroup>
       <thead><tr>
         <th scope="col" class="classification-identity">Место / Игрок</th>
         <th scope="col" class="classification-pinned-total">Всего</th>
-        <th scope="col" class="classification-summary"><span data-summary-round>Этап</span><small>за гонку</small></th>
-        {% for e in events %}
-        <th scope="col" class="classification-stage-header{% if e.id == latest_event.id %} is-latest{% endif %}" data-round-id="{{ e.id }}" data-round-title="R{{ e.round_number|stringformat:'02d' }} · {{ e.name }}" data-round-url="{% if league %}{% url 'league:friend_league_event' league.id e.id %}?manage=1{% else %}{% url 'league:event_detail' e.id %}{% endif %}">
-          <button type="button" data-round-select aria-pressed="false" aria-label="Сравнить очки: {{ e.name }}" title="{{ e.name }}" hidden><strong>R{{ e.round_number|stringformat:'02d' }}</strong><small>{% if e.circuit_visual %}{{ e.circuit_visual.location }}{% else %}{{ e.name }}{% endif %}</small></button>
-          <noscript><a href="{% if league %}{% url 'league:friend_league_event' league.id e.id %}?manage=1{% else %}{% url 'league:event_detail' e.id %}{% endif %}"><strong>R{{ e.round_number|stringformat:'02d' }}</strong><small>{{ e.name }}</small></a></noscript>
+        {% for e in result_events %}
+        <th scope="col" class="classification-stage-header" data-round-id="{{ e.id }}">
+          <a href="{% if league %}{% url 'league:friend_league_event' league.id e.id %}?manage=1{% else %}{% url 'league:event_detail' e.id %}{% endif %}" title="{{ e.name }}"><strong>R{{ e.round_number|stringformat:'02d' }}</strong><small>{% if e.circuit_visual %}{{ e.circuit_visual.location }}{% else %}{{ e.name }}{% endif %}</small></a>
         </th>
         {% endfor %}
       </tr></thead>
       <tbody>
         {% for r in rows %}
-        <tr class="classification-entry{% if r.is_round_winner %} is-round-winner{% endif %}{% if r.user.id == user.id %} is-you{% endif %}" data-position="{{ r.rank }}" style="--row-index:{{ forloop.counter0 }}">
+        <tr class="classification-entry">
           <th scope="row" class="classification-identity">
             <a class="classification-player" href="{% url 'league:player_profile' r.user.id %}?season={{ season.year }}" title="{{ r.user.username }}">
-              <span class="classification-position"><strong><span class="visually-hidden">Место </span>{{ r.rank|stringformat:'02d' }}</strong><span class="classification-movement{% if r.movement > 0 %} is-up{% elif r.movement < 0 %} is-down{% endif %}" {% if r.movement > 0 %}aria-label="Поднялся на {{ r.movement }}"{% elif r.movement < 0 %}aria-label="Опустился на {{ r.movement|stringformat:'d'|slice:'1:' }}"{% else %}aria-label="Без изменения позиции"{% endif %}>{% if r.movement > 0 %}↑{{ r.movement }}{% elif r.movement < 0 %}↓{{ r.movement|stringformat:'d'|slice:'1:' }}{% else %}—{% endif %}</span></span>
-              <span class="table-avatar classification-avatar">{% if r.avatar_url %}<img src="{{ r.avatar_url }}" alt="" loading="lazy">{% else %}{{ r.user.username|slice:':1'|upper }}{% endif %}</span>
+              <span class="classification-position"><strong><span class="visually-hidden">Место </span>{{ r.rank|stringformat:'02d' }}</strong><span class="classification-movement" {% if r.movement > 0 %}aria-label="Поднялся на {{ r.movement }}"{% elif r.movement < 0 %}aria-label="Опустился на {{ r.movement|stringformat:'d'|slice:'1:' }}"{% else %}aria-label="Без изменения позиции"{% endif %}>{% if r.movement > 0 %}↑{{ r.movement }}{% elif r.movement < 0 %}↓{{ r.movement|stringformat:'d'|slice:'1:' }}{% else %}—{% endif %}</span></span>
+              <span class="table-avatar classification-avatar">{% if r.avatar_url %}<img src="{{ r.avatar_url }}" alt="" loading="lazy" width="32" height="32">{% else %}{{ r.user.username|slice:':1'|upper }}{% endif %}</span>
               <span class="classification-player-copy"><span class="classification-name">{{ r.user.username }}</span>{% if r.user.id == user.id %}<small>Вы</small>{% endif %}</span>
             </a>
           </th>
           <td class="classification-pinned-total"><strong class="classification-total">{{ r.total }}</strong></td>
-          <td class="classification-summary"><span class="classification-round-score">{{ r.latest_points|default_if_none:'—' }}</span></td>
-          {% for e in events %}{% score_for scores_map r.user.id e.id as s %}
-          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}" data-round-id="{{ e.id }}"><span class="classification-score">{% if s %}{{ s.points }}{% else %}<span class="visually-hidden">Нет результата</span>—{% endif %}</span></td>
+          {% for e in result_events %}{% score_for scores_map r.user.id e.id as s %}
+          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}"><span class="classification-score">{% if s %}{{ s.points }}{% else %}<span class="visually-hidden">Нет результата</span>—{% endif %}</span></td>
           {% endfor %}
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-  <div class="classification-foot"><span id="classification-instructions">Листайте этапы вправо и влево. Нажмите на этап, чтобы сравнить очки.</span></div>
-  <div class="classification-selection" hidden><span data-selection-caption aria-live="polite"></span><a data-selection-link>Открыть этап {% include 'ui_arrow.html' %}</a></div>
-  {% else %}<div class="classification-empty"><strong>Стартовая решётка пока пуста</strong><p>{% if league %}Пригласите друзей в лигу — здесь начнётся ваша борьба за очки.{% else %}Здесь появятся участники чемпионата.{% endif %}</p></div>{% endif %}
+  <div class="classification-foot" id="classification-instructions">{% if result_events %}Листайте к ранним этапам вправо. Игроки и общий счёт остаются слева.{% else %}Очки по этапам появятся после подведения результатов.{% endif %}</div>
+  {% else %}<div class="classification-empty"><strong>Здесь появятся результаты участников</strong><p>{% if league %}Пригласите друзей в лигу, чтобы начать соревнование.{% else %}Зачёт обновится после первого этапа.{% endif %}</p></div>{% endif %}
 </section>

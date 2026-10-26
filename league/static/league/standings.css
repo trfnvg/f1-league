@@ -1,121 +1,101 @@
-/* Race classification: a compact comparison and an optional full timing grid. */
-.classification{--classification-mono:"SFMono-Regular",Consolas,monospace;min-width:0;overflow:hidden;color:#f4f3f0;background:#202329;border:1px solid #3a3e46;border-radius:20px;font-family:Inter,"Segoe UI",Arial,sans-serif}
-.classification [hidden]{display:none!important}
-.classification-head{position:relative;display:flex;justify-content:space-between;align-items:center;gap:24px;padding:36px;background:radial-gradient(ellipse at 95% 0,#b43e322b,transparent 65%),#24272e;border-bottom:1px solid #ffffff0c}
-.classification-head::after{content:"";position:absolute;top:0;left:36px;width:64px;height:3px;background:#f34c47}
-.classification-head>div{min-width:0}
-.classification-kicker{color:#f78d82;font:600 10px/1.5 var(--classification-mono);letter-spacing:.12em}
-body.apex-night-theme .classification .classification-head :is(h1,h2){margin:12px 0;color:#f5f4f1;font:750 clamp(24px,3vw,36px)/1.12 Inter,sans-serif;letter-spacing:-.05em}
-.classification-head p{margin:0;color:#aeb0b9;font-size:12px;line-height:1.6}
-.classification-count{flex:none;color:#f5f4f1;font:650 40px/1 var(--classification-mono);letter-spacing:-.06em;text-align:right}
-.classification-count small{display:block;margin-top:9px;color:#9ea3ad;font:400 10px/1.5 Inter,sans-serif;letter-spacing:0}
-.classification-season{display:inline-flex;padding:10px 14px;border:1px solid #41454d;border-radius:8px;color:#c4c5cb;font:500 11px/1.5 var(--classification-mono)}
-.classification-winners{display:flex;align-items:center;flex-wrap:wrap;gap:10px 24px;padding:14px 36px;background:#c7a75e0b;border-bottom:1px solid #c7a75e15}
-.classification-winner-label{display:flex;align-items:center;gap:8px;color:#c7b78e;font-size:11px}
-.classification-winner-label svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
-.classification-winner-names{display:flex;flex-wrap:wrap;gap:8px 20px;min-width:0}
-body.apex-night-theme .classification .classification-winner-names a{display:flex;align-items:baseline;gap:12px;color:#eae0c9;font-size:12px;text-decoration:none;overflow-wrap:anywhere}
-.classification-winner-names b{flex:none;color:#dcca99;font:600 12px/1.5 var(--classification-mono)}
-.classification-winner-names small{font-size:9px}
-.classification-workspace{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:24px 28px}
-.classification-modes{display:flex;gap:4px;padding:4px;background:#16191f;border:1px solid #363a43;border-radius:12px}
-body.apex-night-theme .classification .classification-modes button{min-height:44px;padding:10px 18px;border:0;border-radius:8px;background:none;color:#adafb9;box-shadow:none;font:600 12px/1.4 Inter,sans-serif;text-transform:none;letter-spacing:0;transition:background .18s,color .18s}
-body.apex-night-theme .classification .classification-modes button[aria-pressed="true"]{background:#f34c47;color:#fff;box-shadow:0 3px 14px #f34c4720}
-.classification-round-picker{display:flex;align-items:center;gap:12px;min-width:0;margin:0}
-.classification-round-picker>span{color:#a4a6b0;font-size:10px;flex:none}
-body.apex-night-theme .classification select{max-width:240px;min-width:0;min-height:44px;padding:10px 30px 10px 12px;border:1px solid #484b54;border-radius:8px;color:#f2eeea;background-color:#2b2e36;font:500 12px/1.5 Inter,sans-serif;color-scheme:dark}
-.classification-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 28px;border-top:1px solid #ffffff0b}
-.classification-toolbar>span{font-size:12px;color:#b6b7c0}
-.classification-controls{display:flex;align-items:center;gap:6px}
-body.apex-night-theme .classification .classification-controls button{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:8px 12px;border:1px solid #3d414b;border-radius:8px;color:#dedde3;background:#292c34;box-shadow:none;font:500 11px/1.4 var(--classification-mono);text-transform:none;letter-spacing:0}
-body.apex-night-theme .classification .classification-controls button:disabled{opacity:.3}
-.classification-controls svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.classification-viewport{--classification-identity:260px;--classification-total:90px;--classification-event:92px;max-width:100%;overflow-x:auto;isolation:isolate;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#6e6d78 #191c22}
-.classification-table{width:calc(var(--classification-identity) + var(--classification-total) + var(--classification-event) * var(--classification-events));min-width:100%;table-layout:fixed;border-collapse:separate;border-spacing:0;margin:0}
-.classification-identity-col{width:var(--classification-identity)}
-.classification-total-col{width:var(--classification-total)}
-.classification-event-col{width:var(--classification-event)}
-.classification-summary,.classification-summary-col{display:none}
-.classification-table :is(th,td){box-sizing:border-box;padding:16px;border:0;border-bottom:1px solid #ffffff0c;text-align:center;vertical-align:middle}
-.classification-table thead th{height:66px;padding:0;background:#181b21;color:#969ba7;font:500 10px/1.5 var(--classification-mono)}
-.classification-table thead .classification-identity{padding:18px 28px;text-align:left;text-transform:uppercase}
-.classification-table thead .classification-pinned-total{text-transform:uppercase}
-.classification-table .classification-identity{position:sticky;left:0;z-index:3;text-align:left}
-.classification-table .classification-pinned-total{position:sticky;left:var(--classification-identity);z-index:3;border-right:1px solid #444750}
-.classification-table thead :is(.classification-identity,.classification-pinned-total){z-index:5;background:#181b21}
-.classification-viewport.is-scrolled .classification-pinned-total{box-shadow:8px 0 12px -8px #0009}
-.classification-table tbody tr{--row-bg:#202329;--row-hover:#2c2f38}
-.classification-table tbody tr:nth-child(even){--row-bg:#24272e}
-.classification-table tbody tr.is-you{--row-bg:#32282c;--row-hover:#3a2d31}
-.classification-table tbody tr.is-round-winner{--row-bg:#2d2c27;--row-hover:#34332d}
-.classification-table tbody :is(th,td){height:88px;background-color:var(--row-bg);transition:background-color .16s}
-@media(hover:hover){.classification-table tbody tr:hover :is(th,td){background-color:var(--row-hover)}}
-.classification-table tbody tr:last-child :is(th,td){border-bottom:0}
-.classification-table :is(th,td).is-selected{background-image:linear-gradient(#ee75680c,#ee75680c)}
-.classification-table thead th.is-selected{background-color:#3a292d}
-.classification-stage-header.is-selected strong{color:#ff968a}
-.classification-stage-header.is-latest{box-shadow:inset 0 2px #f34c47}
-body.apex-night-theme .classification .classification-stage-header :is(button,a){display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:66px;padding:8px;border:0;border-radius:0;background:none;color:#e8e5e6;box-shadow:none;text-decoration:none;text-transform:none;letter-spacing:0}
-.classification-stage-header strong{font:600 12px/1.4 var(--classification-mono)}
-.classification-stage-header small{max-width:100%;color:#a6a7b0;font:400 10px/1.3 Inter,sans-serif;overflow-wrap:anywhere}
-body.apex-night-theme .classification .classification-player{display:flex;align-items:center;gap:14px;min-width:0;color:#f3f0ed;text-decoration:none}
-.classification-position{flex:0 0 30px;text-align:center}
-.classification-position>strong{display:block;color:#d5d5db;font:650 22px/1.2 var(--classification-mono);letter-spacing:-.06em}
-.classification-entry[data-position="1"] .classification-position>strong{color:#f4cb7e}
-.classification-movement{display:block;margin-top:5px;color:#7e8490;font:500 10px/1.3 var(--classification-mono)}
-.classification-movement.is-up{color:#81d6b2}
-.classification-movement.is-down{color:#f08e84}
-body.apex-night-theme .classification .classification-avatar{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;min-width:0;min-height:0;background:#3d424d;color:#e2e3e9;font:600 15px/1 Inter,sans-serif}
-.classification-player-copy{min-width:0}
-.classification-name{display:block;font:600 14px/1.4 Inter,sans-serif;overflow-wrap:anywhere}
-.classification-player-copy>small{display:block;margin-top:4px;color:#f2978e;font:500 10px/1.3 Inter,sans-serif}
-.classification-total{display:block;color:#f7f4ef;font:700 26px/1.2 Inter,sans-serif;letter-spacing:-.05em;font-variant-numeric:tabular-nums}
-.classification-score{display:inline-block;color:#d4d3db;font:500 15px/1.4 var(--classification-mono);font-variant-numeric:tabular-nums}
-.classification-result.is-penalty .classification-score{color:#f39387}
-.classification-result.is-unscored .classification-score{color:#737986}
-.classification-foot{padding:16px 28px;border-top:1px solid #ffffff0b;color:#999eaa;font:400 11px/1.6 Inter,sans-serif}
-.classification-selection{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:0 28px 20px;color:#b7b7c0;font:400 11px/1.5 Inter,sans-serif}
-body.apex-night-theme .classification .classification-selection>a{display:flex;align-items:center;gap:8px;min-height:36px;color:#f7998d;font:600 11px/1.4 Inter,sans-serif;text-decoration:none}
-.classification-selection svg{width:14px;height:14px}
-.classification-empty{padding:32px}
-.classification-empty p{color:#a7aab3;font-size:13px;margin-top:12px}
-/* Overview uses the same rows and totals: no separate mobile ranking to drift out of sync. */
-.classification.is-overview :is(.classification-toolbar,.classification-foot,.classification-event-col,.classification-stage-header,.classification-result){display:none}
-.classification.is-overview .classification-table{width:100%}
-.classification.is-overview .classification-identity-col{width:auto}
-.classification.is-overview .classification-total-col{width:22%}
-.classification.is-overview .classification-summary-col{display:table-column;width:22%}
-.classification.is-overview .classification-summary{display:table-cell}
-.classification.is-overview .classification-table :is(.classification-identity,.classification-pinned-total){position:static;border-right:0;box-shadow:none}
-.classification.is-overview tbody .classification-identity{padding-left:28px}
-.classification-summary small{display:block;color:#7f8693;font:400 9px/1.5 Inter,sans-serif}
-.classification-round-score{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:36px;padding:6px 10px;border-radius:7px;color:#f6ac9e;background:#f1847210;font:600 16px/1.4 var(--classification-mono)}
-.classification-summary.is-unscored .classification-round-score{color:#7e8490;background:transparent}
-.classification-summary.is-penalty .classification-round-score{color:#ff8179}
-.classification.is-overview .classification-selection{padding:16px 28px;border-top:1px solid #ffffff0b}
-.classification.is-rounds .classification-round-picker{display:none}
-.classification tbody tr:nth-child(-n+10) :is(.classification-player,.classification-total,.classification-score,.classification-round-score){animation:classification-arrive .32s ease both;animation-delay:calc(var(--row-index) * 20ms)}
-@keyframes classification-arrive{from{opacity:.65;transform:translateY(4px)}to{opacity:1;transform:none}}
-body.apex-night-theme .classification :is(a,button,select,.classification-viewport):focus-visible{outline:2px solid #f38f82!important;outline-offset:-3px}
-@media(max-width:1000px){
-.classification-workspace{flex-wrap:wrap;gap:14px}.classification-round-picker{flex:1;justify-content:flex-end}.classification-round-picker>span{display:none}
+/* One stable, neutral score table. Only the horizontal score strip scrolls. */
+.classification {
+  --classification-identity: 248px;
+  --classification-total: 80px;
+  --classification-event: 88px;
+  --classification-mono: "SFMono-Regular", Consolas, monospace;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #383e47;
+  border-radius: 12px;
+  background: #20242b;
+  color: #efefef;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
 }
-@media(max-width:700px){
-.classification{border-radius:14px}.classification-head{padding:25px 18px;gap:16px}.classification-head::after{left:18px}.classification-head p{font-size:11px}.classification-count{font-size:28px}.classification-count small{font-size:9px}
-.classification-winners{padding:12px 18px;gap:8px 18px}.classification-winner-label{font-size:10px}
-.classification-workspace{padding:18px 12px}.classification-modes{width:100%}body.apex-night-theme .classification .classification-modes button{flex:1;padding:10px 8px}
-.classification-round-picker{width:100%}.classification-round-picker>span{display:block}body.apex-night-theme .classification select{flex:1;max-width:none;width:0;font-size:11px}
-.classification-viewport{--classification-identity:156px;--classification-total:60px;--classification-event:70px}
-.classification-table :is(th,td){padding:12px 8px}.classification-table tbody :is(th,td){height:76px}.classification-table thead .classification-identity{padding:14px 12px;font-size:9px}.classification-table thead .classification-pinned-total{font-size:9px}
-.classification.is-overview tbody .classification-identity{padding-left:12px}.classification.is-overview .classification-total-col{width:19%}.classification.is-overview .classification-summary-col{width:20%}
-body.apex-night-theme .classification .classification-player{gap:8px}.classification-position{flex-basis:20px}.classification-position>strong{font-size:17px}.classification-movement{font-size:9px}
-body.apex-night-theme .classification .classification-avatar{width:30px;height:30px;flex-basis:30px}.classification-name{font-size:12px}.classification-total{font-size:22px}.classification-score{font-size:13px}.classification-round-score{min-width:30px;min-height:32px;padding:5px;font-size:13px}
-.classification-toolbar{padding:8px 12px}.classification-toolbar>span{font-size:10px}.classification-foot{padding:14px 16px;font-size:10px}.classification-selection,.classification.is-overview .classification-selection{padding:12px 16px;font-size:10px}
+.classification [hidden] { display: none !important; }
+.classification-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 24px 26px; }
+.classification-head>div { min-width: 0; }
+.classification-kicker { color: #989fa9; font: 500 10px/1.5 var(--classification-mono); letter-spacing: .1em; }
+body.apex-night-theme .classification .classification-head :is(h1,h2) { margin: 8px 0; color: #f3f3f3; font: 650 26px/1.2 Inter,sans-serif; letter-spacing: -.035em; }
+.classification-head p { margin: 0; color: #a4aab4; font-size: 12px; line-height: 1.5; }
+.classification-head .classification-last-winner { margin-top: 6px; font-size: 10px; }
+body.apex-night-theme .classification .classification-last-winner a { color: #bfc5ce; text-decoration: none; }
+.classification-count { flex: none; color: #d9dce1; font: 500 26px/1.2 var(--classification-mono); text-align: right; }
+.classification-count small { display: block; margin-top: 4px; color: #989fa9; font: 400 10px/1.5 Inter,sans-serif; }
+.classification-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; padding: 7px 20px 7px 26px; border-block: 1px solid #ffffff0e; }
+.classification-toolbar>span { color: #dedfe3; font: 500 12px/1.5 Inter,sans-serif; }
+.classification-toolbar small { margin-left: 12px; color: #959da9; font-size: 10px; }
+.classification-controls { display: flex; gap: 6px; }
+body.apex-night-theme .classification .classification-controls button { display: grid; place-items: center; width: 40px; min-height: 40px; padding: 0; border: 1px solid #414853; border-radius: 6px; background: transparent; color: #c9cdd4; box-shadow: none; transform: none; }
+body.apex-night-theme .classification .classification-controls button:disabled { opacity: .25; cursor: default; }
+.classification-controls svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.classification-viewport {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  isolation: isolate;
+  overscroll-behavior-x: contain;
+  overflow-anchor: none;
+  scroll-behavior: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #636b78 #191d24;
 }
-@media(max-width:360px){
-.classification-viewport{--classification-identity:134px;--classification-total:52px;--classification-event:66px}.classification-head{padding-inline:14px}.classification-count{display:none}.classification-name{font-size:11px}
-body.apex-night-theme .classification .classification-avatar{width:25px;height:25px;flex-basis:25px}body.apex-night-theme .classification .classification-player{gap:6px}.classification-total{font-size:20px}
+.classification-table { width: calc(var(--classification-identity) + var(--classification-total) + var(--classification-event) * var(--classification-events)); min-width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+.classification-identity-col { width: var(--classification-identity); }
+.classification-total-col { width: var(--classification-total); }
+.classification-event-col { width: var(--classification-event); }
+.classification-table :is(th,td) { box-sizing: border-box; height: 64px; padding: 10px 12px; border: 0; border-bottom: 1px solid #ffffff0d; background: #20242b; text-align: center; vertical-align: middle; }
+.classification-table thead th { height: 68px; padding: 0; background: #191d23; color: #a5adb9; font: 500 10px/1.4 var(--classification-mono); }
+.classification-table .classification-identity { position: sticky; left: 0; z-index: 2; text-align: left; padding-left: 22px; }
+.classification-table .classification-pinned-total { position: sticky; left: var(--classification-identity); z-index: 2; border-right: 1px solid #434a55; }
+.classification-table thead :is(.classification-identity,.classification-pinned-total) { z-index: 3; }
+.classification-table tbody tr:last-child :is(th,td) { border-bottom: 0; }
+/* Fixed cell sizes and opaque pinned backgrounds prevent jumping and score bleed. */
+.classification-table :is(tr,th,td,a,span,strong) { animation: none !important; transition: none !important; transform: none !important; }
+body.apex-night-theme .classification .classification-stage-header a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 68px; padding: 8px 6px; color: #d1d5dd; text-decoration: none; }
+.classification-stage-header strong { font: 600 12px/1.3 var(--classification-mono); }
+.classification-stage-header small { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; color: #9aa4b2; font: 400 10px/1.3 Inter,sans-serif; overflow-wrap: anywhere; }
+body.apex-night-theme .classification .classification-player { display: flex; align-items: center; gap: 10px; min-width: 0; color: #e9ebee; text-decoration: none; }
+.classification-position { flex: 0 0 25px; text-align: left; }
+.classification-position strong { display: block; color: #c6ccd6; font: 500 17px/1.2 var(--classification-mono); letter-spacing: -.05em; }
+.classification-movement { display: block; height: 13px; margin-top: 3px; color: #8e98a7; font: 400 9px/1.3 var(--classification-mono); }
+body.apex-night-theme .classification .classification-avatar { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 32px; min-width: 0; min-height: 0; background: #353c48; color: #d1d6df; font: 500 12px/1 Inter,sans-serif; }
+.classification-player-copy { min-width: 0; }
+.classification-name { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #e4e7ec; font: 550 13px/1.5 Inter,sans-serif; }
+.classification-player-copy>small { display: block; margin-top: 2px; color: #969fab; font: 400 9px/1.3 Inter,sans-serif; }
+.classification-total { color: #f4f4f4; font: 650 20px/1.3 Inter,sans-serif; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.classification-score { color: #d0d5dd; font: 500 14px/1.3 var(--classification-mono); font-variant-numeric: tabular-nums; }
+.classification-result.is-unscored .classification-score { color: #727d8e; }
+.classification-foot { margin: 0; padding: 12px 26px; border-top: 1px solid #ffffff0d; color: #939daa; font: 400 10px/1.6 Inter,sans-serif; }
+.classification-empty { padding: 26px; border-top: 1px solid #ffffff0d; }
+.classification-empty strong { font-size: 14px; }
+.classification-empty p { margin: 10px 0 0; color: #a0a8b3; font-size: 12px; }
+body.apex-night-theme .classification :is(a,button,.classification-viewport):focus-visible { outline: 2px solid #c4cbd5 !important; outline-offset: -3px; }
+@media(max-width:700px) {
+  .classification { --classification-identity: 150px; --classification-total: 56px; --classification-event: 66px; border-radius: 10px; }
+  .classification-head { padding: 20px 16px; gap: 12px; }
+  body.apex-night-theme .classification .classification-head :is(h1,h2) { font-size: 23px; }
+  .classification-head p { font-size: 10px; }
+  .classification-count { font-size: 21px; }
+  .classification-count small { font-size: 9px; }
+  .classification-toolbar { padding: 6px 10px 6px 14px; }
+  .classification-toolbar>span { font-size: 11px; }
+  .classification-toolbar small { display: block; margin: 2px 0 0; font-size: 9px; }
+  body.apex-night-theme .classification .classification-controls button { width: 44px; min-height: 44px; }
+  .classification-table :is(th,td) { height: 62px; padding: 8px 6px; }
+  .classification-table .classification-identity { padding-left: 10px; }
+  .classification-table thead .classification-identity { font-size: 8px; }
+  .classification-table thead .classification-pinned-total { font-size: 9px; }
+  body.apex-night-theme .classification .classification-player { gap: 6px; }
+  .classification-position { flex-basis: 19px; }
+  .classification-position strong { font-size: 15px; }
+  body.apex-night-theme .classification .classification-avatar { flex-basis: 25px; width: 25px; height: 25px; }
+  .classification-name { font-size: 11px; }
+  .classification-total { font-size: 18px; }
+  .classification-score { font-size: 12px; }
+  .classification-foot { padding: 12px 14px; font-size: 9px; }
 }
-@media(prefers-reduced-motion:reduce){
-.classification :is(.classification-player,.classification-total,.classification-score,.classification-round-score){animation:none!important}.classification *{transition:none!important;scroll-behavior:auto!important}
+@media(max-width:360px) {
+  .classification { --classification-identity: 132px; --classification-total: 52px; --classification-event: 64px; }
+  .classification-count { display: none; }
 }

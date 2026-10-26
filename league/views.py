@@ -2103,6 +2103,7 @@ def leaderboard(request, force_global=False):
         "leaderboard.html",
         {
             "events": data["events"],
+            "result_events": list(reversed(data["scored_events"])),
             "rows": data["rows"],
             "scores_map": data["scores_map"],
             "latest_event": data["latest_event"],

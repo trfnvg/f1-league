@@ -65,4 +65,5 @@ def standings(season):
             avatar_url=profile.avatar.url if profile and profile.avatar else None,
             latest_points=last.points if last else None, is_round_winner=bool(last and last.points==best)))
     return dict(entries=entries, rows=rows, events=events, scores_map=scores_map,
+        result_events=list(reversed(scored)),
         latest_event=latest, round_winners=[r for r in rows if r["is_round_winner"]])
