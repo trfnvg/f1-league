@@ -1,4 +1,6 @@
 {% extends 'leagues/base.html' %}
+{% load static %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=1">{% endblock %}
 {% block league_breadcrumb %}{% endblock %}
 {% block league_content %}
 <header class="league-dashboard-head league-dashboard-head-premium">

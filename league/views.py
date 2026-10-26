@@ -2105,7 +2105,6 @@ def leaderboard(request, force_global=False):
             "events": data["events"],
             "rows": data["rows"],
             "scores_map": data["scores_map"],
-            "leaderboard_chart": data["chart"],
             "latest_event": data["latest_event"],
             "round_winners": [row for row in data["rows"] if row["is_round_winner"]],
             "season": season,

@@ -1,0 +1,123 @@
+/* Shared classification: native disclosures, no sticky or scrolling overlays. */
+.classification {
+  --classification-line:#ffffff0e;
+  --classification-muted:#9aa7b8;
+  --classification-ink:#e9edf3;
+  --classification-mono:"SFMono-Regular",Consolas,monospace;
+  min-width:0;
+  overflow:hidden;
+  border:1px solid #38414d;
+  border-radius:16px;
+  background:#1d232b;
+  color:var(--classification-ink);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
+}
+.classification-head { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:26px 28px; }
+.classification-head>div { min-width:0; }
+.classification-kicker { display:flex; align-items:center; gap:9px; color:#9ba8b8; font:500 9px/1.5 var(--classification-mono); letter-spacing:.09em; }
+.classification-kicker::before { content:""; flex:none; width:17px; height:3px; border-radius:1px; background:#e46e63; transform:skewX(-25deg); }
+body.apex-night-theme .classification .classification-head h2 { margin:10px 0 8px; color:#eef1f6; font:650 26px/1.2 Inter,sans-serif; letter-spacing:-.04em; }
+.classification-head p { margin:0; color:var(--classification-muted); font-size:11px; line-height:1.6; overflow-wrap:anywhere; }
+.classification-count { flex:none; text-align:right; color:#e5eaf1; font:500 27px/1.1 var(--classification-mono); font-variant-numeric:tabular-nums; }
+.classification-count small { display:block; margin-top:8px; color:var(--classification-muted); font:400 10px/1.5 Inter,sans-serif; }
+.classification-season { display:inline-flex; padding:10px 14px; border:1px solid #3c4654; border-radius:7px; color:#acb8c8; font:500 10px/1.5 "SFMono-Regular",Consolas,monospace; }
+.classification-winners { display:flex; align-items:center; flex-wrap:wrap; gap:10px 24px; padding:13px 28px; border-top:1px solid #d5bb8914; border-bottom:1px solid #d5bb8914; background:#c8ac6b08; }
+.classification-winner-label { display:inline-flex; align-items:center; gap:9px; color:#c5b18b; font-size:10px; }
+.classification-winner-label svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.3; stroke-linecap:round; stroke-linejoin:round; }
+.classification-winner-names { display:flex; flex-wrap:wrap; gap:8px 22px; min-width:0; }
+body.apex-night-theme .classification .classification-winner-names a { display:inline-flex; align-items:baseline; gap:12px; min-width:0; color:#e2d8c6; font-size:12px; text-decoration:none; }
+.classification-winner-names a>span { overflow-wrap:anywhere; }
+.classification-winner-names b { flex:none; color:#d5c49d; font:500 12px/1.4 var(--classification-mono); }
+.classification-winner-names small { font-size:9px; }
+.classification-grid { display:grid; grid-template-columns:52px minmax(0,1fr) 86px 90px 34px; align-items:center; gap:16px; }
+.classification-columns { padding:13px 28px; border-bottom:1px solid var(--classification-line); background:#181e26; color:#94a1b2; font:500 9px/1.5 var(--classification-mono); letter-spacing:.04em; text-transform:uppercase; }
+.classification-points-label { text-align:right; }
+.classification-list { margin:0; padding:0; list-style:none; }
+.classification-entry { position:relative; margin:0; padding:0; border-bottom:1px solid var(--classification-line); }
+.classification-entry:last-child { border-bottom:0; }
+.classification-entry.is-round-winner { background:#d4b77107; }
+.classification-entry.is-you:not(.is-round-winner) { background:#a8bad008; }
+.classification-row { min-height:88px; padding:16px 28px; }
+.classification-position { display:block; min-width:0; }
+.classification-position>strong { display:block; color:#b4c0cf; font:500 21px/1.2 var(--classification-mono); letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
+.classification-entry:first-child .classification-position>strong { color:#f0f2f6; }
+.classification-movement { display:block; margin-top:6px; color:#778799; font:500 10px/1.3 var(--classification-mono); }
+.classification-movement.is-up { color:#99c4af; }
+.classification-movement.is-down { color:#d7938d; }
+body.apex-night-theme .classification .classification-player { display:flex; align-items:center; gap:13px; min-width:0; color:#e5eaf2; text-decoration:none; }
+.classification-player:hover .classification-name { color:#fff; }
+body.apex-night-theme .classification .classification-avatar { display:grid; place-items:center; flex:0 0 38px; width:38px; height:38px; min-width:0; min-height:0; background:#323e4c; color:#cbd6e4; font:550 13px/1 Inter,sans-serif; }
+.classification-player-copy { min-width:0; }
+.classification-name { display:block; color:#e5eaf2; font:550 14px/1.5 Inter,sans-serif; overflow-wrap:anywhere; }
+.classification-name small { display:inline-block; margin-left:8px; color:#97a8bc; font:400 10px/1.5 Inter,sans-serif; }
+.classification-mobile-latest { display:none; }
+.classification-latest { text-align:center; color:#aab7c8; font:450 13px/1.5 var(--classification-mono); font-variant-numeric:tabular-nums; }
+.classification-columns .classification-latest { font:inherit; }
+.classification-total { text-align:right; color:#edf1f7; font:600 25px/1.2 Inter,sans-serif; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+.classification-breakdown>summary {
+  position:absolute; top:22px; right:21px;
+  display:grid; place-items:center; width:44px; height:44px;
+  padding:0; border:1px solid transparent; border-radius:8px;
+  color:#9cabbf; background:none; cursor:pointer; list-style:none;
+}
+.classification-breakdown>summary::-webkit-details-marker { display:none; }
+.classification-breakdown>summary::marker { content:""; }
+.classification-breakdown>summary::before,.classification-breakdown>summary::after { content:none; }
+.classification-breakdown>summary svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.classification-breakdown[open]>summary svg { transform:rotate(180deg); }
+.classification-breakdown>summary:hover { color:#e4ebf4; border-color:#4b5869; background:#ffffff04; }
+.classification a:focus-visible,.classification-breakdown>summary:focus-visible { outline:2px solid #b1c0d2; outline-offset:3px; border-radius:6px; }
+.classification-breakdown>summary:focus-visible { outline-offset:-3px; }
+.classification-detail { margin:0 28px 22px 96px; padding-top:18px; border-top:1px solid var(--classification-line); }
+.classification-detail-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+.classification-detail h3 { margin:0; color:#9eacbf; font:500 11px/1.5 Inter,sans-serif; }
+body.apex-night-theme .classification .classification-detail-heading a { display:inline-flex; align-items:center; gap:6px; color:#c6d1df; font:500 10px/1.5 Inter,sans-serif; text-decoration:none; white-space:nowrap; }
+.classification-detail-heading svg { width:14px; height:14px; }
+.classification-rounds { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+body.apex-night-theme .classification .classification-round { display:grid; grid-template-columns:1fr auto; gap:8px; min-width:0; padding:13px 12px; border:1px solid #3e4b5d; border-radius:8px; background:#252e39; color:#d6e0ed; text-decoration:none; }
+.classification-round>span { align-self:center; font:500 10px/1.3 var(--classification-mono); color:#a5b4c7; }
+.classification-round>strong { text-align:right; color:#e3ebf6; font:550 17px/1.3 Inter,sans-serif; font-variant-numeric:tabular-nums; }
+.classification-round>small { grid-column:1/-1; color:#a6b5c8; font:400 10px/1.5 Inter,sans-serif; overflow-wrap:anywhere; }
+body.apex-night-theme .classification .classification-round.is-unscored { border-color:#ffffff0c; background:#ffffff02; }
+.classification-round.is-unscored>strong { color:#7d8ea4; }
+body.apex-night-theme .classification .classification-round:hover { border-color:#7e91a9; background:#2d3846; }
+.classification-foot { padding:15px 28px; border-top:1px solid var(--classification-line); color:#8d9bad; font:400 10px/1.6 Inter,sans-serif; }
+.classification-empty { padding:28px; border-top:1px solid var(--classification-line); }
+.classification-empty strong { display:block; margin-bottom:9px; color:#d7e1ee; font-size:16px; font-weight:550; }
+.classification-empty p,.classification-empty-rounds { margin:0; color:#9aa9bd; font:400 12px/1.7 Inter,sans-serif; }
+@media(max-width:700px) {
+  .classification-head { padding:22px 18px; gap:15px; }
+  .classification-head>div { max-width:76%; }
+  body.apex-night-theme .classification .classification-head h2 { font-size:23px; }
+  .classification-head p { font-size:10px; }
+  .classification-count { font-size:23px; }
+  .classification-count small { font-size:9px; }
+  .classification-winners { padding:12px 18px; gap:8px 16px; }
+  .classification-winner-label { font-size:9px; }
+  .classification-winner-names a { font-size:11px; }
+  .classification-grid { grid-template-columns:32px minmax(0,1fr) 52px 44px; gap:10px; }
+  .classification-columns { padding:12px 18px; font-size:8px; }
+  .classification .classification-latest { display:none; }
+  .classification-row { min-height:82px; padding:15px 18px; }
+  .classification-position>strong { font-size:18px; }
+  .classification-movement { font-size:9px; }
+  body.apex-night-theme .classification .classification-player { gap:10px; }
+  body.apex-night-theme .classification .classification-avatar { width:32px; height:32px; flex-basis:32px; }
+  .classification-name { font-size:12px; }
+  .classification-name small { font-size:9px; margin-left:5px; }
+  .classification-mobile-latest { display:block; margin-top:3px; color:#95a5ba; font:400 9px/1.5 Inter,sans-serif; }
+  .classification-total { font-size:22px; }
+  .classification-breakdown>summary { top:19px; right:9px; }
+  .classification-detail { margin:0 18px 18px; padding-top:16px; }
+  .classification-rounds { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .classification-foot { padding:13px 18px; font-size:9px; }
+  .classification-empty { padding:22px 18px; }
+}
+@media(max-width:360px) {
+  .classification-grid { grid-template-columns:25px minmax(0,1fr) 44px 44px; gap:8px; }
+  .classification-head,.classification-winners,.classification-columns,.classification-row { padding-inline:14px; }
+  body.apex-night-theme .classification .classification-player { gap:7px; }
+  body.apex-night-theme .classification .classification-avatar { width:28px; height:28px; flex-basis:28px; }
+  .classification-total { font-size:20px; }
+  .classification-breakdown>summary { right:4px; }
+}

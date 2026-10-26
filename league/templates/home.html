@@ -6,7 +6,7 @@
 <div class="ns-home" data-server-time="{{ page_server_time|date:'c' }}"{% if featured_switch_at %} data-stage-switch="{{ featured_switch_at|date:'c' }}"{% endif %}>
 <header class="ns-page-intro">
   <div><div class="ns-kicker">СЕЗОН {{ season.year }} · ТВОЙ КОМАНДНЫЙ ПУНКТ</div><h1>Гонка начинается<br><span>до старта.</span></h1><p>Предсказывай результат. Забирай очки. Напоминай друзьям, кто здесь лучше разбирается в гонках.</p></div>
-  <a class="ns-secondary" href="{% url 'league:friend_league_create' %}"><span aria-hidden="true">＋</span> Создать лигу</a>
+  {% if not user.is_authenticated %}<a class="ns-secondary" href="{% url 'league:friend_league_create' %}"><span aria-hidden="true">＋</span> Создать лигу</a>{% endif %}
 </header>
 
 <div class="ns-homegrid">
@@ -21,7 +21,7 @@
         <div class="ns-racebottom">{% if circuit %}<span>{{ circuit.country }}</span><span>{{ circuit.name }}</span>{% else %}<span>SEASON {{ season.year }}</span><span>ROUND {{ featured_event.round_number }}</span>{% endif %}</div>
         {% endwith %}
       {% else %}
-        <h2 id="featured-gp-title">Твоя сетка<span>.</span><br>Твой сезон.</h2><p>Собери свою компанию и соревнуйся с друзьями. Здесь появится ближайший Гран-при.</p><a class="ns-primary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">{% include 'ui_arrow.html' %}</span></a>
+        <h2 id="featured-gp-title">Твоя сетка<span>.</span><br>Твой сезон.</h2><p>Собери свою компанию и соревнуйся с друзьями. Здесь появится ближайший Гран-при.</p>{% if not user.is_authenticated %}<a class="ns-primary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">{% include 'ui_arrow.html' %}</span></a>{% endif %}
       {% endif %}
     </div>
     {% if featured_event.circuit_visual %}<div class="ns-trackdrawing">{% include 'circuit_track.html' with circuit=featured_event.circuit_visual track_id='home' animated=True %}</div><div class="ns-track-meta">{{ featured_event.circuit_visual.length_km }} KM / {{ featured_event.circuit_visual.name }}</div>{% endif %}
@@ -125,7 +125,7 @@
     </section>
   </div>
 </section>
-<div class="ns-community"><div><div class="ns-kicker">FASTLAP / ОДНА ГОНКА — МНОГО МНЕНИЙ</div><h3>Своя лига. Своя борьба.</h3><p>Приглашай друзей, угадывай исходы и переписывай историю своего чата.</p></div><a class="ns-secondary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">{% include 'ui_arrow.html' %}</span></a></div>
+{% if not user.is_authenticated %}<div class="ns-community"><div><div class="ns-kicker">FASTLAP / ОДНА ГОНКА — МНОГО МНЕНИЙ</div><h3>Своя лига. Своя борьба.</h3><p>Приглашай друзей, угадывай исходы и переписывай историю своего чата.</p></div><a class="ns-secondary" href="{% url 'league:friend_league_create' %}">Создать лигу <span aria-hidden="true">{% include 'ui_arrow.html' %}</span></a></div>{% endif %}
 
 {% if result_images %}
   <section class="editorial-section mb-4">

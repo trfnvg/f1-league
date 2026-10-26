@@ -198,6 +198,31 @@ def run(output, widths, engine):
                     if sidebar_visible != (width > 780):
                         page.screenshot(path=str(output/f"failure-{width}-{route.strip('/') or 'home'}.png"), full_page=True)
                     assert sidebar_visible == (width > 780), (width, route, page.locator(".nightshift-sidebar").evaluate("e=>({display:getComputedStyle(e).display,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})"))
+                    if route in ('/', '/closed/', '/guest/'):
+                        assert page.locator('.ns-home a', has_text='Создать лигу').count() == (2 if route == '/guest/' else 0)
+                    if route in ('/league/', '/standings/'):
+                        assert page.locator('.classification').is_visible()
+                        assert page.locator('#pointsChart,script[src*="leaderboard-chart"],#leaderboard-chart-data').count() == 0
+                        assert page.locator('.classification-breakdown[open]').count() == 0
+                        assert page.locator('.classification-row').evaluate_all('''rows=>rows.every(row=>{
+                            const player=row.querySelector('.classification-player').getBoundingClientRect(),points=row.querySelector('.classification-total').getBoundingClientRect();
+                            const toggle=row.parentElement.querySelector('summary').getBoundingClientRect();
+                            return player.right+6<=points.left && points.right+6<=toggle.left && row.scrollWidth<=row.clientWidth+1;
+                        })'''), (width, route, 'Player names overlap points')
+                        disclosure=page.locator('.classification-breakdown>summary').first
+                        assert disclosure.bounding_box()['width'] >= 44
+                        disclosure.focus()
+                        page.keyboard.press('Space')
+                        assert page.locator('.classification-breakdown[open]').count() == 1
+                        assert page.locator('.classification-detail').first.is_visible()
+                        assert page.locator('.classification-round:visible').count() > 0
+                        assert page.locator('.classification-round:visible').evaluate_all('items=>items.every(e=>e.scrollWidth<=e.clientWidth+1)')
+                        round_link=page.locator('.classification-round:visible').first.get_attribute('href')
+                        assert round_link.startswith('/leagues/' if route == '/league/' else '/events/')
+                        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                        page.screenshot(path=str(output/f'{width}-{route.strip("/")}-expanded.png'), full_page=True)
+                        disclosure.click()
+                        assert page.locator('.classification-breakdown[open]').count() == 0
                     if route in ("/", "/guest/", "/closed/"):
                         svg = page.locator(".ns-trackdrawing .circuit-visual")
                         assert svg.get_attribute("data-circuit") == "austin"
@@ -410,6 +435,9 @@ def run(output, widths, engine):
             assert fallback_page.locator('#id_p1').is_visible()
             assert fallback_page.locator('#id_pole').is_visible()
             assert fallback_page.locator('[data-fallback-submit]').is_visible()
+            fallback_page.goto(base+'/standings/', wait_until='networkidle')
+            fallback_page.locator('.classification-breakdown>summary').first.click()
+            assert fallback_page.locator('.classification-detail').first.is_visible()
             fallback_page.close()
             page = browser.new_page(viewport={"width": 1440, "height": 1000})
             page.on("pageerror", lambda error: errors.append(str(error)))

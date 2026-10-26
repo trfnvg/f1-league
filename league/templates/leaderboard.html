@@ -2,6 +2,7 @@
 {% load league_extras static %}
 
 {% block title %}Таблица сезона {{ season.year }} · F1 Predictions{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=1">{% endblock %}
 
 {% block content %}
 
@@ -10,15 +11,11 @@
   <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
     <div>
       <div class="page-kicker">Championship standings</div>
-      <h1 class="section-title">Таблица сезона</h1>
-      <p class="section-subtitle">Общий рейтинг игроков, движение позиций и очки за каждый этап.</p>
+      <h1 class="section-title">Общий рейтинг</h1>
+      <p class="section-subtitle">Один сезон. Общая борьба за первое место.</p>
     </div>
     <div>
-      <div class="deadline-chip">
-        <span>Игроков: {{ rows|length }}</span>
-        <span style="opacity:.45;">|</span>
-        <span>{% if latest_event %}После R{{ latest_event.round_number }} · {{ latest_event.name }}{% else %}Ожидаем первый этап{% endif %}</span>
-      </div>
+      <span class="classification-season">Сезон {{ season.year }}</span>
     </div>
   </div>
 </header>

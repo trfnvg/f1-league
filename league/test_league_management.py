@@ -70,7 +70,9 @@ class LeagueManagementTests(TestCase):
     def test_direct_entry_remembers_only_accessible_league_and_catalog_is_explicit(self):
         self.assertRedirects(self.client.get(reverse("league:friend_leagues")), self.url("friend_league"), fetch_redirect_response=False)
         response=self.client.get(self.url("friend_league"))
-        self.assertContains(response, "Очки по этапам");self.assertContains(response, "Динамика очков")
+        self.assertContains(response, "Очки по этапам");self.assertNotContains(response, "Динамика очков")
+        self.assertContains(response, 'class="classification-breakdown"')
+        self.assertNotContains(response, 'league/leaderboard-chart.js')
         self.assertContains(response, "Сменить лигу");self.assertNotContains(response, "Назначить модератором")
         self.assertNotContains(response, '>Таблица</a>')
         self.assertContains(self.client.get(reverse("league:friend_leagues"), {"all":"1"}), "Создать лигу")

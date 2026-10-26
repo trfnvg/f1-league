@@ -1,4 +1,4 @@
-"""Bounded, membership-scoped table and chart; original scores stay immutable."""
+"""Bounded, membership-scoped standings; original scores stay immutable."""
 from collections import defaultdict
 from types import SimpleNamespace
 from django.db.models import F
@@ -6,7 +6,6 @@ from django.db.models import F
 from .competition_scoring import _text_digest
 from .models import (Event, LeagueCrazyDecision, LeagueDayDecision, LeagueEventScore,
     Prediction, Score, SeasonScore)
-from .services import CHART_COLORS
 
 
 def standings(season):
@@ -53,7 +52,7 @@ def standings(season):
     entries.sort(key=lambda e: (-totals[e.membership.user_id], e.membership.user.username.lower()))
     latest_points = [s.points for (uid, eid), s in scores_map.items() if latest and eid == latest.pk]
     best = max(latest_points, default=None)
-    rows, series = [], []
+    rows = []
     for rank, entry in enumerate(entries, 1):
         user = entry.membership.user
         entry.rank, entry.total = rank, totals[user.pk]
@@ -65,11 +64,5 @@ def standings(season):
             movement=previous_rank[entry.pk]-rank if len(scored)>1 else 0,
             avatar_url=profile.avatar.url if profile and profile.avatar else None,
             latest_points=last.points if last else None, is_round_winner=bool(last and last.points==best)))
-        cumulative = 0;points = []
-        for i, event in enumerate(scored):
-            cumulative += getattr(scores_map.get((user.pk, event.pk)), "points", 0)
-            points.append(cumulative+(bonuses.get(user.pk, 0) if i==len(scored)-1 else 0))
-        series.append(dict(user_id=user.pk, name=user.username, color=CHART_COLORS[(rank-1)%len(CHART_COLORS)], points=points))
     return dict(entries=entries, rows=rows, events=events, scores_map=scores_map,
-        latest_event=latest, round_winners=[r for r in rows if r["is_round_winner"]],
-        leaderboard_chart=dict(events=[dict(round=e.round_number, name=e.name) for e in scored], series=series))
+        latest_event=latest, round_winners=[r for r in rows if r["is_round_winner"]])

@@ -122,7 +122,6 @@ def detail(request, league_id):
     page = Paginator(data.pop("entries"), 50).get_page(request.GET.get("page"))
     visible = {entry.membership.user_id for entry in page}
     data["rows"] = [r for r in data["rows"] if r["user"].pk in visible]
-    data["leaderboard_chart"]["series"] = [s for s in data["leaderboard_chart"]["series"] if s["user_id"] in visible]
     now = timezone.now()
     next_event = select_current_event(data["events"], now)
     prediction_open = bool(next_event and next_event.voting_state() == "open" and now < next_event.deadline)

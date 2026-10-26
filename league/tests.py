@@ -144,8 +144,8 @@ class HomeEventOrderingTests(TestCase):
 
 
 @override_settings(STORAGES=TEST_STORAGES)
-class LeaderboardChartTests(TestCase):
-    def test_chart_uses_cumulative_scores_in_chronological_round_order(self):
+class LeaderboardStandingsTests(TestCase):
+    def test_standings_keep_scores_and_round_order_without_a_chart(self):
         first_player = User.objects.create_user(username="Алексей", password="test")
         second_player = User.objects.create_user(username="Борис", password="test")
         now = timezone.now()
@@ -174,14 +174,27 @@ class LeaderboardChartTests(TestCase):
         response = self.client.get(reverse("league:leaderboard"))
 
         self.assertEqual(response.status_code, 200)
-        chart = response.context["leaderboard_chart"]
-        self.assertEqual([event["round"] for event in chart["events"]], [1, 2])
-        series = {item["name"]: item for item in chart["series"]}
-        self.assertEqual(series["Алексей"]["points"], [10, 14])
-        self.assertEqual(series["Борис"]["points"], [2, 22])
+        self.assertEqual([event.round_number for event in response.context["events"]], [1, 2, 3])
         self.assertEqual([row["user"].username for row in response.context["rows"]], ["Борис", "Алексей"])
-        self.assertContains(response, 'id="pointsChart"')
-        self.assertContains(response, "league/leaderboard-chart.js")
+        self.assertEqual([row["total"] for row in response.context["rows"]], [22, 14])
+        self.assertContains(response, 'class="classification-breakdown"', count=2)
+        self.assertNotContains(response, 'id="pointsChart"')
+        self.assertNotContains(response, "league/leaderboard-chart.js")
+        self.assertNotContains(response, "leaderboard-chart-data")
+
+    def test_zero_negative_and_missing_round_scores_remain_distinct(self):
+        from django.template.loader import render_to_string
+        player = User.objects.create_user("scored-driver")
+        events = [Event.objects.create(name=f"GP {i}", round_number=i,
+            deadline=timezone.now()+timedelta(days=i)) for i in range(1, 4)]
+        zero = Score.objects.create(user=player, event=events[0], points=0)
+        penalty = Score.objects.create(user=player, event=events[1], points=-4)
+        html = render_to_string("leagues/standings.html", {"season": {"year": 2026},
+            "rows": [{"user": player, "rank": 1, "total": -4, "latest_points": 0}],
+            "events": events, "scores_map": {(player.pk, events[0].pk): zero, (player.pk, events[1].pk): penalty}})
+        self.assertIn('<strong>0</strong>', html)
+        self.assertIn('<strong>-4</strong>', html)
+        self.assertEqual(html.count('classification-round is-unscored'), 1)
 
 
 @override_settings(STORAGES=TEST_STORAGES)

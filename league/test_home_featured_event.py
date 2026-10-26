@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
+from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -29,6 +30,16 @@ class HomeFeaturedEventTests(TestCase):
             response = self.client.get(reverse("league:home"))
         self.assertEqual(response.status_code, 200)
         return response
+
+    def test_league_creation_ctas_only_appear_for_guests_with_or_without_events(self):
+        player = User.objects.create_user("home-player")
+        for empty_calendar in (False, True):
+            if empty_calendar:
+                Event.objects.all().delete()
+            self.client.logout()
+            self.assertContains(self.home_at(self.race), "Создать лигу")
+            self.client.force_login(player)
+            self.assertNotContains(self.home_at(self.race), "Создать лигу")
 
     def test_closed_deadline_keeps_current_gp_and_prediction_deadline_is_not_reopened(self):
         now = self.race-timedelta(days=1)
