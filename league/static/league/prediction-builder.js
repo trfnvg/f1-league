@@ -18,8 +18,6 @@
   const labels = ['Победитель', 'Второе место', 'Третье место'];
   const summaryLabels = {p1: 'Первое место', p2: 'Второе место', p3: 'Третье место', pole: 'Поул', fastest_lap: 'Быстрый круг', driver_of_day: 'Гонщик дня', safety_car_count: 'Safety Car', dnf_count: 'Сходы (DNF)', crazy_prediction: 'Crazy Prediction', sprint_qualifying_winner: 'Квалификация к спринту', sprint_winner: 'Победитель спринта'};
   const fields = [...form.querySelectorAll('select,input,textarea')].filter(field => summaryLabels[field.name]);
-  const initialValues = fields.map(field => field.value);
-  const savedBadge = form.closest('.event-page').querySelector('.event-status-badge.is-saved');
   function element(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -147,7 +145,6 @@
     const bar = form.querySelector('[data-progress-bar]');
     bar.max = fields.length;
     bar.value = filled;
-    if (savedBadge) savedBadge.textContent = fields.some((field, i) => field.value !== initialValues[i]) ? 'Есть изменения' : 'Прогноз сохранён';
     if (podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
   }
   function renderDriverButton(button, field) {

@@ -22,5 +22,6 @@ def save_shared_prediction(*, user, event, data, include_crazy=True):
         return form, None
     prediction = form.save(commit=False)
     prediction.user = user;prediction.event = event
+    prediction.submitted_at = timezone.now()
     prediction.save()
     return form, prediction

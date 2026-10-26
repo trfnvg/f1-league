@@ -5,10 +5,13 @@ from . import jury_admin
 from . import league_views
 from . import driver_profiles
 from . import auth_views
+from . import score_details
 
 app_name = "league"
 
 urlpatterns = [
+    path("events/<int:event_id>/scores/<int:user_id>/", score_details.detail, name="score_detail"),
+    path("leagues/<uuid:league_id>/events/<int:event_id>/scores/<int:user_id>/", score_details.detail, name="friend_league_score"),
     path("drivers/", driver_profiles.directory, name="drivers"),
     path("drivers/<int:year>/<slug:key>/", driver_profiles.detail, name="driver_profile"),
     path("leagues/", league_views.index, name="friend_leagues"),

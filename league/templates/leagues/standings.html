@@ -42,7 +42,7 @@
           </th>
           <td class="classification-pinned-total"><strong class="classification-total">{{ r.total }}</strong></td>
           {% for e in result_events %}{% score_for scores_map r.user.id e.id as s %}
-          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}"><span class="classification-score">{% if s %}{{ s.points }}{% else %}<span class="visually-hidden">Нет результата</span>—{% endif %}</span></td>
+          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}">{% if s %}<a class="classification-score" href="{% if league %}{% url 'league:friend_league_score' league.id e.id r.user.id %}{% else %}{% url 'league:score_detail' e.id r.user.id %}{% endif %}" aria-label="Разбор: {{ r.user|player_name }}, {{ e.name }}, {{ s.points }} очков">{{ s.points }}</a>{% else %}<span class="classification-score"><span class="visually-hidden">Нет результата</span>—</span>{% endif %}</td>
           {% endfor %}
         </tr>
         {% endfor %}

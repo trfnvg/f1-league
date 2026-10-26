@@ -162,6 +162,18 @@ def render_pages():
     pages["/new-password/"] = client.get(token_response.url).content
     client.force_login(player)
     pages["/account-settings/"] = client.get(reverse("league:account_settings")).content
+    from league.leagues import create_league, create_invite
+    from league.models import Result
+    private = create_league(owner=player, name="Гоночная компания друзей", season=season, start_event=future, ruleset="paddock")
+    _, invite_token = create_invite(actor=player, league_season=private)
+    pages["/invite-manage/"] = client.post(reverse("league:friend_league_invites", args=[private.league_id])).content
+    pages["/private-predict/"] = client.get(reverse("league:friend_league_event", args=[private.league_id, future.pk])).content
+    Result.objects.create(event=past, p1="russell", p2="leclerc", p3="norris", pole="russell", safety_car_count=1, dnf_count=2)
+    Prediction.objects.filter(user=player, event=past).update(p1="leclerc", p2="russell", p3="norris", pole="russell", created_at=past.deadline-timedelta(hours=1))
+    Score.objects.filter(user=player, event=past).update(points=12, breakdown={"P1 (Top-3)":3,"P2 (Top-3)":3,"P3":4,"Pole Position":4,"Дуэль":-2})
+    pages["/score-detail/"] = client.get(reverse("league:score_detail", args=[past.pk, player.pk])).content
+    client.logout()
+    pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
     assert all(b"Server Error" not in html for html in pages.values())
     return pages
 
@@ -208,7 +220,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -231,6 +243,20 @@ def run(output, widths, engine):
                         assert page.locator('#id_first_name,#id_username,#id_email,#id_password1,#id_password2').count() == 5
                         assert page.locator('.account-handle>span').inner_text() == '@'
                         assert page.locator('#id_password2').get_attribute('autocomplete') == 'new-password'
+                    if route in ('/event/', '/private-predict/'):
+                        status = page.locator('[data-save-label]')
+                        assert status.is_visible()
+                        field = page.locator('textarea[name="crazy_prediction"]')
+                        original = field.input_value()
+                        field.fill('Несохранённый тестовый прогноз')
+                        assert status.inner_text() == 'Есть несохранённые изменения'
+                        field.fill(original)
+                        assert status.inner_text() in ('Прогноз сохранён', 'Прогноз ещё не сохранён')
+                    if route == '/score-detail/':
+                        assert page.locator('.score-explanation-total strong').inner_text() == '12'
+                        assert page.locator('.score-explanation-table tbody tr').count() == 8
+                    if route == '/invite-preview/':
+                        assert page.locator('.leagues-join a[href*="next="]').count() == 2
                     if route == '/login/':
                         assert page.locator('a[href="/accounts/password_reset/"]').is_visible()
                     if route in ('/league/', '/standings/', '/league-long/', '/standings-long/'):
@@ -515,7 +541,7 @@ def run(output, widths, engine):
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)
             browser.close()
         assert not errors, errors
-        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 32 real pages, account forms and recovery, newest-first results, stable horizontal scrolling, neutral rows, consistent avatars, live feed, duel states and 27 admin choices. Screenshots: {output}")
+        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 36 real pages, prediction save states, invites, score details, account forms and recovery, newest-first results, stable horizontal scrolling, neutral rows, consistent avatars, live feed, duel states and 27 admin choices. Screenshots: {output}")
     finally:
         server.shutdown()
 

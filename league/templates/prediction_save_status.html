@@ -1,0 +1,4 @@
+<div class="prediction-save-status" role="status" aria-live="polite" data-save-status data-saved="{% if prediction %}yes{% endif %}" data-invalid="{% if form.is_bound %}yes{% endif %}" data-deadline="{{ event.deadline|date:'c' }}">
+  <strong data-save-label>{% if form.is_bound %}Не сохранено — проверь ответы{% elif prediction %}Прогноз сохранён{% else %}Прогноз ещё не сохранён{% endif %}</strong>
+  <small data-save-note>{% if prediction.submitted_at %}Последнее сохранение: {{ prediction.submitted_at|date:'d.m.Y · H:i:s' }} МСК.{% elif prediction %}Твой прогноз принят.{% else %}Выбери ответы и нажми «Сохранить прогноз».{% endif %}</small>
+</div>

@@ -32,13 +32,16 @@ def standings(season):
         for score in scores:
             key = (score.user_id, score.event_id)
             points = score.points
+            breakdown = dict(score.breakdown)
             prediction = by_user_event.get(key)
             decision, day = decisions.get(key), days.get(score.event_id)
             if decision and prediction and decision.prediction_id == prediction.pk and decision.text_digest == _text_digest(prediction):
                 points += (5 if decision.approved else 0)-score.breakdown.get("Crazy Prediction", 0)
+                breakdown["Crazy Prediction"] = 5 if decision.approved else 0
             if day and prediction:
                 points += (3 if (prediction.driver_of_day or "").strip().lower() in day.drivers else 0)-score.breakdown.get("Driver of the Day", 0)
-            scores_map[key] = SimpleNamespace(points=points)
+                breakdown["Driver of the Day"] = 3 if (prediction.driver_of_day or "").strip().lower() in day.drivers else 0
+            scores_map[key] = SimpleNamespace(points=points, breakdown=breakdown)
     else:
         for score in LeagueEventScore.objects.filter(entry__league_season=season).select_related("entry__membership"):
             scores_map[(score.entry.membership.user_id, score.event_id)] = score

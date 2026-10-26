@@ -1,6 +1,7 @@
 <form method="post" id="race-prediction-form" class="race-prediction-layout" data-prediction-builder>
   {% csrf_token %}
   <div class="race-prediction-main">
+    {% include 'prediction_save_status.html' %}
     <details class="prediction-points-help"><summary>Как начисляются очки?</summary><p>Точное место на подиуме: 10 / 6 / 4 очка. Пилот попал в тройку, но на другое место: 3 очка. Поул — 4, быстрый круг и гонщик дня — по 3. Точное число выездов Safety Car и сходов — по 5. Засчитанный Crazy Prediction — 5.{% if event.has_sprint %} Квалификация спринта — 3, победитель спринта — 5.{% endif %}</p></details>
     {% if form.non_field_errors %}<div class="alert alert-danger" role="alert">{{ form.non_field_errors }}</div>{% endif %}
     <section class="prediction-form-panel">

@@ -678,6 +678,7 @@ class Prediction(models.Model):
     crazy_prediction_approved = models.BooleanField("Crazy Prediction засчитан судьей", default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
+    submitted_at = models.DateTimeField("Последнее сохранение игроком", null=True, blank=True, editable=False)
 
     class Meta:
         unique_together = ("event", "user")

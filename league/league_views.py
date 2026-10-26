@@ -162,7 +162,6 @@ def revoke(request, league_id, invite_id):
     return redirect(f"{reverse('league:friend_league_invites', args=[league.pk])}?year={invite.league_season.season.year}")
 
 
-@login_required
 @never_cache
 @require_http_methods(["GET", "POST"])
 def join(request, token):
@@ -171,6 +170,9 @@ def join(request, token):
     except ValidationError as exc:
         raise Http404("Приглашение недоступно или срок его действия истёк.") from exc
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            from django.contrib.auth.views import redirect_to_login
+            return redirect_to_login(request.path)
         try:
             entry = accept_invite(user=request.user, token=token)
         except ValidationError as exc:
@@ -178,7 +180,9 @@ def join(request, token):
         else:
             messages.success(request, f"Вы в лиге! Ваш первый зачётный этап — {entry.first_event}.")
             return redirect(f"{reverse('league:friend_league', args=[entry.membership.league_id])}?year={entry.league_season.season.year}")
-    response = render(request, "leagues/join.html", {"invite": invite, "league": invite.league_season.league})
+    members = invite.league_season.entries.filter(membership__is_active=True).select_related("membership__user")
+    response = render(request, "leagues/join.html", {"invite": invite, "league": invite.league_season.league,
+        "member_count": members.count(), "invite_members": list(members[:6])})
     response["Referrer-Policy"] = "no-referrer"
     return response
 
