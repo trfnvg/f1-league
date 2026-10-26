@@ -2,24 +2,9 @@
 {% load league_extras static %}
 
 {% block title %}Таблица сезона {{ season.year }} · F1 Predictions{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=2">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=3">{% endblock %}
 
 {% block content %}
-
-
-<header class="nightshift-pageheading mb-4">
-  <div class="d-flex flex-wrap align-items-end justify-content-between gap-3">
-    <div>
-      <div class="page-kicker">Championship standings</div>
-      <h1 class="section-title">Общий рейтинг</h1>
-      <p class="section-subtitle">Один сезон. Общая борьба за первое место.</p>
-    </div>
-    <div>
-      <span class="classification-season">Сезон {{ season.year }}</span>
-    </div>
-  </div>
-</header>
-
 {% include 'leagues/standings.html' %}
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/standings.js' %}?v=1" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/standings.js' %}?v=2" defer></script>{% endblock %}

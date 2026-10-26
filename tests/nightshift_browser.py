@@ -212,6 +212,13 @@ def run(output, widths, engine):
                         assert page.locator('.classification').is_visible()
                         assert page.locator('#pointsChart,script[src*="leaderboard-chart"],#leaderboard-chart-data').count() == 0
                         assert page.locator('.classification-table tbody tr').count() == 5
+                        assert page.locator('.classification.is-overview').is_visible()
+                        assert page.locator('.classification-viewport').evaluate('e=>e.scrollWidth<=e.clientWidth+1'), (width, route, 'Overview must fit without scrolling')
+                        assert page.locator('tbody .classification-summary:visible').count() == 5
+                        chosen = page.locator('[data-round-picker] option').first.get_attribute('value')
+                        page.locator('[data-round-picker]').select_option(chosen)
+                        assert page.locator('tbody tr').evaluate_all('rows=>rows.every(r=>{const s=r.querySelector(".classification-result.is-selected");return r.querySelector(".classification-round-score").textContent===(s.classList.contains("is-unscored")?"—":s.querySelector(".classification-score").textContent.trim());})')
+                        page.locator('[data-table-mode="rounds"]').click()
                         assert page.locator('.classification-result:visible').count() == page.locator('.classification-stage-header').count()*5
                         frame = page.locator('.classification-viewport')
                         frame.scroll_into_view_if_needed()
@@ -254,6 +261,9 @@ def run(output, widths, engine):
                         frame.evaluate('e=>e.scrollLeft=0')
                         page.evaluate('document.activeElement.blur()')
                         page.wait_for_timeout(550)
+                        page.locator('[data-table-mode="overview"]').click()
+                        page.evaluate('document.activeElement.blur(); window.scrollTo(0,0)')
+                        page.wait_for_timeout(400)
                     if route in ("/", "/guest/", "/closed/"):
                         svg = page.locator(".ns-trackdrawing .circuit-visual")
                         assert svg.get_attribute("data-circuit") == "austin"

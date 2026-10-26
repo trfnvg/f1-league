@@ -7,6 +7,8 @@
   const next = controls.querySelector('[data-table-step="1"]');
   const jump = controls.querySelector('[data-latest-round]');
   const headers = [...board.querySelectorAll('.classification-stage-header')];
+  const picker = board.querySelector('[data-round-picker]');
+  const modes = [...board.querySelectorAll('[data-table-mode]')];
   const columns = new Map(headers.map(header => [header.dataset.roundId, []]));
   board.querySelectorAll('[data-round-id]').forEach(cell => columns.get(cell.dataset.roundId)?.push(cell));
   let selected = null;
@@ -28,6 +30,7 @@
     viewport.scrollTo({left, behavior: smooth && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 'smooth' : 'auto'});
   }
   function reveal(header, smooth = true) {
+    if (board.classList.contains('is-overview')) return;
     const view = viewport.getBoundingClientRect();
     const box = header.getBoundingClientRect();
     const left = view.left + pinnedWidth();
@@ -42,6 +45,17 @@
     selected = header;
     columns.get(header.dataset.roundId).forEach(cell => cell.classList.add('is-selected'));
     header.querySelector('button').setAttribute('aria-pressed', 'true');
+    picker.value = header.dataset.roundId;
+    board.querySelector('[data-summary-round]').textContent = header.querySelector('strong').textContent;
+    board.querySelectorAll('tbody tr').forEach(row => {
+      const source = [...row.querySelectorAll('.classification-result')].find(cell => cell.dataset.roundId === header.dataset.roundId);
+      const target = row.querySelector('.classification-summary');
+      target.classList.toggle('is-unscored', source.classList.contains('is-unscored'));
+      target.classList.toggle('is-penalty', source.classList.contains('is-penalty'));
+      target.querySelector('.classification-round-score').textContent = source.classList.contains('is-unscored') ? '—' : source.querySelector('.classification-score').textContent.trim();
+      if (source.classList.contains('is-unscored')) target.setAttribute('aria-label', 'Нет результата');
+      else target.removeAttribute('aria-label');
+    });
     const selection = board.querySelector('.classification-selection');
     selection.hidden = false;
     selection.querySelector('[data-selection-caption]').textContent = header.dataset.roundTitle;
@@ -64,7 +78,24 @@
     if (!scheduled) { scheduled = true; requestAnimationFrame(updateNavigation); }
   }, {passive:true});
   window.addEventListener('resize', updateNavigation, {passive:true});
-  const latest = headers.find(header => header.classList.contains('is-latest'));
-  if (latest) { select(latest); reveal(latest, false); }
+  function setMode(mode) {
+    board.classList.toggle('is-overview', mode === 'overview');
+    board.classList.toggle('is-rounds', mode === 'rounds');
+    modes.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.tableMode === mode)));
+    viewport.scrollLeft = 0;
+    viewport.tabIndex = mode === 'overview' ? -1 : 0;
+    if (selected) reveal(selected, false);
+    updateNavigation();
+  }
+  modes.forEach(button => button.addEventListener('click', () => setMode(button.dataset.tableMode)));
+  picker.addEventListener('change', () => {
+    const header = headers.find(item => item.dataset.roundId === picker.value);
+    if (header) select(header);
+  });
+  picker.disabled = !headers.length;
+  board.querySelector('.classification-workspace').hidden = false;
+  setMode('overview');
+  const latest = headers.find(header => header.classList.contains('is-latest')) || headers[0];
+  if (latest) select(latest);
   updateNavigation();
 })();
