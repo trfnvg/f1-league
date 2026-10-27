@@ -67,6 +67,17 @@ class LeagueManagementTests(TestCase):
         self.assertContains(self.client.get(self.url("friend_league")), "Управляющий лигой")
         self.assertContains(self.client.get(self.url()), "Название и аватар")
 
+    def test_management_rounds_prioritize_stages_ready_for_judging(self):
+        self.event.deadline = self.now-timedelta(minutes=1)
+        self.event.save(update_fields=['deadline'])
+        for number in range(2, 9):
+            Event.objects.create(name=f'Future {number}', season_year=2027, round_number=number,
+                deadline=self.now+timedelta(days=number), race_datetime=self.now+timedelta(days=number, hours=1))
+        response = self.client.get(self.url())
+        events = response.context['events']
+        self.assertEqual(events[0].pk, self.event.pk)
+        self.assertEqual([event.round_number for event in events[1:]], list(range(2, 9)))
+
     def test_direct_entry_remembers_only_accessible_league_and_catalog_is_explicit(self):
         self.assertRedirects(self.client.get(reverse("league:friend_leagues")), self.url("friend_league"), fetch_redirect_response=False)
         response=self.client.get(self.url("friend_league"))
@@ -99,6 +110,10 @@ class LeagueManagementTests(TestCase):
         self.client.force_login(self.player)
         self.assertEqual(self.client.get(self.url()).status_code,403)
         member.role="manager";member.save(update_fields=("role",))
+        response = self.client.get(self.url())
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'Удалить лигу')
+        self.assertNotContains(response, 'name="role"')
         self.assertEqual(self.client.post(self.url(),{"name":"Managed Alpha"}).status_code,302)
 
     def test_avatar_is_normalized_and_svg_or_invalid_upload_is_rejected(self):
@@ -114,6 +129,31 @@ class LeagueManagementTests(TestCase):
             self.assertEqual(self.client.post(self.url(),{"name":"Bad","avatar":invalid}).status_code,200)
             self.a.league.refresh_from_db();self.assertEqual(self.a.league.avatar.name,old)
             self.assertEqual(self.a.league.name,"Alpha")
+
+    def test_profile_avatar_controls_keep_clear_and_upload_validation(self):
+        with TemporaryDirectory(prefix="fastlap-manage-avatar-") as directory, override_settings(MEDIA_ROOT=directory):
+            buffer = BytesIO(); Image.new("RGBA", (32, 24), (200, 30, 30, 128)).save(buffer, "PNG")
+            def upload():
+                return SimpleUploadedFile("logo.png", buffer.getvalue(), content_type="image/png")
+            response = self.client.get(self.url())
+            self.assertNotContains(response, 'name="avatar-clear"')
+            self.assertContains(response, 'name="avatar"')
+            self.assertEqual(self.client.post(self.url(), {"name": "Alpha", "avatar": upload()}).status_code, 302)
+            self.a.league.refresh_from_db()
+            old_avatar = self.a.league.avatar.name
+            response = self.client.get(self.url())
+            self.assertContains(response, 'name="avatar-clear"')
+            self.assertNotContains(response, 'Currently:')
+            self.assertNotContains(response, old_avatar + '</a>')
+            response = self.client.post(self.url(), {"name": "Alpha", "avatar": upload(), "avatar-clear": "on"})
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.context["form"].errors.get("avatar"))
+            self.assertContains(response, 'name="avatar-clear" id="avatar-clear_id" data-logo-clear checked')
+            self.a.league.refresh_from_db()
+            self.assertEqual(self.a.league.avatar.name, old_avatar)
+            self.assertEqual(self.client.post(self.url(), {"name": "Alpha", "avatar-clear": "on"}).status_code, 302)
+            self.a.league.refresh_from_db()
+            self.assertFalse(self.a.league.avatar)
 
     def test_transparent_league_logo_keeps_alpha_and_all_edges(self):
         with TemporaryDirectory(prefix="fastlap-avatar-test-") as directory, override_settings(MEDIA_ROOT=directory):

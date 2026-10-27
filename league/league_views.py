@@ -291,8 +291,15 @@ def settings(request, league_id):
         else:
             messages.success(request, "Настройки лиги сохранены.")
             return redirect(f"{reverse('league:friend_league', args=[league.pk])}?year={season.season.year}")
-    members = league.memberships.filter(is_active=True).select_related("user").order_by("user__username")
-    events = Event.objects.filter(season_year=season.season.year, round_number__gte=season.start_event.round_number).order_by("-round_number")
+    members = league.memberships.filter(is_active=True).select_related("user", "user__league_profile").order_by("user__username")
+    events = list(Event.objects.filter(season_year=season.season.year,
+        round_number__gte=season.start_event.round_number).order_by("-round_number"))
+    now = timezone.now()
+    # Judging is actionable after the prediction deadline. Keep these rounds
+    # visible first, followed by upcoming rounds in chronological order.
+    events = [event for event in events if event.deadline <= now] + [
+        event for event in reversed(events) if event.deadline > now
+    ]
     return render(request, "leagues/settings.html", dict(league=league, league_season=season, form=form,
         members=members, events=events, **_rights(request.user, league)))
 

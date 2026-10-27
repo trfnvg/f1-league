@@ -1,8 +1,57 @@
 {% extends 'leagues/base.html' %}
+{% load static league_extras %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/league-management.css' %}?v=1">{% endblock %}
+{% block league_breadcrumb %}<nav class="leagues-breadcrumb manage-breadcrumb" aria-label="Навигация по лигам"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a><span aria-hidden="true">/</span><a href="{% url 'league:friend_league' league.id %}?year={{ league_season.season.year }}">{{ league.name }}</a></nav>{% endblock %}
 {% block league_content %}
-<header class="leagues-heading"><h1>Управление лигой</h1><p>{{ league.name }} · {{ league_season.season.year }}</p></header>
-<div class="leagues-create-grid"><section class="leagues-panel"><h2>Название и аватар</h2>{% if league.avatar %}<img class="league-logo mb-3" src="{{ league.avatar.url }}" alt="Логотип {{ league.name }}">{% endif %}<form method="post" enctype="multipart/form-data" class="leagues-form">{% csrf_token %}{{ form.non_field_errors }}{% for field in form %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}{% endfor %}<p class="leagues-help">PNG, JPEG или WebP до 5 МБ. Логотип отображается целиком, с сохранением пропорций и прозрачности.</p><button type="submit" class="leagues-button mt-4">Сохранить</button></form></section>
-<section class="leagues-panel"><h2>Зачёт этапа</h2><p class="leagues-help">Крейзи и гонщик дня засчитываются только в этой лиге. Официальные результаты других зачётов не меняются.</p><div class="league-review-events">{% for event in events %}<a href="{% url 'league:friend_league_event' league.id event.id %}?manage=1">R{{ event.round_number }} · {{ event.name }} <span>Судейство ↗</span></a>{% endfor %}</div></section></div>
-<section class="leagues-panel mt-4"><h2>Участники</h2><div class="league-members">{% for member in members %}<div><strong>{{ member.user|player_name }}</strong><span>{% if member.user_id == league.owner_id %}Создатель · управляющий{% else %}{{ member.get_role_display }}{% endif %}</span>{% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}">{% csrf_token %}<label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option><option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Управляющий</option></select><button class="leagues-text-button" type="submit">Сохранить роль</button></form>{% endif %}</div>{% endfor %}</div></section>
-{% if is_owner %}<section class="league-danger-zone"><div><h2>Удаление лиги</h2><p>Лига исчезнет у всех участников. Общие прогнозы игроков останутся.</p></div><a class="leagues-button league-button-danger" href="{% url 'league:friend_league_delete' league.id %}">Удалить лигу</a></section>{% endif %}
+<div class="league-manage">
+  <header class="manage-header">
+    <div><span class="manage-eyebrow">FASTLAP / СЕЗОН {{ league_season.season.year }}</span><h1>Управление лигой</h1><p>{{ league.name }}</p></div>
+    <a class="manage-back" href="{% url 'league:friend_league' league.id %}?year={{ league_season.season.year }}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5"/></svg> К лиге</a>
+  </header>
+
+  <div class="manage-grid">
+    <section class="manage-card manage-profile" aria-labelledby="manage-profile-title">
+      <header class="manage-card-head"><div><span class="manage-eyebrow">01 / НАСТРОЙКИ</span><h2 id="manage-profile-title">Название и аватар</h2><p>Настройте, как лига выглядит для участников.</p></div><span class="manage-head-mark" aria-hidden="true">FL</span></header>
+      <form method="post" enctype="multipart/form-data" class="manage-profile-form" data-league-profile-form>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="manage-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="manage-field"><label for="{{ form.name.id_for_label }}">Название лиги</label>{{ form.name }}{% if form.name.errors %}<div class="manage-errors" role="alert">{{ form.name.errors }}</div>{% endif %}</div>
+        {% with pending_clear=form.data|get_item:'avatar-clear' %}
+        <div class="manage-logo-row">
+          <div class="manage-logo-preview" data-logo-preview data-original="{% if league.avatar %}{{ league.avatar.url }}{% endif %}">
+            {% if league.avatar %}<img src="{{ league.avatar.url }}" alt="Текущий аватар лиги" data-logo-image {% if pending_clear %}hidden{% endif %}>{% else %}<img alt="Предпросмотр аватара лиги" data-logo-image hidden>{% endif %}
+            <span data-logo-placeholder {% if league.avatar and not pending_clear %}hidden{% endif %}>{{ league.name|first|upper }}</span>
+          </div>
+          <div class="manage-logo-copy"><strong>Аватар лиги</strong><p>PNG, JPEG или WebP · до 5 МБ</p><small>До 4096 × 4096 пикселей. Изображение отображается целиком, без обрезки.</small></div>
+        </div>
+        <div class="manage-upload">
+          <label for="{{ form.avatar.id_for_label }}">{% if league.avatar %}Заменить изображение{% else %}Выбрать изображение{% endif %}</label>
+          <div class="manage-file-control"><input type="file" name="{{ form.avatar.html_name }}" id="{{ form.avatar.id_for_label }}" accept="image/png,image/jpeg,image/webp" aria-describedby="manage-avatar-help{% if form.avatar.errors %} manage-avatar-errors{% endif %}" {% if form.avatar.errors %}aria-invalid="true"{% endif %} data-logo-input><label for="{{ form.avatar.id_for_label }}" class="manage-file-button" data-logo-button hidden>Выбрать файл</label><span class="manage-file-name" data-logo-filename aria-live="polite" hidden>Файл не выбран</span></div>
+          <p id="manage-avatar-help">Изменения вступят в силу после сохранения.</p>
+          {% if form.avatar.errors %}<div class="manage-errors" id="manage-avatar-errors" role="alert">{{ form.avatar.errors }}</div>{% endif %}
+          {% if league.avatar %}<label class="manage-clear"><input type="checkbox" name="avatar-clear" id="avatar-clear_id" data-logo-clear {% if pending_clear %}checked{% endif %}><span>Удалить текущий аватар</span></label>{% endif %}
+        </div>
+        {% endwith %}
+        <div class="manage-form-foot"><button type="submit" class="manage-primary">Сохранить изменения <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></button><span>Изменения видны всем участникам.</span></div>
+      </form>
+    </section>
+
+    <section class="manage-card manage-rounds" aria-labelledby="manage-rounds-title">
+      <header class="manage-card-head"><div><span class="manage-eyebrow">02 / СЕЗОН {{ league_season.season.year }}</span><h2 id="manage-rounds-title">Зачёт этапа</h2><p>Гонщик дня и крейзи-предикты оцениваются только для этой лиги.</p></div></header>
+      <div class="manage-round-list">{% for event in events %}{% if forloop.counter <= 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% empty %}<p class="manage-empty">Здесь появятся этапы сезона.</p>{% endfor %}</div>
+      {% if events|length > 5 %}<details class="manage-round-more"><summary>Все этапы <span>{{ events|length }}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></summary><div class="manage-round-list">{% for event in events %}{% if forloop.counter > 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% endfor %}</div></details>{% endif %}
+    </section>
+  </div>
+
+  <section class="manage-card manage-members" aria-labelledby="manage-members-title">
+    <header class="manage-card-head"><div><span class="manage-eyebrow">03 / ПАДДОК</span><h2 id="manage-members-title">Участники</h2><p>{% if is_owner %}Управляйте ролями участников лиги.{% else %}Состав и роли участников лиги.{% endif %}</p></div><span class="manage-member-count">{{ members|length }} <small>участников</small></span></header>
+    <div class="manage-member-list">{% for member in members %}<div class="manage-member">
+      <div class="manage-member-person"><span class="manage-member-avatar leagues-avatar">{% if member.user.league_profile.avatar %}<img src="{{ member.user.league_profile.avatar.url }}" alt="" loading="lazy" width="40" height="40">{% else %}{{ member.user|player_name|first|upper }}{% endif %}</span><div><strong>{{ member.user|player_name }}</strong><small>{% if member.user_id == league.owner_id %}Создатель · управляющий{% else %}{{ member.get_role_display }}{% endif %}</small></div></div>
+      {% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}" class="manage-role-form">{% csrf_token %}<label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option><option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Управляющий</option></select><button type="submit">Сохранить<span class="visually-hidden"> роль {{ member.user|player_name }}</span></button></form>{% endif %}
+    </div>{% empty %}<p class="manage-empty">В лиге пока нет участников.</p>{% endfor %}</div>
+  </section>
+
+  {% if is_owner %}<section class="manage-danger"><div><h2>Удаление лиги</h2><p>Лига исчезнет у всех участников. Общие прогнозы игроков останутся.</p></div><a href="{% url 'league:friend_league_delete' league.id %}">Удалить лигу <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></section>{% endif %}
+</div>
 {% endblock %}
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/league-management.js' %}?v=1" defer></script>{% endblock %}

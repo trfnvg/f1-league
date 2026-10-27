@@ -115,6 +115,9 @@ def render_pages():
         pages[f"/stage-{name}/"] = client.get(reverse("league:event_detail", args=[event.pk])).content
     Event.objects.filter(pk=event.pk).update(race_datetime=event.race_datetime, cover_image="covers/test-wide.png")
     client.force_login(owner)
+    league.league.avatar = 'avatars/test.png'
+    league.league.save(update_fields=['avatar'])
+    pages['/league-settings/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id])).content
     pages["/admin-add/"] = client.get(reverse("admin:league_event_add")).content
     pages["/admin-edit/"] = client.get(reverse("admin:league_event_change", args=[event.pk])).content
     pages[reverse("admin:jsi18n")] = client.get(reverse("admin:jsi18n")).content
@@ -226,7 +229,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -245,6 +248,31 @@ def run(output, widths, engine):
                     if route in ('/register/', '/login/', '/password-reset/', '/password-reset-done/', '/password-reset-complete/', '/new-password/', '/account-settings/'):
                         assert page.locator('.account-card').is_visible()
                         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                    if route == '/league-settings/':
+                        assert page.locator('.manage-header h1').inner_text() == 'Управление лигой'
+                        assert page.locator('.manage-card').count() == 3
+                        assert page.locator('.manage-round-more').is_visible()
+                        assert page.locator('.manage-round:visible').count() == 5
+                        page.locator('.manage-round-more summary').click()
+                        assert page.locator('.manage-round:visible').count() > 5
+                        page.locator('.manage-round-more summary').click()
+                        assert page.locator('[data-logo-image]').evaluate("e=>getComputedStyle(e).objectFit==='contain'")
+                        assert page.locator('[data-logo-clear]').is_visible()
+                        page.locator('[data-logo-clear]').check()
+                        assert page.locator('[data-logo-placeholder]').is_visible()
+                        page.locator('[data-logo-clear]').uncheck()
+                        assert page.locator('[data-logo-image]').is_visible()
+                        assert page.locator('[data-logo-button]').inner_text() == 'Выбрать файл'
+                        page.locator('[data-logo-input]').set_input_files({'name':'logo.png','mimeType':'image/png','buffer':pages['/media/avatars/test.png']})
+                        assert page.locator('[data-logo-filename]').inner_text() == 'logo.png'
+                        assert page.locator('[data-logo-image]').get_attribute('src').startswith('blob:')
+                        page.locator('[data-logo-clear]').check()
+                        assert page.locator('[data-logo-filename]').inner_text() == 'Файл не выбран'
+                        assert page.locator('[data-logo-input]').evaluate('e=>e.files.length') == 0
+                        page.locator('[data-logo-clear]').uncheck()
+                        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                        page.evaluate("document.activeElement.blur();document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,0)")
+                        page.wait_for_function('window.scrollY < 2')
                     if route == '/register/':
                         assert page.locator('#id_first_name,#id_username,#id_email,#id_password1,#id_password2').count() == 5
                         assert page.locator('.account-handle>span').inner_text() == '@'
@@ -554,6 +582,9 @@ def run(output, widths, engine):
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 page.close()
             fallback_page = browser.new_page(viewport={"width": 390, "height": 1000}, java_script_enabled=False)
+            fallback_page.goto(base+'/league-settings/', wait_until='networkidle')
+            assert fallback_page.locator('[data-logo-input]').is_visible()
+            assert fallback_page.locator('[data-logo-clear]').is_visible()
             fallback_page.goto(base+'/event/', wait_until='networkidle')
             assert fallback_page.locator('#id_p1').is_visible()
             assert fallback_page.locator('#id_pole').is_visible()
@@ -598,7 +629,7 @@ def run(output, widths, engine):
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)
             browser.close()
         assert not errors, errors
-        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 37 real pages, confirmed saves, score counters, radio disclosures, one-time finishes, reduced motion, stable tables, invites, accounts, duels and 27 admin choices. Screenshots: {output}")
+        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 38 real pages, league management, confirmed saves, score counters, radio, stable tables, invites, accounts and 27 admin choices. Screenshots: {output}")
     finally:
         server.shutdown()
 
