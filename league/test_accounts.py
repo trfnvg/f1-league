@@ -40,6 +40,26 @@ class AccountTests(TestCase):
         self.assertEqual(self.client.post(reverse("league:register"),
             {**self.data, "username": "racer64", "email": "other@example.com"}).status_code, 302)
 
+    def test_admin_shows_and_searches_current_handle_separately_from_legacy_username(self):
+        admin = User.objects.create_superuser('admin63', 'admin@example.com', 'RaceStart!63')
+        player = User.objects.create_user('legacy-player', first_name='Гриша', email='player@example.com')
+        profile = player.league_profile
+        profile.handle = 'racefan63'
+        profile.save(update_fields=['handle'])
+        self.client.force_login(admin)
+        for term in ('racefan63', '@racefan63'):
+            response = self.client.get(reverse('admin:auth_user_changelist'), {'q': term})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual([u.pk for u in response.context['cl'].result_list], [player.pk])
+            self.assertContains(response, '@racefan63')
+            self.assertContains(response, 'Гриша')
+        response = self.client.get(reverse('admin:auth_user_change', args=[player.pk]))
+        self.assertContains(response, '@racefan63')
+        self.assertContains(response, 'legacy-player')
+        response = self.client.get(reverse('admin:league_userprofile_changelist'), {'q': '@racefan63'})
+        self.assertEqual([p.pk for p in response.context['cl'].result_list], [profile.pk])
+        self.assertContains(response, '@racefan63')
+
     def test_handle_rejects_special_symbols_unicode_spaces_and_bad_lengths(self):
         for handle in ("ra.cer", "ra_cer", "ra-cer", "ra cer", "@racer", "racer🔥", "гонщик", "ab", "a"*31):
             with self.subTest(handle=handle):

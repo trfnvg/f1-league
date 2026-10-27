@@ -1,5 +1,7 @@
 ﻿from django import forms
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
 import json
 from django.db import transaction
 from django.template.response import TemplateResponse
@@ -45,6 +47,41 @@ from .scoring import (
     restore_score_revision,
 )
 from .wildcards import unresolved_wildcard_questions
+from .identity import display_name
+
+
+class HandleSearchMixin:
+    def get_search_results(self, request, queryset, search_term):
+        term = search_term.strip()
+        if term.startswith("@"):
+            term = term[1:]
+        return super().get_search_results(request, queryset, term)
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class PlayerUserAdmin(HandleSearchMixin, UserAdmin):
+    list_display = ("player_handle", "player_display_name", "email", "is_staff")
+    list_display_links = ("player_handle",)
+    list_select_related = ("league_profile",)
+    search_fields = (*UserAdmin.search_fields, "league_profile__handle")
+    search_help_text = "Имя, почта или логин — с @ или без него."
+    readonly_fields = (*UserAdmin.readonly_fields, "player_handle")
+    fieldsets = (
+        (None, {"fields": ("username", "password", "player_handle")}),
+        *UserAdmin.fieldsets[1:],
+    )
+
+    @admin.display(description="Логин", ordering="league_profile__handle")
+    def player_handle(self, obj):
+        profile = getattr(obj, "league_profile", None)
+        return f"@{profile.handle}" if profile and profile.handle else "—"
+
+    @admin.display(description="Имя", ordering="first_name")
+    def player_display_name(self, obj):
+        return display_name(obj)
 
 
 @admin.register(DriverProfile)
@@ -845,9 +882,10 @@ class SeasonScoreAdmin(admin.ModelAdmin):
 
 
 @admin.register(UserProfile)
-class UserProfileAdmin(admin.ModelAdmin):
+class UserProfileAdmin(HandleSearchMixin, admin.ModelAdmin):
     list_display = (
         "user",
+        "player_handle",
         "is_world_predict_champion",
         "telegram_chat_id",
         "telegram_notifications",
@@ -856,8 +894,12 @@ class UserProfileAdmin(admin.ModelAdmin):
     )
     list_filter = ("is_world_predict_champion", "telegram_notifications")
     list_editable = ("is_world_predict_champion",)
-    search_fields = ("user__username",)
+    search_fields = ("handle", "user__username", "user__first_name", "user__last_name", "user__email")
     list_select_related = ("user",)
+
+    @admin.display(description="Логин", ordering="handle")
+    def player_handle(self, obj):
+        return f"@{obj.handle}" if obj.handle else "—"
 
 
 @admin.register(TelegramReminder)
