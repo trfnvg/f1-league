@@ -346,21 +346,7 @@ def run(output, widths, engine):
                         assert page.locator(".event-stage-hero").is_visible()
                         assert page.locator(".community-shell").is_visible()
                     if route == "/":
-                        scene = page.locator('[data-home-launch]')
-                        scene.scroll_into_view_if_needed()
-                        page.wait_for_function("document.querySelector('[data-home-launch]').dataset.state === 'complete'")
-                        before = scene.bounding_box()
-                        page.locator('[data-launch-replay]').click()
-                        page.wait_for_function("document.querySelector('[data-home-launch]').dataset.state === 'playing'")
-                        page.wait_for_timeout(800)
-                        assert page.locator('.launch-light').evaluate_all('nodes=>nodes.every(n=>getComputedStyle(n).fill==="rgb(246, 90, 78)")'), 'All five lights must be lit before departure'
-                        scene.screenshot(path=str(output/f'{width}-car-start.png'))
-                        page.wait_for_function("document.querySelector('[data-home-launch]').dataset.state === 'complete'")
-                        assert page.locator('.launch-light').evaluate_all('nodes=>nodes.every(n=>getComputedStyle(n).fill==="rgb(54, 63, 75)")')
-                        assert scene.bounding_box() == before, 'Start sequence must not move the page'
-                        page.reload(wait_until='networkidle')
-                        assert scene.get_attribute('data-state') == 'idle', 'Autoplay is once per visit'
-                        scene.screenshot(path=str(output/f'{width}-car-static.png'))
+                        assert page.locator('[data-home-launch],script[src*="home-launch"],link[href*="home-launch"]').count() == 0
                         first = page.locator('[data-clock="seconds"]').inner_text()
                         page.wait_for_timeout(1200)
                         assert page.locator('[data-clock="seconds"]').inner_text() != first
@@ -561,11 +547,6 @@ def run(output, widths, engine):
                 disclosure.click()
                 page.unroute('**'+feed_url)
                 page.emulate_media(reduced_motion='reduce')
-                page.goto(base+'/', wait_until='networkidle')
-                assert page.locator('[data-home-launch]').get_attribute('data-state') == 'idle'
-                assert page.locator('[data-launch-replay]').is_hidden()
-                assert page.locator('.launch-car').evaluate('e=>getComputedStyle(e).opacity') == '1'
-                assert page.locator('.home-launch-intro').evaluate('e=>e.getAnimations({subtree:true}).every(a=>a.playState!=="running")')
                 page.goto(base+'/standings/', wait_until='networkidle')
                 assert page.locator('[data-count-to]').evaluate_all('nodes=>nodes.every(n=>n.textContent===n.dataset.countTo)')
                 page.goto(base+'/saved-predict/', wait_until='networkidle')
