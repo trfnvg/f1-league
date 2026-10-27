@@ -7,6 +7,7 @@
   let refreshing = false;
   let lastHTML = list.innerHTML;
   const motion = matchMedia('(prefers-reduced-motion: reduce)');
+  const compact = matchMedia('(max-width: 1000px)');
   radio.classList.add('is-radio-ready');
   const storageKey = `fastlap:radio:v1:${list.dataset.feedUrl}`;
   let seen = [];
@@ -59,13 +60,14 @@
 
   function render() {
     const items = [...list.querySelectorAll('.activity-news-item')];
+    const visibleCount = compact.matches && !expanded ? 3 : 5;
     items.forEach((item, index) => {
-      item.closest('.radio-transmission').hidden = !expanded && index >= 3;
+      item.closest('.radio-transmission').hidden = index >= visibleCount;
       updateDisclosure(item);
     });
-    toggle.hidden = items.length <= 3;
-    toggle.setAttribute('aria-expanded', String(expanded));
-    toggle.querySelector('[data-radio-toggle-label]').textContent = expanded ? 'Свернуть' : `Ещё ${Math.max(0, items.length - 3)}`;
+    toggle.hidden = !compact.matches || items.length <= 3;
+    toggle.setAttribute('aria-expanded', String(compact.matches && expanded));
+    toggle.querySelector('[data-radio-toggle-label]').textContent = expanded ? 'Свернуть' : `Ещё ${Math.max(0, Math.min(items.length, 5) - 3)}`;
     transmit();
   }
   list.addEventListener('click', event => {
@@ -80,6 +82,7 @@
     updateDisclosure(item);
   });
   toggle.addEventListener('click', () => { expanded = !expanded; render(); });
+  compact.addEventListener('change', render);
   registerMessages();
   render();
   if ('IntersectionObserver' in window) new IntersectionObserver(transmit, {threshold: .2}).observe(radio);

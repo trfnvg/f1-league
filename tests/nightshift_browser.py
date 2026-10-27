@@ -396,11 +396,19 @@ def run(output, widths, engine):
                         image = page.locator('.ns-calendar .event-media>img').first
                         assert image.evaluate('e=>getComputedStyle(e).objectFit') == 'cover'
                         assert page.locator('.ns-live .activity-news-item').count() == 5
-                        assert page.locator('.ns-live .activity-news-item:visible').count() == 3
+                        compact_radio = width <= 1000
+                        assert page.locator('.ns-live .activity-news-item:visible').count() == (3 if compact_radio else 5)
                         radio = page.locator('.ns-live')
-                        assert radio.bounding_box()['height'] < 390, (width, 'Radio takes too much vertical space')
-                        page.locator('.paddock-radio-toggle').click()
-                        assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                        if compact_radio:
+                            assert radio.bounding_box()['height'] < 390, (width, 'Radio takes too much vertical space')
+                            page.locator('.paddock-radio-toggle').click()
+                            assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                        else:
+                            assert not page.locator('.paddock-radio-toggle').is_visible()
+                            left_box = page.locator('.ns-socialgrid>.ns-panel').first.bounding_box()
+                            right_box = radio.bounding_box()
+                            assert abs(left_box['y']-right_box['y']) < 1
+                            assert abs(left_box['height']-right_box['height']) < 1, (width, left_box, right_box)
                         assert page.locator('.ns-live .activity-news-item:visible').count() == 5
                         assert page.locator('.ns-live .activity-news-item:visible').evaluate_all('''items=>items.every(item=>{
                             const icon=item.querySelector('.activity-feed-icon'),copy=item.querySelector('.activity-news-copy');
@@ -413,11 +421,28 @@ def run(output, widths, engine):
                         with page.expect_response('**'+feed_url):
                             page.evaluate("document.activeElement.blur();document.dispatchEvent(new Event('visibilitychange'))")
                         page.locator('.ns-live .activity-news-copy strong').first.get_by_text('Аня возглавляет чемпионат · обновлено', exact=True).wait_for()
-                        assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                        assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == str(compact_radio).lower()
                         assert page.locator('.ns-live .activity-news-item:visible').count() == 5
-                        page.locator('.paddock-radio-toggle').click()
-                        assert page.locator('.ns-live .activity-news-item:visible').count() == 3
+                        if compact_radio:
+                            page.locator('.paddock-radio-toggle').click()
+                            assert page.locator('.ns-live .activity-news-item:visible').count() == 3
                         radio.screenshot(path=str(output/f'{width}-paddock-radio.png'))
+                        page.locator('.ns-socialgrid').screenshot(path=str(output/f'{width}-pitwall-panels.png'))
+                        if not compact_radio:
+                            page.set_viewport_size({'width':390,'height':1000})
+                            page.wait_for_function("document.querySelectorAll('.radio-transmission:not([hidden])').length===3")
+                            assert page.locator('.paddock-radio-toggle').is_visible()
+                            page.locator('.paddock-radio-toggle').click()
+                            assert page.locator('.ns-live .activity-news-item:visible').count() == 5
+                            page.set_viewport_size({'width':width,'height':1000})
+                            page.wait_for_function("document.querySelector('.paddock-radio-toggle').hidden")
+                            assert page.locator('.ns-live .activity-news-item:visible').count() == 5
+                            page.set_viewport_size({'width':390,'height':1000})
+                            page.wait_for_function("!document.querySelector('.paddock-radio-toggle').hidden")
+                            assert page.locator('.paddock-radio-toggle').get_attribute('aria-expanded') == 'true'
+                            page.locator('.paddock-radio-toggle').click()
+                            page.set_viewport_size({'width':width,'height':1000})
+                            page.wait_for_function("document.querySelector('.paddock-radio-toggle').hidden")
                         page.unroute('**'+feed_url)
                         action=page.locator('.ns-primary')
                         assert action.evaluate("e=>getComputedStyle(e).clipPath==='none' && getComputedStyle(e).transform==='none'")

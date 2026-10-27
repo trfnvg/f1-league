@@ -89,7 +89,7 @@ body.apex-night-theme.editorial-theme .ns-primary::after { content:none; }
 .ns-primary>span { min-width:0; }
 .ns-primary>svg,.event-card-action>svg { width:18px; height:18px; flex:0 0 18px; fill:none; stroke:currentColor; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; }
 
-/* Compact pit-wall radio: three transmissions, with the rest available on demand. */
+/* Pit-wall radio: five transmissions on desktop, three + disclosure on mobile. */
 body.apex-night-theme.editorial-theme .ns-live { background:linear-gradient(125deg,#242c36,#1d232b 65%); border-color:#3d4754; box-shadow:none; }
 .paddock-radio-header { display:flex; align-items:center; gap:12px; padding:18px 20px; border-bottom:1px solid #ffffff0d; background:linear-gradient(90deg,#ee6d5c07,transparent 70%); }
 .paddock-radio-headset { flex:0 0 30px; width:30px; height:32px; fill:none; stroke:#e99488; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
@@ -135,6 +135,20 @@ body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>strong { disp
 body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>.paddock-radio-meta { display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 7px; margin:0; color:#94a1b3; font:400 9px/1.5 Inter,sans-serif; }
 .paddock-radio-context { min-width:0; overflow-wrap:anywhere; }.paddock-radio-context::before { content:"·"; margin-right:7px; color:#68788d; }
 body.apex-night-theme.editorial-theme .ns-live .activity-news-empty { padding:18px 0; font:400 12px/1.65 Inter,sans-serif; color:#aab6c6; }
+
+@media(min-width:1001px) {
+  .ns-home .ns-socialgrid { align-items:stretch; }
+  .ns-home .ns-socialgrid>.ns-panel { display:flex; flex-direction:column; }
+  .ns-home .ns-socialgrid .ns-rankrows { flex:1; display:flex; flex-direction:column; justify-content:space-evenly; }
+  .ns-home .ns-socialgrid :is(.ns-bottomstrip,.paddock-radio-footer) { margin-top:auto; }
+  body.apex-night-theme.editorial-theme .ns-live .activity-news-list { flex:1; display:grid; grid-auto-rows:auto; }
+  .ns-live .radio-transmission { display:grid; align-content:center; }
+  .ns-live .paddock-radio-header { padding-block:16px; }
+  body.apex-night-theme.editorial-theme .ns-live .activity-news-item { padding-block:10px; }
+  body.apex-night-theme.editorial-theme .ns-live .activity-news-copy>.paddock-radio-meta { flex-wrap:nowrap; }
+  .ns-live .paddock-radio-context { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  body.apex-night-theme.editorial-theme .ns-live .paddock-radio-toggle { display:none; }
+}
 
 /* Equal calendar frames; contain preserves the entire uploaded artwork. */
 .ns-score b>.ns-rank-total { display:inline-flex; align-items:baseline; gap:6px; margin-left:9px; letter-spacing:0; }
