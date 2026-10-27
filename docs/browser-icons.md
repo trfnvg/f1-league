@@ -1,8 +1,11 @@
 # Browser icons
 
 Browser icons share `site_icons.html` across the public layout and the admin
-layout. PNG variants at 32 and 48 px use content-hashed static URLs in production;
-an ICO fallback is available at the public `/favicon.ico` route. Previously that
+layout. A single multi-size ICO uses a new filename (`fastlap-tab-v4.ico`) and a
+content-hashed static URL in production to avoid reusing previously cached icon
+addresses. It contains 16, 32 and 48 px images. PNG alternatives remain generated,
+but are not competing tab-icon declarations. An ICO fallback is still available
+at the public `/favicon.ico` route. Previously that
 standard path returned 404, and admin pages had no explicit brand icon links.
 The route supports GET/HEAD, returns `image/x-icon`, and caches publicly for one
 hour. The existing centered SVG remains the source for generated assets; it is

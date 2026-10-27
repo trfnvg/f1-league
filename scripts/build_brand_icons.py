@@ -20,7 +20,8 @@ def build():
         pixels = page.screenshot(omit_background=True)
         browser.close()
     with Image.open(io.BytesIO(pixels)) as source:
-        source.save(root / "favicon.ico", format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
+        for name in ("favicon.ico", "fastlap-tab-v4.ico"):
+            source.save(root / name, format="ICO", sizes=[(16, 16), (32, 32), (48, 48)])
         for size in (32, 48):
             source.resize((size, size), Image.Resampling.LANCZOS).save(root / f"favicon-{size}.png", optimize=True)
         source.resize((180, 180), Image.Resampling.LANCZOS).save(root / "apple-touch-icon.png", optimize=True)

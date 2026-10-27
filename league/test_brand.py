@@ -15,10 +15,9 @@ class BrowserIconTests(TestCase):
         self.assertEqual(self.client.head('/favicon.ico').status_code, 200)
         self.assertEqual(self.client.post('/favicon.ico').status_code, 405)
 
-    def test_admin_and_public_login_use_same_raster_icons(self):
-        for path in ('/accounts/login/', '/admin/login/'):
+    def test_home_admin_and_login_use_one_shared_versioned_tab_icon(self):
+        for path in ('/', '/accounts/login/', '/admin/login/'):
             response = self.client.get(path)
-            self.assertContains(response, 'href="/favicon.ico?v=3"')
-            self.assertContains(response, 'league/favicon-32.png')
-            self.assertContains(response, 'league/favicon-48.png')
+            self.assertContains(response, 'rel="icon"', count=1)
+            self.assertContains(response, 'href="/static/league/fastlap-tab-v4.ico"')
             self.assertNotContains(response, 'type="image/svg+xml"')
