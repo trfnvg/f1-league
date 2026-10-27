@@ -9,19 +9,37 @@
     const label = status.querySelector('[data-save-label]');
     const note = status.querySelector('[data-save-note]');
     const originalLabel = label.textContent, originalNote = note.textContent;
+    const receipt = !!document.querySelector('[data-save-receipt]') && !invalid && status.dataset.saved === 'yes';
+    const buttons = [...form.querySelectorAll('button[type="submit"]')];
+    const buttonLabels = new Map(buttons.map(button => [button, button.textContent]));
     const badge = form.closest('.event-page')?.querySelector('.event-status-badge');
     let sending = false;
+    let confirmed = receipt;
+    const setState = state => {
+      status.dataset.state = state;
+      form.dataset.saveState = state;
+      buttons.forEach(button => {
+        const text = state === 'sending' ? 'Сохраняем…' : state === 'confirmed' ? 'Прогноз принят' : buttonLabels.get(button);
+        // Replacing an unchanged label during textarea blur can cancel a tap in WebKit.
+        if (button.textContent !== text) button.textContent = text;
+        const disabled = String(state === 'sending');
+        if (button.getAttribute('aria-disabled') !== disabled) button.setAttribute('aria-disabled', disabled);
+      });
+    };
     const dirty = () => invalid || values() !== initial;
     const warn = event => { if (dirty() && !sending) { event.preventDefault(); event.returnValue = ''; } };
     const render = () => {
       const changed = dirty();
       window.removeEventListener('beforeunload', warn);
       if (changed) window.addEventListener('beforeunload', warn);
+      if (changed) confirmed = false;
       if (Date.now() >= Date.parse(status.dataset.deadline)) {
+        setState('locked');
         label.textContent = 'Прогнозы зафиксированы';
         note.textContent = changed ? 'Изменения на этой странице не сохранены. Дедлайн уже прошёл.' : 'Приём прогнозов завершён.';
       } else {
-        label.textContent = changed ? 'Есть несохранённые изменения' : originalLabel;
+        setState(changed ? 'dirty' : confirmed ? 'confirmed' : status.dataset.saved === 'yes' ? 'saved' : 'empty');
+        label.textContent = changed ? 'Есть несохранённые изменения' : confirmed ? 'Прогноз принят' : originalLabel;
         note.textContent = changed ? 'Нажми «Сохранить прогноз», чтобы ответы попали в зачёт.' : originalNote;
       }
       if (badge) badge.textContent = label.textContent;
@@ -29,17 +47,26 @@
     form.addEventListener('input', render);
     form.addEventListener('change', render);
     form.addEventListener('submit', event => {
-      queueMicrotask(() => {
-        if (event.defaultPrevented) return;
-        sending = true;
-        label.textContent = 'Сохраняем прогноз…';
-        note.textContent = 'Дождись подтверждения от сервера.';
-      });
+      if (sending) { event.preventDefault(); return; }
     });
-    window.addEventListener('pageshow', () => { sending = false; render(); });
+    // Run after form-level validation, including the driver picker's cancellation.
+    // A microtask can run between event listeners in WebKit.
+    window.addEventListener('submit', event => {
+      if (event.target !== form || event.defaultPrevented) return;
+      sending = true;
+      setState('sending');
+      label.textContent = 'Сохраняем прогноз…';
+      note.textContent = 'Дождись подтверждения от сервера.';
+    });
+    window.addEventListener('pageshow', event => {
+      sending = false;
+      if (event.persisted) confirmed = false;
+      render();
+    });
     document.addEventListener('visibilitychange', render);
     const remaining = Date.parse(status.dataset.deadline) - Date.now();
     if (remaining > 0 && remaining < 2147483647) setTimeout(render, remaining + 50);
     render();
+    if (receipt) setTimeout(() => { confirmed = false; if (!sending) render(); }, 2400);
   });
 })();

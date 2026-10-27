@@ -54,6 +54,17 @@ class PredictionExperienceTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             publish_event_scores(self.event, self.staff)
 
+    def test_save_receipt_requires_success_and_is_consumed_once(self):
+        urls = [reverse('league:event_detail', args=[self.event.pk]),
+            reverse('league:friend_league_event', args=[self.a.league_id, self.event.pk])]
+        for url in urls:
+            invalid = self.client.post(url, {**self.values, 'p1': 'invalid'})
+            self.assertNotContains(invalid, 'data-save-receipt')
+            success = self.client.post(url, self.values, follow=True)
+            self.assertContains(success, 'data-save-receipt', count=1)
+            self.assertContains(success, 'Прогноз принят')
+            self.assertNotContains(self.client.get(url), 'data-save-receipt')
+
     def test_details_use_saved_snapshot_and_are_membership_scoped(self):
         url = reverse("league:friend_league_score", args=[self.a.league_id, self.event.pk, self.owner.pk])
         self.assertEqual(self.client.get(url).status_code, 404)

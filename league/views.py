@@ -1416,7 +1416,7 @@ def event_detail(request, event_id: int):
             messages.error(request, " ".join(exc.messages))
             return redirect("league:event_detail", event_id=event.id)
         if new_prediction:
-            messages.success(request, "Прогноз сохранен.")
+            messages.success(request, "Прогноз принят", extra_tags="prediction-saved")
             return redirect("league:event_detail", event_id=event.id)
     else:
         state = event.voting_state()

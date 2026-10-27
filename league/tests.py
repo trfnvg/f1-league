@@ -200,8 +200,8 @@ class LeaderboardStandingsTests(TestCase):
         html = render_to_string("leagues/standings.html", {"season": {"year": 2026},
             "rows": [{"user": player, "rank": 1, "total": -4, "latest_points": 0}],
             "result_events": list(reversed(events)), "scores_map": {(player.pk, events[0].pk): zero, (player.pk, events[1].pk): penalty}})
-        self.assertRegex(html, r'<a class="classification-score"[^>]*>0</a>')
-        self.assertRegex(html, r'<a class="classification-score"[^>]*>-4</a>')
+        self.assertRegex(html, r'<a class="classification-score"[^>]*><span[^>]*>0</span></a>')
+        self.assertRegex(html, r'<a class="classification-score"[^>]*><span[^>]*>-4</span></a>')
         self.assertEqual(html.count('classification-result is-unscored'), 1)
         self.assertEqual(html.count('classification-result is-penalty'), 1)
 

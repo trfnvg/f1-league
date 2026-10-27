@@ -40,9 +40,9 @@
               <span class="classification-player-copy"><span class="classification-name">{{ r.user|player_name }}</span>{% if r.user.id == user.id %}<small>Вы</small>{% endif %}</span>
             </a>
           </th>
-          <td class="classification-pinned-total"><strong class="classification-total">{{ r.total }}</strong></td>
+          <td class="classification-pinned-total"><strong class="classification-total" aria-label="{{ r.total }} очков"><span data-count-to="{{ r.total }}" aria-hidden="true">{{ r.total }}</span></strong></td>
           {% for e in result_events %}{% score_for scores_map r.user.id e.id as s %}
-          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}">{% if s %}<a class="classification-score" href="{% if league %}{% url 'league:friend_league_score' league.id e.id r.user.id %}{% else %}{% url 'league:score_detail' e.id r.user.id %}{% endif %}" aria-label="Разбор: {{ r.user|player_name }}, {{ e.name }}, {{ s.points }} очков">{{ s.points }}</a>{% else %}<span class="classification-score"><span class="visually-hidden">Нет результата</span>—</span>{% endif %}</td>
+          <td class="classification-result{% if not s %} is-unscored{% elif s.points < 0 %} is-penalty{% endif %}">{% if s %}<a class="classification-score" href="{% if league %}{% url 'league:friend_league_score' league.id e.id r.user.id %}{% else %}{% url 'league:score_detail' e.id r.user.id %}{% endif %}" aria-label="Разбор: {{ r.user|player_name }}, {{ e.name }}, {{ s.points }} очков"><span data-count-to="{{ s.points }}" aria-hidden="true">{{ s.points }}</span></a>{% else %}<span class="classification-score"><span class="visually-hidden">Нет результата</span>—</span>{% endif %}</td>
           {% endfor %}
         </tr>
         {% endfor %}

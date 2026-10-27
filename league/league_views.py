@@ -235,7 +235,7 @@ def event_detail(request, league_id, event_id):
                 messages.error(request, _error(exc))
                 return redirect("league:friend_league_event", league_id=league.pk, event_id=event.pk)
             if saved:
-                messages.success(request, "Базовый прогноз сохранён для всех ваших зачётов.")
+                messages.success(request, "Прогноз принят для всех ваших зачётов", extra_tags="prediction-saved")
                 return redirect("league:friend_league_event", league_id=league.pk, event_id=event.pk)
     rows = []
     if now >= event.deadline:

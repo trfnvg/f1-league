@@ -1,6 +1,8 @@
 {% for item in activity_feed %}
+  <div class="radio-transmission">
   <a
     class="activity-feed-item activity-news-item is-{{ item.type }}"
+    data-radio-key="{{ item.type }}:{{ item.user_id }}:{{ item.event_id }}:{{ item.occurred_at|date:'c' }}:{{ item.text }}"
     {% if item.event_id %}
       href="{% url 'league:event_detail' event_id=item.event_id %}{{ item.anchor|default:'' }}"
     {% else %}
@@ -9,8 +11,10 @@
   >
     <span class="activity-feed-icon" aria-hidden="true">{% include 'activity_icon.html' with kind=item.type %}</span>
     <span class="activity-news-copy"><strong>{{ item.text }}</strong><small class="paddock-radio-meta"><span class="activity-news-label">{% if item.type == "leader" %}Лидер{% elif item.type == "winner" %}Гонка{% elif item.type == "movement" %}Позиции{% elif item.type == "arcade-leader" or item.type == "arcade-winner" %}Аркада{% elif item.type == "duel-accepted" or item.type == "duel-result" %}Дуэль{% elif item.type == "crazy-veto" %}Paddock Jury{% else %}Паддок{% endif %}</span>{% if item.meta %}<span class="paddock-radio-context">{{ item.meta }}</span>{% endif %}</small></span>
-    <span class="paddock-radio-index" aria-hidden="true">{{ forloop.counter|stringformat:"02d" }}</span>
+    <span class="paddock-radio-index" aria-hidden="true"><span class="radio-message-wave"><i></i><i></i><i></i></span><span>{{ forloop.counter|stringformat:"02d" }}</span></span>
   </a>
+  <button type="button" class="radio-message-open" aria-expanded="false" hidden>Читать сообщение</button>
+  </div>
 {% empty %}
   <div class="activity-news-empty">Пока нет новых событий. Новости появятся здесь после гонок, дуэлей и аркады.</div>
 {% endfor %}

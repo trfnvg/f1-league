@@ -1,0 +1,6 @@
+<section class="race-finish" data-race-finish="{{ user.id }}:{% if finish_league %}{{ finish_league.league_id }}{% else %}global{% endif %}:{{ finish_event.id }}:{{ finish_score.points }}" aria-label="Твой результат этапа">
+  <span class="race-finish-flag" aria-hidden="true"></span>
+  <div class="race-finish-copy"><small>ФИНИШ / R{{ finish_event.round_number|stringformat:'02d' }}</small><h3>{{ finish_event.name }}</h3><p>{% if finish_league %}{{ finish_league.league.name }}{% else %}Общий зачёт{% endif %}{% if finish_movement != None %}<span class="race-finish-movement">{% if finish_movement > 0 %}↑ {{ finish_movement }} в таблице{% elif finish_movement < 0 %}↓ {{ finish_movement|stringformat:'d'|slice:'1:' }} в таблице{% else %}Позиция без изменений{% endif %}</span>{% endif %}</p></div>
+  <div class="race-finish-points" aria-label="{{ finish_score.points }} очков"><strong data-count-to="{{ finish_score.points }}" aria-hidden="true">{{ finish_score.points }}</strong><small>ОЧКОВ ЗА ЭТАП</small></div>
+  <a class="race-finish-link" href="{% if finish_league %}{% url 'league:friend_league_score' finish_league.league_id finish_event.id user.id %}{% else %}{% url 'league:score_detail' finish_event.id user.id %}{% endif %}">Разбор очков {% include 'ui_arrow.html' %}</a>
+</section>

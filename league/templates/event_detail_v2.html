@@ -248,13 +248,14 @@
 <div id="stage-results" class="stage-results">
 {% if state == 'open' %}<div class="stage-result-pending"><h2>Результаты появятся после гонки</h2><p>Прогнозы участников откроются после дедлайна. Здесь будут твои очки и итоговая таблица этапа.</p></div>{% else %}
 {% if user.is_authenticated %}
+  {% if score and state == 'scored' %}{% include 'race_finish.html' with finish_event=event finish_score=score %}{% endif %}
   <div class="score-card card mb-4">
     <div class="card-body">
       <div class="d-flex align-items-end justify-content-between">
         <div>
           <h2 class="h5 mb-1">Очки за этап</h2>
         </div>
-        {% if score %}
+        {% if score and state != 'scored' %}
           <div class="text-end">
             <div class="score-subtitle">Итого</div>
             <div class="score-total">{{ score.points }}</div>

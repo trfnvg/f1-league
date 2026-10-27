@@ -168,6 +168,11 @@ def render_pages():
     _, invite_token = create_invite(actor=player, league_season=private)
     pages["/invite-manage/"] = client.post(reverse("league:friend_league_invites", args=[private.league_id])).content
     pages["/private-predict/"] = client.get(reverse("league:friend_league_event", args=[private.league_id, future.pk])).content
+    saved = client.post(reverse('league:event_detail', args=[future.pk]), dict(
+        p1='russell', p2='leclerc', p3='norris', pole='russell', fastest_lap='russell',
+        driver_of_day='russell', safety_car_count=1, dnf_count=2, crazy_prediction='Тестовый прогноз'), follow=True)
+    assert b'data-save-receipt' in saved.content
+    pages['/saved-predict/'] = saved.content
     Result.objects.create(event=past, p1="russell", p2="leclerc", p3="norris", pole="russell", safety_car_count=1, dnf_count=2)
     Prediction.objects.filter(user=player, event=past).update(p1="leclerc", p2="russell", p3="norris", pole="russell", created_at=past.deadline-timedelta(hours=1))
     Score.objects.filter(user=player, event=past).update(points=12, breakdown={"P1 (Top-3)":3,"P2 (Top-3)":3,"P3":4,"Pole Position":4,"Дуэль":-2})
@@ -463,7 +468,7 @@ def run(output, widths, engine):
                         page.locator('#id_pole').evaluate("e=>{e.value='';e.dispatchEvent(new Event('change',{bubbles:true}));}")
                         page.locator('.prediction-summary-action button').click()
                         assert page.locator('[data-more-predictions]').is_visible()
-                        assert page.locator('#driver-picker-dialog').is_visible()
+                        page.locator('#driver-picker-dialog').wait_for(state='visible')
                         page.locator('[data-driver="norris"]').click()
                         page.locator('[data-driver-field="pole"]').click()
                         page.keyboard.press('Escape')
@@ -503,6 +508,48 @@ def run(output, widths, engine):
                         page.evaluate('document.activeElement.blur(); window.scrollTo(0,0)')
                         page.wait_for_timeout(250)
                     page.screenshot(path=str(output/f"{width}-{route.strip('/') or 'home'}.png"), full_page=True)
+                # Feedback is cosmetic: final scores and fixed geometry stay authoritative.
+                page.goto(base+'/standings-long/', wait_until='networkidle')
+                page.locator('.classification-viewport').scroll_into_view_if_needed()
+                page.wait_for_timeout(750)
+                assert page.locator('[data-count-to]:visible').evaluate_all('nodes=>nodes.every(n=>n.textContent===n.dataset.countTo)')
+                page.goto(base+'/saved-predict/', wait_until='networkidle')
+                assert page.locator('[data-save-receipt]').is_visible()
+                assert page.locator('[data-save-status]').get_attribute('data-state') == 'confirmed'
+                page.locator('[data-save-receipt]').screenshot(path=str(output/f'{width}-save-receipt.png'))
+                page.locator('textarea[name="crazy_prediction"]').fill('Изменённый прогноз')
+                assert page.locator('[data-save-status]').get_attribute('data-state') == 'dirty'
+                page.evaluate('''() => { const f=document.querySelector('select[name="p1"]'); f.value=''; f.dispatchEvent(new Event('change',{bubbles:true})); }''')
+                page.locator('.prediction-summary-action button').click()
+                assert page.locator('[data-save-status]').get_attribute('data-state') != 'sending'
+                page.goto(base+'/', wait_until='networkidle')
+                finish = page.locator('[data-race-finish]')
+                finish.scroll_into_view_if_needed()
+                assert 'is-finishing' not in (finish.get_attribute('class') or ''), 'Repeated visits must not replay the finish'
+                finish.screenshot(path=str(output/f'{width}-race-finish.png'))
+                feed_url = page.locator('#live-paddock-list').get_attribute('data-feed-url')
+                long_text = 'Новое сообщение командного радио: ' + 'на трассе идёт борьба за позиции. '*12
+                updated = page.locator('#live-paddock-list').inner_html().replace('Аня возглавляет чемпионат', long_text)
+                page.route('**'+feed_url, lambda route: route.fulfill(json={'html': updated}))
+                page.locator('.ns-live').scroll_into_view_if_needed()
+                with page.expect_response('**'+feed_url):
+                    page.evaluate("document.activeElement.blur();document.dispatchEvent(new Event('visibilitychange'))")
+                first_message = page.locator('.radio-transmission').first
+                disclosure = first_message.locator('.radio-message-open')
+                disclosure.wait_for(state='visible')
+                assert first_message.locator('.activity-news-item').evaluate('e=>e.classList.contains("is-unread")')
+                disclosure.click()
+                assert disclosure.get_attribute('aria-expanded') == 'true'
+                assert first_message.locator('.activity-news-copy>strong').evaluate('e=>e.scrollHeight<=e.clientHeight+1')
+                assert not first_message.locator('.activity-news-item').evaluate('e=>e.classList.contains("is-unread")')
+                disclosure.click()
+                page.unroute('**'+feed_url)
+                page.emulate_media(reduced_motion='reduce')
+                page.goto(base+'/standings/', wait_until='networkidle')
+                assert page.locator('[data-count-to]').evaluate_all('nodes=>nodes.every(n=>n.textContent===n.dataset.countTo)')
+                page.goto(base+'/saved-predict/', wait_until='networkidle')
+                assert page.locator('.race-save-check path').evaluate('e=>getComputedStyle(e).animationName') == 'none'
+                assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 page.close()
             fallback_page = browser.new_page(viewport={"width": 390, "height": 1000}, java_script_enabled=False)
             fallback_page.goto(base+'/event/', wait_until='networkidle')
@@ -549,7 +596,7 @@ def run(output, widths, engine):
             page.screenshot(path=str(output/"all-circuits.png"), full_page=True)
             browser.close()
         assert not errors, errors
-        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 36 real pages, prediction save states, invites, score details, account forms and recovery, newest-first results, stable horizontal scrolling, neutral rows, consistent avatars, live feed, duel states and 27 admin choices. Screenshots: {output}")
+        print(f"UI OK ({engine}): {len(widths)} viewport sizes, 37 real pages, confirmed saves, score counters, radio disclosures, one-time finishes, reduced motion, stable tables, invites, accounts, duels and 27 admin choices. Screenshots: {output}")
     finally:
         server.shutdown()
 
