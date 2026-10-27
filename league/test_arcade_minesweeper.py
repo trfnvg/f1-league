@@ -50,6 +50,10 @@ class MinesweeperArcadeTests(TestCase):
         self.assertContains(response, "PITWALL")
         self.assertTrue(response.context["arcade_test_mode"])
         self.assertContains(response, reverse("league:arcade_control"))
+        self.assertContains(response, "league/arcade-results.css")
+        self.assertContains(response, 'class="minesweeper-leaderboard arcade-results"')
+        self.assertContains(response, 'class="minesweeper-leaderboard-list arcade-results-list"')
+        self.assertContains(response, '<span>Время</span>')
 
     def test_admin_control_page_is_available_for_toggling_public_access(self):
         admin = User.objects.create_superuser("mine-superuser", "admin@example.com", "test-password")

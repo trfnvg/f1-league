@@ -232,7 +232,11 @@
       time.textContent = formatTime(record.best_time_ms);
       const meta = document.createElement("span");
       meta.className = "minesweeper-record-meta";
-      meta.textContent = `${record.wins} прохожд. · ${record.attempts} попыток`;
+      const count = document.createElement("strong");
+      count.textContent = String(record.attempts);
+      const wins = document.createElement("small");
+      wins.textContent = `${record.wins} прохожд.`;
+      meta.append(count, wins);
       item.append(rank, username, time, meta);
       leaderboardNode.appendChild(item);
     });

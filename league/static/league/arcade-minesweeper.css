@@ -424,7 +424,7 @@
 .minesweeper-driver-name { overflow: hidden; font-family: "Manrope", "Segoe UI", sans-serif; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
 .minesweeper-record-time { color: var(--mine-yellow); font-size: .75rem; font-weight: 900; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 .minesweeper-record-meta { color: var(--mine-muted); font-size: .5rem; text-align: right; white-space: nowrap; }
-.minesweeper-board-empty { display: block !important; color: var(--mine-muted) !important; font-size: .65rem; }
+.minesweeper-board-empty { display: block; color: var(--mine-muted); font-size: .65rem; }
 .minesweeper-footnote { margin: .65rem 0 0; color: #8094b1; font-size: .53rem; line-height: 1.5; }
 
 .minesweeper-machine.is-fullscreen,

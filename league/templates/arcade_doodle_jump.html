@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
   <link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
   <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
+  {% include "arcade_results_assets.html" %}
 {% endblock %}
 
 {% block content %}
@@ -160,8 +161,8 @@
 
   </section>
 
-  <section class="doodle-leaderboard" aria-labelledby="doodle-leaderboard-title">
-    <div class="doodle-leaderboard-heading">
+  <section class="doodle-leaderboard arcade-results" aria-labelledby="doodle-leaderboard-title">
+    <div class="doodle-leaderboard-heading arcade-results-heading">
       <div>
         <p class="doodle-kicker"><span></span> COWBOY GP</p>
         <h2 id="doodle-leaderboard-title">{{ leaderboard_title }}</h2>
@@ -169,7 +170,7 @@
       <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> попыток</span>
     </div>
     <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Очки</span><span>Попытки</span></div>
-    <ol class="doodle-leaderboard-list" id="doodle-leaderboard-list">
+    <ol class="doodle-leaderboard-list arcade-results-list" id="doodle-leaderboard-list">
       {% for record in doodle_records %}
         <li{% if record.is_current_user %} class="is-current-user"{% endif %}>
           <span class="doodle-rank">{{ record.rank|stringformat:"02d" }}</span>

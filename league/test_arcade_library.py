@@ -43,6 +43,20 @@ class ArcadeLibraryTests(TestCase):
         from .models import ArcadeAttempt
         self.assertIsNone(ArcadeAttempt.objects.get(pk=response.json()["attempt_id"]).competition_id)
 
+    def test_all_public_results_use_shared_component_for_players_and_guests(self):
+        ArcadeRecord.objects.create(user=self.user, best_score=50, total_attempts=2)
+        DoodleRecord.objects.create(user=self.user, best_score=500, total_attempts=2)
+        for guest in (False, True):
+            if guest:
+                self.client.logout()
+            for key, prefix in (("flappy", "arcade"), ("doodle_jump", "doodle")):
+                page = self.client.get(reverse("league:arcade_game", args=[key]))
+                self.assertContains(page, "league/arcade-results.css")
+                self.assertContains(page, f'class="{prefix}-leaderboard arcade-results"')
+                self.assertContains(page, f'class="{prefix}-leaderboard-list arcade-results-list"', count=1)
+                self.assertContains(page, 'class="arcade-table-labels"', count=1)
+                self.assertContains(page, f'id="{prefix}-leaderboard-list"', count=1)
+
     def test_global_place_is_available_below_top_ten(self):
         ArcadeRecord.objects.create(user=self.user, best_score=5, total_attempts=3)
         for i in range(11):

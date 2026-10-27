@@ -1,0 +1,46 @@
+/* Shared results component. Higher specificity intentionally beats game skins,
+   including rows recreated by polling. Keep gameplay/fullscreen styles separate. */
+.arcade-results.arcade-results {
+  --results-bg:#101820; --results-panel:#151e27; --results-line:#2c3843;
+  --results-text:#eef2f6; --results-muted:#9aa9b7;
+  margin:32px 0 0; padding:0; overflow:hidden; background:var(--results-bg);
+  border:1px solid var(--results-line); border-radius:18px; box-shadow:0 12px 32px #0002;
+  font-family:Manrope,system-ui,sans-serif;
+}
+.arcade-results .arcade-results-heading {
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;
+  gap:20px; margin:0; padding:24px; background:var(--results-panel); border-bottom:1px solid var(--results-line);
+}
+.arcade-results .arcade-results-heading h2 { margin:6px 0 0; color:var(--results-text); font:800 clamp(18px,2.5vw,24px)/1.45 Manrope,system-ui,sans-serif; letter-spacing:-.025em; }
+.arcade-results .arcade-results-heading :is(p,.arcade-board-meta,.doodle-leaderboard-total) { margin:0; color:var(--results-muted); font:500 12px/1.7 Manrope,system-ui,sans-serif; letter-spacing:0; text-transform:none; white-space:normal; text-align:left; }
+.arcade-results .arcade-results-heading :is(.arcade-section-kicker,.doodle-kicker,.minesweeper-section-kicker) { margin:0; color:var(--results-muted); font:500 10px/1.6 Manrope,system-ui,sans-serif; letter-spacing:.16em; }
+.arcade-results .arcade-results-heading :is(.arcade-total-attempts strong,.doodle-leaderboard-total strong,#minesweeper-total-attempts) { color:var(--results-text); font:700 16px/1.7 Manrope,system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.arcade-results .arcade-results-list { display:block; margin:0; padding:0; list-style:none; }
+.arcade-results .arcade-table-labels,.arcade-results .arcade-results-list>li { display:grid; grid-template-columns:44px minmax(0,1fr) 100px 100px; align-items:center; gap:16px; padding:15px 24px; }
+.arcade-results .arcade-table-labels { padding-block:13px; color:#91a1b0; font:500 10px/1.5 Manrope,system-ui,sans-serif; letter-spacing:.09em; text-transform:uppercase; background:#111b24; }
+.arcade-results .arcade-table-labels span:nth-child(n+3) { text-align:right; }
+.arcade-results .arcade-results-list>li { min-height:74px; margin:0; border:0; border-top:1px solid #25313c; border-radius:0; background:transparent; box-shadow:none; }
+.arcade-results .arcade-results-list>li:first-child { background:linear-gradient(90deg,#c5a15a12,transparent); }
+.arcade-results .arcade-results-list>li:is(.is-you,.is-current-user) { background:#20303a; border-left:3px solid #a3bdcc; padding-left:21px; }
+.arcade-results .arcade-results-list>li>:is(.arcade-rank,.doodle-rank,.minesweeper-rank) { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border:1px solid #37434f; border-radius:9px; background:#19232c; color:#bdc9d4; font:700 12px/1 Manrope,system-ui,sans-serif; }
+.arcade-results .arcade-results-list>li:first-child>:is(.arcade-rank,.doodle-rank,.minesweeper-rank) { color:#e3c784; border-color:#8a7548; background:#302b21; }
+.arcade-results .arcade-results-list>li>:is(.arcade-driver-name,strong) { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--results-text); font:700 14px/1.5 Manrope,system-ui,sans-serif; }
+.arcade-results .arcade-results-list>li>:is(.arcade-record-score,.doodle-record-score,.minesweeper-record-time) { text-align:right; justify-self:stretch; color:var(--results-text); font:800 22px/1.5 Manrope,system-ui,sans-serif; font-variant-numeric:tabular-nums; background:none; border:0; box-shadow:none; padding:0; white-space:nowrap; }
+.arcade-results .arcade-results-list .arcade-record-score strong { color:inherit; font:inherit; }
+.arcade-results .arcade-record-score small,.arcade-results .arcade-attempt-count>small { display:none; }
+.arcade-results .arcade-results-list>li>:is(.arcade-attempt-count,small,.minesweeper-record-meta) { min-width:0; grid-column:auto; text-align:right; justify-self:stretch; padding:0; border:0; color:var(--results-muted); font:500 12px/1.5 Manrope,system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.arcade-results .arcade-results-list :is(.arcade-attempt-count,.minesweeper-record-meta) strong { color:inherit; font:inherit; }
+.arcade-results .arcade-results-list .minesweeper-record-meta small { display:block; color:var(--results-muted); font:400 10px/1.5 Manrope,system-ui,sans-serif; white-space:normal; }
+.arcade-results .arcade-results-list>li:is(.arcade-board-empty,.doodle-board-empty,.minesweeper-board-empty) { display:block; padding:32px 24px; background:transparent; color:var(--results-muted); font:500 14px/1.8 Manrope,system-ui,sans-serif; }
+.arcade-results :is(.arcade-own-rank,.doodle-leaderboard-note,.arcade-board-login,.minesweeper-footnote) { margin:0; padding:16px 24px; border-top:1px solid var(--results-line); color:var(--results-muted); font:500 12px/1.8 Manrope,system-ui,sans-serif; }
+@media(max-width:600px) {
+  .arcade-results .arcade-results-heading { padding:18px; gap:12px; align-items:flex-start; flex-direction:column; }
+  .arcade-results .arcade-table-labels,.arcade-results .arcade-results-list>li { grid-template-columns:30px minmax(0,1fr) 62px 68px; gap:8px; padding-inline:14px; }
+  .arcade-results .arcade-results-list>li:is(.is-you,.is-current-user) { padding-left:11px; }
+  .arcade-results .arcade-results-list>li>:is(.arcade-rank,.doodle-rank,.minesweeper-rank) { width:27px; height:29px; font-size:11px; }
+  .arcade-results .arcade-results-list>li>:is(.arcade-driver-name,strong) { font-size:12px; }
+  .arcade-results .arcade-results-list>li>:is(.arcade-record-score,.doodle-record-score,.minesweeper-record-time) { font-size:18px; }
+  .arcade-results .arcade-results-list>li>:is(.arcade-attempt-count,small,.minesweeper-record-meta) { font-size:10px; }
+  .arcade-results .arcade-table-labels { font-size:9px; letter-spacing:0; }
+  .arcade-results .arcade-results-list .minesweeper-record-meta small { font-size:9px; }
+}

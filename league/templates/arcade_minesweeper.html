@@ -4,8 +4,9 @@
 {% block title %}Pitwall Sweep · аркада{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="{% static 'league/arcade-minesweeper.css' %}">
+  <link rel="stylesheet" href="{% static 'league/arcade-minesweeper.css' %}?v=shared-results-v1">
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
+  {% include "arcade_results_assets.html" %}
 {% endblock %}
 
 {% block content %}
@@ -106,18 +107,19 @@
   </section>
   {% else %}<section class="minesweeper-machine" role="status"><div class="minesweeper-overlay-card"><h2>Зачёт игры закрыт</h2><p>{% if wheel_event and wheel_event.deadline <= now %}Результаты этапа зафиксированы. Победитель и колесо бонусов — ниже на этой странице.{% else %}Зачёт начнётся, когда администратор откроет игру для выбранного этапа.{% endif %}</p></div></section>{% endif %}
 
-  <section class="minesweeper-leaderboard" aria-labelledby="minesweeper-leaderboard-title">
-    <div class="minesweeper-leaderboard-heading">
+  <section class="minesweeper-leaderboard arcade-results" aria-labelledby="minesweeper-leaderboard-title">
+    <div class="minesweeper-leaderboard-heading arcade-results-heading">
       <div><span class="minesweeper-section-kicker">PITWALL SWEEP · ЭТАП</span><h2 id="minesweeper-leaderboard-title">Таблица лидеров</h2></div>
       <p><span id="minesweeper-total-attempts">{{ minesweeper_total_attempts }}</span> попыток всего · побеждает лучшее время полного прохождения</p>
     </div>
-    <ol class="minesweeper-leaderboard-list" id="minesweeper-leaderboard-list">
+    <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Время</span><span>Попытки</span></div>
+    <ol class="minesweeper-leaderboard-list arcade-results-list" id="minesweeper-leaderboard-list">
       {% for row in minesweeper_records %}
         <li{% if row.is_current_user %} class="is-current-user"{% endif %}>
           <span class="minesweeper-rank">{{ row.rank|stringformat:'02d' }}</span>
           <strong class="minesweeper-driver-name">{{ row.username }}</strong>
           <span class="minesweeper-record-time" data-time-ms="{{ row.best_time_ms }}">—</span>
-          <span class="minesweeper-record-meta">{{ row.wins }} прохожд. · {{ row.attempts }} попыток</span>
+          <span class="minesweeper-record-meta"><strong>{{ row.attempts }}</strong><small>{{ row.wins }} прохожд.</small></span>
         </li>
       {% empty %}
         <li class="minesweeper-board-empty" id="minesweeper-board-empty">Поле ещё никто не прошёл — первым рекордом можешь стать ты.</li>
@@ -133,6 +135,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/arcade-minesweeper.js' %}" defer></script>
+  <script src="{% static 'league/arcade-minesweeper.js' %}?v=shared-results-v1" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

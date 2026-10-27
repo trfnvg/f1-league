@@ -6,6 +6,7 @@
 {% block extra_head %}
   <link rel="stylesheet" href="{% static 'league/arcade.css' %}"><link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
   <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
+  {% include "arcade_results_assets.html" %}
 {% endblock %}
 
 {% block content %}
@@ -81,8 +82,8 @@
   </div>
   {% endif %}
 
-  <section class="arcade-leaderboard" aria-labelledby="arcade-leaderboard-title" aria-live="polite">
-    <div class="arcade-leaderboard-heading">
+  <section class="arcade-leaderboard arcade-results" aria-labelledby="arcade-leaderboard-title" aria-live="polite">
+    <div class="arcade-leaderboard-heading arcade-results-heading">
       <div>
         <span class="arcade-section-kicker">PIT LANE FLIGHT</span>
         <h2 id="arcade-leaderboard-title">{{ leaderboard_title }}</h2>
@@ -95,7 +96,7 @@
     <form hidden id="arcade-csrf-form">{% csrf_token %}</form>
     <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Ворота</span><span>Попытки</span></div>
     {% if user.is_authenticated %}
-      <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
+      <ol class="arcade-leaderboard-list arcade-results-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
           <li class="{% if record.is_current_user %}is-you{% endif %}" data-username="{{ record.username }}">
             <span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span>
@@ -109,7 +110,7 @@
       </ol>
       <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ board_own_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ board_own_attempts }}</strong></p>
     {% else %}
-      <ol class="arcade-leaderboard-list" id="arcade-leaderboard-list">
+      <ol class="arcade-leaderboard-list arcade-results-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
           <li><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong><small>ворот</small></span><span class="arcade-attempt-count"><small>ПОПЫТОК</small><strong>{{ record.attempts }}</strong></span></li>
         {% empty %}
