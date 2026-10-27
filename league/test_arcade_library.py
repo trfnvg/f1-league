@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -42,6 +43,34 @@ class ArcadeLibraryTests(TestCase):
         self.assertIsNone(response.json().get("error"))
         from .models import ArcadeAttempt
         self.assertIsNone(ArcadeAttempt.objects.get(pk=response.json()["attempt_id"]).competition_id)
+
+    def test_library_feature_disappears_exactly_at_deadline_but_games_remain(self):
+        url = reverse("league:arcade")
+        for offset, active in ((-1, True), (0, False), (1, False)):
+            with self.subTest(offset=offset), patch("league.arcade_library.timezone.now",
+                    return_value=self.event.deadline+timedelta(seconds=offset)):
+                page = self.client.get(url)
+                self.assertEqual(page.context["contest_open"], active)
+                if active:
+                    self.assertContains(page, 'class="library-featured"', count=1)
+                    self.assertContains(page, 'data-contest-deadline=')
+                else:
+                    self.assertIsNone(page.context["current_game"])
+                    self.assertNotContains(page, 'class="library-featured"')
+                    self.assertNotContains(page, 'class="library-notice"')
+                    self.assertNotContains(page, "ЗАЧЁТ ЗАВЕРШЁН")
+                self.assertContains(page, "Библиотека игр")
+                for game in ("flappy", "doodle_jump"):
+                    self.assertContains(page, reverse("league:arcade_game", args=[game]))
+        self.contest.refresh_from_db()
+        self.assertIsNotNone(self.contest.frozen_at)
+
+    def test_paused_competition_does_not_get_a_library_feature(self):
+        self.settings.public_enabled = False
+        self.settings.save(update_fields=["public_enabled"])
+        page = self.client.get(reverse("league:arcade"))
+        self.assertNotContains(page, 'class="library-featured"')
+        self.assertContains(page, "Библиотека игр")
 
     def test_all_public_results_use_shared_component_for_players_and_guests(self):
         ArcadeRecord.objects.create(user=self.user, best_score=50, total_attempts=2)

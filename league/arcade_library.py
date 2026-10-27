@@ -126,9 +126,12 @@ def library(request):
     # New releases lead the library; the selected competition has its own hero card.
     newest_first = ("doodle_jump", "flappy")
     cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])} for key in newest_first]
-    current = next((card for card in cards if contest and card["key"] == contest.game_key), None)
+    now = timezone.now()
+    contest_open = bool(contest and settings.public_enabled and not contest.frozen_at
+                        and contest.opened_at <= now < contest.event.deadline)
+    current = next((card for card in cards if contest_open and card["key"] == contest.game_key), None)
     return render(request, "arcade_library.html", {"games": cards, "current_game": current,
-        "contest": contest, "contest_open": bool(contest and settings.public_enabled and timezone.now() < contest.event.deadline),
+        "contest": contest, "contest_open": contest_open, "library_server_time": now,
         "arcade_settings_admin_url": reverse("league:arcade_control")})
 
 

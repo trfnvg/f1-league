@@ -152,7 +152,8 @@ class ArcadeWheelTests(TestCase):
         self.event.deadline = self.now - timedelta(seconds=1)
         self.event.save(update_fields=("deadline",))
         response = self.client.get(reverse("league:arcade"))
-        self.assertContains(response, "ЗАЧЁТ ЗАВЕРШЁН")
+        self.assertContains(response, "Библиотека игр")
+        self.assertNotContains(response, 'class="library-featured"')
         self.assertNotContains(response, 'id="arcade-canvas"')
 
         free_play = self.client.post(reverse("league:arcade_run_start"))
@@ -207,7 +208,8 @@ class ArcadeWheelTests(TestCase):
 
         response = self.client.get(reverse("league:arcade"))
 
-        self.assertContains(response, "ЗАЧЁТ ЗАВЕРШЁН")
+        self.assertContains(response, "Библиотека игр")
+        self.assertNotContains(response, 'class="library-featured"')
         contest.refresh_from_db()
         self.assertIsNotNone(contest.frozen_at)
         self.assertEqual([row["username"] for row in contest.standings], ["arcade-winner"])
