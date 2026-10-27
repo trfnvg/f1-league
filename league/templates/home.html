@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}Fastlap · Обзор сезона {{ season.year }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/nightshift-home.css' %}?v=20261026-race">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/nightshift-home.css' %}?v=20261026-race"><link rel="stylesheet" href="{% static 'league/home-launch.css' %}?v=1">{% endblock %}
 {% block content %}
 <div class="ns-home" data-server-time="{{ page_server_time|date:'c' }}"{% if featured_switch_at %} data-stage-switch="{{ featured_switch_at|date:'c' }}"{% endif %}>
-<header class="ns-page-intro">
-  <div><div class="ns-kicker">СЕЗОН {{ season.year }} · ТВОЙ КОМАНДНЫЙ ПУНКТ</div><h1>Гонка начинается<br><span>до старта.</span></h1><p>Предсказывай результат. Забирай очки. Напоминай друзьям, кто здесь лучше разбирается в гонках.</p></div>
+<header class="ns-page-intro home-launch-intro">
+  <div class="home-launch-copy"><div class="ns-kicker">СЕЗОН {{ season.year }} · ТВОЙ КОМАНДНЫЙ ПУНКТ</div><h1>Гонка начинается<br><span>до старта.</span></h1><p>Предсказывай результат. Забирай очки. Напоминай друзьям, кто здесь лучше разбирается в гонках.</p>
   {% if not user.is_authenticated %}<a class="ns-secondary" href="{% url 'league:friend_league_create' %}"><span aria-hidden="true">＋</span> Создать лигу</a>{% endif %}
+  </div>
+  {% include 'home_launch.html' %}
 </header>
 
 <div class="ns-homegrid">
@@ -193,4 +195,4 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}<script src="{% static 'league/home-race-clock.js' %}?v=1" defer></script><script src="{% static 'league/paddock-radio.js' %}?v=2" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/home-launch.js' %}?v=1" defer></script><script src="{% static 'league/home-race-clock.js' %}?v=1" defer></script><script src="{% static 'league/paddock-radio.js' %}?v=2" defer></script>{% endblock %}

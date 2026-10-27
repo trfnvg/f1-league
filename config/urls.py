@@ -4,8 +4,10 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from league.auth_views import FastlapLoginView, FastlapPasswordResetView
+from league.brand_views import favicon
 
 urlpatterns = [
+    path("favicon.ico", favicon, name="site_favicon"),
     path("admin/", admin.site.urls),
     path("accounts/login/", FastlapLoginView.as_view(), name="login"),
     path("accounts/password_reset/", FastlapPasswordResetView.as_view(), name="password_reset"),
