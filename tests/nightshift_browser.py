@@ -347,6 +347,18 @@ def run(output, widths, engine):
                         assert 'Очень_длинное_имя_участника' in notice.inner_text()
                         assert notice.locator('.ui-arrow').is_visible()
                         assert notice.evaluate("e=>getComputedStyle(e).textDecorationLine==='none'")
+                        assert notice.evaluate("e=>getComputedStyle(e,'::before').animationName") == 'duel-ember-drift'
+                        assert notice.evaluate("e=>getComputedStyle(e,'::before').pointerEvents") == 'none'
+                        original_box = notice.bounding_box()
+                        page.wait_for_timeout(180)
+                        assert notice.bounding_box() == original_box
+                        notice.screenshot(path=str(output/f'{width}-duel-ember.png'))
+                        page.emulate_media(reduced_motion='reduce')
+                        assert notice.evaluate("e=>getComputedStyle(e,'::before').animationName") == 'none'
+                        page.emulate_media(reduced_motion='no-preference')
+                        notice.focus()
+                        assert notice.evaluate("e=>getComputedStyle(e).outlineStyle") == 'solid'
+                        notice.evaluate('e=>e.blur()')
                     if route == "/closed/":
                         assert page.locator(".ns-deadline").inner_text().startswith("ДО СТАРТА ГОНКИ")
                         assert "Время гонки." not in page.locator('#featured-gp-title').inner_text()
