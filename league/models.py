@@ -1580,6 +1580,14 @@ class MinesweeperAttempt(models.Model):
         return f"{self.user} · {self.week_start} · {result}"
 
 
+class AuthRateBucket(models.Model):
+    """Shared, expiring counters; keys contain no raw login, email or IP."""
+
+    key = models.CharField(max_length=64, primary_key=True)
+    hits = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField(db_index=True)
+
+
 class ArcadeWheelSpin(models.Model):
     class Prize(models.TextChoices):
         PIT_WALL = "pit_wall", "Бонус пит-уолла +2"

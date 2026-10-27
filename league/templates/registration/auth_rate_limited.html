@@ -1,0 +1,5 @@
+{% extends "registration/auth_base.html" %}
+{% block title %}Повторите позже · Fastlap{% endblock %}
+{% block auth_heading %}Слишком много попыток{% endblock %}
+{% block auth_note %}Для защиты аккаунтов запросы временно ограничены. Попробуйте снова через {{ retry_minutes }} мин.{% endblock %}
+{% block auth_body %}<div class="account-links"><a href="{% url 'login' %}">Вернуться ко входу</a><a href="{% url 'password_reset' %}">Восстановить пароль</a></div>{% endblock %}

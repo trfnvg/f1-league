@@ -1,17 +1,16 @@
-import hashlib
 from urllib.parse import urlsplit
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, PasswordResetView
-from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_http_methods
 
 from .forms import AccountSettingsForm
+from .auth_limits import consume
 
 
 class FastlapLoginView(LoginView):
@@ -34,8 +33,8 @@ class FastlapPasswordResetView(PasswordResetView):
             form.add_error(None, "Восстановление по почте временно недоступно. Обратись к администратору.")
             return self.form_invalid(form)
         # One response for known and unknown addresses, with a bounded mail rate.
-        digest = hashlib.sha256(form.cleaned_data["email"].strip().lower().encode()).hexdigest()
-        if not cache.add(f"password-reset:{digest}", True, timeout=60):
+        address = form.cleaned_data["email"].strip().casefold()
+        if consume("reset-email-minute", address, 1, 60) or consume("reset-email-hour", address, 3, 3600):
             return redirect(self.success_url)
         # Never build recovery links from a caller-controlled Host header.
         public = urlsplit(settings.SITE_URL or "https://fastlap.ru")
