@@ -72,6 +72,18 @@ body.apex-night-theme .league-manage .manage-round { display:flex; align-items:c
 .manage-rounds>.manage-round-list:last-child { padding-bottom:14px; }
 .manage-empty { margin:0; padding:20px 0; color:#9da8b5; font:400 12px/1.6 Inter,system-ui,sans-serif; }
 .manage-members { margin-top:18px; }
+.league-manage [hidden] { display:none!important; }
+.manage-role-guide { margin:0 27px 20px; color:#a1abb8; font:400 12px/1.6 Inter,system-ui,sans-serif; }
+.manage-role-guide summary { cursor:pointer; color:#e0e4e9; width:fit-content; padding:8px 0; }
+.manage-role-guide dl { display:grid; grid-template-columns:1fr 1fr; gap:16px 24px; margin:12px 0 0; padding:18px; border:1px solid #ffffff12; border-radius:10px; background:#191e25; }
+.manage-role-guide dt { color:#e0e4e9; font-weight:600; margin-bottom:4px; }
+.manage-role-guide dd { margin:0; }
+.manage-member-tools { display:grid; grid-template-columns:minmax(0,1fr) minmax(140px,200px); gap:12px; margin:0 27px 6px; }
+.manage-member-tools label { display:block; font:500 11px/1.5 Inter,system-ui,sans-serif; color:#a1abb8; margin-bottom:7px; }
+body.apex-night-theme .league-manage .manage-member-tools :is(input,select) { display:block; width:100%; min-width:0; min-height:44px; padding:10px 12px; border:1px solid #46505d; border-radius:8px; background:#191e25; color:#e5e9ef; font:400 14px/1.4 Inter,system-ui,sans-serif; }
+.manage-member-status { grid-column:1/-1; margin:0; color:#98a4b1; font:400 11px/1.5 Inter,system-ui,sans-serif; }
+.manage-role-form button:disabled { opacity:.4; cursor:default!important; }
+.manage-member-role { color:#c1c8d2!important; }
 .manage-member-count { flex:none; color:#e0e4e9; font:600 23px/1.1 var(--manage-mono); text-align:right; }
 .manage-member-count small { display:block; margin-top:5px; color:#98a4b1; font:400 10px/1.4 Inter,system-ui,sans-serif; }
 .manage-member-list { padding:0 27px; }
@@ -108,6 +120,10 @@ body.apex-night-theme .league-manage .manage-primary:hover { background:#f04c45;
   .manage-round-list,.manage-member-list { padding-inline:18px; }
   .manage-round-more summary { padding-inline:18px; }
   .manage-member { align-items:flex-start; flex-direction:column; gap:12px; }
+  .manage-role-guide { margin-inline:18px; }
+  .manage-role-guide dl { grid-template-columns:1fr; }
+  .manage-member-tools { margin-inline:18px; grid-template-columns:minmax(0,1fr); }
+  body.apex-night-theme .league-manage .manage-member-tools :is(input,select) { font-size:16px; }
   .manage-role-form { width:100%; padding-left:52px; }
   body.apex-night-theme .league-manage .manage-role-form select { flex:1; min-width:0; width:auto; font-size:16px; }
   .manage-danger { align-items:flex-start; flex-direction:column; padding:20px 18px; }

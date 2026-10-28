@@ -43,6 +43,60 @@ class LeagueManagementTests(TestCase):
     def url(self, name="friend_league_settings", league=None, **kwargs):
         return reverse("league:"+name, kwargs={"league_id": (league or self.a).league_id, **kwargs})
 
+    def test_member_directory_shows_name_handle_and_owner_role(self):
+        self.player.first_name = "Алексей"
+        self.player.save(update_fields=["first_name"])
+        profile = self.player.league_profile
+        profile.handle = "alex_test"
+        profile.save(update_fields=["handle"])
+        response = self.client.get(self.url())
+        self.assertContains(response, "Алексей")
+        self.assertContains(response, "@alex_test")
+        self.assertContains(response, 'data-member-role="owner"')
+        self.assertContains(response, 'data-member-search')
+        self.assertContains(response, 'data-member-filter')
+        self.assertContains(response, 'data-role-form')
+        self.assertNotContains(response, self.other.username)
+
+    def test_owner_can_change_roles_and_returns_to_selected_season_settings(self):
+        url = self.url("friend_league_role", membership_id=self.entry.membership_id)
+        for role in ("manager", "moderator", "player"):
+            response = self.client.post(url, {"role": role, "year": 2027})
+            self.assertRedirects(response, self.url()+"?year=2027#manage-members-title", fetch_redirect_response=False)
+            self.entry.membership.refresh_from_db()
+            self.assertEqual(self.entry.membership.role, role)
+        activities = LeagueActivity.objects.filter(league=self.a.league, action="role_changed")
+        self.assertEqual(activities.count(), 3)
+        self.assertEqual(activities.latest("pk").details["after"], "player")
+        self.client.post(url, {"role": "player"})
+        self.assertEqual(activities.count(), 3)
+
+    def test_only_owner_can_assign_roles_even_by_forged_post(self):
+        for role in ("player", "moderator", "manager"):
+            self.entry.membership.role = role
+            self.entry.membership.save(update_fields=["role"])
+            self.client.force_login(self.player)
+            url = self.url("friend_league_role", membership_id=self.a.entries.get(membership__user=self.owner).membership_id)
+            self.assertEqual(self.client.post(url, {"role": "player"}).status_code, 403)
+        self.assertFalse(LeagueActivity.objects.filter(action="role_changed").exists())
+
+    def test_owner_invalid_and_inactive_roles_are_rejected_without_audit(self):
+        owner_member = self.a.entries.get(membership__user=self.owner).membership
+        response = self.client.post(self.url("friend_league_role", membership_id=owner_member.pk), {"role":"player"}, follow=True)
+        self.assertContains(response, "Роль владельца лиги изменить нельзя")
+        owner_member.refresh_from_db()
+        self.assertEqual(owner_member.role, "manager")
+        url = self.url("friend_league_role", membership_id=self.entry.membership_id)
+        self.client.post(url, {"role": "owner"})
+        self.entry.membership.refresh_from_db()
+        self.assertEqual(self.entry.membership.role, "player")
+        self.entry.membership.is_active = False
+        self.entry.membership.save(update_fields=["is_active"])
+        self.client.post(url, {"role": "moderator"})
+        self.entry.membership.refresh_from_db()
+        self.assertEqual(self.entry.membership.role, "player")
+        self.assertFalse(LeagueActivity.objects.filter(action="role_changed").exists())
+
     def test_settings_creates_invite_without_editing_profile_and_get_is_read_only(self):
         self.assertContains(self.client.get(self.url()), "Создать ссылку")
         self.assertEqual(LeagueInvite.objects.count(), 0)

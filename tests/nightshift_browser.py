@@ -193,6 +193,8 @@ def render_pages():
         guest = User.objects.create_user(f'invite-preview-{i}', first_name=f'Новый участник {i+1}')
         enroll_member(actor=player, league_season=private, user=guest)
     pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
+    client.force_login(player)
+    pages["/members-manage/"] = client.get(reverse("league:friend_league_settings", args=[private.league_id])).content
     from league import error_views
     error_request = RequestFactory().get('/leagues/join/example/')
     for name, view in (("403", error_views.permission_denied), ("404", error_views.page_not_found),
@@ -256,6 +258,37 @@ def run(output, widths, engine):
                         assert page.locator('nav a[href="/"]').is_visible()
                         assert page.locator('form').count() == 0
                     page.screenshot(path=str(output/f'{width}-{name}-recovery.png'), full_page=True)
+                page.goto(base + '/members-manage/')
+                assert page.locator('[data-member-row]:visible').count() == 30
+                assert page.locator('[data-role-form]').count() == 29
+                page.locator('[data-member-search]').fill('Новый участник 29')
+                assert page.locator('[data-member-row]:visible').count() == 1
+                page.locator('[data-member-search]').fill('НЕТ ТАКОГО УЧАСТНИКА')
+                assert page.locator('[data-member-empty]').is_visible()
+                page.locator('[data-member-search]').fill('')
+                page.locator('[data-member-filter]').select_option('owner')
+                assert page.locator('[data-member-row]:visible').count() == 1
+                assert page.locator('[data-member-row]:visible [data-role-form]').count() == 0
+                page.locator('[data-member-filter]').select_option('player')
+                assert page.locator('[data-member-row]:visible').count() == 29
+                first_handle = page.locator('[data-member-row]:visible [data-member-handle]').first.inner_text()
+                page.locator('[data-member-search]').fill(first_handle.upper())
+                assert page.locator('[data-member-row]:visible').count() == 1
+                page.locator('[data-member-search]').fill('')
+                role_form = page.locator('[data-role-form]').first
+                assert role_form.locator('button').is_disabled()
+                role_form.locator('select').select_option('manager')
+                assert role_form.locator('button').is_enabled()
+                for allowed in (False, True):
+                    assert role_form.evaluate('''(form, allowed) => {
+                        const original = window.confirm; let text = '', blocked;
+                        window.confirm = message => {text = message; return allowed;};
+                        form.addEventListener('submit', event => {blocked = event.defaultPrevented; event.preventDefault();}, {once:true});
+                        form.requestSubmit(); window.confirm = original;
+                        return blocked === !allowed && text.includes('Управляющий');
+                    }''', allowed)
+                assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                page.locator('.manage-members').screenshot(path=str(output/f'{width}-members-directory.png'))
                 for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/league-settings-invite/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")

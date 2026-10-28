@@ -204,6 +204,7 @@ def join(request, token):
 @require_POST
 def role(request, league_id, membership_id):
     league = _league(request, league_id)
+    season = _season(request, league)
     member = get_object_or_404(LeagueMembership, pk=membership_id, league=league)
     try:
         set_member_role(actor=request.user, membership=member, role=request.POST.get("role", ""))
@@ -211,7 +212,7 @@ def role(request, league_id, membership_id):
         messages.error(request, _error(exc))
     else:
         messages.success(request, "Роль участника обновлена.")
-    return redirect("league:friend_league", league_id=league.pk)
+    return redirect(f"{reverse('league:friend_league_settings', args=[league.pk])}?year={season.season.year}#manage-members-title")
 
 
 @login_required

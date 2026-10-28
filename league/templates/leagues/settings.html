@@ -1,6 +1,6 @@
 {% extends 'leagues/base.html' %}
 {% load static league_extras %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/league-management.css' %}?v=2-invites">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/league-management.css' %}?v=3-members">{% endblock %}
 {% block league_breadcrumb %}<nav class="leagues-breadcrumb manage-breadcrumb" aria-label="Навигация по лигам"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a><span aria-hidden="true">/</span><a href="{% url 'league:friend_league' league.id %}?year={{ league_season.season.year }}">{{ league.name }}</a></nav>{% endblock %}
 {% block league_content %}
 <div class="league-manage">
@@ -56,13 +56,19 @@
 
   <section class="manage-card manage-members" aria-labelledby="manage-members-title">
     <header class="manage-card-head"><div><span class="manage-eyebrow">03 / ПАДДОК</span><h2 id="manage-members-title">Участники</h2><p>{% if is_owner %}Управляйте ролями участников лиги.{% else %}Состав и роли участников лиги.{% endif %}</p></div><span class="manage-member-count">{{ members|length }} <small>участников</small></span></header>
-    <div class="manage-member-list">{% for member in members %}<div class="manage-member">
-      <div class="manage-member-person"><span class="manage-member-avatar leagues-avatar">{% if member.user.league_profile.avatar %}<img src="{{ member.user.league_profile.avatar.url }}" alt="" loading="lazy" width="40" height="40">{% else %}{{ member.user|player_name|first|upper }}{% endif %}</span><div><strong>{{ member.user|player_name }}</strong><small>{% if member.user_id == league.owner_id %}Создатель · управляющий{% else %}{{ member.get_role_display }}{% endif %}</small></div></div>
-      {% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}" class="manage-role-form">{% csrf_token %}<label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option><option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Управляющий</option></select><button type="submit">Сохранить<span class="visually-hidden"> роль {{ member.user|player_name }}</span></button></form>{% endif %}
-    </div>{% empty %}<p class="manage-empty">В лиге пока нет участников.</p>{% endfor %}</div>
+    <details class="manage-role-guide"><summary>Права участников</summary><dl><div><dt>Владелец</dt><dd>Все настройки, назначение ролей и удаление лиги.</dd></div><div><dt>Управляющий</dt><dd>Название, аватар, приглашения и судейство. Не может менять роли и удалять лигу.</dd></div><div><dt>Модератор</dt><dd>Зачёт крейзи-предиктов и гонщика дня, управление приглашениями.</dd></div><div><dt>Игрок</dt><dd>Прогнозы, результаты и приглашение друзей по действующей ссылке.</dd></div></dl></details>
+    <div class="manage-member-tools" data-member-tools hidden>
+      <div><label for="member-search">Найти участника</label><input id="member-search" type="search" placeholder="Имя или @логин" autocomplete="off" maxlength="150" data-member-search></div>
+      <div><label for="member-role-filter">Роль</label><select id="member-role-filter" data-member-filter><option value="">Все роли</option><option value="owner">Владелец</option><option value="manager">Управляющие</option><option value="moderator">Модераторы</option><option value="player">Игроки</option></select></div>
+      <p class="manage-member-status" role="status" data-member-status></p>
+    </div>
+    <div class="manage-member-list">{% for member in members %}<div class="manage-member" data-member-row data-member-role="{% if member.user_id == league.owner_id %}owner{% else %}{{ member.role }}{% endif %}">
+      <div class="manage-member-person"><span class="manage-member-avatar leagues-avatar">{% if member.user.league_profile.avatar %}<img src="{{ member.user.league_profile.avatar.url }}" alt="" loading="lazy" width="40" height="40">{% else %}{{ member.user|player_name|first|upper }}{% endif %}</span><div><strong data-member-name>{{ member.user|player_name }}</strong>{% if member.user.league_profile.handle %}<small data-member-handle>@{{ member.user.league_profile.handle }}</small>{% endif %}<small class="manage-member-role">{% if member.user_id == league.owner_id %}Владелец{% else %}{{ member.get_role_display }}{% endif %}</small></div></div>
+      {% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}" class="manage-role-form" data-role-form>{% csrf_token %}<input type="hidden" name="year" value="{{ league_season.season.year }}"><label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}" data-original-role="{{ member.role }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option><option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Управляющий</option></select><button type="submit">Сохранить<span class="visually-hidden"> роль {{ member.user|player_name }}</span></button></form>{% endif %}
+    </div>{% empty %}<p class="manage-empty">В лиге пока нет участников.</p>{% endfor %}<p class="manage-empty" data-member-empty hidden>Никого не нашли. Измените имя или выбранную роль.</p></div>
   </section>
 
   {% if is_owner %}<section class="manage-danger"><div><h2>Удаление лиги</h2><p>Лига исчезнет у всех участников. Общие прогнозы игроков останутся.</p></div><a href="{% url 'league:friend_league_delete' league.id %}">Удалить лигу <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></section>{% endif %}
 </div>
 {% endblock %}
-{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/league-management.js' %}?v=1" defer></script>{% endblock %}
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/league-management.js' %}?v=2-members" defer></script>{% endblock %}

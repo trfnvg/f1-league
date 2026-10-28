@@ -124,14 +124,17 @@ def enroll_member(*, actor, league_season, user):
 def set_member_role(*, actor, membership, role):
     membership = LeagueMembership.objects.select_related("league").get(pk=membership.pk)
     league = League.objects.select_for_update().get(pk=membership.league_id)
+    membership = LeagueMembership.objects.select_related("league").get(pk=membership.pk)
     membership_for(actor, league)
     if actor.pk != league.owner_id:
-        raise PermissionDenied("Назначать модераторов может только владелец лиги.")
+        raise PermissionDenied("Менять роли может только владелец лиги.")
+    if membership.user_id == league.owner_id:
+        raise ValidationError("Роль владельца лиги изменить нельзя.")
     if not membership.is_active:
         raise ValidationError("Нельзя менять роль отключённого участника.")
+    previous = membership.role
     membership.role = role
     membership.full_clean()
-    previous = LeagueMembership.objects.get(pk=membership.pk).role
     if previous == role:
         return membership
     membership.save(update_fields=("role",))
