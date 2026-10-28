@@ -36,6 +36,98 @@ from league.duels import create_duel_challenge, respond_to_duel
 from league.models import Event, Prediction, Score, Season, UserProfile, EventWildcardQuestion, EventWildcardDeck, EventWildcardDeckCard, ArcadeTrophyAward
 
 
+def check_live_handle(page, base, output, width):
+    """Use real form markup/JS; mock only the advisory HTTP response."""
+    requests = []
+    mode = {'status': 200}
+    def respond(route):
+        assert route.request.method == 'POST'
+        assert route.request.headers.get('x-csrftoken')
+        value = route.request.post_data.split('=', 1)[1]
+        requests.append(value)
+        if mode['status'] != 200:
+            route.fulfill(status=mode['status'], headers={'Retry-After': '60'}, body='Unavailable')
+        elif value == 'taken63':
+            route.fulfill(json={'available': False, 'message': 'Этот логин уже занят. Выбери другой.'})
+        elif value == 'putin63':
+            route.fulfill(json={'available': False, 'message': 'Логин не соответствует правилам Fastlap.'})
+        else:
+            route.fulfill(json={'available': True, 'message': 'Логин доступен.'})
+    pattern = '**/account/handle/check/'
+    page.route(pattern, respond)
+    page.goto(base+'/register/', wait_until='networkidle')
+    field = page.locator('#id_username')
+    status = page.locator('[data-handle-status]')
+    assert status.is_hidden()
+    assert status.get_attribute('id') in field.get_attribute('aria-describedby').split()
+    field.fill('ab')
+    assert status.get_attribute('data-state') == 'invalid'
+    page.wait_for_timeout(450)
+    assert not requests
+    field.fill('racer')
+    page.wait_for_timeout(80)
+    field.fill('racer63')
+    page.wait_for_function("document.querySelector('[data-handle-status]').dataset.state === 'available'")
+    assert requests == ['racer63']
+    assert field.get_attribute('aria-invalid') is None
+    field.fill('taken63')
+    page.wait_for_function("document.querySelector('[data-handle-status]').textContent.includes('занят')")
+    assert field.get_attribute('aria-invalid') == 'true'
+    field.fill('putin63')
+    page.wait_for_function("document.querySelector('[data-handle-status]').textContent.includes('правилам')")
+    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+    page.screenshot(path=str(output/f'{width}-live-handle.png'), full_page=True)
+    # CSRF/session failures and service failures are not shown as availability.
+    for code in (403, 503):
+        mode['status'] = code
+        field.fill(f'racer{code}')
+        page.wait_for_function("document.querySelector('[data-handle-status]').dataset.state === 'unknown'")
+        assert 'при отправке' in status.inner_text()
+        assert page.locator('.account-submit').is_enabled()
+    mode['status'] = 429
+    field.fill('racer429')
+    page.wait_for_function("document.querySelector('[data-handle-status]').textContent.includes('Подожди')")
+    count = len(requests)
+    field.fill('racer430')
+    page.wait_for_timeout(450)
+    assert len(requests) == count  # Respect Retry-After locally, too.
+    mode['status'] = 200
+    page.goto(base+'/account-settings/', wait_until='networkidle')
+    assert page.locator('[data-handle-status]').is_hidden()
+    page.locator('#id_handle').fill('settings63')
+    page.wait_for_function("document.querySelector('[data-handle-status]').dataset.state === 'available'")
+    page.unroute(pattern, respond)
+    # Simulate a transport which ignores abort: stale replies must still lose.
+    page.goto(base+'/register/', wait_until='networkidle')
+    page.evaluate("""() => {
+        window.handleRequests = [];
+        const original = window.fetch;
+        window.fetch = (url, options) => String(url).includes('/account/handle/check/')
+            ? new Promise(resolve => window.handleRequests.push({resolve, options}))
+            : original(url, options);
+    }""")
+    field = page.locator('#id_username')
+    field.fill('old63')
+    page.wait_for_function('window.handleRequests.length === 1')
+    field.fill('new63')
+    page.wait_for_function('window.handleRequests.length === 2')
+    assert page.evaluate('window.handleRequests[0].options.signal.aborted')
+    page.evaluate("window.handleRequests[1].resolve(new Response(JSON.stringify({available:true,message:'Логин доступен.'})))")
+    page.wait_for_function("document.querySelector('[data-handle-status]').dataset.state === 'available'")
+    page.evaluate("window.handleRequests[0].resolve(new Response(JSON.stringify({available:false,message:'Старый ответ'})))")
+    page.wait_for_timeout(100)
+    assert page.locator('[data-handle-status]').inner_text() == 'Логин доступен.'
+    field.fill('')
+    assert page.locator('[data-handle-status]').is_hidden()
+    # Original bound-form error stays visible until this field is edited.
+    page.goto(base+'/register-blocked/', wait_until='networkidle')
+    assert page.locator('#id_username_error').is_visible()
+    page.locator('#id_username').fill('ab')
+    assert page.locator('#id_username_error').is_hidden()
+    assert 'id_username_error' not in page.locator('#id_username').get_attribute('aria-describedby').split()
+    assert page.locator('[data-handle-status]').is_visible()
+
+
 def render_pages():
     call_command("migrate", verbosity=0)
     now = timezone.now()
@@ -257,6 +349,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
+                check_live_handle(page, base, output, width)
                 page.goto(base+'/register-blocked/', wait_until='networkidle')
                 assert 'не соответствует правилам Fastlap' in page.locator('.account-card').inner_text()
                 assert page.locator('[name="username"]').input_value() == 'putin63'

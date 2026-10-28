@@ -4,13 +4,42 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView, PasswordResetView
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods
 
+from .auth_limits import client_address, consume
 from .forms import AccountSettingsForm
-from .auth_limits import consume
+from .identity import clean_handle
+
+
+@never_cache
+@require_http_methods(["POST"])
+def handle_check(request):
+    """Advisory only: registration/settings must still validate on submission.
+
+    POST keeps typed handles out of URLs/access logs. Normal CSRF protection
+    applies; the response never exposes an account's identity or email.
+    """
+    address = client_address(request)
+    wait = consume("handle-check-minute", address, 60, 60)
+    if not wait:
+        wait = consume("handle-check-hour", address, 600, 3600)
+    if wait:
+        response = JsonResponse({"available": None, "code": "rate_limited",
+            "message": "Слишком много проверок. Подожди немного или отправь форму — проверим логин при сохранении."}, status=429)
+        response["Retry-After"] = str(wait)
+        return response
+    try:
+        clean_handle(request.POST.get("handle", ""),
+            user=request.user if request.user.is_authenticated else None)
+    except ValidationError as error:
+        return JsonResponse({"available": False, "code": error.code, "message": error.messages[0]})
+    return JsonResponse({"available": True, "code": "available", "message": "Логин доступен."})
 
 
 class FastlapLoginView(LoginView):

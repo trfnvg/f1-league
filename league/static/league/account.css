@@ -13,6 +13,11 @@ body.apex-night-theme .account-handle input { padding-left: 34px; }
 .account-help ul { padding-left: 18px; margin: 0; }
 .account-error { margin: 8px 0; color: #f3a199; font-size: 12px; line-height: 1.5; }
 .account-error ul { list-style: none; padding: 0; margin: 0; }
+.account-handle-status { display: flex; align-items: baseline; gap: 7px; margin-top: 8px; color: #a8b0bd; font-size: 12px; line-height: 1.5; }
+.account-handle-status[hidden] { display: none; }
+.account-handle-status::before { content: ""; flex: 0 0 5px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.account-handle-status[data-state="available"] { color: #9bc7b2; }
+.account-handle-status[data-state="invalid"] { color: #f3a199; }
 body.apex-night-theme .account-submit { display: flex; width: 100%; min-height: 48px; justify-content: center; align-items: center; margin-top: 8px; padding: 12px; border: 1px solid #f5665c; border-radius: 8px; background: #ed4b44; color: white; font: 650 13px/1.5 Inter,sans-serif; text-decoration: none; box-shadow: none; }
 .account-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 24px; margin: 22px 0 0; color: #a4afbf; font-size: 12px; line-height: 1.6; }
 body.apex-night-theme .account-links a { color: #d0d9e7; text-underline-offset: 4px; }

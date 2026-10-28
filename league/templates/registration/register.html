@@ -3,8 +3,8 @@
 {% block auth_heading %}Создать аккаунт{% endblock %}
 {% block auth_note %}Имя увидят другие игроки. Уникальный @логин нужен для входа.{% endblock %}
 {% block auth_body %}
-<form method="post" novalidate>
-  {% csrf_token %}{% include 'registration/fields.html' %}
+<form method="post" novalidate data-handle-check-url="{% url 'league:handle_check' %}">
+  {% csrf_token %}{% include 'registration/fields.html' with handle_check=True %}
   {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
   <button class="account-submit" type="submit">Зарегистрироваться</button>
 </form>

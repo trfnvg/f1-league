@@ -13,7 +13,7 @@ def clean_handle(value, user=None):
     from .models import UserProfile
     value = value.strip().lower()
     if not re.fullmatch(r"[a-z0-9]{3,30}", value):
-        raise ValidationError("Используй от 3 до 30 латинских букв и цифр, без пробелов и спецсимволов.")
+        raise ValidationError("Используй от 3 до 30 латинских букв и цифр, без пробелов и спецсимволов.", code="invalid_format")
     # Existing accounts are not renamed or locked out by a new policy. A real
     # handle change is checked, including changes through UserProfile.clean().
     unchanged = bool(user and user.pk and UserProfile.objects.filter(user=user, handle=value).exists())
@@ -26,7 +26,7 @@ def clean_handle(value, user=None):
         handles = handles.exclude(user=user)
         usernames = usernames.exclude(pk=user.pk)
     if handles.exists() or usernames.exists():
-        raise ValidationError("Этот логин уже занят. Выбери другой.")
+        raise ValidationError("Этот логин уже занят. Выбери другой.", code="handle_taken")
     return value
 
 

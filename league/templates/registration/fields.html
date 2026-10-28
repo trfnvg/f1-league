@@ -4,6 +4,7 @@
   <label for="{{ field.id_for_label }}">{{ field.label }}</label>
   {% if field.name == 'username' or field.name == 'handle' %}<div class="account-handle"><span aria-hidden="true">@</span>{{ field }}</div>{% else %}{{ field }}{% endif %}
   {% if field.help_text %}<div class="account-help" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</div>{% endif %}
-  {% if field.errors %}<div class="account-error" id="{{ field.auto_id }}_error" role="alert">{{ field.errors }}</div>{% endif %}
+  {% if field.errors %}<div class="account-error" role="alert">{{ field.errors }}</div>{% endif %}
+  {% if handle_check %}{% if field.name == 'username' or field.name == 'handle' %}<div class="account-handle-status" id="{{ field.auto_id }}_status" data-handle-status role="status" aria-live="polite" aria-atomic="true" hidden></div>{% endif %}{% endif %}
 </div>
 {% endfor %}
