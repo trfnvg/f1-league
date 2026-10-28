@@ -14,7 +14,20 @@ from django.views.decorators.http import require_http_methods
 
 from .auth_limits import client_address, consume
 from .forms import AccountSettingsForm
-from .identity import clean_handle
+from .identity import clean_display_name, clean_handle
+
+
+def _live_check_limit(request, scope, result_key):
+    address = client_address(request)
+    wait = consume(f"{scope}-minute", address, 60, 60)
+    if not wait:
+        wait = consume(f"{scope}-hour", address, 600, 3600)
+    if not wait:
+        return None
+    response = JsonResponse({result_key: None, "code": "rate_limited",
+        "message": "Слишком много проверок. Подожди немного. Значение также проверим при отправке формы."}, status=429)
+    response["Retry-After"] = str(wait)
+    return response
 
 
 @never_cache
@@ -25,21 +38,29 @@ def handle_check(request):
     POST keeps typed handles out of URLs/access logs. Normal CSRF protection
     applies; the response never exposes an account's identity or email.
     """
-    address = client_address(request)
-    wait = consume("handle-check-minute", address, 60, 60)
-    if not wait:
-        wait = consume("handle-check-hour", address, 600, 3600)
-    if wait:
-        response = JsonResponse({"available": None, "code": "rate_limited",
-            "message": "Слишком много проверок. Подожди немного или отправь форму — проверим логин при сохранении."}, status=429)
-        response["Retry-After"] = str(wait)
-        return response
+    limited = _live_check_limit(request, "handle-check", "available")
+    if limited is not None:
+        return limited
     try:
         clean_handle(request.POST.get("handle", ""),
             user=request.user if request.user.is_authenticated else None)
     except ValidationError as error:
         return JsonResponse({"available": False, "code": error.code, "message": error.messages[0]})
     return JsonResponse({"available": True, "code": "available", "message": "Логин доступен."})
+
+
+@never_cache
+@require_http_methods(["POST"])
+def name_check(request):
+    """Names are not unique: only format/policy, never an account lookup."""
+    limited = _live_check_limit(request, "name-check", "valid")
+    if limited is not None:
+        return limited
+    try:
+        clean_display_name(request.POST.get("name", ""))
+    except ValidationError as error:
+        return JsonResponse({"valid": False, "code": error.code, "message": error.messages[0]})
+    return JsonResponse({"valid": True, "code": "valid", "message": "Имя соответствует правилам."})
 
 
 class FastlapLoginView(LoginView):

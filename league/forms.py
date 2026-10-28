@@ -185,12 +185,8 @@ class RegisterForm(UserCreationForm):
         return clean_handle(self.cleaned_data["username"])
 
     def clean_first_name(self):
-        value = " ".join(self.cleaned_data["first_name"].split())
-        if not value or not all(char.isalpha() or char == " " for char in value):
-            raise forms.ValidationError("В имени можно использовать только буквы и пробелы.")
-        from .name_moderation import validate_public_name
-        validate_public_name(value)
-        return value
+        from .identity import clean_display_name
+        return clean_display_name(self.cleaned_data["first_name"])
 
     def clean_email(self):
         value = self.cleaned_data["email"].strip().lower()

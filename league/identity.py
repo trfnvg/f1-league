@@ -9,6 +9,19 @@ def display_name(user):
     return user.get_full_name().strip() or user.username
 
 
+def clean_display_name(value):
+    """One set of public-name rules for registration and live feedback."""
+    value = value.strip()
+    if len(value) > 150:
+        raise ValidationError("Слишком длинное имя. Максимум 150 символов.", code="name_too_long")
+    value = " ".join(value.split())
+    if not value or not all(char.isalpha() or char == " " for char in value):
+        raise ValidationError("В имени можно использовать только буквы и пробелы.", code="invalid_format")
+    from .name_moderation import validate_public_name
+    validate_public_name(value)
+    return value
+
+
 def clean_handle(value, user=None):
     from .models import UserProfile
     value = value.strip().lower()

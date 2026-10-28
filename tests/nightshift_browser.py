@@ -12,7 +12,7 @@ import sys
 import threading
 from datetime import timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -126,6 +126,85 @@ def check_live_handle(page, base, output, width):
     assert page.locator('#id_username_error').is_hidden()
     assert 'id_username_error' not in page.locator('#id_username').get_attribute('aria-describedby').split()
     assert page.locator('[data-handle-status]').is_visible()
+
+
+def check_live_name(page, base, output, width):
+    requests = []
+    mode = {'status': 200}
+    def respond(route):
+        assert route.request.method == 'POST'
+        assert route.request.headers.get('x-csrftoken')
+        value = parse_qs(route.request.post_data)['name'][0]
+        requests.append(value)
+        if mode['status'] != 200:
+            route.fulfill(status=mode['status'], headers={'Retry-After': '60'}, body='Unavailable')
+        elif value == 'Владимир Путин':
+            route.fulfill(json={'valid': False, 'message': 'Это имя не соответствует правилам Fastlap.'})
+        else:
+            route.fulfill(json={'valid': True, 'message': 'Имя соответствует правилам.'})
+    pattern = '**/account/name/check/'
+    page.route(pattern, respond)
+    page.goto(base+'/register/', wait_until='networkidle')
+    field = page.locator('#id_first_name')
+    status = page.locator('[data-name-status]')
+    assert status.is_hidden()
+    assert status.get_attribute('id') in field.get_attribute('aria-describedby').split()
+    field.fill('Гри')
+    page.wait_for_timeout(80)
+    field.fill('Гриша')
+    page.wait_for_function("document.querySelector('[data-name-status]').dataset.state === 'available'")
+    assert requests == ['Гриша']
+    assert status.inner_text() == 'Имя соответствует правилам.'
+    field.fill('Владимир Путин')
+    page.wait_for_function("document.querySelector('[data-name-status]').dataset.state === 'invalid'")
+    assert field.get_attribute('aria-invalid') == 'true'
+    assert page.locator('[data-handle-status]').is_hidden()
+    page.screenshot(path=str(output/f'{width}-live-name.png'), full_page=True)
+    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+    for code in (403, 503):
+        mode['status'] = code
+        field.fill('Анна' if code == 403 else 'Мария')
+        page.wait_for_function("document.querySelector('[data-name-status]').dataset.state === 'unknown'")
+        assert 'при отправке' in status.inner_text()
+        assert page.locator('.account-submit').is_enabled()
+    mode['status'] = 429
+    field.fill('Семён')
+    page.wait_for_function("document.querySelector('[data-name-status]').textContent.includes('Подожди')")
+    count = len(requests)
+    field.fill('Игорь')
+    page.wait_for_timeout(450)
+    assert len(requests) == count
+    field.fill('')
+    assert status.is_hidden()
+    page.unroute(pattern, respond)
+    # Requests for different fields coexist; old name replies cannot erase a ban.
+    page.goto(base+'/register/', wait_until='networkidle')
+    page.evaluate(r"""() => {
+        window.nameRequests = [];
+        const original = window.fetch;
+        window.fetch = (url, options) => /account\/(name|handle)\/check\//.test(String(url))
+            ? new Promise(resolve => window.nameRequests.push({resolve, options}))
+            : original(url, options);
+    }""")
+    field = page.locator('#id_first_name')
+    field.fill('Гриша')
+    page.wait_for_function('window.nameRequests.length === 1')
+    page.locator('#id_username').fill('racer63')
+    page.wait_for_function('window.nameRequests.length === 2')
+    field.fill('Владимир Путин')
+    page.wait_for_function('window.nameRequests.length === 3')
+    assert page.evaluate('window.nameRequests[0].options.signal.aborted')
+    assert not page.evaluate('window.nameRequests[1].options.signal.aborted')
+    page.evaluate("window.nameRequests[1].resolve(new Response(JSON.stringify({available:true,message:'Логин доступен.'})))")
+    page.evaluate("window.nameRequests[2].resolve(new Response(JSON.stringify({valid:false,message:'Имя не соответствует правилам.'})))")
+    page.wait_for_function("document.querySelector('[data-name-status]').dataset.state === 'invalid'")
+    page.wait_for_function("document.querySelector('[data-handle-status]').dataset.state === 'available'")
+    page.evaluate("window.nameRequests[0].resolve(new Response(JSON.stringify({valid:true,message:'Старое имя подходит.'})))")
+    page.wait_for_timeout(100)
+    assert page.locator('[data-name-status]').inner_text() == 'Имя не соответствует правилам.'
+    assert page.locator('[data-handle-status]').inner_text() == 'Логин доступен.'
+    field.fill('')
+    assert page.locator('[data-name-status]').is_hidden()
 
 
 def render_pages():
@@ -350,6 +429,7 @@ def run(output, widths, engine):
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 check_live_handle(page, base, output, width)
+                check_live_name(page, base, output, width)
                 page.goto(base+'/register-blocked/', wait_until='networkidle')
                 assert 'не соответствует правилам Fastlap' in page.locator('.account-card').inner_text()
                 assert page.locator('[name="username"]').input_value() == 'putin63'

@@ -6,5 +6,6 @@
   {% if field.help_text %}<div class="account-help" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</div>{% endif %}
   {% if field.errors %}<div class="account-error" role="alert">{{ field.errors }}</div>{% endif %}
   {% if handle_check %}{% if field.name == 'username' or field.name == 'handle' %}<div class="account-handle-status" id="{{ field.auto_id }}_status" data-handle-status role="status" aria-live="polite" aria-atomic="true" hidden></div>{% endif %}{% endif %}
+  {% if name_check and field.name == 'first_name' %}<div class="account-handle-status" id="{{ field.auto_id }}_status" data-name-status role="status" aria-live="polite" aria-atomic="true" hidden></div>{% endif %}
 </div>
 {% endfor %}
