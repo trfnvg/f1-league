@@ -89,6 +89,68 @@ YES_NO_CHOICES = [
 ]
 
 
+class RaceCalendarRound(models.Model):
+    """Public sporting schedule, independent of prediction deadlines and scores."""
+
+    season_year = models.PositiveSmallIntegerField("Сезон", db_index=True)
+    round_number = models.PositiveSmallIntegerField("Этап")
+    circuit = models.CharField("Ключ трассы", max_length=32)
+    title = models.CharField("Гран-при", max_length=140)
+    location = models.CharField("Город", max_length=80)
+    country = models.CharField("Страна", max_length=80)
+    circuit_name = models.CharField("Автодром", max_length=140)
+    venue_timezone = models.CharField("Часовой пояс автодрома", max_length=64, default="UTC")
+    starts_on = models.DateField("Начало уик-энда")
+    ends_on = models.DateField("Конец уик-энда")
+    practice1_at = models.DateTimeField("Первая практика", null=True, blank=True,
+        help_text="Оставьте пустым, если время официально ещё не объявлено.")
+    race_at = models.DateTimeField("Старт гонки", null=True, blank=True,
+        help_text="Расписание календаря не меняет дедлайн прогнозов.")
+    has_sprint = models.BooleanField("Спринт", default=False)
+    cover_image = models.ImageField("Своя обложка", upload_to="calendar_covers/", blank=True)
+    prediction_event = models.ForeignKey("Event", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="calendar_rounds", verbose_name="Карточка прогнозов",
+        help_text="Необязательно: иначе подбирается по трассе и сезону, не по номеру этапа.")
+    source_url = models.URLField("Официальное расписание", max_length=300)
+    checked_on = models.DateField("Расписание проверено", null=True, blank=True)
+
+    class Meta:
+        ordering = ("season_year", "round_number")
+        verbose_name = "Этап календаря F1"
+        verbose_name_plural = "Календарь F1"
+        constraints = [
+            models.UniqueConstraint(fields=("season_year", "round_number"), name="calendar_season_round_unique"),
+            models.UniqueConstraint(fields=("season_year", "circuit"), name="calendar_season_circuit_unique"),
+            models.CheckConstraint(condition=models.Q(ends_on__gte=models.F("starts_on")), name="calendar_weekend_dates_valid"),
+        ]
+
+    def clean(self):
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        super().clean()
+        errors = {}
+        try:
+            venue_zone = ZoneInfo(self.venue_timezone)
+        except (ValueError, ZoneInfoNotFoundError):
+            errors["venue_timezone"] = "Укажите часовой пояс IANA, например Europe/Monaco."
+            venue_zone = None
+        if self.starts_on and self.ends_on and self.ends_on < self.starts_on:
+            errors["ends_on"] = "Уик-энд не может закончиться раньше начала."
+        if self.prediction_event_id and self.prediction_event.season_year != self.season_year:
+            errors["prediction_event"] = "Карточка прогнозов должна относиться к этому же сезону."
+        if venue_zone and self.starts_on and self.ends_on:
+            for field in ("practice1_at", "race_at"):
+                value = getattr(self, field)
+                if value and not self.starts_on <= value.astimezone(venue_zone).date() <= self.ends_on:
+                    errors[field] = "Дата сессии по времени автодрома должна попадать в уик-энд."
+        if self.practice1_at and self.race_at and self.practice1_at >= self.race_at:
+            errors["race_at"] = "Гонка должна начинаться после первой практики."
+        if errors:
+            raise ValidationError(errors)
+
+    def __str__(self):
+        return f"{self.season_year} · R{self.round_number:02} · {self.title}"
+
+
 class Season(models.Model):
     year = models.PositiveSmallIntegerField("Год", unique=True)
     title = models.CharField("Название", max_length=120, blank=True)

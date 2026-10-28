@@ -7,10 +7,12 @@ from . import driver_profiles
 from . import auth_views
 from . import score_details
 from . import reactions
+from . import race_calendar
 
 app_name = "league"
 
 urlpatterns = [
+    path("calendar/", race_calendar.calendar, name="calendar"),
     path("events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="race_recap"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="friend_league_recap"),
     path("events/<int:event_id>/predictions/<int:prediction_id>/reactions/", reactions.react, name="crazy_reaction"),

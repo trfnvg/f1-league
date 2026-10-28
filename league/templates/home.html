@@ -142,7 +142,7 @@
         <div class="carousel-inner">
           {% for item in result_images %}
             <div class="carousel-item {% if forloop.first %}active{% endif %}">
-              <img src="{{ item.image.url }}" class="results-stage-image" alt="{{ item.title|default:'Результаты этапа' }}">
+              <img src="{{ item.image.url }}" class="results-stage-image" alt="{{ item.title|default:'Результаты этапа' }}" loading="lazy" decoding="async">
             </div>
           {% endfor %}
         </div>

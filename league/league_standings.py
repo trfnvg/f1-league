@@ -1,7 +1,7 @@
 """Bounded, membership-scoped standings; original scores stay immutable."""
 from collections import defaultdict
 from types import SimpleNamespace
-from django.db.models import F
+from django.db.models import F, Q
 
 from .identity import display_name
 from .competition_scoring import _text_digest
@@ -29,12 +29,18 @@ def standings(season):
                        if entry.first_event_id == season.start_event_id]
         bonuses = dict(SeasonScore.objects.filter(season_year=season.season.year,
             user_id__in=bonus_users).values_list("user_id", "points"))
-        predictions = {p.pk: p for p in Prediction.objects.filter(user_id__in=users, event__in=events,
-            created_at__lt=F("event__deadline"))}
-        by_user_event = {(p.user_id, p.event_id): p for p in predictions.values()}
         decisions = {(d.entry.membership.user_id, d.event_id): d for d in
             LeagueCrazyDecision.objects.filter(entry__league_season=season).select_related("entry__membership")}
         days = {d.event_id: d for d in LeagueDayDecision.objects.filter(league_season=season)}
+        # Original scores already contain the official prediction points. Only
+        # local judging overrides require the source prediction, not every GP.
+        by_user_event = {}
+        if decisions or days:
+            overrides = Q(pk__in=[d.prediction_id for d in decisions.values()]) | Q(event_id__in=days)
+            predictions = Prediction.objects.filter(overrides, user_id__in=users, event__in=events,
+                created_at__lt=F("event__deadline")).only(
+                    "user_id", "event_id", "crazy_prediction", "driver_of_day")
+            by_user_event = {(p.user_id, p.event_id): p for p in predictions}
         for score in scores:
             if event_rounds[score.event_id] < first_rounds[score.user_id]:
                 continue

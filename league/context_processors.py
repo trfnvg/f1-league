@@ -1,19 +1,15 @@
 from django.utils import timezone
 
-from .models import ArcadeSettings, Event, Season
+from .models import ArcadeSettings, Event
 from .home_events import select_current_event
+from .services import get_selected_season
 
 
 def league_context(request):
-    active = Season.get_active()
+    selected = get_selected_season(request)
     arcade_settings = ArcadeSettings.objects.filter(pk=1).select_related("competition_event").first()
-    try:
-        year = int(request.GET.get("season", ""))
-    except (TypeError, ValueError):
-        year = None
-    selected = Season.objects.filter(year=year).first() if year else active
     arcade_event = arcade_settings.competition_event if arcade_settings else None
-    selected_year = (selected or active).year
+    selected_year = selected.year
     now = timezone.now()
     events = getattr(request, "_navigation_events", None)
     if events is None:
@@ -42,7 +38,7 @@ def league_context(request):
         and (arcade_running or arcade_wheel_available)
     )
     return {
-        "current_season": selected or active,
+        "current_season": selected,
         "arcade_public_enabled": arcade_visible,
         "current_event": current_event,
         "next_prediction_event": current_event,

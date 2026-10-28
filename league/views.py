@@ -423,7 +423,7 @@ def home(request):
     result_images = list(
         HomeResultImage.objects.filter(is_active=True, season_year=season.year)
     )
-    leaderboard_data = build_leaderboard(season.year)
+    leaderboard_data = build_leaderboard(season.year, events=events)
     saved_event_ids = set()
     if request.user.is_authenticated:
         saved_event_ids = set(
@@ -566,10 +566,11 @@ def activity_feed_updates(request):
     season = get_selected_season(request)
     _award_legacy_flappy_trophy(season.year, now=timezone.now())
     activity_feed = build_activity_feed(build_leaderboard(season.year))
+    # This public fragment needs no navigation/profile/CSRF context. Avoid
+    # rebuilding the full site's context on every 15-second feed refresh.
     html = render_to_string(
         "activity_feed_items.html",
         {"activity_feed": activity_feed, "season": season},
-        request=request,
     )
     response = JsonResponse({"html": html})
     response["Cache-Control"] = "no-store, no-cache, must-revalidate"

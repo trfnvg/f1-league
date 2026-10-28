@@ -5,7 +5,8 @@ from functools import wraps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, F, Q, Sum, Window
+from django.db.models.functions import RowNumber
 from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -61,15 +62,21 @@ def contest_rows(contest):
     attempts = Attempt.objects.filter(competition=contest, user__is_staff=False,
         started_at__gte=contest.opened_at, started_at__lt=contest.event.deadline)
     counts = dict(attempts.values("user_id").annotate(count=Count("pk")).values_list("user_id", "count"))
-    rows, seen = [], set()
+    rows = []
     finished = attempts.filter(score__isnull=False, finished_at__lte=contest.event.deadline,
-                              user__is_active=True).select_related("user").order_by("-score", "finished_at", "user_id")
+                              user__is_active=True)
+    # Pick one best run per player in SQL rather than transferring every run
+    # (including its verification payload) to Python on each leaderboard poll.
+    finished = finished.annotate(best_position=Window(
+        expression=RowNumber(), partition_by=[F("user_id")],
+        order_by=[F("score").desc(), F("finished_at").asc(), F("pk").asc()],
+    )).filter(best_position=1).order_by("-score", "finished_at", "user_id").values(
+        "user_id", "score", "user__first_name", "user__last_name", "user__username",
+    )
     for attempt in finished:
-        if attempt.user_id in seen:
-            continue
-        seen.add(attempt.user_id)
-        rows.append({"user_id": attempt.user_id, "username": attempt.user.get_full_name().strip() or attempt.user.username,
-                     "score": attempt.score, "attempts": counts[attempt.user_id], "rank": len(rows) + 1})
+        name = f"{attempt['user__first_name']} {attempt['user__last_name']}".strip()
+        rows.append({"user_id": attempt["user_id"], "username": name or attempt["user__username"],
+                     "score": attempt["score"], "attempts": counts[attempt["user_id"]], "rank": len(rows) + 1})
     return rows, sum(counts.values())
 
 

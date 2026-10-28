@@ -118,7 +118,7 @@ body.apex-night-theme.editorial-theme .crazy-jury-shell { background:linear-grad
   .nightshift-mobile-brand { display:inline-block; }
   body.apex-night-theme.editorial-theme .nightshift-crumb { display:none; }
   body.apex-night-theme.editorial-theme .main-content { padding:26px 17px 38px; }
-  .nightshift-mobile-nav { display:grid; position:fixed; inset:auto 0 0; z-index:1050; grid-template-columns:repeat(4,minmax(0,1fr)); padding:8px 5px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #3b424b; background:rgba(23,27,33,.97); backdrop-filter:blur(20px); }
+  .nightshift-mobile-nav { display:grid; position:fixed; inset:auto 0 0; z-index:1050; grid-template-columns:repeat(5,minmax(0,1fr)); padding:8px 5px calc(8px + env(safe-area-inset-bottom)); border-top:1px solid #3b424b; background:rgba(23,27,33,.97); backdrop-filter:blur(20px); }
   .nightshift-mobile-nav a { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; min-height:44px; color:#9aa1ab!important; text-decoration:none!important; font-size:9px; font-weight:750; }
   .nightshift-mobile-nav svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.65; stroke-linecap:round; stroke-linejoin:round; }
   .nightshift-mobile-nav a.is-active { color:#f3f5f7!important; }.nightshift-mobile-nav a.is-active svg { color:var(--nightshift-red); }

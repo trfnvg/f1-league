@@ -73,6 +73,10 @@ def _russian_plural(value, forms):
 
 
 def get_selected_season(request=None):
+    # A view and its template context use the same selection. Keep this cache
+    # strictly request-local: changing the active season must affect the next GET.
+    if request is not None and hasattr(request, "_selected_season"):
+        return request._selected_season
     active = Season.get_active()
     if request is None:
         return active
@@ -80,15 +84,21 @@ def get_selected_season(request=None):
     try:
         requested_year = int(request.GET.get("season", ""))
     except (TypeError, ValueError):
-        return active
-    return Season.objects.filter(year=requested_year).first() or active
+        requested_year = None
+    selected = active
+    if requested_year and requested_year != active.year:
+        selected = Season.objects.filter(year=requested_year).first() or active
+    request._selected_season = selected
+    return selected
 
 
-def build_leaderboard(season_year):
-    events = list(Event.objects.filter(season_year=season_year).order_by("round_number"))
+def build_leaderboard(season_year, *, events=None):
+    events = (list(Event.objects.filter(season_year=season_year).order_by("round_number"))
+              if events is None else sorted(events, key=lambda event: event.round_number))
     scores = list(
         Score.objects.filter(event__season_year=season_year)
-        .select_related("user", "event")
+        # Consumers use IDs, points and breakdowns, not score.user/score.event.
+        # Hydrating the same player and event for every score multiplies memory.
         .order_by("event__round_number")
     )
     scores_map = {(score.user_id, score.event_id): score for score in scores}
@@ -664,13 +674,6 @@ def build_activity_feed(leaderboard, limit=5):
     scored_events = leaderboard["scored_events"]
     event_ids = [event.id for event in scored_events]
     user_ids = [user.id for user in users]
-    predictions = {
-        (prediction.user_id, prediction.event_id): prediction
-        for prediction in Prediction.objects.filter(
-            event_id__in=event_ids,
-            user_id__in=user_ids,
-        )
-    }
     results = {
         result.event_id: result
         for result in Result.objects.filter(event_id__in=event_ids)
@@ -684,6 +687,16 @@ def build_activity_feed(leaderboard, limit=5):
     ]
     if not published_events:
         return newest([item for item in [arcade_news, jury_news, *duel_news] if item])
+
+    # Only the latest published GP can contribute prediction news. Historical
+    # scores still establish personal bests; historical prediction bodies don't.
+    latest_published_event = published_events[-1]
+    predictions = {
+        (prediction.user_id, prediction.event_id): prediction
+        for prediction in Prediction.objects.filter(
+            event_id=latest_published_event.pk, user_id__in=user_ids,
+        ).only("user_id", "event_id", "p1", "p2", "p3")
+    }
 
     def event_timestamp(event):
         result = results.get(event.id)
@@ -720,6 +733,13 @@ def build_activity_feed(leaderboard, limit=5):
     personal_bests = {}
     feed = []
     for event in published_events:
+        if event.pk != latest_published_event.pk:
+            for user in users:
+                score = leaderboard["scores_map"].get((user.pk, event.pk))
+                if score:
+                    previous_best = personal_bests.get(user.pk)
+                    personal_bests[user.pk] = max(previous_best or score.points, score.points)
+            continue
         event_scores = {}
         for user in users:
             score = leaderboard["scores_map"].get((user.id, event.id))

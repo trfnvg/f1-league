@@ -93,6 +93,7 @@ jobs:
           python tests/monitoring_browser.py --browser chromium
           python tests/monitoring_browser.py --browser webkit
           python tests/nightshift_browser.py --browser webkit --widths 390 1440 --output-dir /tmp/fastlap-ci-ui
+          python tests/calendar_browser.py --browser webkit --output-dir /tmp/fastlap-ci-calendar
 
 # A green workflow does NOT automatically gate an independent Timeweb auto-deploy.
 # Configure branch protection/deployment separately; see docs/reliability.md.
