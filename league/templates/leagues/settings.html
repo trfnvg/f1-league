@@ -1,28 +1,24 @@
 {% extends 'leagues/base.html' %}
 {% load static league_extras %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/league-management.css' %}?v=3-members">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/league-management.css' %}?v=4-pitwall">{% endblock %}
 {% block league_breadcrumb %}<nav class="leagues-breadcrumb manage-breadcrumb" aria-label="Навигация по лигам"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a><span aria-hidden="true">/</span><a href="{% url 'league:friend_league' league.id %}?year={{ league_season.season.year }}">{{ league.name }}</a></nav>{% endblock %}
 {% block league_content %}
 <div class="league-manage">
   <header class="manage-header">
-    <div><span class="manage-eyebrow">FASTLAP / СЕЗОН {{ league_season.season.year }}</span><h1>Управление лигой</h1><p>{{ league.name }}</p></div>
+    <div class="manage-identity">{% if league.avatar %}<img class="manage-identity-logo" src="{{ league.avatar.url }}" alt="">{% else %}<span class="manage-identity-logo manage-identity-placeholder" aria-hidden="true">{{ league.name|first|upper }}</span>{% endif %}<div><span class="manage-eyebrow">{{ league_season.season.year }} / ВЛАДЕЛЕЦ</span><h1>Управление лигой</h1><p>{{ league.name }}</p></div></div>
     <a class="manage-back" href="{% url 'league:friend_league' league.id %}?year={{ league_season.season.year }}"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M16 10H4m5-5-5 5 5 5"/></svg> К лиге</a>
   </header>
 
-  <section class="manage-card manage-invites" aria-labelledby="manage-invites-title">
-    <div class="manage-invite-intro"><h2 id="manage-invites-title">Пригласить друзей</h2>
-      {% if not invites_enabled %}<p>Приглашения в исторический зачёт пока недоступны: сначала нужно завершить его перенос. Существующие участники продолжают играть как раньше.</p>
-      {% else %}<p>Одна постоянная ссылка для всей лиги. После обновления прежние ссылки перестанут работать; участники останутся в лиге.</p>{% endif %}
-    </div>
-    {% if invites_enabled %}
-      <div class="manage-invite-actions"><form method="post" {% if invite_link %}data-confirm-invite-rotation{% endif %}>{% csrf_token %}<input type="hidden" name="action" value="create_invite"><input type="hidden" name="year" value="{{ league_season.season.year }}"><button type="submit" class="manage-primary">{% if invite_link %}Обновить ссылку{% else %}Создать ссылку{% endif %}</button></form><a class="manage-back" href="{% url 'league:friend_league_invites' league.id %}?year={{ league_season.season.year }}">История ссылок {% include 'ui_arrow.html' %}</a></div>
-      {% if invite_link %}<div class="manage-invite-share"><label for="league-invite-link">Постоянная ссылка лиги</label><div><input id="league-invite-link" type="text" value="{{ invite_link }}" readonly autocomplete="off" spellcheck="false"><button type="button" class="manage-back" data-copy-invite>Скопировать</button></div><p role="status" data-copy-status>Ссылка не истекает и всегда доступна здесь. Не публикуйте её в открытом доступе.</p></div>{% endif %}
-    {% endif %}
-  </section>
+  <nav class="manage-nav" aria-label="Разделы управления лигой">
+    <a href="?year={{ league_season.season.year }}&amp;section=settings" {% if management_section == 'settings' %}aria-current="page"{% endif %}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 10h12M4 15h12M7 3v4m6 1v4m-6 1v4"/></svg>Настройки</a>
+    <a href="?year={{ league_season.season.year }}&amp;section=members" {% if management_section == 'members' %}aria-current="page"{% endif %}><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="6" r="3"/><path d="M2 17v-2a6 6 0 0 1 12 0v2m0-14a3 3 0 0 1 0 6m2 3a5 5 0 0 1 2 5"/></svg>Участники <span>{{ members|length }}</span></a>
+    <a href="?year={{ league_season.season.year }}&amp;section=judging" {% if management_section == 'judging' %}aria-current="page"{% endif %}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 18V3m0 1h11l-2 4 2 4H5"/></svg>Судейство</a>
+  </nav>
 
-  <div class="manage-grid">
+  {% if management_section == 'settings' %}
+  <div class="manage-settings-layout">
     <section class="manage-card manage-profile" aria-labelledby="manage-profile-title">
-      <header class="manage-card-head"><div><span class="manage-eyebrow">01 / НАСТРОЙКИ</span><h2 id="manage-profile-title">Название и аватар</h2><p>Настройте, как лига выглядит для участников.</p></div><span class="manage-head-mark" aria-hidden="true">FL</span></header>
+      <header class="manage-card-head"><div><h2 id="manage-profile-title">Название и аватар</h2><p>Лицо вашей команды.</p></div></header>
       <form method="post" enctype="multipart/form-data" class="manage-profile-form" data-league-profile-form>
         {% csrf_token %}
         {% if form.non_field_errors %}<div class="manage-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
@@ -47,28 +43,36 @@
       </form>
     </section>
 
+    <aside class="manage-settings-aside">
+      {% include 'leagues/settings_invite.html' %}
+      <details class="manage-danger"><summary>Удаление лиги <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></summary><p>Лига исчезнет у всех участников. Общие прогнозы игроков останутся.</p><a href="{% url 'league:friend_league_delete' league.id %}">Удалить лигу {% include 'ui_arrow.html' %}</a></details>
+    </aside>
+  </div>
+  {% endif %}
+
+  {% if management_section == 'judging' %}
     <section class="manage-card manage-rounds" aria-labelledby="manage-rounds-title">
-      <header class="manage-card-head"><div><span class="manage-eyebrow">02 / СЕЗОН {{ league_season.season.year }}</span><h2 id="manage-rounds-title">Зачёт этапа</h2><p>Гонщик дня и крейзи-предикты оцениваются только для этой лиги.</p></div></header>
+      <header class="manage-card-head"><div><h2 id="manage-rounds-title">Зачёт этапа</h2><p>Гонщик дня и крейзи-предикты оцениваются только для этой лиги.</p></div><span class="manage-head-mark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 18V3m0 1h11l-2 4 2 4H5"/></svg></span></header>
       <div class="manage-round-list">{% for event in events %}{% if forloop.counter <= 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% empty %}<p class="manage-empty">Здесь появятся этапы сезона.</p>{% endfor %}</div>
       {% if events|length > 5 %}<details class="manage-round-more"><summary>Все этапы <span>{{ events|length }}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></summary><div class="manage-round-list">{% for event in events %}{% if forloop.counter > 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% endfor %}</div></details>{% endif %}
     </section>
-  </div>
+  {% endif %}
 
+  {% if management_section == 'members' %}
   <section class="manage-card manage-members" aria-labelledby="manage-members-title">
-    <header class="manage-card-head"><div><span class="manage-eyebrow">03 / ПАДДОК</span><h2 id="manage-members-title">Участники</h2><p>{% if is_owner %}Управляйте ролями участников лиги.{% else %}Состав и роли участников лиги.{% endif %}</p></div><span class="manage-member-count">{{ members|length }} <small>участников</small></span></header>
-    <details class="manage-role-guide"><summary>Права участников</summary><dl><div><dt>Владелец</dt><dd>Все настройки, назначение ролей и удаление лиги.</dd></div><div><dt>Управляющий</dt><dd>Название, аватар, приглашения и судейство. Не может менять роли и удалять лигу.</dd></div><div><dt>Модератор</dt><dd>Зачёт крейзи-предиктов и гонщика дня, управление приглашениями.</dd></div><div><dt>Игрок</dt><dd>Прогнозы, результаты и приглашение друзей по действующей ссылке.</dd></div></dl></details>
+    <header class="manage-card-head"><div><h2 id="manage-members-title">Участники</h2><p>Назначайте модераторов для судейства этапов.</p></div><span class="manage-member-count">{{ members|length }}</span></header>
+    <details class="manage-role-guide"><summary>Права участников</summary><dl><div><dt>Владелец</dt><dd>Все настройки, назначение ролей и удаление лиги.</dd></div><div><dt>Модератор</dt><dd>Зачёт крейзи-предиктов и гонщика дня, управление приглашениями.</dd></div><div><dt>Игрок</dt><dd>Прогнозы, результаты и приглашение друзей по действующей ссылке.</dd></div></dl></details>
     <div class="manage-member-tools" data-member-tools hidden>
       <div><label for="member-search">Найти участника</label><input id="member-search" type="search" placeholder="Имя или @логин" autocomplete="off" maxlength="150" data-member-search></div>
-      <div><label for="member-role-filter">Роль</label><select id="member-role-filter" data-member-filter><option value="">Все роли</option><option value="owner">Владелец</option><option value="manager">Управляющие</option><option value="moderator">Модераторы</option><option value="player">Игроки</option></select></div>
+      <div><label for="member-role-filter">Роль</label><select id="member-role-filter" data-member-filter><option value="">Все роли</option><option value="owner">Владелец</option><option value="moderator">Модераторы</option><option value="player">Игроки</option></select></div>
       <p class="manage-member-status" role="status" data-member-status></p>
     </div>
     <div class="manage-member-list">{% for member in members %}<div class="manage-member" data-member-row data-member-role="{% if member.user_id == league.owner_id %}owner{% else %}{{ member.role }}{% endif %}">
       <div class="manage-member-person"><span class="manage-member-avatar leagues-avatar">{% if member.user.league_profile.avatar %}<img src="{{ member.user.league_profile.avatar.url }}" alt="" loading="lazy" width="40" height="40">{% else %}{{ member.user|player_name|first|upper }}{% endif %}</span><div><strong data-member-name>{{ member.user|player_name }}</strong>{% if member.user.league_profile.handle %}<small data-member-handle>@{{ member.user.league_profile.handle }}</small>{% endif %}<small class="manage-member-role">{% if member.user_id == league.owner_id %}Владелец{% else %}{{ member.get_role_display }}{% endif %}</small></div></div>
-      {% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}" class="manage-role-form" data-role-form>{% csrf_token %}<input type="hidden" name="year" value="{{ league_season.season.year }}"><label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}" data-original-role="{{ member.role }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option><option value="manager" {% if member.role == 'manager' %}selected{% endif %}>Управляющий</option></select><button type="submit">Сохранить<span class="visually-hidden"> роль {{ member.user|player_name }}</span></button></form>{% endif %}
+      {% if is_owner and member.user_id != league.owner_id %}<form method="post" action="{% url 'league:friend_league_role' league.id member.id %}" class="manage-role-form" data-role-form>{% csrf_token %}<input type="hidden" name="year" value="{{ league_season.season.year }}"><label class="visually-hidden" for="role-{{ member.id }}">Роль {{ member.user|player_name }}</label><select name="role" id="role-{{ member.id }}" data-original-role="{{ member.role }}"><option value="player" {% if member.role == 'player' %}selected{% endif %}>Игрок</option><option value="moderator" {% if member.role == 'moderator' %}selected{% endif %}>Модератор</option></select><button type="submit">Сохранить<span class="visually-hidden"> роль {{ member.user|player_name }}</span></button></form>{% endif %}
     </div>{% empty %}<p class="manage-empty">В лиге пока нет участников.</p>{% endfor %}<p class="manage-empty" data-member-empty hidden>Никого не нашли. Измените имя или выбранную роль.</p></div>
   </section>
-
-  {% if is_owner %}<section class="manage-danger"><div><h2>Удаление лиги</h2><p>Лига исчезнет у всех участников. Общие прогнозы игроков останутся.</p></div><a href="{% url 'league:friend_league_delete' league.id %}">Удалить лигу <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h12m-5-5 5 5-5 5"/></svg></a></section>{% endif %}
+  {% endif %}
 </div>
 {% endblock %}
 {% block extra_scripts %}{{ block.super }}<script src="{% static 'league/league-management.js' %}?v=2-members" defer></script>{% endblock %}

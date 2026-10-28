@@ -40,7 +40,7 @@ def membership_for(user, league):
 
 def require_moderator(user, league):
     membership = membership_for(user, league)
-    if membership.league.owner_id != user.pk and membership.role not in (LeagueMembership.Role.MODERATOR, LeagueMembership.Role.MANAGER):
+    if membership.league.owner_id != user.pk and membership.role != LeagueMembership.Role.MODERATOR:
         raise PermissionDenied("Нужны права модератора этой лиги.")
     return membership
 
@@ -104,9 +104,7 @@ def create_league(*, owner, name, season, start_event, ruleset=LeagueSeason.Rule
     league_season = LeagueSeason(league=league, season=season, start_event=start_event, ruleset=ruleset, created_at=now)
     league_season.full_clean()
     league_season.save()
-    entry = _enroll(league_season, owner, now)
-    entry.membership.role = LeagueMembership.Role.MANAGER
-    entry.membership.save(update_fields=("role",))
+    _enroll(league_season, owner, now)
     LeagueActivity.objects.create(league=league, actor=owner, action="created", details={"season": season.year, "ruleset": ruleset})
     return league_season
 

@@ -1,15 +1,11 @@
 from datetime import timedelta
-from importlib import import_module
 from io import BytesIO
 from tempfile import TemporaryDirectory
-from types import SimpleNamespace
 from urllib.parse import urlsplit
 
 from PIL import Image
-from django.apps import apps
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import connection
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -49,7 +45,7 @@ class LeagueManagementTests(TestCase):
         profile = self.player.league_profile
         profile.handle = "alex_test"
         profile.save(update_fields=["handle"])
-        response = self.client.get(self.url())
+        response = self.client.get(self.url(), {"section": "members"})
         self.assertContains(response, "Алексей")
         self.assertContains(response, "@alex_test")
         self.assertContains(response, 'data-member-role="owner"')
@@ -57,22 +53,40 @@ class LeagueManagementTests(TestCase):
         self.assertContains(response, 'data-member-filter')
         self.assertContains(response, 'data-role-form')
         self.assertNotContains(response, self.other.username)
+        self.assertNotContains(response, 'value="manager"')
+
+    def test_management_sections_are_separate_and_fallback_is_safe(self):
+        sections = {"settings": ("manage-profile-title", "manage-invites-title"),
+            "members": ("manage-members-title",), "judging": ("manage-rounds-title",)}
+        all_ids = {title for titles in sections.values() for title in titles}
+        for section, visible in sections.items():
+            response = self.client.get(self.url(), {"section": section})
+            self.assertEqual(response.context["management_section"], section)
+            for title in all_ids:
+                if title in visible:
+                    self.assertContains(response, f'id="{title}"')
+                else:
+                    self.assertNotContains(response, f'id="{title}"')
+            self.assertContains(response, 'aria-current="page"', count=1)
+        response = self.client.get(self.url(), {"section": "//evil.example/"})
+        self.assertEqual(response.context["management_section"], "settings")
+        self.assertNotContains(response, "evil.example")
 
     def test_owner_can_change_roles_and_returns_to_selected_season_settings(self):
         url = self.url("friend_league_role", membership_id=self.entry.membership_id)
-        for role in ("manager", "moderator", "player"):
+        for role in ("moderator", "player"):
             response = self.client.post(url, {"role": role, "year": 2027})
-            self.assertRedirects(response, self.url()+"?year=2027#manage-members-title", fetch_redirect_response=False)
+            self.assertRedirects(response, self.url()+"?year=2027&section=members#manage-members-title", fetch_redirect_response=False)
             self.entry.membership.refresh_from_db()
             self.assertEqual(self.entry.membership.role, role)
         activities = LeagueActivity.objects.filter(league=self.a.league, action="role_changed")
-        self.assertEqual(activities.count(), 3)
+        self.assertEqual(activities.count(), 2)
         self.assertEqual(activities.latest("pk").details["after"], "player")
         self.client.post(url, {"role": "player"})
-        self.assertEqual(activities.count(), 3)
+        self.assertEqual(activities.count(), 2)
 
     def test_only_owner_can_assign_roles_even_by_forged_post(self):
-        for role in ("player", "moderator", "manager"):
+        for role in ("player", "moderator"):
             self.entry.membership.role = role
             self.entry.membership.save(update_fields=["role"])
             self.client.force_login(self.player)
@@ -85,7 +99,7 @@ class LeagueManagementTests(TestCase):
         response = self.client.post(self.url("friend_league_role", membership_id=owner_member.pk), {"role":"player"}, follow=True)
         self.assertContains(response, "Роль владельца лиги изменить нельзя")
         owner_member.refresh_from_db()
-        self.assertEqual(owner_member.role, "manager")
+        self.assertEqual(owner_member.role, "player")
         url = self.url("friend_league_role", membership_id=self.entry.membership_id)
         self.client.post(url, {"role": "owner"})
         self.entry.membership.refresh_from_db()
@@ -182,11 +196,11 @@ class LeagueManagementTests(TestCase):
         recalculate_league_event(actor=self.owner, league_season=self.a, event=self.event)
         recalculate_league_event(actor=self.other, league_season=self.b, event=self.event)
 
-    def test_creator_has_manager_status_without_platform_permissions(self):
+    def test_creator_has_owner_rights_without_platform_permissions(self):
         member=LeagueMembership.objects.get(league=self.a.league, user=self.owner)
-        self.assertEqual(member.role, "manager")
+        self.assertEqual(member.role, "player")
         self.owner.refresh_from_db();self.assertFalse(self.owner.is_staff)
-        self.assertContains(self.client.get(self.url("friend_league")), "Управляющий лигой")
+        self.assertContains(self.client.get(self.url("friend_league")), "Владелец лиги")
         self.assertContains(self.client.get(self.url()), "Название и аватар")
 
     def test_management_rounds_prioritize_stages_ready_for_judging(self):
@@ -226,17 +240,13 @@ class LeagueManagementTests(TestCase):
         self.client.force_login(self.operator)
         self.assertEqual(self.client.get(self.url()).status_code,404)
 
-    def test_manager_can_configure_but_moderator_cannot_rename(self):
+    def test_moderator_can_judge_but_cannot_configure_or_rename(self):
         member=self.entry.membership
         member.role="moderator";member.save(update_fields=("role",))
         self.client.force_login(self.player)
         self.assertEqual(self.client.get(self.url()).status_code,403)
-        member.role="manager";member.save(update_fields=("role",))
-        response = self.client.get(self.url())
-        self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Удалить лигу')
-        self.assertNotContains(response, 'name="role"')
-        self.assertEqual(self.client.post(self.url(),{"name":"Managed Alpha"}).status_code,302)
+        self.assertEqual(self.client.post(self.url(),{"name":"Managed Alpha"}).status_code,403)
+        self.assertEqual(self.client.get(self.url("friend_league_invites")).status_code, 200)
 
     def test_avatar_is_normalized_and_svg_or_invalid_upload_is_rejected(self):
         with TemporaryDirectory(prefix="fastlap-avatar-test-") as directory, override_settings(MEDIA_ROOT=directory):
@@ -341,15 +351,15 @@ class LeagueManagementTests(TestCase):
         self.assertRedirects(self.client.get(reverse("league:leaderboard")),
             self.url("friend_league")+"?year=2027",fetch_redirect_response=False)
 
-    def test_migration_gives_grisha_local_manager_rights_only(self):
+    def test_retired_manager_role_is_rejected(self):
         grisha=User.objects.create_user("Гриша")
         entry=enroll_member(actor=self.owner,league_season=self.a,user=grisha)
         self.a.league.legacy_key="original-friends";self.a.league.save(update_fields=("legacy_key",))
-        import_module("league.migrations.0046_assign_league_managers").assign(apps,SimpleNamespace(connection=connection))
-        entry.membership.refresh_from_db();self.assertEqual(entry.membership.role,"manager")
+        self.client.post(self.url("friend_league_role", membership_id=entry.membership_id), {"role": "manager"})
+        entry.membership.refresh_from_db();self.assertEqual(entry.membership.role,"player")
         grisha.refresh_from_db();self.assertFalse(grisha.is_staff);self.assertFalse(grisha.is_superuser)
         self.client.force_login(grisha)
-        self.assertEqual(self.client.get(self.url()).status_code,200)
+        self.assertEqual(self.client.get(self.url()).status_code,403)
 
     def test_unknown_rules_and_other_season_cannot_receive_a_day_decision(self):
         self.publish()
@@ -379,10 +389,10 @@ class LeagueManagementTests(TestCase):
         delete_league(actor=self.owner,league=self.a.league,confirmation="Alpha")
         self.assertEqual(LeagueActivity.objects.filter(league=self.a.league,action="archived").count(),1)
 
-    def test_manager_cannot_delete_and_delete_post_requires_csrf(self):
-        member=self.entry.membership;member.role="manager";member.save(update_fields=("role",))
+    def test_moderator_cannot_delete_and_delete_post_requires_csrf(self):
+        member=self.entry.membership;member.role="moderator";member.save(update_fields=("role",))
         self.client.force_login(self.player)
-        self.assertNotContains(self.client.get(self.url()),"Удалить лигу")
+        self.assertEqual(self.client.get(self.url()).status_code,403)
         self.assertEqual(self.client.get(self.url("friend_league_delete")).status_code,403)
         self.assertEqual(self.client.post(self.url("friend_league_delete"),{"confirmation":"Alpha"}).status_code,403)
         self.client.force_login(self.operator)

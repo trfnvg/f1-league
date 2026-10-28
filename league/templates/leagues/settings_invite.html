@@ -1,0 +1,11 @@
+<section class="manage-card manage-invites" aria-labelledby="manage-invites-title">
+  <div class="manage-invite-intro"><span class="manage-eyebrow">В ПАДДОК С ДРУЗЬЯМИ</span><h2 id="manage-invites-title">Пригласить в лигу</h2>
+    {% if not invites_enabled %}<p>Приглашения станут доступны после завершения переноса исторического зачёта.</p>
+    {% else %}<p>Одна ссылка для всей компании. Без срока действия.</p>{% endif %}
+  </div>
+  {% if invites_enabled %}
+    {% if invite_link %}<div class="manage-invite-share"><label for="league-invite-link">Ссылка для вступления</label><div><input id="league-invite-link" type="text" value="{{ invite_link }}" readonly autocomplete="off" spellcheck="false"><button type="button" class="manage-back" data-copy-invite>Скопировать</button></div><p role="status" data-copy-status>Отправляйте друзьям, не публикуйте в открытом доступе.</p></div>{% endif %}
+    <div class="manage-invite-actions"><form method="post" {% if invite_link %}data-confirm-invite-rotation{% endif %}>{% csrf_token %}<input type="hidden" name="action" value="create_invite"><input type="hidden" name="year" value="{{ league_season.season.year }}"><button type="submit" class="{% if invite_link %}manage-back{% else %}manage-primary{% endif %}">{% if invite_link %}Обновить ссылку{% else %}Создать ссылку{% endif %}</button></form><a class="manage-invite-history" href="{% url 'league:friend_league_invites' league.id %}?year={{ league_season.season.year }}">История {% include 'ui_arrow.html' %}</a></div>
+    {% if invite_link %}<p class="manage-invite-warning">Обновление отключит прежние ссылки. Участники останутся в лиге.</p>{% endif %}
+  {% endif %}
+</section>

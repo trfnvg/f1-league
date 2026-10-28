@@ -118,6 +118,7 @@ def render_pages():
     league.league.avatar = 'avatars/test.png'
     league.league.save(update_fields=['avatar'])
     pages['/league-settings/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id])).content
+    pages['/league-judging/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id]), {'section':'judging'}).content
     pages['/league-settings-invite/'] = client.post(reverse('league:friend_league_settings', args=[league.league_id]), {'action':'create_invite'}, follow=True).content
     client.force_login(player)
     pages['/league/'] = client.get(reverse('league:friend_league', args=[league.league_id])).content
@@ -194,7 +195,7 @@ def render_pages():
         enroll_member(actor=player, league_season=private, user=guest)
     pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
     client.force_login(player)
-    pages["/members-manage/"] = client.get(reverse("league:friend_league_settings", args=[private.league_id])).content
+    pages["/members-manage/"] = client.get(reverse("league:friend_league_settings", args=[private.league_id]), {"section":"members"}).content
     from league import error_views
     error_request = RequestFactory().get('/leagues/join/example/')
     for name, view in (("403", error_views.permission_denied), ("404", error_views.page_not_found),
@@ -277,7 +278,8 @@ def run(output, widths, engine):
                 page.locator('[data-member-search]').fill('')
                 role_form = page.locator('[data-role-form]').first
                 assert role_form.locator('button').is_disabled()
-                role_form.locator('select').select_option('manager')
+                assert page.locator('option[value="manager"]').count() == 0
+                role_form.locator('select').select_option('moderator')
                 assert role_form.locator('button').is_enabled()
                 for allowed in (False, True):
                     assert role_form.evaluate('''(form, allowed) => {
@@ -285,10 +287,20 @@ def run(output, widths, engine):
                         window.confirm = message => {text = message; return allowed;};
                         form.addEventListener('submit', event => {blocked = event.defaultPrevented; event.preventDefault();}, {once:true});
                         form.requestSubmit(); window.confirm = original;
-                        return blocked === !allowed && text.includes('Управляющий');
+                        return blocked === !allowed && text.includes('Модератор');
                     }''', allowed)
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                page.locator('[data-member-search]').fill(first_handle)
                 page.locator('.manage-members').screenshot(path=str(output/f'{width}-members-directory.png'))
+                page.goto(base + '/league-judging/')
+                assert page.locator('.manage-round:visible').count() == 5
+                page.locator('.manage-round-more summary').click()
+                assert page.locator('.manage-round:visible').count() > 5
+                page.locator('.manage-round-more summary').click()
+                assert page.locator('.manage-profile').count() == 0
+                assert page.locator('.manage-nav a[aria-current]').inner_text() == 'Судейство'
+                assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                page.screenshot(path=str(output/f'{width}-judging.png'), full_page=True)
                 for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/league-settings-invite/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
@@ -310,13 +322,14 @@ def run(output, widths, engine):
                         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                     if route == '/league-settings/':
                         assert page.locator('.manage-header h1').inner_text() == 'Управление лигой'
-                        assert page.locator('.manage-card').count() == 4
+                        assert page.locator('.manage-card').count() == 2
+                        assert page.locator('.manage-members,.manage-rounds').count() == 0
+                        assert page.locator('.manage-nav a[aria-current]').inner_text() == 'Настройки'
                         assert page.locator('.manage-invite-actions button').inner_text() == 'Создать ссылку'
-                        assert page.locator('.manage-round-more').is_visible()
-                        assert page.locator('.manage-round:visible').count() == 5
-                        page.locator('.manage-round-more summary').click()
-                        assert page.locator('.manage-round:visible').count() > 5
-                        page.locator('.manage-round-more summary').click()
+                        assert not page.locator('.manage-danger a').is_visible()
+                        page.locator('.manage-danger summary').click()
+                        assert page.locator('.manage-danger a').is_visible()
+                        page.locator('.manage-danger summary').click()
                         assert page.locator('[data-logo-image]').evaluate("e=>getComputedStyle(e).objectFit==='contain'")
                         assert page.locator('[data-logo-clear]').is_visible()
                         page.locator('[data-logo-clear]').check()

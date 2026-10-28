@@ -15,7 +15,7 @@ from django.views.decorators.http import require_GET, require_POST, require_http
 from .competition_scoring import recalculate_league_event
 from .forms import PredictionForm
 from .league_forms import CreateLeagueForm, LeagueDayForm, LeagueProfileForm
-from .league_management import decide_crazy, decide_day, delete_league, require_manager, update_profile
+from .league_management import decide_crazy, decide_day, delete_league, require_owner, update_profile
 from .league_standings import standings
 from .home_events import select_current_event
 from .prediction_submission import save_shared_prediction
@@ -59,8 +59,8 @@ def _season(request, league):
 def _rights(user, league):
     member = membership_for(user, league)
     return {"is_owner": league.owner_id == user.pk,
-        "can_configure": league.owner_id == user.pk or member.role == "manager",
-        "can_manage": league.owner_id == user.pk or member.role in ("moderator", "manager")}
+        "can_configure": league.owner_id == user.pk,
+        "can_manage": league.owner_id == user.pk or member.role == "moderator"}
 
 
 @login_required
@@ -212,7 +212,7 @@ def role(request, league_id, membership_id):
         messages.error(request, _error(exc))
     else:
         messages.success(request, "Роль участника обновлена.")
-    return redirect(f"{reverse('league:friend_league_settings', args=[league.pk])}?year={season.season.year}#manage-members-title")
+    return redirect(f"{reverse('league:friend_league_settings', args=[league.pk])}?year={season.season.year}&section=members#manage-members-title")
 
 
 @login_required
@@ -293,8 +293,11 @@ def judge(request, league_id, event_id, entry_id):
 @require_http_methods(["GET", "POST"])
 def settings(request, league_id):
     league = _league(request, league_id)
-    require_manager(request.user, league)
+    require_owner(request.user, league)
     season = _season(request, league)
+    section = request.GET.get("section", "settings")
+    if section not in ("settings", "members", "judging"):
+        section = "settings"
     creating_invite = request.method == "POST" and request.POST.get("action") == "create_invite"
     form = LeagueProfileForm(None if creating_invite else request.POST or None,
         None if creating_invite else request.FILES or None, instance=league)
@@ -325,7 +328,7 @@ def settings(request, league_id):
     token = current_invite(actor=request.user, league=league)
     invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token])) if token else None
     return render(request, "leagues/settings.html", dict(league=league, league_season=season, form=form,
-        members=members, events=events, invite_link=invite_link,
+        members=members, events=events, invite_link=invite_link, management_section=section,
         invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",
         **_rights(request.user, league)))
 

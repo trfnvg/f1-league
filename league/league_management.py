@@ -10,10 +10,10 @@ from .competition_scoring import _project_league, _text_digest, judge_crazy_pred
 from .prediction_rules import RULES_VERSION
 
 
-def require_manager(actor, league):
+def require_owner(actor, league):
     member = membership_for(actor, league)
-    if league.owner_id != actor.pk and member.role != LeagueMembership.Role.MANAGER:
-        raise PermissionDenied("Нужны права управляющего этой лиги.")
+    if league.owner_id != actor.pk:
+        raise PermissionDenied("Настройки доступны только владельцу лиги.")
     return member
 
 
@@ -39,7 +39,7 @@ def delete_league(*, actor, league, confirmation):
 @transaction.atomic
 def update_profile(*, actor, league, name, avatar=None):
     league = League.objects.select_for_update().get(pk=league.pk)
-    require_manager(actor, league)
+    require_owner(actor, league)
     before = {"name": league.name, "avatar": league.avatar.name}
     league.name = name.strip()
     if avatar is not None:

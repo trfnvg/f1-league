@@ -251,7 +251,6 @@ class LeagueMembership(models.Model):
     class Role(models.TextChoices):
         PLAYER = "player", "Игрок"
         MODERATOR = "moderator", "Модератор"
-        MANAGER = "manager", "Управляющий"
 
     league = models.ForeignKey(League, on_delete=models.PROTECT, related_name="memberships")
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="friend_league_memberships")
@@ -262,7 +261,7 @@ class LeagueMembership(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=("league", "user"), name="league_member_unique"),
-            models.CheckConstraint(condition=Q(role__in=("player", "moderator", "manager")), name="league_member_role_valid"),
+            models.CheckConstraint(condition=Q(role__in=("player", "moderator")), name="league_member_role_valid"),
         ]
 
     def __str__(self):
