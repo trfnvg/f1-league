@@ -46,7 +46,7 @@ class LeagueManagementTests(TestCase):
     def test_settings_creates_invite_without_editing_profile_and_get_is_read_only(self):
         self.assertContains(self.client.get(self.url()), "Создать ссылку")
         self.assertEqual(LeagueInvite.objects.count(), 0)
-        response = self.client.post(self.url(), {"action": "create_invite", "year": 2027, "name": "Forged name"})
+        response = self.client.post(self.url(), {"action": "create_invite", "year": 2027, "name": "Forged name"}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="league-invite-link"')
         self.assertContains(response, 'data-copy-invite')
@@ -55,7 +55,9 @@ class LeagueManagementTests(TestCase):
         self.assertNotIn(invite.token_digest, response.context["invite_link"])
         self.a.league.refresh_from_db()
         self.assertEqual(self.a.league.name, "Alpha")
-        self.client.get(self.url())
+        again = self.client.get(self.url())
+        self.assertEqual(again.context["invite_link"], response.context["invite_link"])
+        self.assertContains(again, "Обновить ссылку")
         self.assertEqual(LeagueInvite.objects.count(), 1)
         strict = Client(enforce_csrf_checks=True)
         strict.force_login(self.owner)
@@ -80,7 +82,7 @@ class LeagueManagementTests(TestCase):
         SeasonScore.objects.create(user=newcomer, season_year=2027, points=50)
         before = list(Score.objects.order_by("pk").values())
         self.assertContains(self.client.get(self.url("friend_league")), "Пригласить")
-        response = self.client.post(self.url(), {"action": "create_invite"})
+        response = self.client.post(self.url(), {"action": "create_invite"}, follow=True)
         link = response.context["invite_link"]
         self.assertTrue(link)
         path = urlsplit(link).path

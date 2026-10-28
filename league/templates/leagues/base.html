@@ -5,4 +5,4 @@
   {% block league_breadcrumb %}<nav class="leagues-breadcrumb"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a>{% if league %}<span>/</span><a href="{% url 'league:friend_league' league.id %}{% if league_season %}?year={{ league_season.season.year }}{% endif %}">{{ league.name }}</a>{% endif %}</nav>{% endblock %}
   {% block league_content %}{% endblock %}
 </div>{% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/private-leagues.js' %}?v=league-dashboard-v3" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/private-leagues.js' %}?v=permanent-invite-v4" defer></script>{% endblock %}

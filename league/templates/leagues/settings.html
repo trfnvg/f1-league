@@ -12,11 +12,11 @@
   <section class="manage-card manage-invites" aria-labelledby="manage-invites-title">
     <div class="manage-invite-intro"><h2 id="manage-invites-title">Пригласить друзей</h2>
       {% if not invites_enabled %}<p>Приглашения в исторический зачёт пока недоступны: сначала нужно завершить его перенос. Существующие участники продолжают играть как раньше.</p>
-      {% else %}<p>Создайте ссылку и отправьте друзьям. Она действует 7 дней; вступление подтверждается после входа в аккаунт.</p>{% endif %}
+      {% else %}<p>Одна постоянная ссылка для всей лиги. После обновления прежние ссылки перестанут работать; участники останутся в лиге.</p>{% endif %}
     </div>
     {% if invites_enabled %}
-      <div class="manage-invite-actions"><form method="post">{% csrf_token %}<input type="hidden" name="action" value="create_invite"><input type="hidden" name="year" value="{{ league_season.season.year }}"><button type="submit" class="manage-primary">Создать ссылку</button></form><a class="manage-back" href="{% url 'league:friend_league_invites' league.id %}?year={{ league_season.season.year }}">Все приглашения {% include 'ui_arrow.html' %}</a></div>
-      {% if invite_link %}<div class="manage-invite-share"><label for="league-invite-link">Ссылка для вступления</label><div><input id="league-invite-link" type="text" value="{{ invite_link }}" readonly autocomplete="off" spellcheck="false"><button type="button" class="manage-back" data-copy-invite>Скопировать</button></div><p role="status" data-copy-status>Скопируйте и сохраните ссылку: целиком она показывается только после создания. Не публикуйте её в открытом доступе.</p></div>{% endif %}
+      <div class="manage-invite-actions"><form method="post" {% if invite_link %}data-confirm-invite-rotation{% endif %}>{% csrf_token %}<input type="hidden" name="action" value="create_invite"><input type="hidden" name="year" value="{{ league_season.season.year }}"><button type="submit" class="manage-primary">{% if invite_link %}Обновить ссылку{% else %}Создать ссылку{% endif %}</button></form><a class="manage-back" href="{% url 'league:friend_league_invites' league.id %}?year={{ league_season.season.year }}">История ссылок {% include 'ui_arrow.html' %}</a></div>
+      {% if invite_link %}<div class="manage-invite-share"><label for="league-invite-link">Постоянная ссылка лиги</label><div><input id="league-invite-link" type="text" value="{{ invite_link }}" readonly autocomplete="off" spellcheck="false"><button type="button" class="manage-back" data-copy-invite>Скопировать</button></div><p role="status" data-copy-status>Ссылка не истекает и всегда доступна здесь. Не публикуйте её в открытом доступе.</p></div>{% endif %}
     {% endif %}
   </section>
 

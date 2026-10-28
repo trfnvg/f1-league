@@ -118,7 +118,7 @@ def render_pages():
     league.league.avatar = 'avatars/test.png'
     league.league.save(update_fields=['avatar'])
     pages['/league-settings/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id])).content
-    pages['/league-settings-invite/'] = client.post(reverse('league:friend_league_settings', args=[league.league_id]), {'action':'create_invite'}).content
+    pages['/league-settings-invite/'] = client.post(reverse('league:friend_league_settings', args=[league.league_id]), {'action':'create_invite'}, follow=True).content
     pages["/admin-add/"] = client.get(reverse("admin:league_event_add")).content
     pages["/admin-edit/"] = client.get(reverse("admin:league_event_change", args=[event.pk])).content
     pages[reverse("admin:jsi18n")] = client.get(reverse("admin:jsi18n")).content
@@ -173,7 +173,7 @@ def render_pages():
     from league.models import Result
     private = create_league(owner=player, name="Гоночная компания друзей", season=season, start_event=future, ruleset="paddock")
     _, invite_token = create_invite(actor=player, league_season=private)
-    pages["/invite-manage/"] = client.post(reverse("league:friend_league_invites", args=[private.league_id])).content
+    pages["/invite-manage/"] = client.get(reverse("league:friend_league_invites", args=[private.league_id])).content
     pages["/private-predict/"] = client.get(reverse("league:friend_league_event", args=[private.league_id, future.pk])).content
     saved = client.post(reverse('league:event_detail', args=[future.pk]), dict(
         p1='russell', p2='leclerc', p3='norris', pole='russell', fastest_lap='russell',
@@ -280,6 +280,17 @@ def run(output, widths, engine):
                     if route == '/league-settings-invite/':
                         link = page.locator('#league-invite-link').input_value()
                         assert '/leagues/join/' in link
+                        assert page.locator('.manage-invite-actions button').inner_text() == 'Обновить ссылку'
+                        assert page.evaluate("""() => {
+                            const form=document.querySelector('[data-confirm-invite-rotation]');
+                            const confirm=window.confirm;
+                            window.confirm=()=>false;
+                            const blocked=!form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+                            window.confirm=()=>true;
+                            const allowed=form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+                            window.confirm=confirm;
+                            return blocked && allowed;
+                        }""")
                         page.evaluate("Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.testCopiedInvite=text;}}})")
                         page.locator('[data-copy-invite]').click()
                         page.wait_for_function("document.querySelector('[data-copy-status]').textContent.includes('Ссылка скопирована')")

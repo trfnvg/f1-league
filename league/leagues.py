@@ -4,8 +4,9 @@ All mutations lock the league first, verify the actor's live membership, and
 choose eligibility on the server. UUIDs select a league, not authorize access.
 """
 import hashlib
+import base64
 import re
-import secrets
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -14,6 +15,7 @@ from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
 from .models import (
     Event, League, LeagueActivity, LeagueInvite, LeagueMembership, LeagueSeason, LeagueSeasonEntry, Prediction,
@@ -191,12 +193,33 @@ def _invite_digest(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
+def _permanent_token(seed):
+    return base64.urlsafe_b64encode(salted_hmac("fastlap-league-invite", str(seed),
+        algorithm="sha256").digest()).decode().rstrip("=")
+
+
+def current_invite(*, actor, league):
+    require_moderator(actor, league)
+    invite = LeagueInvite.objects.filter(permanent_league=league, revoked_at__isnull=True).first()
+    if not invite or not invite.token_seed:
+        return None
+    token = _permanent_token(invite.token_seed)
+    # A changed SECRET_KEY must not display a link that cannot be redeemed.
+    return token if _invite_digest(token) == invite.token_digest else None
+
+
 def invite_for_token(token):
     invite = LeagueInvite.objects.select_related("league_season__league", "league_season__season", "league_season__start_event").filter(token_digest=_invite_digest(token)).first()
-    if (invite is None or invite.revoked_at or invite.expires_at <= timezone.now()
+    if (invite is None or invite.revoked_at or (invite.expires_at and invite.expires_at <= timezone.now())
             or invite.league_season.league.archived_at
             or (invite.league_season.is_legacy and invite.league_season.league.legacy_key != "original-friends")):
         raise ValidationError("Приглашение недоступно или срок его действия истёк.")
+    if invite.permanent_league_id:
+        seasons = LeagueSeason.objects.filter(league_id=invite.permanent_league_id).select_related("league", "season", "start_event")
+        selected = seasons.filter(season__is_active=True).order_by("-season__year").first() or seasons.order_by("-season__year").first()
+        if selected is None or (selected.is_legacy and selected.league.legacy_key != "original-friends"):
+            raise ValidationError("У лиги нет доступного сезона.")
+        invite.league_season = selected
     return invite
 
 
@@ -208,12 +231,15 @@ def create_invite(*, actor, league_season):
     if league_season.is_legacy and league.legacy_key != "original-friends":
         raise ValidationError("Сначала нужно завершить перенос исторической лиги.")
     now = timezone.now()
-    _next_event(league_season, now)
-    if league_season.invites.filter(revoked_at__isnull=True, expires_at__gt=now).count() >= 5:
-        raise ValidationError("Уже есть пять действующих приглашений. Отзовите ненужное.")
-    token = secrets.token_urlsafe(32)
+    # The league lock serializes rotations and joins. Retire every older link,
+    # including legacy seven-day invitations and links created in other seasons.
+    LeagueInvite.objects.filter(league_season__league=league, revoked_at__isnull=True).update(
+        revoked_at=now, permanent_league=None)
+    LeagueInvite.objects.filter(permanent_league=league).update(permanent_league=None)
+    seed = uuid.uuid4()
+    token = _permanent_token(seed)
     invite = LeagueInvite.objects.create(league_season=league_season, token_digest=_invite_digest(token),
-        created_by=actor, expires_at=now+timedelta(days=7))
+        permanent_league=league, token_seed=seed, created_by=actor, expires_at=None)
     LeagueActivity.objects.create(league=league, actor=actor, action="invite_created", details={"invite_id": invite.pk})
     return invite, token
 

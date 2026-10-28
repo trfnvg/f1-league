@@ -474,10 +474,13 @@ class CompetitionScoreAudit(models.Model):
 
 class LeagueInvite(models.Model):
     league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="invites")
+    permanent_league = models.OneToOneField(League, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="permanent_invite", editable=False)
+    token_seed = models.UUIDField(null=True, blank=True, editable=False)
     token_digest = models.CharField(max_length=64, unique=True, editable=False)
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name="league_invites")
     created_at = models.DateTimeField(default=timezone.now)
-    expires_at = models.DateTimeField()
+    expires_at = models.DateTimeField(null=True, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
     uses = models.PositiveIntegerField(default=0)
 

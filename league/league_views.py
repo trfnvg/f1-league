@@ -20,7 +20,7 @@ from .league_standings import standings
 from .home_events import select_current_event
 from .prediction_submission import save_shared_prediction
 from .leagues import (
-    accept_invite, create_invite, create_league, invite_for_token, membership_for,
+    accept_invite, create_invite, create_league, current_invite, invite_for_token, membership_for,
     require_moderator, revoke_invite, set_member_role,
 )
 from .models import (
@@ -141,14 +141,16 @@ def invites(request, league_id):
     league = _league(request, league_id)
     season = _season(request, league)
     require_moderator(request.user, league)
-    link = None
     if request.method == "POST":
         try:
-            _, token = create_invite(actor=request.user, league_season=season)
-            link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token]))
+            create_invite(actor=request.user, league_season=season)
         except ValidationError as exc:
             messages.error(request, _error(exc))
-    rows = season.invites.select_related("created_by").order_by("-created_at")[:30]
+        else:
+            return redirect(f"{reverse('league:friend_league_invites', args=[league.pk])}?year={season.season.year}")
+    token = current_invite(actor=request.user, league=league)
+    link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token])) if token else None
+    rows = LeagueInvite.objects.filter(league_season__league=league).select_related("created_by").order_by("-created_at")[:30]
     return render(request, "leagues/invites.html", dict(league=league, league_season=season, invites=rows, invite_link=link, now=timezone.now()))
 
 
@@ -286,13 +288,13 @@ def settings(request, league_id):
     creating_invite = request.method == "POST" and request.POST.get("action") == "create_invite"
     form = LeagueProfileForm(None if creating_invite else request.POST or None,
         None if creating_invite else request.FILES or None, instance=league)
-    invite_link = None
     if creating_invite:
         try:
-            _, token = create_invite(actor=request.user, league_season=season)
-            invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token]))
+            create_invite(actor=request.user, league_season=season)
         except ValidationError as exc:
             messages.error(request, _error(exc))
+        else:
+            return redirect(f"{reverse('league:friend_league_settings', args=[league.pk])}?year={season.season.year}")
     elif request.method == "POST" and form.is_valid():
         try:
             update_profile(actor=request.user, league=league, **form.cleaned_data)
@@ -310,6 +312,8 @@ def settings(request, league_id):
     events = [event for event in events if event.deadline <= now] + [
         event for event in reversed(events) if event.deadline > now
     ]
+    token = current_invite(actor=request.user, league=league)
+    invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token])) if token else None
     return render(request, "leagues/settings.html", dict(league=league, league_season=season, form=form,
         members=members, events=events, invite_link=invite_link,
         invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",

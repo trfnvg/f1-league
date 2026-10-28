@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  document.querySelectorAll('[data-confirm-invite-rotation]').forEach(form=>form.addEventListener('submit',event=>{
+    if(!window.confirm('Обновить ссылку? Все прежние ссылки перестанут работать. Участники останутся в лиге.'))event.preventDefault();
+  }));
   const button=document.querySelector('[data-copy-invite]');
   if(button)button.addEventListener('click',async()=>{
     const input=document.getElementById('league-invite-link'),status=document.querySelector('[data-copy-status]');

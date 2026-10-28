@@ -12,10 +12,10 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .competition_scoring import recalculate_league_event
-from .leagues import accept_invite, create_invite, create_league, invite_for_token, revoke_invite
+from .leagues import accept_invite, create_invite, create_league, current_invite, invite_for_token, revoke_invite
 from .models import (
     Event, GlobalEventScore, League, LeagueActivity, LeagueCrazyDecision, LeagueEventScore,
-    LeagueInvite, LeagueMembership, Prediction, Result, Score, Season, SeasonScore,
+    LeagueInvite, LeagueMembership, LeagueSeason, Prediction, Result, Score, Season, SeasonScore,
 )
 from .scoring import publish_event_scores
 
@@ -232,6 +232,11 @@ class PrivateLeagueUITests(TestCase):
 
     def test_invites_expire_at_boundary_and_revoke_blocks_get_and_post(self):
         invite, token = create_invite(actor=self.owner, league_season=self.a)
+        # Old seven-day links remain supported until expired or explicitly rotated.
+        invite.permanent_league = None
+        invite.token_seed = None
+        invite.expires_at = self.now+timedelta(days=7)
+        invite.save()
         url = reverse("league:friend_league_join", args=[token])
         self.client.force_login(self.player)
         self.clock.return_value = invite.expires_at
@@ -248,7 +253,7 @@ class PrivateLeagueUITests(TestCase):
         entry = accept_invite(user=self.player, token=token)
         self.assertEqual(entry.first_event, self.next_event)
 
-    def test_invite_management_requires_own_moderator_and_limits_active_links(self):
+    def test_invite_management_requires_own_moderator_and_rotates_single_link(self):
         entry = self.enter()
         self.client.force_login(self.player)
         self.assertEqual(self.client.get(self.url("friend_league_invites")).status_code, 403)
@@ -257,14 +262,72 @@ class PrivateLeagueUITests(TestCase):
         response = self.client.post(self.url("friend_league_role", membership_id=entry.membership_id), {"role": "moderator"})
         self.assertEqual(response.status_code, 302)
         self.client.force_login(self.player)
-        response = self.client.post(self.url("friend_league_invites"))
+        response = self.client.post(self.url("friend_league_invites"), follow=True)
         self.assertEqual(response.status_code, 200);self.assertTrue(response.context["invite_link"])
         invite = self.a.invites.latest("pk")
         self.assertNotIn(invite.token_digest, response.content.decode())
         for _ in range(3):
             create_invite(actor=self.owner, league_season=self.a)
+        invite, token = create_invite(actor=self.owner, league_season=self.a)
+        self.assertEqual(self.a.invites.filter(revoked_at__isnull=True).count(), 1)
+        self.assertEqual(current_invite(actor=self.owner, league=self.a.league), token)
+
+    def test_permanent_link_survives_refresh_time_and_rotation_preserves_members(self):
+        first, old_token = create_invite(actor=self.owner, league_season=self.a)
+        self.assertIsNone(first.expires_at)
+        entry = accept_invite(user=self.player, token=old_token)
+        self.clock.return_value = self.now+timedelta(days=365)
+        self.assertEqual(invite_for_token(old_token).pk, first.pk)
+        self.client.force_login(self.owner)
+        page = self.client.get(self.url("friend_league_settings"))
+        self.assertTrue(page.context["invite_link"].endswith(old_token+"/"))
+        self.assertContains(page, "Обновить ссылку")
+        second, token = create_invite(actor=self.owner, league_season=self.a)
+        self.assertNotEqual(old_token, token)
+        first.refresh_from_db()
+        self.assertIsNotNone(first.revoked_at)
         with self.assertRaises(ValidationError):
-            create_invite(actor=self.owner, league_season=self.a)
+            invite_for_token(old_token)
+        self.assertEqual(invite_for_token(token).pk, second.pk)
+        self.assertEqual(accept_invite(user=self.player, token=token).pk, entry.pk)
+        self.assertEqual(self.a.entries.filter(membership__user=self.player).count(), 1)
+        revoke_invite(actor=self.owner, invite=second)
+        self.assertIsNone(current_invite(actor=self.owner, league=self.a.league))
+        third, token = create_invite(actor=self.owner, league_season=self.a)
+        self.assertEqual(invite_for_token(token).pk, third.pk)
+
+    def test_one_link_for_entire_league_across_seasons(self):
+        first, token = create_invite(actor=self.owner, league_season=self.a)
+        self.season.is_active = False
+        self.season.save(update_fields=["is_active"])
+        calendar = Season.objects.create(year=2028, is_active=True)
+        event = Event.objects.create(name="New season", round_number=1, season_year=2028,
+            deadline=self.now+timedelta(days=365))
+        season = LeagueSeason.objects.create(league=self.a.league, season=calendar, start_event=event)
+        self.assertEqual(invite_for_token(token).league_season, season)
+        entry = accept_invite(user=self.player, token=token)
+        self.assertEqual(entry.league_season, season)
+        self.assertEqual(entry.first_event, event)
+        self.assertEqual(current_invite(actor=self.owner, league=self.a.league), token)
+        second, new_token = create_invite(actor=self.owner, league_season=season)
+        first.refresh_from_db()
+        self.assertIsNotNone(first.revoked_at)
+        with self.assertRaises(ValidationError):
+            invite_for_token(token)
+        self.assertEqual(current_invite(actor=self.owner, league=self.a.league), new_token)
+
+    def test_rotation_retires_existing_seven_day_links(self):
+        old, token = create_invite(actor=self.owner, league_season=self.a)
+        old.permanent_league = None
+        old.token_seed = None
+        old.expires_at = self.now+timedelta(days=7)
+        old.save()
+        self.assertEqual(invite_for_token(token).pk, old.pk)
+        self.assertIsNone(current_invite(actor=self.owner, league=self.a.league))
+        new, new_token = create_invite(actor=self.owner, league_season=self.a)
+        self.assertEqual(invite_for_token(new_token).pk, new.pk)
+        with self.assertRaises(ValidationError):
+            invite_for_token(token)
 
     @override_settings(PRIVATE_LEAGUE_MAX_MEMBERS=1, PRIVATE_LEAGUE_MAX_OWNED=1)
     def test_limits_reject_without_orphan_memberships(self):
