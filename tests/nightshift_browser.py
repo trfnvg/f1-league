@@ -201,6 +201,11 @@ def render_pages():
     pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
     client.force_login(player)
     pages["/members-manage/"] = client.get(reverse("league:friend_league_settings", args=[private.league_id]), {"section":"members"}).content
+    client.logout()
+    blocked = client.post(reverse('league:register'), dict(first_name='Гриша', username='putin63',
+        email='blocked-preview@example.com', password1='RaceStart!63', password2='RaceStart!63'))
+    assert blocked.status_code == 200
+    pages['/register-blocked/'] = blocked.content
     from league import error_views
     error_request = RequestFactory().get('/leagues/join/example/')
     for name, view in (("403", error_views.permission_denied), ("404", error_views.page_not_found),
@@ -252,6 +257,11 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
+                page.goto(base+'/register-blocked/', wait_until='networkidle')
+                assert 'не соответствует правилам Fastlap' in page.locator('.account-card').inner_text()
+                assert page.locator('[name="username"]').input_value() == 'putin63'
+                assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                page.screenshot(path=str(output/f'{width}-registration-moderation.png'), full_page=True)
                 for route in ('/race-recap/', '/league-recap/'):
                     page.goto(base+route, wait_until='networkidle')
                     page.locator('canvas[data-ready="true"]').wait_for()

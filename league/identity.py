@@ -14,6 +14,12 @@ def clean_handle(value, user=None):
     value = value.strip().lower()
     if not re.fullmatch(r"[a-z0-9]{3,30}", value):
         raise ValidationError("Используй от 3 до 30 латинских букв и цифр, без пробелов и спецсимволов.")
+    # Existing accounts are not renamed or locked out by a new policy. A real
+    # handle change is checked, including changes through UserProfile.clean().
+    unchanged = bool(user and user.pk and UserProfile.objects.filter(user=user, handle=value).exists())
+    if not unchanged:
+        from .name_moderation import validate_public_name
+        validate_public_name(value)
     handles = UserProfile.objects.filter(handle__iexact=value)
     usernames = User.objects.filter(username__iexact=value)
     if user and user.pk:

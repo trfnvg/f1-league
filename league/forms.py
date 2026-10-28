@@ -188,6 +188,8 @@ class RegisterForm(UserCreationForm):
         value = " ".join(self.cleaned_data["first_name"].split())
         if not value or not all(char.isalpha() or char == " " for char in value):
             raise forms.ValidationError("В имени можно использовать только буквы и пробелы.")
+        from .name_moderation import validate_public_name
+        validate_public_name(value)
         return value
 
     def clean_email(self):

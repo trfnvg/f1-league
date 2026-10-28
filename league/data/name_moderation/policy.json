@@ -1,0 +1,33 @@
+{
+  "excluded_source_terms": [
+    "byk", "gol", "uboy", "бугор", "голый", "другой дразнится", "какая разница",
+    "мент", "на фиг", "обнаженный", "офигеть", "фига", "хапать", "хрен",
+    "big black", "girl on", "girl on top", "hard core", "hardcore", "hot carl", "hot chick",
+    "huge fat", "jelly donut", "lemon party", "mr hands", "rosy palm", "santorum",
+    "shaved beaver", "style doggy", "taste my", "tight white", "tongue in a",
+    "twinkie", "wrapping men", "xx",
+    "dick", "semen", "lolita", "tit", "suck", "sucks", "domination"
+  ],
+  "extra_terms": [
+    "мудак", "еблан", "долбоеб", "пидор", "пидорас", "пидораст", "пидар", "сука", "блять", "бля",
+    "хуйня", "хуйло", "хуесос", "пиздец", "пиздюк", "гнида", "shithead", "dickhead", "motherfucker",
+    "huy", "hui", "khui", "blyat", "blyad", "pizdec", "pidoras", "ебет", "ебёт"
+  ],
+  "compound_stems": [
+    "fuck", "motherfuck", "asshole", "shithead", "bullshit", "dickhead", "pizd", "khuy", "khui", "huy",
+    "zalup", "blyad", "blyat", "dolboeb", "eblan", "eban", "ebet", "pidoras", "nigger", "faggot"
+  ],
+  "policy_identities": [
+    "putin", "vladimirputin", "путин", "владимирпутин",
+    "trump", "donaldtrump", "трамп", "дональдтрамп",
+    "biden", "joebiden", "байден", "джобайден",
+    "zelensky", "zelenskyy", "zelenskiy", "zelenski", "зеленский", "владимирзеленский", "володимирзеленський",
+    "lukashenko", "лукашенко", "alexanderlukashenko", "александрлукашенко",
+    "stalin", "сталин", "josephstalin", "иосифсталин",
+    "lenin", "ленин", "vladimirlenin", "владимирленин",
+    "mussolini", "муссолини", "benitomussolini", "бенитомуссолини",
+    "hitler", "гитлер", "adolfhitler", "адольфгитлер",
+    "nazi", "nazism", "nazist", "neonazi", "нацист", "нацизм", "неонацист", "неонацизм",
+    "siegheil", "зигхайль", "зигхейль", "heilhitler", "хайльгитлер", "whitepower", "swastika", "свастика"
+  ]
+}
