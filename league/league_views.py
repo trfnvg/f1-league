@@ -128,7 +128,10 @@ def detail(request, league_id):
     prediction_soon = bool(next_event and next_event.voting_state() == "soon")
     choices = LeagueSeason.objects.filter(league__memberships__user=request.user,
         league__memberships__is_active=True, league__archived_at__isnull=True).select_related("league", "season").order_by("-season__year", "league__name")
+    token = current_invite(actor=request.user, league=league)
+    invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token])) if token else None
     context = dict(league=league, league_season=season, season=season.season, league_choices=choices,
+        invite_link=invite_link,
         invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",
         page=page, next_event=next_event, prediction_open=prediction_open, prediction_soon=prediction_soon,
         **data, **_rights(request.user, league))
@@ -184,8 +187,11 @@ def join(request, token):
             messages.success(request, f"Вы в лиге! Ваш первый зачётный этап — {entry.first_event}.")
             return redirect(f"{reverse('league:friend_league', args=[entry.membership.league_id])}?year={entry.league_season.season.year}")
     members = invite.league_season.entries.filter(membership__is_active=True).select_related("membership__user")
+    member_count = members.count()
+    preview = list(members.order_by("pk")[:6])
     response = render(request, "leagues/join.html", {"invite": invite, "league": invite.league_season.league,
-        "member_count": members.count(), "invite_members": list(members[:6])})
+        "member_count": member_count, "invite_members": preview,
+        "invite_more_count": max(0, member_count-len(preview))})
     # Keep invitation URLs off third-party requests without suppressing the
     # same-origin Referer required by Django for HTTPS POSTs without Origin.
     response["Referrer-Policy"] = "same-origin"

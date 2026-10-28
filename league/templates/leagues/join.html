@@ -6,7 +6,7 @@
   {% if league.avatar %}<img src="{{ league.avatar.url }}" alt="" width="80" height="80" style="object-fit:cover;border-radius:50%">{% else %}<span class="leagues-mark" aria-hidden="true">{{ league.name|first|upper }}</span>{% endif %}
   <h1>{{ league.name }}</h1>
   <p>{{ invite.league_season.season.year }} · {{ invite.league_season.get_ruleset_display }} · Участников: {{ member_count }}</p>
-  <p>{% for entry in invite_members %}{{ entry.membership.user|player_name }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>
+  <p>{% for entry in invite_members %}{{ entry.membership.user|player_name }}{% if not forloop.last %} · {% endif %}{% endfor %}{% if invite_more_count %}<span class="league-invite-more"> · и ещё {{ invite_more_count }}</span>{% endif %}</p>
   <p class="leagues-help">Очки начнут учитываться с первого доступного этапа после вступления. Один прогноз действует во всех твоих лигах.</p>
   {% if user.is_authenticated %}<form method="post">{% csrf_token %}<button type="submit" class="leagues-button">Присоединиться к лиге</button></form>
   {% else %}<a class="leagues-button" href="{% url 'league:register' %}?next={{ request.path|urlencode }}">Создать аккаунт и присоединиться</a><p><a class="leagues-text-link" href="{% url 'login' %}?next={{ request.path|urlencode }}">Уже есть аккаунт? Войти</a></p>{% endif %}

@@ -12,7 +12,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .competition_scoring import recalculate_league_event
-from .leagues import accept_invite, create_invite, create_league, current_invite, invite_for_token, revoke_invite
+from .leagues import accept_invite, create_invite, create_league, current_invite, enroll_member, invite_for_token, revoke_invite
 from .models import (
     Event, GlobalEventScore, League, LeagueActivity, LeagueCrazyDecision, LeagueEventScore,
     LeagueInvite, LeagueMembership, LeagueSeason, Prediction, Result, Score, Season, SeasonScore,
@@ -229,6 +229,56 @@ class PrivateLeagueUITests(TestCase):
         invite.refresh_from_db();self.assertEqual(invite.uses, 1)
         self.assertEqual(self.a.entries.filter(membership__user=self.player).count(), 1)
         self.assertEqual(LeagueActivity.objects.filter(action="joined").count(), 1)
+
+    def test_invitation_lists_six_members_and_remaining_count(self):
+        _, token = create_invite(actor=self.owner, league_season=self.a)
+        url = reverse("league:friend_league_join", args=[token])
+        self.client.logout()
+        for count in (1, 6, 7, 30):
+            while self.a.entries.count() < count:
+                number = self.a.entries.count()
+                user = User.objects.create_user(f"preview-member-{number}", first_name=f"Участник {number}")
+                enroll_member(actor=self.owner, league_season=self.a, user=user)
+            with self.subTest(count=count):
+                response = self.client.get(url)
+                self.assertEqual(response.context["member_count"], count)
+                self.assertEqual(len(response.context["invite_members"]), min(count, 6))
+                self.assertEqual(response.context["invite_more_count"], max(0, count-6))
+                if count > 6:
+                    self.assertContains(response, f"и ещё {count-6}")
+                    self.assertNotContains(response, f"Участник {count-1}")
+                else:
+                    self.assertNotContains(response, "и ещё")
+
+    def test_members_can_share_current_link_but_cannot_rotate_it(self):
+        first, old_token = create_invite(actor=self.owner, league_season=self.a)
+        accept_invite(user=self.player, token=old_token)
+        self.client.force_login(self.player)
+        response = self.client.get(self.url())
+        link = response.context["invite_link"]
+        self.assertTrue(link.endswith(old_token+"/"))
+        self.assertContains(response, 'class="league-share-url"')
+        self.assertContains(response, f'href="{link}"')
+        self.assertContains(response, 'data-copy-invite')
+        self.assertNotContains(response, "Обновить ссылку")
+        self.assertEqual(current_invite(actor=self.player, league=self.a.league), old_token)
+        self.assertEqual(self.client.post(self.url("friend_league_invites")).status_code, 403)
+        self.assertEqual(self.client.post(self.url("friend_league_settings"), {"action":"create_invite"}).status_code, 403)
+        _, new_token = create_invite(actor=self.owner, league_season=self.a)
+        response = self.client.get(self.url())
+        self.assertTrue(response.context["invite_link"].endswith(new_token+"/"))
+        self.assertNotContains(response, old_token)
+        first.refresh_from_db()
+        self.assertIsNotNone(first.revoked_at)
+        self.client.force_login(self.other)
+        self.assertEqual(self.client.get(self.url()).status_code, 404)
+
+    def test_league_page_does_not_create_an_invite_on_get(self):
+        self.assertFalse(LeagueInvite.objects.filter(league_season=self.a).exists())
+        response = self.client.get(self.url())
+        self.assertIsNone(response.context["invite_link"])
+        self.assertContains(response, "Создать в управлении")
+        self.assertFalse(LeagueInvite.objects.filter(league_season=self.a).exists())
 
     def test_https_join_without_origin_uses_same_origin_referer_and_keeps_csrf(self):
         _, token = create_invite(actor=self.owner, league_season=self.a)

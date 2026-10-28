@@ -6,8 +6,14 @@
   const button=document.querySelector('[data-copy-invite]');
   if(button)button.addEventListener('click',async()=>{
     const input=document.getElementById('league-invite-link'),status=document.querySelector('[data-copy-status]');
-    try {await navigator.clipboard.writeText(input.value);status.textContent='Ссылка скопирована. Отправьте её друзьям.';}
-    catch {input.focus();input.select();status.textContent='Выделили ссылку — скопируйте её вручную.';}
+    const url=input.value || input.href;
+    try {await navigator.clipboard.writeText(url);status.textContent='Ссылка скопирована. Отправьте её друзьям.';}
+    catch {
+      input.focus();
+      if(typeof input.select==='function')input.select();
+      else {const range=document.createRange();range.selectNodeContents(input);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);}
+      status.textContent='Выделили ссылку — скопируйте её вручную.';
+    }
   });
   const official=document.getElementById('id_use_official');
   if(official){

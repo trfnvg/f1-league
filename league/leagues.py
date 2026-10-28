@@ -199,7 +199,9 @@ def _permanent_token(seed):
 
 
 def current_invite(*, actor, league):
-    require_moderator(actor, league)
+    # Members may share the link; creating, rotating and revoking it still
+    # require the league's management permissions.
+    membership_for(actor, league)
     invite = LeagueInvite.objects.filter(permanent_league=league, revoked_at__isnull=True).first()
     if not invite or not invite.token_seed:
         return None

@@ -119,6 +119,9 @@ def render_pages():
     league.league.save(update_fields=['avatar'])
     pages['/league-settings/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id])).content
     pages['/league-settings-invite/'] = client.post(reverse('league:friend_league_settings', args=[league.league_id]), {'action':'create_invite'}, follow=True).content
+    client.force_login(player)
+    pages['/league/'] = client.get(reverse('league:friend_league', args=[league.league_id])).content
+    client.force_login(owner)
     pages["/admin-add/"] = client.get(reverse("admin:league_event_add")).content
     pages["/admin-edit/"] = client.get(reverse("admin:league_event_change", args=[event.pk])).content
     pages[reverse("admin:jsi18n")] = client.get(reverse("admin:jsi18n")).content
@@ -169,7 +172,7 @@ def render_pages():
     pages["/new-password/"] = client.get(token_response.url).content
     client.force_login(player)
     pages["/account-settings/"] = client.get(reverse("league:account_settings")).content
-    from league.leagues import create_league, create_invite
+    from league.leagues import create_league, create_invite, enroll_member
     from league.models import Result
     private = create_league(owner=player, name="Гоночная компания друзей", season=season, start_event=future, ruleset="paddock")
     _, invite_token = create_invite(actor=player, league_season=private)
@@ -185,6 +188,9 @@ def render_pages():
     Score.objects.filter(user=player, event=past).update(points=12, breakdown={"P1 (Top-3)":3,"P2 (Top-3)":3,"P3":4,"Pole Position":4,"Дуэль":-2})
     pages["/score-detail/"] = client.get(reverse("league:score_detail", args=[past.pk, player.pk])).content
     client.logout()
+    for i in range(29):
+        guest = User.objects.create_user(f'invite-preview-{i}', first_name=f'Новый участник {i+1}')
+        enroll_member(actor=player, league_season=private, user=guest)
     pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
     assert all(b"Server Error" not in html for html in pages.values())
     return pages
@@ -313,11 +319,28 @@ def run(output, widths, engine):
                         assert page.locator('.score-explanation-total strong').inner_text() == '12'
                         assert page.locator('.score-explanation-table tbody tr').count() == 8
                     if route == '/invite-preview/':
+                        assert page.locator('.league-invite-more').inner_text().strip() == '· и ещё 24'
                         assert page.locator('.leagues-join a[href*="next="]').count() == 2
                     if route == '/login/':
                         assert page.locator('a[href="/accounts/password_reset/"]').is_visible()
                     if route in ('/league/', '/standings/', '/league-long/', '/standings-long/'):
                         assert page.locator('.classification').is_visible()
+                        if route.startswith('/league'):
+                            share = page.locator('.league-share')
+                            assert share.is_visible()
+                            source = share.locator('#league-invite-link')
+                            link = source.get_attribute('href')
+                            assert '/leagues/join/' in link
+                            assert share.locator('[data-confirm-invite-rotation]').count() == 0
+                            page.evaluate("Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.testSharedInvite=text;}}})")
+                            share.locator('[data-copy-invite]').click()
+                            page.wait_for_function("document.querySelector('[data-copy-status]').textContent.includes('Ссылка скопирована')")
+                            assert page.evaluate('window.testSharedInvite') == link
+                            page.evaluate("() => {navigator.clipboard.writeText=async()=>{throw new Error('Clipboard unavailable');};}")
+                            share.locator('[data-copy-invite]').click()
+                            page.wait_for_function("document.querySelector('[data-copy-status]').textContent.includes('Выделили ссылку')")
+                            assert page.evaluate('window.getSelection().toString()') == link
+                            share.screenshot(path=str(output/f'{width}-{route.strip("/")}-share.png'))
                         assert page.locator('#pointsChart,script[src*="leaderboard-chart"],#leaderboard-chart-data').count() == 0
                         assert page.locator('.classification-table tbody tr').count() == 5
                         assert page.locator('[data-table-mode],.classification-summary,.classification-selection').count() == 0

@@ -1,0 +1,18 @@
+/* League invitation sharing. No management actions are exposed to players. */
+.league-share { display:grid; grid-template-columns:minmax(200px,.8fr) minmax(0,1.2fr); align-items:center; gap:14px 24px; margin:0 0 24px; padding:22px 24px; border:1px solid #39434f; border-radius:15px; background:#20262e; }
+.league-share-copy { display:flex; align-items:center; gap:13px; min-width:0; }
+.league-share-mark { display:grid; place-items:center; flex:0 0 38px; width:38px; height:38px; border:1px solid #4b5664; border-radius:10px; color:#c6cfd9; background:#272f39; }
+.league-share svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.leagues-page .league-share h2 { margin:0; color:#eef1f5; font:650 17px/1.35 Inter,system-ui,sans-serif; letter-spacing:-.025em; }
+.league-share-copy p { margin:5px 0 0; color:#a1adbc; font:400 12px/1.6 Inter,system-ui,sans-serif; }
+.league-share-actions { display:flex; align-items:center; gap:10px; min-width:0; }
+.league-share .league-share-url { display:block; flex:1; min-width:0; padding:12px 13px; border:1px solid #414d5a; border-radius:9px; background:#181e25; color:#ccd7e3; font:450 12px/1.5 Inter,system-ui,sans-serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.league-share-url:hover { border-color:#85919f; color:#fff; }
+.league-share .league-share-copy-button { display:inline-flex; align-items:center; justify-content:center; gap:8px; flex:none; min-height:44px; padding:11px 14px; border:1px solid #586574; border-radius:9px; background:#2c3540; color:#eff3f8; font:600 12px/1.5 Inter,system-ui,sans-serif; cursor:pointer; }
+.league-share-copy-button:hover { background:#36424f; color:#fff; }
+.league-share-status { grid-column:1/-1; margin:0; color:#939fae; font:400 11px/1.6 Inter,system-ui,sans-serif; }
+.league-share .league-share-status a { color:#c7d1dc; text-decoration:underline; text-underline-offset:3px; }
+.league-invite-more { display:inline-block; color:#acb8c8; font-size:.9em; white-space:nowrap; }
+@media(max-width:800px) { .league-share { grid-template-columns:minmax(0,1fr); padding:20px; gap:16px; } }
+@media(max-width:420px) { .league-share { padding:18px; } .league-share-actions { flex-wrap:wrap; } .league-share-url { flex:1 1 100%; } .league-share-copy-button { width:100%; } .league-share-empty>.league-share-copy-button { width:100%; } }
+@media(prefers-reduced-motion:no-preference) { .league-share-url,.league-share-copy-button { transition:background-color .15s,border-color .15s; } }
