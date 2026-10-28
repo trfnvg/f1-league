@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import F
 from django.shortcuts import render
+from django.http import JsonResponse
 from django.utils import timezone
 from django.utils.crypto import salted_hmac
 from django.utils.deprecation import MiddlewareMixin
@@ -55,6 +56,29 @@ class AuthRateLimitMiddleware(MiddlewareMixin):
         if request.method != "POST" or not request.resolver_match:
             return None
         name = request.resolver_match.url_name
+        if name in {"arcade_run_start", "doodle_attempt_start", "arcade_run_finish", "doodle_attempt_finish",
+                    "arcade_run_progress", "doodle_attempt_progress"}:
+            if not request.user.is_authenticated:
+                return None
+            action = "start" if name.endswith("start") else "update"
+            waits = [consume(f"arcade-{action}-ip", client_address(request), 6000, 60),
+                     consume(f"arcade-{action}-user", str(request.user.pk), 120, 60)]
+            if max(waits):
+                response = JsonResponse({"error": "Слишком много игровых запросов. Подожди минуту."}, status=429)
+                response["Retry-After"] = str(max(waits))
+                response["Cache-Control"] = "no-store"
+                return response
+            return None
+        if name in {"register", "account_settings"}:
+            if name == "register" and request.user.is_authenticated:
+                return None
+            if name == "account_settings" and not request.user.is_authenticated:
+                return None
+            address = client_address(request)
+            wait = consume(f"{name}-ip", address, 20 if name == "register" else 60, 900)
+            if not wait and name == "account_settings":
+                wait = consume("account-settings-user", str(request.user.pk), 10, 900)
+            return self.blocked(request, wait) if wait else None
         if name not in {"login", "password_reset"}:
             return None
         if name == "login" and request.user.is_authenticated:

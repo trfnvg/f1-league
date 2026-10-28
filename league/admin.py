@@ -10,6 +10,7 @@ from django.utils.html import format_html
 
 from .models import (
     ArcadeRecord,
+    ArcadeAttempt,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
@@ -949,20 +950,39 @@ class MinesweeperAttemptAdmin(admin.ModelAdmin):
         return False
 
 
-@admin.register(DoodleAttempt)
-class DoodleAttemptAdmin(admin.ModelAdmin):
-    list_display = ("user", "score", "started_at", "finished_at")
+class RunAttemptAdmin(admin.ModelAdmin):
+    list_display = ("user", "score", "run_check", "started_at", "finished_at")
     list_filter = ("started_at", "finished_at")
     search_fields = ("user__username",)
     list_select_related = ("user",)
-    readonly_fields = tuple(field.name for field in DoodleAttempt._meta.fields)
     ordering = ("-started_at",)
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields)
+
+    @admin.display(description="Проверка заезда")
+    def run_check(self, obj):
+        if obj.verification.get("rejected"):
+            return "Отклонён: " + obj.verification["rejected"]
+        if obj.score is not None:
+            return "Базовая проверка пройдена" if obj.verification else "Исторический результат"
+        return "Завершён без результата" if obj.finished_at else "В процессе"
 
     def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(DoodleAttempt)
+class DoodleAttemptAdmin(RunAttemptAdmin):
+    pass
+
+
+@admin.register(ArcadeAttempt)
+class ArcadeAttemptAdmin(RunAttemptAdmin):
+    pass
 
 
 @admin.register(DoodleRecord)

@@ -11,6 +11,22 @@ from .arcade_library import freeze
 
 @override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"}, "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}})
 class ArcadeLibraryTests(TestCase):
+    def finish_run(self, started, score):
+        """Simulate real wall-clock play/checkpoints, never instant forged scores."""
+        attempt = DoodleAttempt.objects.get(pk=started["attempt_id"])
+        total_seconds = max(10, score / 150)
+        passed = 0
+        while passed + 150 < total_seconds:
+            passed += 150
+            with patch("league.arcade_validation.timezone.now", return_value=attempt.started_at+timedelta(seconds=passed)):
+                response = self.client.post(reverse("league:doodle_attempt_progress"),
+                    data=json.dumps({"attempt_id": attempt.pk, "run_token": started["run_token"],
+                                     "score": min(score, int(passed*150))}), content_type="application/json")
+            self.assertEqual(response.status_code, 200, response.content)
+        with patch("league.arcade_validation.timezone.now", return_value=attempt.started_at+timedelta(seconds=total_seconds)):
+            return self.client.post(reverse("league:doodle_attempt_finish"), data=json.dumps({
+                "attempt_id": attempt.pk, "run_token": started["run_token"], "score": score}), content_type="application/json")
+
     def setUp(self):
         self.user = User.objects.create_user("racer", password="pass")
         self.admin = User.objects.create_user("admin", password="pass", is_staff=True)
@@ -156,7 +172,7 @@ class ArcadeLibraryTests(TestCase):
         self.assertEqual(frozen.standings[0]["attempts"],1)
         start = self.client.post(reverse("league:doodle_attempt_start")).json()
         self.assertIsNone(DoodleAttempt.objects.get(pk=start["attempt_id"]).competition_id)
-        finish = self.client.post(reverse("league:doodle_attempt_finish"), data=json.dumps({"attempt_id":start["attempt_id"],"score":900}), content_type="application/json")
+        finish = self.finish_run(start, 900)
         self.assertEqual(finish.status_code,200)
         self.assertEqual(finish.json()["record"],900)
         self.assertEqual(freeze(self.contest).standings,frozen.standings)
@@ -166,7 +182,7 @@ class ArcadeLibraryTests(TestCase):
         start=self.client.post(reverse("league:doodle_attempt_start")).json()
         self.event.deadline=timezone.now()-timedelta(seconds=1)
         self.event.save(update_fields=["deadline"])
-        response=self.client.post(reverse("league:doodle_attempt_finish"),data=json.dumps({"attempt_id":start["attempt_id"],"score":500}),content_type="application/json")
+        response=self.finish_run(start, 500)
         self.assertEqual(response.status_code,200)
         self.assertEqual(freeze(self.contest).standings,[])
         self.assertEqual(DoodleRecord.objects.get(user=self.user).best_score,500)
@@ -194,7 +210,7 @@ class ArcadeLibraryTests(TestCase):
         start=self.client.post(reverse("league:doodle_attempt_start")).json()
         url=reverse("league:doodle_attempt_finish")
         for score,status in [(100,200),(900,409)]:
-            response=self.client.post(url,data=json.dumps({"attempt_id":start["attempt_id"],"score":score}),content_type="application/json")
+            response=self.client.post(url,data=json.dumps({"attempt_id":start["attempt_id"],"run_token":start["run_token"],"score":score}),content_type="application/json")
             self.assertEqual(response.status_code,status)
         self.assertEqual(DoodleRecord.objects.get(user=self.user).best_score,100)
 
@@ -203,8 +219,8 @@ class ArcadeLibraryTests(TestCase):
             with self.subTest(score=score):
                 start=self.client.post(reverse("league:doodle_attempt_start")).json()
                 url=reverse("league:doodle_attempt_finish")
-                payload={"attempt_id":start["attempt_id"],"score":score}
-                finish=self.client.post(url,data=json.dumps(payload),content_type="application/json")
+                payload={"attempt_id":start["attempt_id"],"run_token":start["run_token"],"score":score}
+                finish=self.finish_run(start, score)
                 self.assertEqual(finish.status_code,200)
                 self.assertEqual(DoodleRecord.objects.get(user=self.user).best_score,score)
                 self.assertEqual(DoodleAttempt.objects.get(pk=start["attempt_id"]).score,score)

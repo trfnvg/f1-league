@@ -3,6 +3,8 @@ set -e
 
 printf '%s\n' 'Starting Fastlap: Python runtime'
 python --version
+printf '%s\n' 'Checking production security settings (no secrets are printed)'
+python manage.py security_audit --strict
 printf '%s\n' 'Applying database migrations'
 python manage.py migrate --noinput
 printf '%s\n' 'Collecting static assets'

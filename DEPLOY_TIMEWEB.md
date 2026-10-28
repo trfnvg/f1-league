@@ -24,11 +24,11 @@
 **Если сборка без Docker (Buildpack / «Сборка из репозитория»):**
 - В поле команды запуска укажите:
   ```bash
-  python manage.py migrate --noinput; python manage.py collectstatic --noinput; gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000}
+  ./start.sh
   ```
   Либо по шагам в «Сборка»:
   - Сборка: `pip install -r requirements.txt`
-  - Запуск: `gunicorn config.wsgi:application --bind 0.0.0.0:8000`
+  - Запуск: `./start.sh` (проверка настроек, миграции, статика, Gunicorn).
 
 Не используйте `runserver` в проде — он не предназначен для продакшена.
 
@@ -39,7 +39,7 @@
 | Переменная | Обязательно | Пример |
 |------------|-------------|--------|
 | `SECRET_KEY` | Да | Длинная случайная строка (например, сгенерировать: `python -c "import secrets; print(secrets.token_urlsafe(50))"`) |
-| `ALLOWED_HOSTS` или `DJANGO_ALLOWED_HOSTS` | Да | Домен приложения Timeweb, например: `your-app-12345.twc1.net` или `*` для любого хоста |
+| `ALLOWED_HOSTS` или `DJANGO_ALLOWED_HOSTS` | Да | `fastlap.ru,www.fastlap.ru,your-app-12345.twc1.net` — перечисли реальные хосты, не используй `*` |
 | `DEBUG` | Нет | В проде лучше `False` |
 | `DATABASE_URL` | Рекомендуется в проде | На App Platform файловая система часто временная/только для чтения — SQLite может не работать. Создай PostgreSQL в панели Timeweb и подставь строку подключения. |
 | `SITE_URL` | Для кнопки в сообщении | Публичный адрес сайта, например `https://f1.example.com`. |
@@ -63,7 +63,7 @@ Telegram-воркер сейчас отключён в production и не зап
 ## Как посмотреть реальную ошибку
 
 1. **Логи приложения** в панели Timeweb (App → Логи / Logs) — там будет traceback Python при 500.
-2. Временно включи **DEBUG**: переменная `DEBUG=True`. После деплоя открой страницу снова — Django покажет полный traceback на экране. **Не забудь потом вернуть DEBUG=False** и перезадеплоить.
+2. Не включай **DEBUG** на публичном сайте. Для диагностики используй логи или закрытый локальный/staging-стенд. Запуск production с `DEBUG=True` теперь блокируется.
 
 ---
 
@@ -72,6 +72,7 @@ Telegram-воркер сейчас отключён в production и не зап
 - [ ] Команда запуска: **gunicorn** (не runserver).
 - [ ] В env заданы **SECRET_KEY** и **ALLOWED_HOSTS** (или **DJANGO_ALLOWED_HOSTS**) с твоим доменом/хостом.
 - [ ] Если используешь БД Timeweb — задан **DATABASE_URL**.
+- [ ] `python manage.py security_audit --strict` проходит. Команда выводит только безопасные флаги, без ключей и паролей.
 - [ ] В репозитории в корне есть `manage.py`, `requirements.txt`, папка `config` с `settings.py` и `wsgi.py`.
 
 После правок сделай новый деплой и снова открой сайт. Если ошибка останется — пришли из логов приложения строки с **Traceback** или **Error**.

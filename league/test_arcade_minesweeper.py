@@ -79,6 +79,8 @@ class MinesweeperArcadeTests(TestCase):
         self.assertNotContains(response, "Управление аркадой")
 
     def test_attempt_count_and_best_completed_time_update_leaderboard(self):
+        self.player.is_staff = True
+        self.player.save(update_fields=["is_staff"])
         ArcadeSettings.objects.filter(pk=1).update(public_enabled=True)
         self.client.force_login(self.player)
 
@@ -98,7 +100,7 @@ class MinesweeperArcadeTests(TestCase):
         self.assertEqual(finished.json()["attempts"], 1)
         self.assertEqual(finished.json()["wins"], 1)
         self.assertEqual(finished.json()["best_time_ms"], 10_000)
-        self.assertEqual(finished.json()["records"][0]["username"], self.player.username)
+        self.assertEqual(finished.json()["records"], [])  # Staff lab runs are not public records.
 
         second = self.client.post(reverse("league:minesweeper_attempt_start"))
         second_id = second.json()["attempt_id"]
@@ -114,14 +116,16 @@ class MinesweeperArcadeTests(TestCase):
         self.assertEqual(failed.status_code, 200)
         self.assertEqual(failed.json()["attempts"], 2)
         self.assertEqual(failed.json()["wins"], 1)
-        self.assertEqual(failed.json()["total_attempts"], 2)
+        self.assertEqual(failed.json()["total_attempts"], 0)  # Staff-only lab has no public attempts.
 
     def test_each_attempt_is_single_use_and_only_own_attempt_can_be_finished(self):
+        self.player.is_staff = True
+        self.player.save(update_fields=["is_staff"])
         ArcadeSettings.objects.filter(pk=1).update(public_enabled=True)
         self.client.force_login(self.player)
         started = self.client.post(reverse("league:minesweeper_attempt_start"))
         attempt_id = started.json()["attempt_id"]
-        other = User.objects.create_user("other-mine-player", password="test-password")
+        other = User.objects.create_user("other-mine-player", password="test-password", is_staff=True)
         self.client.force_login(other)
 
         rejected = self.client.post(

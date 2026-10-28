@@ -133,7 +133,7 @@ def run(output, engine):
                     key = route.strip("/").removesuffix("-guest")
                     source = sources[key]
                     renderer = re.search(r"  function renderLeaderboard\([^\n]*\)[\s\S]*?(?=\n  (?:async )?function )", source)[0]
-                    setup = "const leaderboardNode=document.querySelector('.arcade-results-list'); const board=leaderboardNode; const deadlineClosed=false;"
+                    setup = "const leaderboardNode=document.querySelector('.arcade-results-list'); const board=leaderboardNode; const deadlineClosed=false; const authenticated=false;"
                     if key == "minesweeper":
                         setup += source[source.index("  const formatTime ="):source.index("  const currentElapsed =")]
                     page.evaluate("(script)=>{eval(script)}", setup+renderer+"\nrenderLeaderboard([{rank:1,username:'<b>Очень длинное имя</b>',score:999999,attempts:12345,wins:3,best_time_ms:95000,is_current_user:true}]);")

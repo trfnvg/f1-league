@@ -72,7 +72,7 @@ async function harness(mobile, failStartup = false, production = false) {
       setBossWarning, extendBossRefuge, updateSpaceBoss, followPlayerCamera,
       startBathBossTest, beginBathJourney, updateBathBoss, bathGeometry, buildBathArena, nextBathWarning, releaseBathAttack,
       enterEndless,updateEndless,extendEndlessWorld,drawEndlessBackdrop,pruneWorldObjects,
-      productionRecord(){adminBossTestMode=false;attemptId=42;},
+      productionRecord(){adminBossTestMode=false;attemptId=42;attemptToken="test-run-token-for-original-attempt";},
       cloudTextures:()=>sceneryCache.get(art.cloud),
       skyState:()=>({skyFlock,totoCloud,hawks}),
       duckLanding(){const pos=skyDuckPosition(0),top=pos.y+7;
@@ -1171,7 +1171,7 @@ for(const mobile of [true,false]){
   await delay(0);
   assert.equal(a.state().finalScore,expected);assert.equal(a.state().mode,'over');
   assert.deepEqual(h.calls,['/finish'],'One original attempt finishes exactly once after endless death');
-  assert.deepEqual(h.payloads,[{attempt_id:42,score:expected}]);
+  assert.deepEqual(h.payloads,[{attempt_id:42,run_token:"test-run-token-for-original-attempt",score:expected}]);
   a.startGame(true,{forceRestart:true,adminTest:true});assert.equal(a.state().endless,null);
   console.log(`${mobile?'Mobile':'Desktop'}: all world pairs preserve geometry/score; simulated climb beyond 100000 keeps bounded objects; one final score save and reset passed`);
 }

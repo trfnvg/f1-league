@@ -645,57 +645,14 @@ def doodle_leaderboard(request):
 
 @login_required
 def doodle_attempt_start(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    arcade_settings = _get_arcade_settings()
-    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.DOODLE_JUMP):
-        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if not _arcade_scoring_is_open(request):
-        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
-    with transaction.atomic():
-        DoodleAttempt.objects.filter(
-            user=request.user,
-            started_at__lt=timezone.now() - timedelta(days=30),
-        ).delete()
-        attempt = DoodleAttempt.objects.create(user=request.user)
-        record, _ = DoodleRecord.objects.select_for_update().get_or_create(user=request.user)
-        DoodleRecord.objects.filter(pk=record.pk).update(total_attempts=F("total_attempts") + 1)
-    return JsonResponse({"attempt_id": attempt.pk, **_doodle_leaderboard_data(request.user)})
+    from .arcade_library import attempt_start
+    return attempt_start(request, "doodle_jump")
 
 
 @login_required
 def doodle_attempt_finish(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    arcade_settings = _get_arcade_settings()
-    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.DOODLE_JUMP):
-        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if not _arcade_scoring_is_open(request):
-        return JsonResponse({"error": "Зачёт этой аркады закрыт после дедлайна этапа."}, status=410)
-    try:
-        payload = json.loads(request.body or b"{}")
-        attempt_id = int(payload.get("attempt_id"))
-        score = int(payload.get("score"))
-        if isinstance(payload.get("score"), bool) or score < 0 or score > 1000000:
-            raise ValueError
-    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
-        return JsonResponse({"error": "Некорректный результат забега."}, status=400)
-
-    with transaction.atomic():
-        attempt = DoodleAttempt.objects.select_for_update().filter(
-            pk=attempt_id, user=request.user,
-        ).first()
-        if not attempt or attempt.finished_at:
-            return JsonResponse({"error": "Этот забег уже сохранён или не найден."}, status=409)
-        now = timezone.now()
-        attempt.finished_at = now
-        attempt.score = score
-        attempt.save(update_fields=("finished_at", "score"))
-        record, _ = DoodleRecord.objects.select_for_update().get_or_create(user=request.user)
-        if score > record.best_score:
-            record.best_score = score
-            record.save(update_fields=("best_score", "updated_at"))
-    return JsonResponse(_doodle_leaderboard_data(request.user))
+    from .arcade_library import attempt_finish
+    return attempt_finish(request, "doodle_jump")
 
 
 @login_required
@@ -792,100 +749,21 @@ def _arcade_leaderboard_data(user):
 
 
 def arcade_run_start(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
-    arcade_settings = _get_arcade_settings()
-    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.FLAPPY):
-        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if not _arcade_scoring_is_open(request):
-        return JsonResponse({"error": "Зачёт закрыт: он действует только с ручного открытия до дедлайна выбранного этапа."}, status=410)
-    with transaction.atomic():
-        ArcadeAttempt.objects.filter(
-            user=request.user,
-            started_at__lt=timezone.now() - timedelta(days=30),
-        ).delete()
-        attempt = ArcadeAttempt.objects.create(user=request.user)
-        record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
-        ArcadeRecord.objects.filter(pk=record.pk).update(total_attempts=F("total_attempts") + 1)
-        board_data = _arcade_leaderboard_data(request.user)
-    return JsonResponse({"attempt_id": attempt.pk, **board_data})
+    from .arcade_library import attempt_start
+    return attempt_start(request, "flappy")
 
 
 def arcade_run_finish(request):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "Войдите, чтобы сохранить рекорд в таблице."}, status=401)
-    arcade_settings = _get_arcade_settings()
-    if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.FLAPPY):
-        return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
-    if not _arcade_scoring_is_open(request):
-        return JsonResponse({"error": "Зачёт закрыт: он действует только с ручного открытия до дедлайна выбранного этапа."}, status=410)
-    try:
-        payload = json.loads(request.body or b"{}")
-        attempt_id = int(payload.get("attempt_id"))
-        score = int(payload.get("score"))
-        if isinstance(payload.get("score"), bool) or score < 1 or score > 500:
-            raise ValueError
-    except (AttributeError, TypeError, ValueError, json.JSONDecodeError):
-        return JsonResponse({"error": "Некорректный результат заезда."}, status=400)
-
-    with transaction.atomic():
-        attempt = ArcadeAttempt.objects.select_for_update().filter(pk=attempt_id, user=request.user).first()
-        if not attempt or attempt.finished_at:
-            return JsonResponse({"error": "Этот заезд уже сохранён или не найден."}, status=409)
-        now = timezone.now()
-        elapsed_seconds = (now - attempt.started_at).total_seconds()
-        minimum_seconds = 3.0 + (score - 1) * 1.15
-        maximum_seconds = 12.0 + (score - 1) * 2.6
-        if elapsed_seconds < minimum_seconds or elapsed_seconds > maximum_seconds:
-            attempt.finished_at = now
-            attempt.save(update_fields=("finished_at",))
-            return JsonResponse({"error": "Время заезда не соответствует указанному результату."}, status=400)
-        attempt.finished_at = now
-        attempt.score = score
-        attempt.save(update_fields=("finished_at", "score"))
-
-        # Lock the small leaderboard consistently so concurrent finishes cannot
-        # both announce themselves as the arcade leader.
-        list(
-            ArcadeRecord.objects.select_for_update()
-            .order_by("pk")
-            .values_list("pk", flat=True)
-        )
-        leader_before_id = (
-            ArcadeRecord.objects.filter(best_score__gt=0)
-            .order_by("-best_score", "updated_at", "user__username")
-            .values_list("user_id", flat=True)
-            .first()
-        )
-        record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
-        is_record = score > record.best_score
-        if is_record:
-            record.best_score = score
-            record.save(update_fields=("best_score", "updated_at"))
-        leader_after_id = (
-            ArcadeRecord.objects.filter(best_score__gt=0)
-            .order_by("-best_score", "updated_at", "user__username")
-            .values_list("user_id", flat=True)
-            .first()
-        )
-        if leader_after_id == request.user.id and leader_before_id != leader_after_id:
-            ArcadeLeadChange.objects.create(
-                player=request.user,
-                best_score=record.best_score,
-                attempts=record.total_attempts,
-            )
-        board_data = _arcade_leaderboard_data(request.user)
-    return JsonResponse({**board_data, "is_record": is_record})
+    from .arcade_library import attempt_finish
+    return attempt_finish(request, "flappy")
 
 
 @login_required
 def minesweeper_attempt_start(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Прототип доступен только администратору."}, status=403)
     arcade_settings = _get_arcade_settings()
     if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
@@ -906,6 +784,8 @@ def minesweeper_attempt_start(request):
 def minesweeper_attempt_finish(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if not request.user.is_staff:
+        return JsonResponse({"error": "Прототип доступен только администратору."}, status=403)
     arcade_settings = _get_arcade_settings()
     if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)

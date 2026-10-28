@@ -1361,6 +1361,7 @@ class ArcadeAttempt(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     score = models.PositiveIntegerField(null=True, blank=True)
+    verification = models.JSONField(default=dict, db_default={}, blank=True, editable=False)
 
     class Meta:
         ordering = ("-started_at",)
@@ -1376,6 +1377,7 @@ class DoodleAttempt(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     finished_at = models.DateTimeField(null=True, blank=True)
     score = models.PositiveIntegerField(null=True, blank=True)
+    verification = models.JSONField(default=dict, db_default={}, blank=True, editable=False)
 
     class Meta:
         ordering = ("-started_at",)
