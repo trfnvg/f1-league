@@ -9,3 +9,7 @@ media/
 staticfiles/
 .env
 .env.*
+*.dump
+*.sql
+backups/
+.DS_Store

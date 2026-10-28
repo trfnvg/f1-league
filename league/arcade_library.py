@@ -1,6 +1,5 @@
 """Published arcade library, durable event standings and all-time play."""
 import json
-from datetime import timedelta
 from functools import wraps
 
 from django.contrib import messages
@@ -8,7 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
 from django.http import Http404, HttpResponseForbidden, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
@@ -121,14 +120,6 @@ def board(user, game):
     return data
 
 
-def history(game, user):
-    result = []
-    for item in ArcadeCompetition.objects.filter(game_key=game).select_related("event"):
-        item = freeze(item)
-        rows, total = (item.standings, item.total_attempts) if item.frozen_at else contest_rows(item)
-        result.append({"event": item.event, "frozen": bool(item.frozen_at), "total": total,
-                       "rows": [{**r, "is_current_user": user.is_authenticated and r["user_id"] == user.pk} for r in rows[:20]]})
-    return result
 
 
 @require_GET
@@ -192,10 +183,20 @@ def minesweeper_preview(request):
     """Keep the old prototype in the lab, never publish it accidentally."""
     if not request.user.is_active or not request.user.is_staff:
         return HttpResponseForbidden()
-    from .views import arcade
-    request.GET = request.GET.copy()
-    request.GET["admin_test"] = ArcadeSettings.Game.MINESWEEPER
-    return arcade(request)
+    from .views import _minesweeper_leaderboard_data
+    data = _minesweeper_leaderboard_data(request.user)
+    return render(request, "arcade_minesweeper.html", {
+        "minesweeper_attempts": data["attempts"],
+        "minesweeper_records": data["records"],
+        "minesweeper_total_attempts": data["total_attempts"],
+        "minesweeper_week_start": data["week_start"],
+        "arcade_admin_preview": True, "arcade_test_mode": True,
+        "arcade_scoring_open": True, "arcade_game_key": ArcadeSettings.Game.MINESWEEPER,
+        "arcade_settings_admin_url": reverse("league:arcade_control"),
+        "minesweeper_attempt_start_url": reverse("league:minesweeper_attempt_start") + "?admin_test=1",
+        "minesweeper_attempt_finish_url": reverse("league:minesweeper_attempt_finish") + "?admin_test=1",
+        "minesweeper_leaderboard_url": reverse("league:minesweeper_leaderboard") + "?admin_test=1",
+    })
 
 
 @never_cache

@@ -22,6 +22,7 @@
     nav a{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 22px;border:1px solid #414853;border-radius:12px;text-decoration:none;font-weight:650;font-size:14px;color:#f4f5f6;background:#22272f}
     nav .primary{background:#ef4541;border-color:#ef4541;color:#fff}
     a:hover{filter:brightness(1.1)}a:focus-visible{outline:2px solid #fff;outline-offset:4px}
+    .request-id{margin-top:28px;font:12px/1.7 ui-monospace,monospace;overflow-wrap:anywhere;color:#818995}
     footer{padding:24px clamp(20px,5vw,72px);color:#818995;font:11px ui-monospace,monospace;letter-spacing:1px;border-top:1px solid #30353e}
     @media(max-width:420px){nav{flex-direction:column}nav a{width:100%}header{padding:20px}main{padding:44px 0}}
   </style>
@@ -37,6 +38,7 @@
       <a {% if not retry_url %}class="primary"{% endif %} href="/">На главную</a>
       {% if status == 403 and not retry_url %}<a href="/accounts/login/">Войти в аккаунт</a>{% endif %}
     </nav>
+    {% if request_id %}<p class="request-id">Код обращения: {{ request_id }}</p>{% endif %}
   </main>
   <footer>FASTLAP / RACE PREDICTION CLUB</footer>
 </body>

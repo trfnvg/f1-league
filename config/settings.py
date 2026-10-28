@@ -91,6 +91,7 @@ INSTALLED_APPS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MIDDLEWARE = [
+    'config.observability.RequestMonitoringMiddleware',
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -116,6 +117,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'league.context_processors.league_context',
+                'league.browser_errors.monitoring_context',
             ],
         },
     },
@@ -205,3 +207,23 @@ else:
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
+
+# Local structured logs always work; Sentry is optional and off without a DSN.
+SLOW_REQUEST_MS = max(100, int(os.getenv("SLOW_REQUEST_MS", "1500")))
+BROWSER_ERROR_REPORTING = os.getenv("BROWSER_ERROR_REPORTING", "True").lower() == "true"
+SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
+APP_ENVIRONMENT = os.getenv("APP_ENVIRONMENT", "development" if DEBUG else "production")
+APP_RELEASE = os.getenv("APP_RELEASE", "").strip()
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "formatters": {"operational": {"()": "config.observability.OperationalFormatter"}},
+    "handlers": {"operational": {"class": "logging.StreamHandler", "formatter": "operational"}},
+    "root": {"handlers": ["operational"], "level": "WARNING"},
+    "loggers": {
+        "fastlap.operations": {"handlers": ["operational"], "level": "INFO", "propagate": False},
+        "django": {"handlers": ["operational"], "level": "WARNING", "propagate": False},
+    },
+}
+
+from config.observability import configure_error_monitoring
+configure_error_monitoring(SENTRY_DSN, environment=APP_ENVIRONMENT, release=APP_RELEASE)

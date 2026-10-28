@@ -1,3 +1,0 @@
-<section class="arcade-history"><h2>Зачёты Гран-при</h2>
-  {% for item in contest_history %}<details{% if forloop.first %} open{% endif %}><summary>R{{ item.event.round_number }} · {{ item.event.name }} — {% if item.frozen %}результаты зафиксированы{% else %}идёт соревнование{% endif %}</summary><p class="text-secondary small">{{ item.total }} попыток · дедлайн {{ item.event.deadline|date:'d.m.Y H:i' }}</p><ol>{% for row in item.rows %}<li><span>{{ row.rank }}</span><strong>{{ row.username }}</strong><span>{{ row.score }}</span><small>{{ row.attempts }} попыток</small></li>{% empty %}<li>Результатов пока нет.</li>{% endfor %}</ol></details>{% empty %}<p class="text-secondary">Эта игра пока не участвовала в соревновании Гран-при.</p>{% endfor %}
-</section>

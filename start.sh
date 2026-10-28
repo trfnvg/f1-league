@@ -11,4 +11,4 @@ printf '%s\n' 'Collecting static assets'
 python manage.py collectstatic --noinput
 
 printf '%s\n' 'Starting Gunicorn'
-exec python -m gunicorn config.wsgi:application --bind "0.0.0.0:${PORT:-8000}" --workers 2 --timeout 120 --access-logfile - --error-logfile -
+exec python -m gunicorn config.wsgi:application --bind "0.0.0.0:${PORT:-8000}" --workers 2 --timeout 120 --access-logfile - --access-logformat 'request_id=%({x-request-id}o)s method=%(m)s status=%(s)s duration=%(L)s' --error-logfile -

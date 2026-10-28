@@ -78,8 +78,8 @@ def reject(attempt, reason, now):
     attempt.verification = {**attempt.verification, "rejected": reason}
     attempt.save(update_fields=["finished_at", "verification"])
     # No request bodies, cookies, tokens, names or email addresses in logs.
-    logger.warning("arcade_rejected game=%s attempt=%s user=%s reason=%s",
-        attempt._meta.model_name, attempt.pk, attempt.user_id, reason)
+    logger.warning("arcade_rejected", extra={"game": attempt._meta.model_name,
+        "attempt_id": attempt.pk, "user_id": attempt.user_id, "reason": reason})
 
 
 def check(request, attempt, data, game, *, final=False):
