@@ -534,6 +534,16 @@ def run(output, widths, engine):
                         assert page.locator(".prediction-podium-slot").first.get_attribute('aria-haspopup') == 'dialog'
                         assert page.locator("#personal-wildcard").is_hidden(), "Optional mechanics must not overwhelm the forecast"
                         assert page.locator(".stage-sections a").first.get_attribute("href") == "#stage-prediction"
+                        if route == '/far-future/':
+                            for name in ('safety_car_count', 'dnf_count'):
+                                assert page.locator(f'[name="{name}"]').input_value() == ''
+                            assert page.locator('[data-progress-bar]').get_attribute('value') == '0'
+                            page.locator('[name="safety_car_count"]').fill('0')
+                            assert page.locator('[data-progress-bar]').get_attribute('value') == '1'
+                            page.locator('[name="dnf_count"]').fill('0')
+                            assert page.locator('[data-progress-bar]').get_attribute('value') == '2'
+                            page.locator('[name="safety_car_count"]').fill('')
+                            assert page.locator('[data-progress-bar]').get_attribute('value') == '1'
                         if width < 781:
                             assert float(page.locator("#id_p1").evaluate("e=>parseFloat(getComputedStyle(e).fontSize)")) >= 16, "Avoid iOS input zoom"
                     if route == "/event-broken-cover/":

@@ -50,6 +50,14 @@ class PredictionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         event = kwargs.pop("event", None)
         super().__init__(*args, **kwargs)
+        # Model defaults are storage defaults, not answers chosen by the player.
+        # Bound POST data and existing predictions must still preserve real zeros.
+        if self.instance._state.adding:
+            for name in ("safety_car_count", "dnf_count"):
+                if name not in (kwargs.get("initial") or {}):
+                    self.initial[name] = None
+        for name in ("safety_car_count", "dnf_count"):
+            self.fields[name].widget.attrs.update(placeholder="Укажите число", inputmode="numeric")
         for field_name in (
             "p1",
             "p2",
