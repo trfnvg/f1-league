@@ -194,7 +194,8 @@ def _invite_digest(token):
 def invite_for_token(token):
     invite = LeagueInvite.objects.select_related("league_season__league", "league_season__season", "league_season__start_event").filter(token_digest=_invite_digest(token)).first()
     if (invite is None or invite.revoked_at or invite.expires_at <= timezone.now()
-            or invite.league_season.league.archived_at or invite.league_season.is_legacy):
+            or invite.league_season.league.archived_at
+            or (invite.league_season.is_legacy and invite.league_season.league.legacy_key != "original-friends")):
         raise ValidationError("Приглашение недоступно или срок его действия истёк.")
     return invite
 
@@ -204,7 +205,7 @@ def create_invite(*, actor, league_season):
     league_season = LeagueSeason.objects.select_related("league").get(pk=league_season.pk)
     league = League.objects.select_for_update().get(pk=league_season.league_id)
     require_moderator(actor, league)
-    if league_season.is_legacy:
+    if league_season.is_legacy and league.legacy_key != "original-friends":
         raise ValidationError("Сначала нужно завершить перенос исторической лиги.")
     now = timezone.now()
     _next_event(league_season, now)

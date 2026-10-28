@@ -12,9 +12,11 @@
   gap:20px; margin:0; padding:24px; background:var(--results-panel); border-bottom:1px solid var(--results-line);
 }
 .arcade-results .arcade-results-heading h2 { margin:6px 0 0; color:var(--results-text); font:800 clamp(18px,2.5vw,24px)/1.45 Manrope,system-ui,sans-serif; letter-spacing:-.025em; }
-.arcade-results .arcade-results-heading :is(p,.arcade-board-meta,.doodle-leaderboard-total) { margin:0; color:var(--results-muted); font:500 12px/1.7 Manrope,system-ui,sans-serif; letter-spacing:0; text-transform:none; white-space:normal; text-align:left; }
-.arcade-results .arcade-results-heading :is(.arcade-section-kicker,.doodle-kicker,.minesweeper-section-kicker) { margin:0; color:var(--results-muted); font:500 10px/1.6 Manrope,system-ui,sans-serif; letter-spacing:.16em; }
-.arcade-results .arcade-results-heading :is(.arcade-total-attempts strong,.doodle-leaderboard-total strong,#minesweeper-total-attempts) { color:var(--results-text); font:700 16px/1.7 Manrope,system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.arcade-results .arcade-results-heading .arcade-results-kicker { color:var(--results-muted); font:500 10px/1.6 Manrope,system-ui,sans-serif; letter-spacing:.16em; }
+.arcade-results .arcade-results-heading .arcade-results-total { display:flex; align-items:baseline; gap:8px; margin:0; color:var(--results-muted); font:500 12px/1.7 Manrope,system-ui,sans-serif; white-space:nowrap; }
+.arcade-results .arcade-results-heading .arcade-results-total strong { color:var(--results-text); font:700 16px/1.7 Manrope,system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.arcade-results .arcade-results-status { margin:0; padding:12px 24px; color:var(--results-muted); font:500 12px/1.7 Manrope,system-ui,sans-serif; }
+.arcade-results .arcade-results-status:empty { display:none; }
 .arcade-results .arcade-results-list { display:block; margin:0; padding:0; list-style:none; }
 .arcade-results .arcade-table-labels,.arcade-results .arcade-results-list>li { display:grid; grid-template-columns:44px minmax(0,1fr) 100px 100px; align-items:center; gap:16px; padding:15px 24px; }
 .arcade-results .arcade-table-labels { padding-block:13px; color:#91a1b0; font:500 10px/1.5 Manrope,system-ui,sans-serif; letter-spacing:.09em; text-transform:uppercase; background:#111b24; }

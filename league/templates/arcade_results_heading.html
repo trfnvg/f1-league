@@ -1,0 +1,5 @@
+{% load league_extras %}
+<div class="arcade-results-heading">
+  <div><span class="arcade-results-kicker">{{ game_label }}</span><h2 id="{{ title_id }}">{{ board_title|default:"Зачёт этапа" }}</h2></div>
+  <p class="arcade-results-total"><span>Всего попыток</span><span aria-hidden="true">·</span><strong id="{{ total_id }}">{{ total|arcade_number }}</strong></p>
+</div>

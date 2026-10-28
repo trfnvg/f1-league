@@ -162,14 +162,8 @@
   </section>
 
   <section class="doodle-leaderboard arcade-results" aria-labelledby="doodle-leaderboard-title">
-    <div class="doodle-leaderboard-heading arcade-results-heading">
-      <div>
-        <p class="doodle-kicker"><span></span> COWBOY GP</p>
-        <h2 id="doodle-leaderboard-title">{{ leaderboard_title }}</h2>
-      </div>
-      <span class="doodle-leaderboard-total"><strong id="doodle-total-attempts">{{ doodle_total_attempts }}</strong> попыток</span>
-    </div>
-    <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Очки</span><span>Попытки</span></div>
+    {% include "arcade_results_heading.html" with game_label="COWBOY GP" board_title=leaderboard_title title_id="doodle-leaderboard-title" total_id="doodle-total-attempts" total=doodle_total_attempts %}
+    {% include "arcade_results_labels.html" %}
     <ol class="doodle-leaderboard-list arcade-results-list" id="doodle-leaderboard-list">
       {% for record in doodle_records %}
         <li{% if record.is_current_user %} class="is-current-user"{% endif %}>
@@ -194,6 +188,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'league/doodle-endless.js' %}?v=endless-balance-v2" defer></script>
-  <script src="{% static 'league/doodle-jump.js' %}?v=winter-roster-v71" defer></script>
+  <script src="{% static 'league/doodle-jump.js' %}?v=shared-results-v72" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

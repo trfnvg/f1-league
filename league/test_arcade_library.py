@@ -85,6 +85,11 @@ class ArcadeLibraryTests(TestCase):
                 self.assertContains(page, f'class="{prefix}-leaderboard-list arcade-results-list"', count=1)
                 self.assertContains(page, 'class="arcade-table-labels"', count=1)
                 self.assertContains(page, f'id="{prefix}-leaderboard-list"', count=1)
+                self.assertContains(page, 'class="arcade-results-total"', count=1)
+                self.assertContains(page, 'Всего попыток')
+                self.assertContains(page, '<span>Результат</span>')
+                self.assertNotContains(page, 'онлайн-обновление')
+                self.assertNotContains(page, 'ВСЕГО ПОПЫТОК')
 
     def test_global_place_is_available_below_top_ten(self):
         ArcadeRecord.objects.create(user=self.user, best_score=5, total_attempts=3)

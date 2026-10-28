@@ -81,17 +81,10 @@
   {% endif %}
 
   <section class="arcade-leaderboard arcade-results" aria-labelledby="arcade-leaderboard-title" aria-live="polite">
-    <div class="arcade-leaderboard-heading arcade-results-heading">
-      <div>
-        <span class="arcade-section-kicker">PIT LANE FLIGHT</span>
-        <h2 id="arcade-leaderboard-title">Таблица рекордов</h2>
-      </div>
-      <div class="arcade-board-meta">
-        <p id="arcade-board-status">{% if arcade_closed_event %}Лучшие заезды до дедлайна · результаты зафиксированы{% elif arcade_scoring_open %}Рекорд и попытки · онлайн-обновление каждые 15 сек.{% else %}Зачёт выбранного этапа закрыт{% endif %}</p>
-        <p class="arcade-total-attempts">ВСЕГО ПОПЫТОК <strong id="arcade-total-attempts">{{ arcade_total_attempts }}</strong></p>
-      </div>
-    </div>
+    {% include "arcade_results_heading.html" with game_label="PIT LANE FLIGHT" board_title=leaderboard_title title_id="arcade-leaderboard-title" total_id="arcade-total-attempts" total=arcade_total_attempts %}
+    <p class="arcade-results-status" id="arcade-board-status" role="status"></p>
     <form hidden id="arcade-csrf-form">{% csrf_token %}</form>
+    {% include "arcade_results_labels.html" %}
     {% if user.is_authenticated %}
       <ol class="arcade-leaderboard-list arcade-results-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}

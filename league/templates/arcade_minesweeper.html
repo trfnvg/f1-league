@@ -108,11 +108,8 @@
   {% else %}<section class="minesweeper-machine" role="status"><div class="minesweeper-overlay-card"><h2>Зачёт игры закрыт</h2><p>{% if wheel_event and wheel_event.deadline <= now %}Результаты этапа зафиксированы. Победитель и колесо бонусов — ниже на этой странице.{% else %}Зачёт начнётся, когда администратор откроет игру для выбранного этапа.{% endif %}</p></div></section>{% endif %}
 
   <section class="minesweeper-leaderboard arcade-results" aria-labelledby="minesweeper-leaderboard-title">
-    <div class="minesweeper-leaderboard-heading arcade-results-heading">
-      <div><span class="minesweeper-section-kicker">PITWALL SWEEP · ЭТАП</span><h2 id="minesweeper-leaderboard-title">Таблица лидеров</h2></div>
-      <p><span id="minesweeper-total-attempts">{{ minesweeper_total_attempts }}</span> попыток всего · побеждает лучшее время полного прохождения</p>
-    </div>
-    <div class="arcade-table-labels" aria-hidden="true"><span>Место</span><span>Игрок</span><span>Время</span><span>Попытки</span></div>
+    {% include "arcade_results_heading.html" with game_label="PITWALL SWEEP" board_title=leaderboard_title title_id="minesweeper-leaderboard-title" total_id="minesweeper-total-attempts" total=minesweeper_total_attempts %}
+    {% include "arcade_results_labels.html" %}
     <ol class="minesweeper-leaderboard-list arcade-results-list" id="minesweeper-leaderboard-list">
       {% for row in minesweeper_records %}
         <li{% if row.is_current_user %} class="is-current-user"{% endif %}>
@@ -135,6 +132,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/arcade-minesweeper.js' %}?v=shared-results-v1" defer></script>
+  <script src="{% static 'league/arcade-minesweeper.js' %}?v=shared-results-v2" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

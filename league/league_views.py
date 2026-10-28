@@ -129,6 +129,7 @@ def detail(request, league_id):
     choices = LeagueSeason.objects.filter(league__memberships__user=request.user,
         league__memberships__is_active=True, league__archived_at__isnull=True).select_related("league", "season").order_by("-season__year", "league__name")
     context = dict(league=league, league_season=season, season=season.season, league_choices=choices,
+        invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",
         page=page, next_event=next_event, prediction_open=prediction_open, prediction_soon=prediction_soon,
         **data, **_rights(request.user, league))
     return render(request, "leagues/detail.html", context)
@@ -282,8 +283,17 @@ def settings(request, league_id):
     league = _league(request, league_id)
     require_manager(request.user, league)
     season = _season(request, league)
-    form = LeagueProfileForm(request.POST or None, request.FILES or None, instance=league)
-    if request.method == "POST" and form.is_valid():
+    creating_invite = request.method == "POST" and request.POST.get("action") == "create_invite"
+    form = LeagueProfileForm(None if creating_invite else request.POST or None,
+        None if creating_invite else request.FILES or None, instance=league)
+    invite_link = None
+    if creating_invite:
+        try:
+            _, token = create_invite(actor=request.user, league_season=season)
+            invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token]))
+        except ValidationError as exc:
+            messages.error(request, _error(exc))
+    elif request.method == "POST" and form.is_valid():
         try:
             update_profile(actor=request.user, league=league, **form.cleaned_data)
         except ValidationError as exc:
@@ -301,7 +311,9 @@ def settings(request, league_id):
         event for event in reversed(events) if event.deadline > now
     ]
     return render(request, "leagues/settings.html", dict(league=league, league_season=season, form=form,
-        members=members, events=events, **_rights(request.user, league)))
+        members=members, events=events, invite_link=invite_link,
+        invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",
+        **_rights(request.user, league)))
 
 
 @login_required

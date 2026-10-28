@@ -108,6 +108,11 @@ def run(output, engine):
                     page = browser.new_page(viewport={"width": width, "height": 900})
                     page.goto(f"http://127.0.0.1:{server.server_port}{route}", wait_until="networkidle")
                     assert page.locator(".arcade-results").count() == 1
+                    assert page.locator('.arcade-results-total>span').all_text_contents() == ['Всего попыток', '·']
+                    total = page.locator('.arcade-results-total>strong').inner_text()
+                    if 'minesweeper' not in route:
+                        assert total == '24\u00a0690'
+                    assert 'онлайн-обновление' not in page.locator('.arcade-results').inner_text()
                     assert abs(page.locator(".arcade-results").bounding_box()["width"] - min(width-24, 1120)) <= 1, (route, width)
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
                     if route.endswith("empty"):
@@ -122,6 +127,7 @@ def run(output, engine):
                     signatures.append(signature)
                     assert row.locator(":scope> :nth-child(2)").evaluate("e=>getComputedStyle(e).textOverflow") == "ellipsis"
                     assert page.locator(".arcade-table-labels>span").count() == 4
+                    assert page.locator('.arcade-table-labels>span').all_text_contents() == ['Место','Игрок','Результат','Попытки']
                     # Call the real polling renderer in isolation; its generated
                     # rows must retain the same geometry, typography and colors.
                     key = route.strip("/").removesuffix("-guest")
@@ -131,6 +137,12 @@ def run(output, engine):
                     if key == "minesweeper":
                         setup += source[source.index("  const formatTime ="):source.index("  const currentElapsed =")]
                     page.evaluate("(script)=>{eval(script)}", setup+renderer+"\nrenderLeaderboard([{rank:1,username:'<b>Очень длинное имя</b>',score:999999,attempts:12345,wins:3,best_time_ms:95000,is_current_user:true}]);")
+                    updater_name = {"flappy":"syncLeaderboardStats", "doodle_jump":"applyLeaderboard", "minesweeper":"applyStats"}[key]
+                    updater = re.search(r"  function "+updater_name+r"\([^\n]*\)[\s\S]*?(?=\n  (?:async )?function )", source)[0]
+                    page.evaluate("script=>{eval(script)}", setup+renderer+updater+
+                        "\nconst totalAttemptsNode=document.querySelector('.arcade-results-total>strong'); const totalAttemptsOutput=totalAttemptsNode;"+
+                        f"\n{updater_name}({{total_attempts:3257}});")
+                    assert page.locator('.arcade-results-total>strong').inner_text() == '3\u00a0257'
                     assert page.locator(".arcade-results-list>li").count() == 1
                     assert page.locator(".arcade-results-list>li>:nth-child(2) b").count() == 0
                     assert page.locator(".arcade-results-list>li").first.evaluate("e=>getComputedStyle(e).gridTemplateColumns") == signature[0]

@@ -2,6 +2,15 @@ from django import template
 
 register = template.Library()
 
+
+@register.filter
+def arcade_number(value):
+    """Same non-breaking thousands separator as Intl.NumberFormat('ru-RU')."""
+    try:
+        return f"{int(value):,}".replace(",", "\u00a0")
+    except (TypeError, ValueError, OverflowError):
+        return "0"
+
 @register.filter
 def get_item(d, key):
     if d is None:

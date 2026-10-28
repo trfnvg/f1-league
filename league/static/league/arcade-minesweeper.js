@@ -204,7 +204,7 @@
       attempts = data.attempts;
       attemptsNode.textContent = String(attempts).padStart(2, "0");
     }
-    if (Number.isFinite(data.total_attempts)) totalAttemptsNode.textContent = String(data.total_attempts);
+    if (Number.isFinite(data.total_attempts)) totalAttemptsNode.textContent = new Intl.NumberFormat("ru-RU").format(data.total_attempts);
     if (Array.isArray(data.records)) renderLeaderboard(data.records);
   }
 

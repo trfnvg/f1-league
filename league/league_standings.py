@@ -20,9 +20,15 @@ def standings(season):
     scores_map = {}
     bonuses = {}
     if season.is_legacy:
+        first_rounds = {entry.membership.user_id: entry.first_event.round_number for entry in entries}
+        event_rounds = {event.pk: event.round_number for event in events}
         scores = list(Score.objects.filter(user_id__in=users, event__in=events))
+        # Imported members retain their full original history. Invitees start
+        # from their persisted first event, not their pre-existing global score.
+        bonus_users = [entry.membership.user_id for entry in entries
+                       if entry.first_event_id == season.start_event_id]
         bonuses = dict(SeasonScore.objects.filter(season_year=season.season.year,
-            user_id__in=users).values_list("user_id", "points"))
+            user_id__in=bonus_users).values_list("user_id", "points"))
         predictions = {p.pk: p for p in Prediction.objects.filter(user_id__in=users, event__in=events,
             created_at__lt=F("event__deadline"))}
         by_user_event = {(p.user_id, p.event_id): p for p in predictions.values()}
@@ -30,6 +36,8 @@ def standings(season):
             LeagueCrazyDecision.objects.filter(entry__league_season=season).select_related("entry__membership")}
         days = {d.event_id: d for d in LeagueDayDecision.objects.filter(league_season=season)}
         for score in scores:
+            if event_rounds[score.event_id] < first_rounds[score.user_id]:
+                continue
             key = (score.user_id, score.event_id)
             points = score.points
             breakdown = dict(score.breakdown)

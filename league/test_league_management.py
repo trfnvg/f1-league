@@ -3,6 +3,7 @@ from importlib import import_module
 from io import BytesIO
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 
 from PIL import Image
 from django.apps import apps
@@ -16,9 +17,9 @@ from django.utils import timezone
 from .competition_scoring import recalculate_global_event, recalculate_league_event
 from .league_management import decide_crazy, decide_day, delete_league
 from .league_standings import standings
-from .leagues import create_league, enroll_member
+from .leagues import create_league, enroll_member, revoke_invite
 from .models import (Event, GlobalEventScore, League, LeagueActivity, LeagueCrazyDecision, LeagueDayDecision,
-    LeagueMembership, Prediction, Result, Score, Season)
+    LeagueInvite, LeagueMembership, Prediction, Result, Score, Season, SeasonScore)
 
 
 @override_settings(STORAGES={"default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -41,6 +42,71 @@ class LeagueManagementTests(TestCase):
 
     def url(self, name="friend_league_settings", league=None, **kwargs):
         return reverse("league:"+name, kwargs={"league_id": (league or self.a).league_id, **kwargs})
+
+    def test_settings_creates_invite_without_editing_profile_and_get_is_read_only(self):
+        self.assertContains(self.client.get(self.url()), "Создать ссылку")
+        self.assertEqual(LeagueInvite.objects.count(), 0)
+        response = self.client.post(self.url(), {"action": "create_invite", "year": 2027, "name": "Forged name"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="league-invite-link"')
+        self.assertContains(response, 'data-copy-invite')
+        self.assertFalse(response.context["form"].is_bound)
+        invite = self.a.invites.get()
+        self.assertNotIn(invite.token_digest, response.context["invite_link"])
+        self.a.league.refresh_from_db()
+        self.assertEqual(self.a.league.name, "Alpha")
+        self.client.get(self.url())
+        self.assertEqual(LeagueInvite.objects.count(), 1)
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(self.owner)
+        self.assertEqual(strict.post(self.url(), {"action": "create_invite"}).status_code, 403)
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.post(self.url(), {"action": "create_invite"}).status_code, 403)
+
+    def test_main_invite_starts_future_round_without_importing_old_scores(self):
+        self.a.league.legacy_key = "original-friends"
+        self.a.league.name = "Fastlap Main"
+        self.a.league.save(update_fields=["legacy_key", "name"])
+        self.a.is_legacy = True
+        self.a.save(update_fields=["is_legacy"])
+        self.event.deadline = self.now-timedelta(hours=1)
+        self.event.save(update_fields=["deadline"])
+        upcoming = Event.objects.create(name="Canada", season_year=2027, round_number=2,
+            deadline=self.now+timedelta(days=7))
+        newcomer = User.objects.create_user("new-main-player")
+        Score.objects.create(user=self.player, event=self.event, points=35)
+        SeasonScore.objects.create(user=self.player, season_year=2027, points=5)
+        Score.objects.create(user=newcomer, event=self.event, points=99)
+        SeasonScore.objects.create(user=newcomer, season_year=2027, points=50)
+        before = list(Score.objects.order_by("pk").values())
+        self.assertContains(self.client.get(self.url("friend_league")), "Пригласить")
+        response = self.client.post(self.url(), {"action": "create_invite"})
+        link = response.context["invite_link"]
+        self.assertTrue(link)
+        path = urlsplit(link).path
+        self.client.logout()
+        self.assertEqual(self.client.get(path).status_code, 200)
+        self.assertFalse(self.a.entries.filter(membership__user=newcomer).exists())
+        self.client.force_login(newcomer)
+        self.assertEqual(self.client.post(path).status_code, 302)
+        entry = self.a.entries.get(membership__user=newcomer)
+        self.assertEqual(entry.first_event, upcoming)
+        rows = {row["user"].pk: row for row in standings(self.a)["rows"]}
+        self.assertEqual(rows[self.player.pk]["total"], 40)
+        self.assertEqual(rows[newcomer.pk]["total"], 0)
+        self.assertEqual(list(Score.objects.order_by("pk").values()), before)
+        Score.objects.create(user=newcomer, event=upcoming, points=7)
+        rows = {row["user"].pk: row for row in standings(self.a)["rows"]}
+        self.assertEqual(rows[newcomer.pk]["total"], 7)
+        self.assertEqual(rows[self.player.pk]["total"], 40)
+        invite = self.a.invites.get()
+        invite.refresh_from_db()
+        self.assertEqual(invite.uses, 1)
+        self.client.post(path)
+        invite.refresh_from_db()
+        self.assertEqual(invite.uses, 1)
+        revoke_invite(actor=self.owner, invite=invite)
+        self.assertEqual(self.client.get(path).status_code, 404)
 
     def publish(self):
         self.prediction = Prediction.objects.create(event=self.event, user=self.player,

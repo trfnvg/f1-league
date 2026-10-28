@@ -118,6 +118,7 @@ def render_pages():
     league.league.avatar = 'avatars/test.png'
     league.league.save(update_fields=['avatar'])
     pages['/league-settings/'] = client.get(reverse('league:friend_league_settings', args=[league.league_id])).content
+    pages['/league-settings-invite/'] = client.post(reverse('league:friend_league_settings', args=[league.league_id]), {'action':'create_invite'}).content
     pages["/admin-add/"] = client.get(reverse("admin:league_event_add")).content
     pages["/admin-edit/"] = client.get(reverse("admin:league_event_change", args=[event.pk])).content
     pages[reverse("admin:jsi18n")] = client.get(reverse("admin:jsi18n")).content
@@ -129,6 +130,8 @@ def render_pages():
     pages["/standings-long/"] = client.get(reverse("league:global_leaderboard")).content
     league.start_event = historical[0]
     league.save(update_fields=["start_event"])
+    # These fixtures represent imported original members, not late invitees.
+    league.entries.update(first_event=historical[0])
     client.force_login(player)
     pages["/league-long/"] = client.get(reverse("league:friend_league", args=[league.league_id])).content
     gallery = "".join('<figure style="padding:20px;border:1px solid #353d48;border-radius:15px"><figcaption>'+c["grand_prix"]+'</figcaption>'+render_to_string("circuit_track.html", {"circuit": c, "track_id": key, "animated": True})+'</figure>' for key, c in CIRCUITS.items())
@@ -229,7 +232,7 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
-                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
+                for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/league-settings-invite/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")
                     assert page.locator("head title").count() == 1, (width, route, "head parsed as body content")
@@ -250,7 +253,8 @@ def run(output, widths, engine):
                         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                     if route == '/league-settings/':
                         assert page.locator('.manage-header h1').inner_text() == 'Управление лигой'
-                        assert page.locator('.manage-card').count() == 3
+                        assert page.locator('.manage-card').count() == 4
+                        assert page.locator('.manage-invite-actions button').inner_text() == 'Создать ссылку'
                         assert page.locator('.manage-round-more').is_visible()
                         assert page.locator('.manage-round:visible').count() == 5
                         page.locator('.manage-round-more summary').click()
@@ -273,6 +277,14 @@ def run(output, widths, engine):
                         assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                         page.evaluate("document.activeElement.blur();document.documentElement.style.scrollBehavior='auto';window.scrollTo(0,0)")
                         page.wait_for_function('window.scrollY < 2')
+                    if route == '/league-settings-invite/':
+                        link = page.locator('#league-invite-link').input_value()
+                        assert '/leagues/join/' in link
+                        page.evaluate("Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.testCopiedInvite=text;}}})")
+                        page.locator('[data-copy-invite]').click()
+                        page.wait_for_function("document.querySelector('[data-copy-status]').textContent.includes('Ссылка скопирована')")
+                        assert page.evaluate('window.testCopiedInvite') == link
+                        assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                     if route == '/register/':
                         assert page.locator('#id_first_name,#id_username,#id_email,#id_password1,#id_password2').count() == 5
                         assert page.locator('.account-handle>span').inner_text() == '@'
