@@ -84,6 +84,8 @@ jobs:
         run: python manage.py test --noinput
       - name: Build production static assets
         run: python manage.py collectstatic --noinput
+      - name: Boot actual production startup against an isolated database
+        run: python tests/startup_smoke.py
       - name: Install test browsers
         run: python -m playwright install --with-deps chromium webkit
       - name: Desktop and mobile browser smoke tests

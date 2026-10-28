@@ -57,6 +57,9 @@ SITE_URL = os.getenv("SITE_URL", "").strip()
 _allowed = (os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS")
             or "fastlap.ru,www.fastlap.ru,localhost,127.0.0.1,[::1]")
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
+# Timeweb probes the container using localhost, even when only public domains
+# are configured in env. These are exact loopback hosts, never an external '*'.
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS + ["localhost", "127.0.0.1", "[::1]"]))
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 CSRF_FAILURE_VIEW = "league.error_views.csrf_failure"
 
