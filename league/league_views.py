@@ -186,7 +186,9 @@ def join(request, token):
     members = invite.league_season.entries.filter(membership__is_active=True).select_related("membership__user")
     response = render(request, "leagues/join.html", {"invite": invite, "league": invite.league_season.league,
         "member_count": members.count(), "invite_members": list(members[:6])})
-    response["Referrer-Policy"] = "no-referrer"
+    # Keep invitation URLs off third-party requests without suppressing the
+    # same-origin Referer required by Django for HTTPS POSTs without Origin.
+    response["Referrer-Policy"] = "same-origin"
     return response
 
 

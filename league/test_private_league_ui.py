@@ -222,13 +222,57 @@ class PrivateLeagueUITests(TestCase):
         url = reverse("league:friend_league_join", args=[token])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
         self.assertFalse(LeagueMembership.objects.filter(league=self.a.league, user=self.player).exists())
         for _ in range(2):
             self.assertEqual(self.client.post(url).status_code, 302)
         invite.refresh_from_db();self.assertEqual(invite.uses, 1)
         self.assertEqual(self.a.entries.filter(membership__user=self.player).count(), 1)
         self.assertEqual(LeagueActivity.objects.filter(action="joined").count(), 1)
+
+    def test_https_join_without_origin_uses_same_origin_referer_and_keeps_csrf(self):
+        _, token = create_invite(actor=self.owner, league_season=self.a)
+        url = reverse("league:friend_league_join", args=[token])
+        strict = Client(enforce_csrf_checks=True)
+        strict.force_login(self.player)
+        page = strict.get(url, secure=True)
+        self.assertEqual(page["Referrer-Policy"], "same-origin")
+        secret = strict.cookies["csrftoken"].value
+        data = {"csrfmiddlewaretoken": secret}
+        # Reproduce the former no-referrer policy: valid cookie/token but no
+        # Origin or Referer is rejected on HTTPS. Never bypass that protection.
+        self.assertEqual(strict.post(url, data, secure=True).status_code, 403)
+        self.assertEqual(strict.post(url, data, secure=True,
+            HTTP_REFERER="https://attacker.example/").status_code, 403)
+        self.assertEqual(strict.post(url, data, secure=True,
+            HTTP_ORIGIN="https://attacker.example", HTTP_REFERER="https://testserver"+url).status_code, 403)
+        self.assertFalse(self.a.entries.filter(membership__user=self.player).exists())
+        response = strict.post(url, data, secure=True, HTTP_REFERER="https://testserver"+url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.a.entries.filter(membership__user=self.player).count(), 1)
+
+    def test_https_registration_returns_to_invitation_with_fresh_csrf(self):
+        _, token = create_invite(actor=self.owner, league_season=self.a)
+        join_url = reverse("league:friend_league_join", args=[token])
+        register_url = reverse("league:register")
+        strict = Client(enforce_csrf_checks=True)
+        self.assertEqual(strict.get(join_url, secure=True).status_code, 200)
+        strict.get(register_url, {"next": join_url}, secure=True)
+        old_csrf = strict.cookies["csrftoken"].value
+        data = dict(first_name="Новый", username="invitedrace63", email="invited@example.com",
+            password1="StrongRacePassword!63", password2="StrongRacePassword!63", next=join_url,
+            csrfmiddlewaretoken=old_csrf)
+        response = strict.post(register_url, data, secure=True, HTTP_REFERER="https://testserver"+register_url)
+        self.assertRedirects(response, join_url, fetch_redirect_response=False)
+        user = User.objects.get(username="invitedrace63")
+        self.assertFalse(self.a.entries.filter(membership__user=user).exists())
+        strict.get(join_url, secure=True)
+        fresh_csrf = strict.cookies["csrftoken"].value
+        self.assertNotEqual(old_csrf, fresh_csrf)
+        response = strict.post(join_url, {"csrfmiddlewaretoken": fresh_csrf}, secure=True,
+            HTTP_REFERER="https://testserver"+join_url)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.a.entries.filter(membership__user=user).count(), 1)
 
     def test_invites_expire_at_boundary_and_revoke_blocks_get_and_post(self):
         invite, token = create_invite(actor=self.owner, league_season=self.a)

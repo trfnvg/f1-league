@@ -22,7 +22,7 @@ class PredictionExperienceTests(TestCase):
         self.assertContains(response, "Private Alpha")
         self.assertNotContains(response, "Secret Bravo")
         self.assertContains(response, "next=" + url)
-        self.assertEqual(response["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response["Referrer-Policy"], "same-origin")
         self.assertIn("no-store", response["Cache-Control"])
         self.assertEqual(self.client.post(url).status_code, 302)
         data = dict(first_name="Новый", username="newplayer", email="new@example.com",
