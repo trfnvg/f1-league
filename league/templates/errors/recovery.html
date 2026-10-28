@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171b21">
+  <meta name="robots" content="noindex">
+  <title>{{ title }} — Fastlap</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#171b21;color:#f4f5f6;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;min-height:100svh;display:flex;flex-direction:column}
+    header{padding:24px clamp(20px,5vw,72px);border-bottom:1px solid #30353e}
+    .brand{display:inline-flex;align-items:center;gap:12px;color:inherit;text-decoration:none;font-size:25px;font-weight:800;letter-spacing:-1px}
+    .mark{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#ef4541;color:#fff;letter-spacing:-2px;font-size:24px}
+    main{width:min(100% - 40px,680px);margin:auto;padding:60px 0}
+    .code{font:600 13px/1.5 ui-monospace,monospace;letter-spacing:2px;color:#ff8580}
+    .code:before{content:"";display:inline-block;width:26px;height:3px;margin-right:12px;vertical-align:middle;background:#ef4541}
+    h1{font-size:clamp(30px,6vw,52px);line-height:1.12;letter-spacing:-1.5px;margin:24px 0 20px;overflow-wrap:anywhere}
+    p{color:#a6adb8;font-size:16px;line-height:1.8;max-width:580px;margin:0}
+    nav{display:flex;gap:12px;flex-wrap:wrap;margin-top:32px}
+    nav a{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 22px;border:1px solid #414853;border-radius:12px;text-decoration:none;font-weight:650;font-size:14px;color:#f4f5f6;background:#22272f}
+    nav .primary{background:#ef4541;border-color:#ef4541;color:#fff}
+    a:hover{filter:brightness(1.1)}a:focus-visible{outline:2px solid #fff;outline-offset:4px}
+    footer{padding:24px clamp(20px,5vw,72px);color:#818995;font:11px ui-monospace,monospace;letter-spacing:1px;border-top:1px solid #30353e}
+    @media(max-width:420px){nav{flex-direction:column}nav a{width:100%}header{padding:20px}main{padding:44px 0}}
+  </style>
+</head>
+<body>
+  <header><a class="brand" href="/" aria-label="Fastlap — главная"><span class="mark" aria-hidden="true">FL</span>fastlap</a></header>
+  <main>
+    <div class="code">FASTLAP / {{ status }}</div>
+    <h1>{{ title }}</h1>
+    <p>{{ message }}</p>
+    <nav aria-label="Продолжить на сайте">
+      {% if retry_url %}<a class="primary" href="{{ retry_url }}">Открыть страницу заново</a>{% endif %}
+      <a {% if not retry_url %}class="primary"{% endif %} href="/">На главную</a>
+      {% if status == 403 and not retry_url %}<a href="/accounts/login/">Войти в аккаунт</a>{% endif %}
+    </nav>
+  </main>
+  <footer>FASTLAP / RACE PREDICTION CLUB</footer>
+</body>
+</html>

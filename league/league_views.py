@@ -189,9 +189,10 @@ def join(request, token):
     members = invite.league_season.entries.filter(membership__is_active=True).select_related("membership__user")
     member_count = members.count()
     preview = list(members.order_by("pk")[:6])
+    already_joined = request.user.is_authenticated and members.filter(membership__user=request.user).exists()
     response = render(request, "leagues/join.html", {"invite": invite, "league": invite.league_season.league,
         "member_count": member_count, "invite_members": preview,
-        "invite_more_count": max(0, member_count-len(preview))})
+        "invite_more_count": max(0, member_count-len(preview)), "already_joined": already_joined})
     # Keep invitation URLs off third-party requests without suppressing the
     # same-origin Referer required by Django for HTTPS POSTs without Origin.
     response["Referrer-Policy"] = "same-origin"

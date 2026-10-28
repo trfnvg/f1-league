@@ -55,6 +55,24 @@ class PrivateLeagueUITests(TestCase):
         _, token = create_invite(actor=self.owner if ls == self.a else self.other, league_season=ls)
         return accept_invite(user=self.player, token=token)
 
+    def test_invite_existing_member_opens_league_without_join_form(self):
+        _, token = create_invite(actor=self.owner, league_season=self.a)
+        url = reverse("league:friend_league_join", args=[token])
+        response = self.client.get(url)
+        self.assertContains(response, "Вы уже участвуете")
+        self.assertContains(response, f'href="{self.url()}?year=2027"')
+        invitation = response.content.decode().split('<section class="leagues-join', 1)[1].split('</section>', 1)[0]
+        self.assertNotIn('<form', invitation)
+        self.assertNotContains(response, "Присоединиться к лиге")
+        self.client.force_login(self.player)
+        # A membership alone is not an entry in this invitation's season.
+        LeagueMembership.objects.create(league=self.a.league, user=self.player)
+        self.assertContains(self.client.get(url), "Присоединиться к лиге")
+        accept_invite(user=self.player, token=token)
+        self.assertContains(self.client.get(url), "Открыть лигу")
+        LeagueMembership.objects.filter(league=self.a.league, user=self.player).update(is_active=False)
+        self.assertNotContains(self.client.get(url), "Вы уже участвуете")
+
     def result(self):
         self.clock.return_value = self.event.race_datetime+timedelta(hours=1)
         return Result.objects.create(event=self.event, **{k: v for k, v in self.values.items() if k != "crazy_prediction"})

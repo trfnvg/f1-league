@@ -25,7 +25,7 @@ from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
 from django.core.management import call_command
 from django.template.loader import render_to_string
-from django.test import Client, override_settings
+from django.test import Client, RequestFactory, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from playwright.sync_api import sync_playwright
@@ -177,6 +177,7 @@ def render_pages():
     private = create_league(owner=player, name="Гоночная компания друзей", season=season, start_event=future, ruleset="paddock")
     _, invite_token = create_invite(actor=player, league_season=private)
     pages["/invite-manage/"] = client.get(reverse("league:friend_league_invites", args=[private.league_id])).content
+    pages["/invite-member/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
     pages["/private-predict/"] = client.get(reverse("league:friend_league_event", args=[private.league_id, future.pk])).content
     saved = client.post(reverse('league:event_detail', args=[future.pk]), dict(
         p1='russell', p2='leclerc', p3='norris', pole='russell', fastest_lap='russell',
@@ -192,6 +193,11 @@ def render_pages():
         guest = User.objects.create_user(f'invite-preview-{i}', first_name=f'Новый участник {i+1}')
         enroll_member(actor=player, league_season=private, user=guest)
     pages["/invite-preview/"] = client.get(reverse("league:friend_league_join", args=[invite_token])).content
+    from league import error_views
+    error_request = RequestFactory().get('/leagues/join/example/')
+    for name, view in (("403", error_views.permission_denied), ("404", error_views.page_not_found),
+                       ("500", error_views.server_error), ("csrf", error_views.csrf_failure)):
+        pages[f"/error-{name}/"] = view(error_request).content
     assert all(b"Server Error" not in html for html in pages.values())
     return pages
 
@@ -238,6 +244,18 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
+                for name in ('403', '404', '500', 'csrf', 'member'):
+                    route = '/invite-member/' if name == 'member' else f'/error-{name}/'
+                    page.goto(base + route)
+                    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'), (width, route)
+                    if name == 'member':
+                        assert page.locator('.leagues-join a', has_text='Открыть лигу').is_visible()
+                        assert page.locator('.leagues-join form').count() == 0
+                    else:
+                        assert page.locator('main h1').is_visible()
+                        assert page.locator('nav a[href="/"]').is_visible()
+                        assert page.locator('form').count() == 0
+                    page.screenshot(path=str(output/f'{width}-{name}-recovery.png'), full_page=True)
                 for route in ("/", "/guest/", "/closed/", "/in-race/", "/switched/", "/home-duel/", "/league/", "/league-settings/", "/league-settings-invite/", "/standings/", "/league-long/", "/standings-long/", "/event/", "/drivers/", "/driver-profile/", "/event-closed/", "/far-future/", "/event-broken-cover/", "/event-fallback/", "/profile/", "/duel-sent/", "/duel-received/", "/duel-accepted/", "/cover-square/", "/cover-portrait/", "/stage-square/", "/stage-portrait/", "/register/", "/login/", "/password-reset/", "/password-reset-done/", "/password-reset-complete/", "/new-password/", "/account-settings/", "/score-detail/", "/invite-preview/", "/invite-manage/", "/private-predict/"):
                     page.goto(base+route, wait_until="networkidle")
                     assert page.evaluate("document.compatMode === 'CSS1Compat'"), (width, route, "invalid document prefix enables quirks mode")

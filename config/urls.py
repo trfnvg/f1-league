@@ -6,6 +6,10 @@ from django.urls import path, include
 from league.auth_views import FastlapLoginView, FastlapPasswordResetView
 from league.brand_views import favicon
 
+handler403 = "league.error_views.permission_denied"
+handler404 = "league.error_views.page_not_found"
+handler500 = "league.error_views.server_error"
+
 urlpatterns = [
     path("favicon.ico", favicon, name="site_favicon"),
     path("admin/", admin.site.urls),

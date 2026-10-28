@@ -57,6 +57,7 @@ SITE_URL = os.getenv("SITE_URL", "").strip()
 _allowed = os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS") or "*"
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
+CSRF_FAILURE_VIEW = "league.error_views.csrf_failure"
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
