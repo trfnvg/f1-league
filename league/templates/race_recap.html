@@ -1,0 +1,26 @@
+{% extends 'base.html' %}{% load static %}
+{% block title %}Итоги гонки · {{ player|player_name }} · Fastlap{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/race-social.css' %}?v=1">{% if league %}<meta name="robots" content="noindex,nofollow">{% endif %}{% endblock %}
+{% block content %}
+<div class="race-recap-page">
+  <a class="recap-back" href="{% if league %}{% url 'league:friend_league_score' league.id event.id player.id %}{% else %}{% url 'league:score_detail' event.id player.id %}{% endif %}">← Разбор очков</a>
+  <div class="recap-layout">
+    <section class="recap-preview" aria-label="Карточка итогов этапа">
+      <canvas width="1080" height="1350" data-recap-canvas role="img" aria-label="{{ player|player_name }}: {{ recap_data.points }} очков за {{ event.name }}"></canvas>
+      <noscript><p>Для создания и скачивания картинки включите JavaScript.</p></noscript>
+    </section>
+    <section class="recap-controls">
+      <span class="recap-kicker">ФИНИШНЫЙ ПРОТОКОЛ / R{{ event.round_number|stringformat:'02d' }}</span>
+      <h1>{% if player.id == user.id %}Твоя гонка.<br>Твой результат.{% else %}Гонка в деталях.<br>Результат игрока.{% endif %}</h1>
+      <p>{{ player|player_name }} · {{ event.name }}{% if league %}<br>{{ league.name }}{% endif %}</p>
+      <dl class="recap-facts"><div><dt>Очки за этап</dt><dd>{{ recap_data.points }}</dd></div>{% if recap_data.rank %}<div><dt>{% if league %}Позиция в лиге{% else %}Место на этапе{% endif %}</dt><dd>P{{ recap_data.rank }}</dd></div>{% endif %}{% if recap_data.movement != None %}<div><dt>Изменение позиции</dt><dd>{% if recap_data.movement > 0 %}+{% endif %}{{ recap_data.movement }}</dd></div>{% endif %}{% if recap_data.duel %}<div><dt>Дуэль · {{ recap_data.duel.opponent }}</dt><dd>{{ recap_data.duel.label }}</dd></div>{% endif %}</dl>
+      <div class="recap-actions"><button type="button" data-recap-download disabled>Скачать карточку <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></svg></button><button type="button" data-recap-share hidden>Поделиться</button></div>
+      <p class="recap-export-note">PNG · 1080 × 1350 · без потери чёткости</p>
+      <p class="recap-status" role="status" data-recap-status></p>
+      <p class="recap-disclaimer">{% if league %}Позиция и динамика рассчитаны по очкам опубликованных этапов до этой гонки, без сезонных бонусов. {% endif %}Карточка отражает сохранённый результат на момент открытия. После пересчёта скачайте её заново.</p>
+    </section>
+  </div>
+</div>
+{{ recap_data|json_script:'race-recap-data' }}
+<script src="{% static 'league/race-recap.js' %}?v=1" defer></script>
+{% endblock %}

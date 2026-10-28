@@ -1,0 +1,8 @@
+{% if reactions %}
+<div class="crazy-reactions" data-reactions data-reaction-url="{{ reactions.url }}" aria-label="Реакции на крейзи-предикт">
+  {% for option in reactions.options %}
+    <form method="post" action="{{ reactions.url }}" data-reaction-form>{% csrf_token %}<input type="hidden" name="kind" value="{{ option.kind }}"><button type="submit" data-reaction-kind="{{ option.kind }}" aria-label="{{ option.label }}" aria-pressed="{{ option.selected|yesno:'true,false' }}" {% if not reactions.can_react %}disabled title="{% if user.is_authenticated %}Нельзя реагировать на свой прогноз{% else %}Войдите, чтобы поставить реакцию{% endif %}"{% endif %}><span aria-hidden="true">{{ option.emoji }}</span><span data-reaction-count>{{ option.count }}</span></button></form>
+  {% endfor %}
+  <span class="crazy-reaction-status" role="status" data-reaction-status></span>
+</div>
+{% endif %}

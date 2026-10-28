@@ -189,6 +189,11 @@ def render_pages():
     Prediction.objects.filter(user=player, event=past).update(p1="leclerc", p2="russell", p3="norris", pole="russell", created_at=past.deadline-timedelta(hours=1))
     Score.objects.filter(user=player, event=past).update(points=12, breakdown={"P1 (Top-3)":3,"P2 (Top-3)":3,"P3":4,"Pole Position":4,"Дуэль":-2})
     pages["/score-detail/"] = client.get(reverse("league:score_detail", args=[past.pk, player.pk])).content
+    pages["/race-recap/"] = client.get(reverse("league:race_recap", args=[past.pk, player.pk])).content
+    pages["/league-recap/"] = client.get(reverse("league:friend_league_recap", args=[league.league_id, past.pk, player.pk])).content
+    friend = User.objects.get(username="Аня")
+    Prediction.objects.filter(user=friend, event=past).update(crazy_prediction="Гонку выиграет тот, кто первым доедет до финиша.", created_at=past.deadline-timedelta(hours=1))
+    pages["/social-event/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
     client.logout()
     for i in range(29):
         guest = User.objects.create_user(f'invite-preview-{i}', first_name=f'Новый участник {i+1}')
@@ -247,6 +252,50 @@ def run(output, widths, engine):
             for width in widths:
                 page = browser.new_page(viewport={"width": width, "height": 1000}, device_scale_factor=1)
                 page.on("pageerror", lambda error: errors.append(str(error)))
+                for route in ('/race-recap/', '/league-recap/'):
+                    page.goto(base+route, wait_until='networkidle')
+                    page.locator('canvas[data-ready="true"]').wait_for()
+                    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
+                    with page.expect_download() as exported:
+                        page.locator('[data-recap-download]').click()
+                    image_path = output/f'{width}-{route.strip("/")}-export.png'
+                    exported.value.save_as(str(image_path))
+                    with Image.open(image_path) as saved_image:
+                        assert saved_image.size == (1080,1350)
+                        assert saved_image.format == 'PNG'
+                    assert image_path.stat().st_size > 20000
+                    page.screenshot(path=str(output/f'{width}-{route.strip("/")}.png'), full_page=True)
+                reaction_state = {'kind': None, 'failed': False}
+                def react(route):
+                    if reaction_state['failed']:
+                        route.fulfill(status=403, content_type='text/html', body='Forbidden')
+                        return
+                    # Browser FormData uses multipart, inspect its kind field.
+                    body = route.request.post_data or ''
+                    chosen = next(kind for kind in ('heart','fire','poop') if f'\r\n{kind}\r\n' in body)
+                    reaction_state['kind'] = None if reaction_state['kind']==chosen else chosen
+                    import json
+                    route.fulfill(content_type='application/json', body=json.dumps({'options':[
+                        {'kind':kind,'count':int(reaction_state['kind']==kind),'selected':reaction_state['kind']==kind}
+                        for kind in ('heart','fire','poop')]}))
+                page.route('**/events/*/predictions/*/reactions/', react)
+                page.goto(base+'/social-event/', wait_until='networkidle')
+                page.locator('.crazy-social-list summary').click()
+                group = page.locator('[data-reactions]').first
+                group.evaluate('item=>item.scrollIntoView({block:"center"})')
+                for kind, selected in (('heart', True),('fire',True),('fire',False),('poop',True)):
+                    button = group.locator(f'[data-reaction-kind="{kind}"]')
+                    button.click()
+                    page.wait_for_function('(item)=>item.getAttribute("aria-busy")!=="true"', arg=group.element_handle())
+                    assert button.get_attribute('aria-pressed') == str(selected).lower()
+                    assert button.locator('[data-reaction-count]').inner_text() == str(int(selected))
+                reaction_state['failed']=True
+                group.locator('[data-reaction-kind="heart"]').click()
+                page.wait_for_function('(item)=>item.getAttribute("aria-busy")!=="true"', arg=group.element_handle())
+                assert 'Не удалось сохранить' in group.locator('[data-reaction-status]').inner_text()
+                assert group.locator('[data-reaction-kind="poop"]').get_attribute('aria-pressed') == 'true'
+                group.screenshot(path=str(output/f'{width}-crazy-reactions.png'))
+                page.unroute('**/events/*/predictions/*/reactions/', react)
                 for name in ('403', '404', '500', 'csrf', 'member'):
                     route = '/invite-member/' if name == 'member' else f'/error-{name}/'
                     page.goto(base + route)

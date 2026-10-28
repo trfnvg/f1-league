@@ -68,7 +68,7 @@ def explain(score, prediction, result, event):
 
 @never_cache
 @require_GET
-def detail(request, event_id, user_id, league_id=None):
+def detail(request, event_id, user_id, league_id=None, recap=False):
     event = get_object_or_404(Event, pk=event_id)
     if event.deadline > timezone.now() or event.status != Event.Status.SCORED:
         raise Http404("Результат ещё не опубликован.")
@@ -114,7 +114,17 @@ def detail(request, event_id, user_id, league_id=None):
     wildcard = None
     if not season or season.is_legacy:
         wildcard = PlayerWildcard.objects.filter(event=event, user_id=user_id).select_related("question").first()
-    return render(request, "score_detail.html", dict(event=event, player=player, score=score,
+    if recap:
+        from .race_recap import summary
+        return render(request, "race_recap.html", dict(event=event, player=player, league=league,
+            recap_data=summary(event=event, player=player, score=score, score_rows=rows, season=season)))
+    reactions = None
+    if prediction and (season is None or season.ruleset == "paddock"):
+        from .crazy_jury import crazy_vote_is_open
+        from .reactions import summaries
+        if league or not crazy_vote_is_open(event):
+            reactions = summaries([prediction], request.user, league).get(prediction.pk)
+    return render(request, "score_detail.html", dict(event=event, player=player, score=score, reactions=reactions,
         league=league, league_season=season, score_rows=rows, extras=extras, notes=notes,
         prediction=prediction, wildcard=wildcard, show_crazy=not season or season.ruleset == "paddock",
         has_snapshot=bool(getattr(score, "input_data", {}))))

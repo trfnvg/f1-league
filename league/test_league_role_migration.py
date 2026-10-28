@@ -12,7 +12,8 @@ class RetireManagerMigrationTests(TransactionTestCase):
         after = [("league", "0055_remove_league_manager_role")]
         executor = MigrationExecutor(connection)
         executor.migrate(before)
-        self.addCleanup(lambda: MigrationExecutor(connection).migrate(after))
+        latest = executor.loader.graph.leaf_nodes("league")
+        self.addCleanup(lambda: MigrationExecutor(connection).migrate(latest))
         old = executor.loader.project_state(before).apps
         User = old.get_model("auth", "User")
         League = old.get_model("league", "League")

@@ -262,6 +262,11 @@ def event_detail(request, league_id, event_id):
             score = legacy_scores.get((entry.membership.user_id, event.pk)) if season.is_legacy else scores.get(entry.pk)
             rows.append({"entry": entry, "prediction": p, "score": score, "decision": decisions.get(entry.pk)})
     day = LeagueDayDecision.objects.filter(league_season=season, event=event).first()
+    if season.ruleset == "paddock" and rows:
+        from .reactions import summaries
+        reaction_map = summaries([row["prediction"] for row in rows if row["prediction"]], request.user, league)
+        for row in rows:
+            row["reactions"] = reaction_map.get(row["prediction"].pk) if row["prediction"] else None
     day_form = LeagueDayForm(initial={"use_official": day is None, "drivers": day.drivers if day else []})
     return render(request, "leagues/event.html", dict(league=league, league_season=season, event=event,
         prediction=prediction, form=form, editable=editable, rows=rows, closed=now >= event.deadline, day_form=day_form,

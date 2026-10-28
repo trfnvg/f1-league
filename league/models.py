@@ -692,6 +692,25 @@ class Prediction(models.Model):
         return f"{self.user} - {self.event}"
 
 
+class CrazyReaction(models.Model):
+    class Kind(models.TextChoices):
+        HEART = "heart", "Сердечко"
+        FIRE = "fire", "Огонёк"
+        POOP = "poop", "Какашка"
+
+    prediction = models.ForeignKey(Prediction, on_delete=models.CASCADE, related_name="reactions")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="crazy_reactions")
+    league = models.ForeignKey(League, on_delete=models.CASCADE, null=True, blank=True, related_name="crazy_reactions")
+    kind = models.CharField(max_length=8, choices=Kind.choices)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("prediction", "user", "league"), name="crazy_reaction_league_unique"),
+            models.UniqueConstraint(fields=("prediction", "user"), condition=Q(league__isnull=True), name="crazy_reaction_global_unique"),
+            models.CheckConstraint(condition=Q(kind__in=("heart", "fire", "poop")), name="crazy_reaction_kind_valid"),
+        ]
+
+
 class CrazyPredictionVote(models.Model):
     updated_at = models.DateTimeField("Последнее изменение голоса", null=True, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="crazy_prediction_votes")

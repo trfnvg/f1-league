@@ -1769,6 +1769,13 @@ def event_detail(request, event_id: int):
             for item in public_predictions
         ]
 
+    if can_view_community and not crazy_vote_open and now >= event.deadline:
+        from .reactions import summaries
+        reaction_map = summaries([row["prediction"] for row in community_predictions
+            if row["prediction"].created_at < event.deadline], request.user)
+        for row in community_predictions:
+            row["reactions"] = reaction_map.get(row["prediction"].pk)
+
     own_duel = get_user_event_duel(event, request.user)
     duel_form = None
     if request.user.is_authenticated and state == "open" and own_duel is None:
