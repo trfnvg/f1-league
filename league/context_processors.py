@@ -1,4 +1,7 @@
+from urllib.parse import urlencode
+
 from django.utils import timezone
+from django.urls import reverse
 
 from .models import ArcadeSettings, Event, Season
 from .home_events import select_current_event
@@ -19,6 +22,10 @@ def league_context(request):
     if events is None:
         events = Event.objects.filter(season_year=selected_year).order_by("round_number")
     current_event = select_current_event(events, now)
+    prediction_target = (reverse("league:event_detail", args=[current_event.pk]) if current_event
+                         else reverse("league:home") + "#calendar")
+    prediction_entry_url = (prediction_target if request.user.is_authenticated else
+                            reverse("login") + "?" + urlencode({"next": prediction_target}))
     viewer_profile = getattr(request.user, "league_profile", None) if request.user.is_authenticated else None
     viewer_avatar_url = viewer_profile.avatar.url if viewer_profile and viewer_profile.avatar else ""
     arcade_running = bool(
@@ -46,5 +53,6 @@ def league_context(request):
         "arcade_public_enabled": arcade_visible,
         "current_event": current_event,
         "next_prediction_event": current_event,
+        "prediction_entry_url": prediction_entry_url,
         "viewer_avatar_url": viewer_avatar_url,
     }

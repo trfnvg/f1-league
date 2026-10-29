@@ -80,6 +80,10 @@ def run(browser_name, output):
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base + "/calendar/", wait_until="networkidle")
                 assert page.locator(".rc-card").count() == 23
+                assert page.locator('#mainMenu .menu-item').first.text_content().strip() == "Главная"
+                assert page.locator('#mainMenu .menu-item').first.get_attribute('href') == '/'
+                for link in page.locator('[data-prediction-nav]').all():
+                    assert link.get_attribute('href') == '/accounts/login/?next=%2Fevents%2F' + str(event.pk) + '%2F'
                 assert page.locator("#next-grand-prix").inner_text() == "Мехико"
                 assert page.locator(".rc-feature-times time").last.inner_text() == "01.11 · 23:00"
                 assert page.locator(".rc-feature-times [data-calendar-session]").count() == 5
