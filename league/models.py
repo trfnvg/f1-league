@@ -104,6 +104,11 @@ class RaceCalendarRound(models.Model):
     ends_on = models.DateField("Конец уик-энда")
     practice1_at = models.DateTimeField("Первая практика", null=True, blank=True,
         help_text="Оставьте пустым, если время официально ещё не объявлено.")
+    practice2_at = models.DateTimeField("Вторая практика", null=True, blank=True)
+    practice3_at = models.DateTimeField("Третья практика", null=True, blank=True)
+    qualifying_at = models.DateTimeField("Квалификация", null=True, blank=True)
+    sprint_qualifying_at = models.DateTimeField("Квалификация к спринту", null=True, blank=True)
+    sprint_at = models.DateTimeField("Спринт", null=True, blank=True)
     race_at = models.DateTimeField("Старт гонки", null=True, blank=True,
         help_text="Расписание календаря не меняет дедлайн прогнозов.")
     has_sprint = models.BooleanField("Спринт", default=False)
@@ -138,12 +143,27 @@ class RaceCalendarRound(models.Model):
         if self.prediction_event_id and self.prediction_event.season_year != self.season_year:
             errors["prediction_event"] = "Карточка прогнозов должна относиться к этому же сезону."
         if venue_zone and self.starts_on and self.ends_on:
-            for field in ("practice1_at", "race_at"):
+            for field in ("practice1_at", "practice2_at", "practice3_at", "qualifying_at",
+                          "sprint_qualifying_at", "sprint_at", "race_at"):
                 value = getattr(self, field)
                 if value and not self.starts_on <= value.astimezone(venue_zone).date() <= self.ends_on:
                     errors[field] = "Дата сессии по времени автодрома должна попадать в уик-энд."
         if self.practice1_at and self.race_at and self.practice1_at >= self.race_at:
             errors["race_at"] = "Гонка должна начинаться после первой практики."
+        session_fields = (("practice1_at", "sprint_qualifying_at", "sprint_at", "qualifying_at", "race_at")
+                          if self.has_sprint else
+                          ("practice1_at", "practice2_at", "practice3_at", "qualifying_at", "race_at"))
+        previous = None
+        for field in session_fields:
+            value = getattr(self, field)
+            if value and previous and value <= previous:
+                errors[field] = "Сессии должны идти по порядку: практика, квалификация, гонка."
+            if value:
+                previous = value
+        unused = ("practice2_at", "practice3_at") if self.has_sprint else ("sprint_qualifying_at", "sprint_at")
+        for field in unused:
+            if getattr(self, field):
+                errors[field] = "Этой сессии нет в выбранном формате уик-энда."
         if errors:
             raise ValidationError(errors)
 

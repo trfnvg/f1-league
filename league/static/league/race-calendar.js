@@ -20,7 +20,7 @@
       time.textContent = `${get('day')}.${get('month')} · ${get('hour')}:${get('minute')}`;
       time.title = `${zone} · ${date.toISOString()}`;
     });
-    calendar.querySelectorAll('.rc-card-footer>span').forEach(label => {
+    calendar.querySelectorAll('[data-calendar-zone-badge]').forEach(label => {
       label.textContent = value === 'venue' ? 'МЕСТНОЕ' : value === 'device' ? deviceZone.split('/').pop().replaceAll('_', ' ') : 'МСК';
     });
     zoneNote.textContent = value === 'venue'

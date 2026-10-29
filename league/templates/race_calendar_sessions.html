@@ -1,7 +1,8 @@
 {% load tz %}
 {% timezone 'Europe/Moscow' %}
 <dl class="rc-sessions{% if feature %} rc-sessions-feature{% endif %}">
-  <div><dt><span class="rc-session-marker">FP1</span> Первая практика</dt><dd>{% if race.practice1_at %}<time datetime="{{ race.practice1_at|date:'c' }}" data-calendar-time data-venue="{{ race.venue_timezone }}">{{ race.practice1_at|date:'d.m · H:i' }}</time>{% else %}<span class="rc-tbc">Время уточняется</span>{% endif %}</dd></div>
-  <div><dt><span class="rc-session-marker rc-race-marker">GP</span> Гонка</dt><dd>{% if race.race_at %}<time datetime="{{ race.race_at|date:'c' }}" data-calendar-time data-venue="{{ race.venue_timezone }}">{{ race.race_at|date:'d.m · H:i' }}</time>{% else %}<span class="rc-tbc">Время уточняется</span>{% endif %}</dd></div>
+  {% for session in race.session_rows %}
+  <div class="{% if session.is_race %}rc-session-race{% endif %}" data-calendar-session="{{ session.code }}"><dt><span class="rc-session-marker{% if session.is_race %} rc-race-marker{% endif %}">{{ session.code }}</span><span>{{ session.label }}</span></dt><dd>{% if session.at %}<time datetime="{{ session.at|date:'c' }}" data-calendar-time data-venue="{{ race.venue_timezone }}">{{ session.at|date:'d.m · H:i' }}</time>{% else %}<span class="rc-tbc">Время уточняется</span>{% endif %}</dd></div>
+  {% endfor %}
 </dl>
 {% endtimezone %}

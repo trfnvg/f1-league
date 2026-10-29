@@ -6,28 +6,35 @@
 {% language 'ru' %}
 <div class="race-calendar" data-race-calendar>
   <header class="rc-heading">
-    <div><p class="rc-eyebrow"><span></span> FORMULA 1 · {{ calendar_year }}</p><h1>Гоночный календарь</h1><p class="rc-intro">Весь сезон. Каждый старт.</p></div>
-    <form method="get" class="rc-season"><label for="calendar-season">Сезон</label><div><select id="calendar-season" name="season">{% for year in calendar_years %}<option value="{{ year }}"{% if year == calendar_year %} selected{% endif %}>{{ year }}</option>{% endfor %}</select><button type="submit" aria-label="Открыть выбранный сезон">{% include 'ui_arrow.html' %}</button></div></form>
+    <div><p class="rc-eyebrow"><span></span> FORMULA 1 · {{ calendar_year }}</p><h1>Гоночный календарь</h1><p class="rc-intro">От первой практики до клетчатого флага.</p></div>
+    {% if calendar_years|length > 1 %}<form method="get" class="rc-season"><label for="calendar-season">Сезон</label><div class="rc-select"><select id="calendar-season" name="season">{% for year in calendar_years %}<option value="{{ year }}"{% if year == calendar_year %} selected{% endif %}>{{ year }}</option>{% endfor %}</select><button type="submit" aria-label="Открыть выбранный сезон">{% include 'ui_arrow.html' %}</button></div></form>{% else %}<span class="rc-season-badge">СЕЗОН <b>{{ calendar_year }}</b></span>{% endif %}
   </header>
 
   {% if calendar_next %}{% with race=calendar_next %}
   <section class="rc-feature" aria-labelledby="next-grand-prix">
-    <div class="rc-feature-image" aria-hidden="true">{% if race.cover_image %}<img src="{{ race.cover_image.url }}" alt="" fetchpriority="high" decoding="async">{% elif race.photo_static %}<img src="{% static race.photo_static %}" alt="" fetchpriority="high" decoding="async">{% endif %}</div>
-    <div class="rc-feature-copy"><p class="rc-eyebrow">{% if race.is_weekend %}<span class="rc-live-dot"></span> ГОНОЧНЫЙ УИК-ЭНД{% else %}СЛЕДУЮЩАЯ ОСТАНОВКА{% endif %}<b>R{{ race.round_number|stringformat:'02d' }}</b></p><h2 id="next-grand-prix">{{ race.location }}</h2><p class="rc-feature-country">{{ race.title }} <span>·</span> {{ race.circuit_name }}</p>
-      <div class="rc-feature-times">{% include 'race_calendar_sessions.html' with feature=True %}</div>
-      <div class="rc-feature-bottom"><span>{{ race.starts_on|date:'d' }}{% if race.starts_on.month != race.ends_on.month %} {{ race.starts_on|date:'M' }}{% endif %} — {{ race.ends_on|date:'d E' }}</span>{% if race.linked_event %}<a href="{% url 'league:event_detail' race.linked_event.pk %}">Открыть этап {% include 'ui_arrow.html' %}</a>{% else %}<a href="{{ race.source_url }}" target="_blank" rel="noopener noreferrer">Расписание F1 {% include 'ui_arrow.html' %}</a>{% endif %}</div>
+    <div class="rc-feature-main">
+      <div class="rc-feature-image" aria-hidden="true">{% if race.cover_url %}<img src="{{ race.cover_url }}" alt="" fetchpriority="high" decoding="async">{% elif race.photo_static %}<img src="{% static race.photo_static %}" alt="" fetchpriority="high" decoding="async">{% endif %}</div>
+      <div class="rc-feature-copy">
+        <p class="rc-eyebrow"><span class="rc-live-dot"></span>{% if race.is_weekend %}ГОНОЧНЫЙ УИК-ЭНД{% else %}СЛЕДУЮЩИЙ ГРАН-ПРИ{% endif %}<b>R{{ race.round_number|stringformat:'02d' }}</b></p>
+        <div class="rc-feature-title"><p>{{ race.country }}</p><h2 id="next-grand-prix">{{ race.location }}</h2><span>{{ race.circuit_name }}</span></div>
+        <div class="rc-feature-bottom">
+          <div class="rc-weekend-date"><small>ГОНОЧНЫЙ УИК-ЭНД</small><strong>{{ race.starts_on|date:'d' }}{% if race.starts_on.month != race.ends_on.month %} {{ race.starts_on|date:'M' }}{% endif %} — {{ race.ends_on|date:'d E' }}</strong></div>
+          {% if race.linked_event %}<a class="rc-button rc-button-primary" href="{% url 'league:event_detail' race.linked_event.pk %}">Открыть этап {% include 'ui_arrow.html' %}</a>{% else %}<a class="rc-button rc-button-primary" href="{{ race.source_url }}" target="_blank" rel="noopener noreferrer">На сайте F1 {% include 'ui_arrow.html' %}</a>{% endif %}
+        </div>
+      </div>
+      <span class="rc-feature-watermark" aria-hidden="true">{{ race.round_number|stringformat:'02d' }}</span>
     </div>
-    <span class="rc-feature-watermark" aria-hidden="true">{{ race.round_number|stringformat:'02d' }}</span>
+    <div class="rc-feature-program"><div class="rc-program-heading"><h3>Расписание уик-энда</h3><span data-calendar-zone-badge>МСК</span></div><div class="rc-feature-times">{% include 'race_calendar_sessions.html' with feature=True %}</div><a class="rc-source-link" href="{{ race.source_url }}" target="_blank" rel="noopener noreferrer">Официальное расписание F1 {% include 'ui_arrow.html' %}</a></div>
   </section>
   {% endwith %}{% elif calendar_rounds %}<div class="rc-season-finished"><span class="rc-eyebrow">КЛЕТЧАТЫЙ ФЛАГ</span><h2>Сезон завершён</h2><p>Все этапы и время сессий — в календаре ниже.</p></div>{% endif %}
 
   <div class="rc-toolbar">
     <div><h2>Этапы сезона</h2><span>{{ calendar_rounds|length }} Гран-при <i>·</i> {{ calendar_completed }} завершено</span></div>
-    <div class="rc-timezone" data-calendar-timezone hidden><label for="calendar-timezone">Время</label><select id="calendar-timezone"><option value="Europe/Moscow">Московское · МСК</option><option value="device">Мой часовой пояс</option><option value="venue">На автодроме</option></select></div>
+    <div class="rc-timezone" data-calendar-timezone hidden><label for="calendar-timezone">Часовой пояс</label><div class="rc-select"><select id="calendar-timezone"><option value="Europe/Moscow">Московское · МСК</option><option value="device">Мой часовой пояс</option><option value="venue">На автодроме</option></select></div></div>
   </div>
   <div class="rc-calendar-nav">
     <nav class="rc-month-nav" aria-label="Месяцы сезона">{% for month in calendar_months %}<a href="#calendar-month-{{ month.number }}">{{ month.name|slice:':3' }}</a>{% endfor %}</nav>
-    <div class="rc-filters" data-calendar-filters hidden role="group" aria-label="Показать этапы"><button type="button" data-filter="all" aria-pressed="true">Все</button><button type="button" data-filter="upcoming" aria-pressed="false">Предстоящие</button><button type="button" data-filter="sprint" aria-pressed="false">Спринты</button></div>
+    <div class="rc-filters" data-calendar-filters hidden role="group" aria-label="Показать этапы"><button type="button" data-filter="all" aria-pressed="true">Все этапы</button><button type="button" data-filter="upcoming" aria-pressed="false">Предстоящие</button><button type="button" data-filter="sprint" aria-pressed="false">Спринты</button></div>
   </div>
 
   <div class="rc-months">
@@ -38,13 +45,15 @@
       {% for race in month.rounds %}
         <article class="rc-card{% if race.is_next %} is-next{% endif %}" id="grand-prix-{{ race.circuit }}" data-calendar-round data-finished="{{ race.is_finished|yesno:'true,false' }}" data-sprint="{{ race.has_sprint|yesno:'true,false' }}">
           <div class="rc-card-visual">
-            {% if race.cover_image %}<img src="{{ race.cover_image.url }}" alt="{{ race.photo_alt }}" width="960" height="640" loading="lazy" decoding="async">{% elif race.photo_static %}<img src="{% static race.photo_static %}" alt="{{ race.photo_alt }}" width="960" height="640" loading="lazy" decoding="async">{% endif %}
-            <div class="rc-card-badges"><span class="rc-round">R{{ race.round_number|stringformat:'02d' }}</span>{% if race.is_next %}<span class="rc-status">{% if race.is_weekend %}Сейчас{% else %}Следующий{% endif %}</span>{% elif race.is_finished %}<span class="rc-status is-finished">Завершён</span>{% endif %}{% if race.has_sprint %}<span class="rc-sprint">SPRINT</span>{% endif %}</div>
+            {% if race.cover_url %}<img src="{{ race.cover_url }}" alt="{{ race.photo_alt }}" width="960" height="640" loading="lazy" decoding="async">{% elif race.photo_static %}<img src="{% static race.photo_static %}" alt="{{ race.photo_alt }}" width="960" height="640" loading="lazy" decoding="async">{% endif %}
+            <div class="rc-card-badges"><span class="rc-round">R{{ race.round_number|stringformat:'02d' }}</span>{% if race.has_sprint %}<span class="rc-sprint">SPRINT</span>{% endif %}</div>
             <div class="rc-card-title"><p>{{ race.country }}</p><h4>{{ race.location }}</h4></div>
           </div>
-          <div class="rc-card-body"><div class="rc-card-date"><strong>{{ race.starts_on|date:'d' }}{% if race.starts_on.month != race.ends_on.month %}.{{ race.starts_on|date:'m' }}{% endif %} — {{ race.ends_on|date:'d.m' }}</strong><span>{{ race.circuit_name }}</span></div>
+          <div class="rc-card-body">
+            <div class="rc-card-date"><strong>{{ race.starts_on|date:'d' }}{% if race.starts_on.month != race.ends_on.month %}.{{ race.starts_on|date:'m' }}{% endif %} — {{ race.ends_on|date:'d.m' }}</strong>{% if race.is_next %}<span class="rc-status">{% if race.is_weekend %}Сейчас{% else %}Следующий{% endif %}</span>{% elif race.is_finished %}<span class="rc-status is-finished">Завершён</span>{% endif %}</div>
+            <p class="rc-circuit-name">{{ race.circuit_name }}</p>
             {% include 'race_calendar_sessions.html' %}
-            <footer class="rc-card-footer">{% if race.linked_event %}<a class="rc-event-link" href="{% url 'league:event_detail' race.linked_event.pk %}">Открыть этап {% include 'ui_arrow.html' %}</a>{% else %}<a href="{{ race.source_url }}" target="_blank" rel="noopener noreferrer">Расписание F1 {% include 'ui_arrow.html' %}</a>{% endif %}<span>МСК</span></footer>
+            <footer class="rc-card-footer">{% if race.linked_event %}<a class="rc-button rc-button-stage" href="{% url 'league:event_detail' race.linked_event.pk %}">Открыть этап {% include 'ui_arrow.html' %}</a>{% else %}<a class="rc-button rc-button-source" href="{{ race.source_url }}" target="_blank" rel="noopener noreferrer">На сайте F1 {% include 'ui_arrow.html' %}</a>{% endif %}<span data-calendar-zone-badge>МСК</span></footer>
           </div>
         </article>
       {% endfor %}
@@ -55,7 +64,7 @@
   <p class="rc-filter-empty" data-calendar-empty role="status" hidden>Нет этапов с такими условиями. Выбери другой фильтр.</p>
 
   <footer class="rc-footnote"><p data-calendar-zone-note>Время сессий — московское (UTC+3). Даты уик-эндов — по месту проведения.</p><p>Расписание может меняться.{% if calendar_checked_on %} Проверено {{ calendar_checked_on|date:'d.m.Y' }}.{% endif %} Дедлайн прогнозов указан отдельно на странице этапа.</p>
-    {% if calendar_credits %}<details class="rc-credits"><summary>Фотографии и источники</summary><p>Снимки автодромов и городов иллюстрируют место проведения; это не обязательно фотографии сезона {{ calendar_year }}. Изображения вписаны в обложки с кадрированием.</p><ul>{% for photo in calendar_credits %}<li><a href="{{ photo.source_url }}" target="_blank" rel="noopener noreferrer">{{ photo.alt }}</a><span>{{ photo.author }} · <a href="{{ photo.license_url }}" target="_blank" rel="noopener noreferrer">{{ photo.license }}</a></span></li>{% endfor %}</ul><a href="https://www.formula1.com/en/racing/{{ calendar_year }}" target="_blank" rel="noopener noreferrer">Официальный календарь Formula 1 {% include 'ui_arrow.html' %}</a></details>{% endif %}
+    {% if calendar_credits %}<details class="rc-credits"><summary>Фотографии и источники</summary><p>Архивные кадры Формулы-1 иллюстрируют календарь, это не обязательно фотографии сезона {{ calendar_year }}. Загруженные обложки этапов имеют приоритет. Фотографии кадрируются без искажения пропорций.</p><ul>{% for photo in calendar_credits %}<li><a href="{{ photo.source_url }}" target="_blank" rel="noopener noreferrer">{{ photo.alt }}</a><span>{{ photo.author }} · <a href="{{ photo.license_url }}" target="_blank" rel="noopener noreferrer">{{ photo.license }}</a></span></li>{% endfor %}</ul><a href="https://www.formula1.com/en/racing/{{ calendar_year }}" target="_blank" rel="noopener noreferrer">Официальный календарь Formula 1 {% include 'ui_arrow.html' %}</a></details>{% endif %}
   </footer>
 </div>
 {% endlanguage %}

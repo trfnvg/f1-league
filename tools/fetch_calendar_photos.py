@@ -24,9 +24,15 @@ def fetch(url):
         return response.read()
 
 
-def main(reuse_existing=False):
+def main(reuse_existing=False, replace_reviewed=False, only=None):
     sources = json.loads((Path(__file__).with_name("calendar_photo_sources.json")).read_text())
-    manifest = {}
+    previous = json.loads((ROOT / "league/data/calendar_photos.json").read_text())
+    manifest = dict(previous) if only else {}
+    if only:
+        unknown = set(only) - set(sources)
+        if unknown:
+            raise ValueError(f"Unknown circuits: {sorted(unknown)}")
+        sources = {key: value for key, value in sources.items() if key in only}
     pairs = list(sources.items())
     for start in range(0, len(pairs), 8):
         batch = pairs[start:start + 8]
@@ -52,7 +58,8 @@ def main(reuse_existing=False):
                 raise ValueError(f"Not a JPEG: {key}")
             target.parent.mkdir(parents=True, exist_ok=True)
             if target.exists() and target.read_bytes() != photo:
-                raise ValueError(f"Refusing to overwrite changed photo: {key}")
+                if not replace_reviewed or hashlib.sha256(target.read_bytes()).hexdigest() != previous.get(key, {}).get("sha256"):
+                    raise ValueError(f"Refusing to overwrite unreviewed/locally changed photo: {key}")
             target.write_bytes(photo)
             manifest[key] = {"path": relative, "alt": alt,
                 "author": html.unescape(re.sub(r"<[^>]+>", "", metadata["Artist"]["value"])).strip(),
@@ -67,4 +74,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reuse-existing", action="store_true",
         help="Read previously downloaded files and rebuild credits without re-downloading them.")
-    main(parser.parse_args().reuse_existing)
+    parser.add_argument("--replace-reviewed", action="store_true",
+        help="Replace selected stock photos only when their old hashes still match the committed manifest.")
+    parser.add_argument("--only", nargs="+", help="Download only listed circuits; keep other metadata unchanged.")
+    args = parser.parse_args()
+    main(args.reuse_existing, args.replace_reviewed, args.only)

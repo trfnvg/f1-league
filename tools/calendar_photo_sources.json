@@ -1,25 +1,94 @@
 {
-  "melbourne": ["Melbourne Grand Prix Circuit, March 22, 2018 SkySat (cropped).jpg", "Автодром Альберт-Парк, Мельбурн"],
-  "shanghai": ["2009 Formula 1 Grand Prix of China - Shanghai Circuit (3479323511).jpg", "Гран-при Китая, автодром Шанхая"],
-  "suzuka": ["Suzuka Circuit 21-09-2024.jpg", "Автодром Судзука"],
-  "miami": ["Start of the Porsche Sprint Challenge North America at the F1 Miami GP - 2022.jpg", "Автодром Майами во время гоночного уик-энда"],
-  "montreal": ["Circuit Gilles Villeneuve, Montreal.jpg", "Автодром имени Жиля Вильнёва, Монреаль"],
-  "monaco": ["Monaco Hercule Harbour Panorama.jpg", "Порт Эркюль и Монако"],
-  "barcelona": ["Barcelona, Circuit de Catalunya (Ank kumar) 07.jpg", "Автодром Барселона-Каталунья"],
-  "spielberg": ["2021 4 Hours of Red Bull Ring - The Bull.jpg", "Red Bull Ring, Шпильберг"],
-  "silverstone": ["BRDC Grandstand Silverstone Circuit 2026.jpg", "Автодром Сильверстоун"],
-  "spa": ["2022 6 Hours of Spa-Francorchamps - Eau Rouge Corner stands.jpg", "О-Руж, автодром Спа-Франкоршам"],
-  "hungaroring": ["Hungaroring, Mogyoród 10.jpg", "Хунгароринг, Венгрия"],
-  "zandvoort": ["Circuit Zandvoort - binnenterrein Mickey's en Paddock Club.JPG", "Автодром Зандворт"],
-  "monza": ["2022 6 Hours of Monza - The trrack.jpg", "Автодром Монца"],
-  "madrid": ["Edificios Skyline Madrid 01.jpg", "Мадрид — город проведения Гран-при Испании"],
-  "baku": ["Baku City Circuit, April 9, 2018 SkySat.jpg", "Городская трасса Баку"],
-  "sepang": ["Sepang International Circuit 1.JPG", "Международный автодром Сепанг"],
-  "singapore": ["Marina Bay Singapore-3499.jpg", "Марина-Бэй, Сингапур"],
-  "austin": ["Circuit of the americas (52780065967).jpg", "Circuit of the Americas, Остин"],
-  "mexico": ["Autodromo Hermanos Rodriguez - panoramio.jpg", "Автодром имени братьев Родригес, Мехико"],
-  "interlagos": ["Grande Prêmio São Paulo de Fórmula 1 (52497080967).jpg", "Интерлагос, Гран-при Сан-Паулу"],
-  "las-vegas": ["Las Vegas Strip from Resorts World February 2023 HDR 1.jpg", "Лас-Вегас-Стрип"],
-  "lusail": ["Grand Stand.JPG", "Трибуны международного автодрома Лусаил"],
-  "yas-marina": ["Race car - Abu Dhabi (8645318195).jpg", "Автодром Яс-Марина, Абу-Даби"]
+  "melbourne": [
+    "Melbourne Grand Prix 2010- the start (4477757934).jpg",
+    "Старт Гран-при Австралии · архивный кадр"
+  ],
+  "shanghai": [
+    "2019 Chinese Grand Prix Verstappen (47628580321).jpg",
+    "Болид Red Bull на Гран-при Китая · архивный кадр"
+  ],
+  "suzuka": [
+    "MCL38 during the Japanese Grand Prix.jpg",
+    "McLaren на Гран-при Японии · архивный кадр"
+  ],
+  "miami": [
+    "2022 Miami GP - Red Bull RB18 of Sergio Pérez.jpg",
+    "Red Bull на Гран-при Майами · архивный кадр"
+  ],
+  "montreal": [
+    "2012 Canadian GP - Nico Rosberg Mercedes 02.jpg",
+    "Mercedes на Гран-при Канады · архивный кадр"
+  ],
+  "monaco": [
+    "2013 Monaco Grand Prix - Sunday.jpg",
+    "Гонка в Монако · архивный кадр"
+  ],
+  "barcelona": [
+    "Piastri 2025 Espagne Grand Prix.jpg",
+    "Оскар Пиастри на Гран-при Испании · архивный кадр"
+  ],
+  "spielberg": [
+    "FIA F1 Austria 2022 Nr. 44 Hamilton (apex) (cropped).jpg",
+    "Льюис Хэмилтон на Red Bull Ring · архивный кадр"
+  ],
+  "silverstone": [
+    "2022 British GP - Mercedes-AMG F1 W13 E Performance of Lewis Hamilton (7).jpg",
+    "Mercedes на Гран-при Великобритании · архивный кадр"
+  ],
+  "spa": [
+    "Spa 2008 start smoke.jpg",
+    "Старт гонки в Спа-Франкоршам · архивный кадр"
+  ],
+  "hungaroring": [
+    "Lewis Hamilton during Hungarian Formula 1 GP.jpg",
+    "Льюис Хэмилтон на Гран-при Венгрии · архивный кадр"
+  ],
+  "zandvoort": [
+    "2024-08-25 Motorsport, Formel 1, Großer Preis der Niederlande 2024 STP 3857 by Stepro.jpg",
+    "Гран-при Нидерландов · архивный кадр"
+  ],
+  "monza": [
+    "F Alonso 2 Monza 2011.jpg",
+    "Фернандо Алонсо в Монце · архивный кадр"
+  ],
+  "madrid": [
+    "Alphatauri AT01 (52849862168).jpg",
+    "Болид AlphaTauri · иллюстрация календаря, не фотография этапа в Мадриде"
+  ],
+  "baku": [
+    "Ilham Aliyev watched the opening ceremony of the 2019 Formula-1 Azerbaijan Grand Prix and final race 31.jpg",
+    "Гран-при Азербайджана · архивный кадр"
+  ],
+  "sepang": [
+    "Malaysia GP 2017 Starting Grid.jpg",
+    "Стартовая решётка Сепанга · архивный кадр"
+  ],
+  "singapore": [
+    "Valtteri Bottas on track, Singapore Grand Prix 2024.jpg",
+    "Валттери Боттас на Гран-при Сингапура · архивный кадр"
+  ],
+  "austin": [
+    "2021 United States Grand Prix 01.jpg",
+    "Гран-при США в Остине · архивный кадр"
+  ],
+  "mexico": [
+    "2021 Mexico City Grand Prix (51349315666).jpg",
+    "Гран-при Мексики · архивный кадр"
+  ],
+  "interlagos": [
+    "Felipe Massa 2008 Brazilian Grand Prix.jpg",
+    "Фелипе Масса на Гран-при Бразилии · архивный кадр"
+  ],
+  "las-vegas": [
+    "2024 Las Vegas Grand Prix at the Sphere - Saturday, November 23, Orbi.jpg",
+    "Ночная гонка у Sphere в Лас-Вегасе · архивный кадр"
+  ],
+  "lusail": [
+    "Yas Marina circuit by night.jpg",
+    "Ночная Формула-1 · иллюстрация календаря, не фотография этапа в Катаре"
+  ],
+  "yas-marina": [
+    "2015 Abu Dhabi Grand Prix - Race start (22882439484).jpg",
+    "Старт гонки в Абу-Даби · архивный кадр"
+  ]
 }

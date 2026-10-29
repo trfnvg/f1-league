@@ -1,42 +1,168 @@
-.race-calendar{--rc-bg:#1c222a;--rc-line:rgba(210,220,233,.13);--rc-muted:#9ba4b0;--rc-red:#f34c48;max-width:1520px;margin:0 auto;color:#f2f3f5}
-.race-calendar [hidden]{display:none!important}
-.rc-heading{display:flex;align-items:end;justify-content:space-between;gap:24px;margin:16px 0 32px}
-.race-calendar .rc-eyebrow{display:flex;align-items:center;gap:10px;font:700 11px/1.5 Inter,sans-serif;letter-spacing:.15em;color:#c3c9d1;margin:0 0 12px}
-.rc-eyebrow>span:not(.rc-live-dot){width:18px;height:3px;border-radius:2px;background:var(--rc-red)}
-.race-calendar h1{font:800 clamp(30px,3.1vw,48px)/1.12 Inter,sans-serif;letter-spacing:-.055em;margin:0 0 10px;color:#f5f6f7}
-.rc-intro{margin:0;color:var(--rc-muted);font-size:15px}
-.rc-season{flex-shrink:0}.rc-season label,.rc-timezone label{display:block;margin:0 0 7px;font-size:11px;color:var(--rc-muted)}
-.rc-season>div{display:flex;border:1px solid var(--rc-line);border-radius:10px;overflow:hidden;background:#1d232b}
-.rc-season select,.rc-timezone select{border:0;background:#1d232b;color:#e7eaf0;padding:11px 13px;font:600 13px Inter,sans-serif;color-scheme:dark;border-radius:9px;min-width:0;max-width:100%}
-.rc-season button{border:0;border-left:1px solid var(--rc-line);background:transparent;color:#d4dae2;padding:0 12px;display:flex;align-items:center}
-.race-calendar svg{width:17px;height:17px;flex-shrink:0}.race-calendar a{text-decoration:none;color:inherit}
-.race-calendar a:focus-visible,.race-calendar button:focus-visible,.race-calendar select:focus-visible,.rc-credits summary:focus-visible{outline:2px solid #f89591;outline-offset:4px}
-.rc-feature{position:relative;isolation:isolate;overflow:hidden;border:1px solid var(--rc-line);border-radius:20px;min-height:320px;background:#20262e}
-.rc-feature-image{position:absolute;inset:0;z-index:-2;background:#252d38}
-.rc-feature-image img{width:100%;height:100%;object-fit:cover;object-position:center 55%}
-.rc-feature:before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(19,24,31,.98) 0%,rgba(19,24,31,.94) 31%,rgba(19,24,31,.45) 69%,rgba(19,24,31,.12)),linear-gradient(0deg,rgba(15,20,26,.7),transparent 60%)}
-.rc-feature-copy{padding:34px 40px;max-width:750px}.rc-feature .rc-eyebrow{color:#f49a94;letter-spacing:.11em}.rc-feature .rc-eyebrow b{border-left:1px solid #ffffff30;padding-left:14px;color:#e3e7ed;font:600 11px/1.5 monospace;margin-left:6px}
-.rc-live-dot{width:6px;height:6px;background:#f2776f;border-radius:50%;box-shadow:0 0 0 4px #f2776f18}
-.race-calendar .rc-feature h2{font:800 clamp(36px,4.4vw,62px)/1.1 Inter,sans-serif;letter-spacing:-.045em;margin:0 0 10px;color:#fff}
-.rc-feature-country{font-size:13px;line-height:1.6;color:#c1c8d1;margin:0 0 23px}.rc-feature-country>span{margin:0 6px;color:#73808e}
-.rc-feature-watermark{position:absolute;right:26px;bottom:-45px;font:800 230px/1 Inter,sans-serif;letter-spacing:-.09em;color:#ffffff0a;pointer-events:none;z-index:-1}
-.rc-sessions{display:grid;gap:11px;margin:0;font-variant-numeric:tabular-nums}
-.rc-sessions>div{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}.rc-sessions dt{font-size:11px;font-weight:500;color:#aeb7c4;display:flex;align-items:center;gap:7px;margin:0;white-space:nowrap}
-.rc-sessions dd{font:650 13px/1.4 Inter,sans-serif;margin:0;white-space:nowrap;color:#e5e9ef}
-.rc-session-marker{display:inline-flex;align-items:center;justify-content:center;width:27px;height:21px;border:1px solid #d2dce91c;border-radius:4px;color:#a8b2c0;font:600 9px/1 monospace;letter-spacing:.03em}
-.rc-race-marker{border-color:#ed78723b;color:#f3938b}.rc-sessions .rc-tbc{font-size:11px;font-weight:500;color:#a9b2be}
-.rc-sessions-feature{display:flex;gap:36px}.rc-sessions-feature>div{display:block}.rc-sessions-feature dt{font-size:11px;margin-bottom:8px}.rc-sessions-feature dd{font-size:19px;letter-spacing:-.02em}.rc-sessions-feature .rc-tbc{font-size:14px}
-.rc-feature-bottom{display:flex;align-items:center;gap:26px;margin-top:26px}.rc-feature-bottom>span{color:#bac3cd;font:500 12px/1.5 Inter,sans-serif}.rc-feature-bottom a{display:inline-flex;align-items:center;gap:18px;background:#ee4843;border:1px solid #ffaaa344;color:#fff;padding:12px 17px;border-radius:8px;font-size:12px;font-weight:700;transition:background .16s}
-.rc-feature-bottom a:hover{background:#d83e3a;color:#fff}
-.rc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:37px 0 18px}.rc-toolbar h2{font:750 21px/1.3 Inter,sans-serif;letter-spacing:-.035em;margin:0 0 6px;color:#f0f2f5}.rc-toolbar>div>span{font-size:11px;color:var(--rc-muted)}.rc-toolbar i{font-style:normal;margin:0 5px;color:#5f6977}.rc-timezone{display:flex;align-items:center;gap:12px}.rc-timezone label{margin:0;white-space:nowrap}.rc-timezone select{font-size:11px;border:1px solid var(--rc-line);padding:10px}
-.rc-calendar-nav{display:flex;align-items:center;justify-content:space-between;gap:18px;border-top:1px solid var(--rc-line);border-bottom:1px solid var(--rc-line);padding:12px 0;margin-bottom:8px}.rc-month-nav{display:flex;align-items:center;gap:5px;overflow-x:auto;scrollbar-width:none;min-width:0}.rc-month-nav::-webkit-scrollbar{display:none}.rc-month-nav a{padding:8px 11px;color:#bac2ce;font:550 11px/1.4 Inter,sans-serif;border-radius:6px;flex-shrink:0}.rc-month-nav a:hover{background:#ffffff08;color:#fff}
-.rc-filters{display:flex;gap:2px;flex-shrink:0}.rc-filters button{padding:8px 10px;background:transparent;border:1px solid transparent;border-radius:7px;color:#99a4b3;font:600 10px/1.4 Inter,sans-serif;cursor:pointer}.rc-filters button[aria-pressed=true]{border-color:#c9d4e523;background:#252c35;color:#f1f3f7}
-.rc-month{scroll-margin-top:110px;margin:0 0 27px}.rc-month-heading{display:flex;align-items:center;gap:12px;padding:23px 0 17px}.rc-month-heading>span{font:600 11px/1 monospace;color:#758190}.rc-month-heading h3{font:700 17px/1.2 Inter,sans-serif;letter-spacing:-.025em;margin:0;color:#e4e8ed}.rc-month-heading i{flex:1;height:1px;background:var(--rc-line);margin-left:4px}
-.rc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.rc-card{min-width:0;border:1px solid var(--rc-line);background:var(--rc-bg);border-radius:13px;overflow:hidden;transition:border-color .18s,box-shadow .18s}.rc-card:hover{border-color:#aebcce45;box-shadow:0 6px 20px #00000014}.rc-card.is-next{border-color:#ee817754}.rc-card-visual{position:relative;isolation:isolate;aspect-ratio:1.86;background:#29333f;overflow:hidden}.rc-card-visual>img{width:100%;height:100%;object-fit:cover;display:block}.rc-card-visual:after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(13,18,25,.92),transparent 75%),linear-gradient(180deg,#0b11174a,transparent 42%);z-index:0;pointer-events:none}
-.rc-card-badges{display:flex;align-items:center;gap:6px;position:absolute;inset:12px 12px auto;z-index:1;font:650 9px/1.4 Inter,sans-serif}.rc-card-badges>span{padding:5px 7px;border-radius:4px;border:1px solid #ffffff20;background:#101720cc;color:#edf1f5}.rc-card-badges .rc-round{font-family:monospace;letter-spacing:.05em}.rc-card-badges .rc-status{background:#cc4138e8;color:#fff;border-color:#ffb4a74a}.rc-card-badges .is-finished{background:#172029bb;color:#c9d0da;border-color:#ffffff15}.rc-card-badges .rc-sprint{margin-left:auto;letter-spacing:.09em;color:#f7c9a7;background:#34251cd9;border-color:#e9a97140}
-.rc-card-title{position:absolute;left:17px;right:17px;bottom:15px;z-index:1}.rc-card-title p{font:600 9px/1.5 Inter,sans-serif;letter-spacing:.13em;text-transform:uppercase;color:#d4dbe4;margin:0 0 4px}.rc-card-title h4{font:750 25px/1.1 Inter,sans-serif;letter-spacing:-.035em;margin:0;color:#fff}.rc-card-body{padding:17px}.rc-card-date{display:flex;flex-direction:column;gap:5px;margin-bottom:17px}.rc-card-date strong{color:#dfe5ed;font:650 12px/1.3 Inter,sans-serif;letter-spacing:.025em}.rc-card-date>span{font:400 10px/1.5 Inter,sans-serif;color:#939faf;min-height:15px}.rc-card-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--rc-line);padding-top:13px;margin-top:16px}.rc-card-footer a{display:inline-flex;align-items:center;gap:12px;font-size:10px;font-weight:600;color:#c3ccd9}.rc-card-footer a:hover{color:#fff}.rc-card-footer a.rc-event-link{color:#f3958c}.rc-card-footer>span{color:#7f8d9e;font:500 9px/1.3 monospace}
-.rc-footnote{border-top:1px solid var(--rc-line);margin-top:32px;padding-top:20px;color:#8c98a7;font-size:11px;line-height:1.7}.rc-footnote>p{margin:0 0 5px}.rc-credits{margin-top:20px}.rc-credits summary{cursor:pointer;color:#c1cad6;display:list-item;font-weight:600;padding:5px 0}.rc-credits p{margin:10px 0}.rc-credits ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 25px;list-style:none;padding:0;margin:16px 0}.rc-credits li{display:flex;flex-direction:column;overflow-wrap:anywhere;font-size:10px}.rc-credits a{color:#cbd3df}.rc-credits a:hover{text-decoration:underline}.rc-credits> a{display:inline-flex;align-items:center;gap:8px;margin:8px 0 16px}.rc-empty,.rc-season-finished{padding:28px;border:1px solid var(--rc-line);border-radius:15px;background:#1c232c}.rc-empty h2,.rc-season-finished h2{font-size:24px;margin:0 0 10px}.rc-empty p,.rc-season-finished p,.rc-filter-empty{font-size:13px;color:var(--rc-muted)}
-@media(min-width:1600px){.rc-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:1100px){.rc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rc-calendar-nav{flex-wrap:wrap;gap:8px}.rc-month-nav{width:100%}.rc-filters{margin-left:auto}.rc-feature-copy{padding:30px}.rc-sessions dt{font-size:11px}}
-@media(max-width:600px){.rc-heading{align-items:center;margin:8px 0 24px;gap:10px}.race-calendar h1{font-size:30px;max-width:250px}.race-calendar .rc-eyebrow{font-size:9px;letter-spacing:.11em}.rc-intro{font-size:12px}.rc-season label{font-size:10px}.rc-season select{padding:10px 7px;font-size:12px}.rc-season button{padding:0 8px}.rc-feature{border-radius:14px;min-height:365px}.rc-feature-copy{padding:24px 21px}.rc-feature:before{background:linear-gradient(90deg,#13181fdd,#13181f55),linear-gradient(0deg,#13181ff5 0%,#13181fc9 40%,#13181f20 100%)}.rc-feature-image img{object-position:62% center}.race-calendar .rc-feature h2{font-size:44px;margin-top:20px}.rc-feature-country{font-size:11px;max-width:270px}.rc-sessions-feature{gap:26px;margin-top:20px}.rc-sessions-feature dd{font-size:17px}.rc-sessions-feature dt{font-size:10px}.rc-feature-bottom{gap:15px;justify-content:space-between;margin-top:24px}.rc-feature-bottom>span{font-size:10px}.rc-feature-bottom a{padding:11px 12px;font-size:10px;gap:9px}.rc-toolbar{align-items:start;margin-top:29px}.rc-toolbar h2{font-size:19px}.rc-toolbar>div>span{font-size:10px}.rc-timezone{display:block}.rc-timezone label{font-size:9px;margin-bottom:4px}.rc-timezone select{font-size:10px;padding:9px 6px;max-width:155px}.rc-calendar-nav{padding:9px 0;gap:9px}.rc-month-nav{gap:2px}.rc-month-nav a{padding:8px 10px;font-size:10px}.rc-filters{margin-left:0}.rc-filters button{font-size:10px}.rc-grid{grid-template-columns:minmax(0,1fr);gap:16px}.rc-card-visual{aspect-ratio:2.05}.rc-card-title h4{font-size:28px}.rc-card-date{flex-direction:row;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:17px}.rc-card-date>span{text-align:right;max-width:60%;font-size:10px}.rc-sessions dt{font-size:12px}.rc-sessions dd{font-size:14px}.rc-card-footer a{font-size:11px}.rc-card-body{padding:17px 18px}.rc-month-heading{padding-top:19px}.rc-credits ul{grid-template-columns:minmax(0,1fr)}}
-@media(prefers-reduced-motion:reduce){.race-calendar *{transition:none!important;scroll-behavior:auto!important}}
+.race-calendar {
+  --rc-bg:#20262e; --rc-line:#343c47; --rc-muted:#929daa; --rc-red:#f34c48;
+  max-width:1520px; margin:0 auto; color:#edf0f4; font-variant-numeric:tabular-nums;
+}
+.race-calendar [hidden] { display:none!important; }
+.race-calendar a { text-decoration:none!important; }
+.race-calendar svg { width:17px; height:17px; flex:none; }
+.race-calendar :is(a,button,select,summary):focus-visible { outline:2px solid #f38c85; outline-offset:4px; }
+.rc-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:12px 0 30px; }
+.race-calendar .rc-eyebrow { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 12px; color:#b5bfcb; font:700 10px/1.5 Inter,sans-serif; letter-spacing:.13em; }
+.rc-eyebrow>span { width:20px; height:3px; background:var(--rc-red); border-radius:1px; }
+.race-calendar h1 { margin:0 0 10px; color:#f4f6f8; font:800 clamp(29px,3.2vw,46px)/1.12 Inter,sans-serif; letter-spacing:-.05em; }
+.rc-intro { margin:0; color:var(--rc-muted); font-size:13px; }
+.rc-season-badge { display:flex; gap:12px; align-items:center; border:1px solid var(--rc-line); border-radius:8px; padding:11px 13px; color:#929daa; font:650 10px/1.2 monospace; letter-spacing:.06em; }
+.rc-season-badge b { color:#dbe1e9; font-size:12px; }
+.rc-season label,.rc-timezone label { display:block; color:var(--rc-muted); font-size:10px; margin:0 0 6px; }
+.rc-select { display:flex; align-items:center; border:1px solid var(--rc-line); border-radius:8px; overflow:hidden; background:#1d232b; }
+.race-calendar .rc-select select { appearance:none; -webkit-appearance:none; border:0; border-radius:0; background:transparent; color:#dbe2eb; padding:11px 34px 11px 12px; font:600 11px/1.4 Inter,sans-serif; color-scheme:dark; min-width:0; max-width:100%; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23929daa' stroke-width='1.5'%3E%3Cpath d='m3 4 3 3 3-3'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
+.rc-season button { display:flex; align-items:center; padding:11px; background:#252d37; border:0; border-left:1px solid var(--rc-line); color:#dbe2eb; }
+.rc-feature { display:grid; grid-template-columns:minmax(0,1fr) 340px; overflow:hidden; border:1px solid #424b58; border-radius:16px; background:var(--rc-bg); }
+.rc-feature-main { position:relative; isolation:isolate; min-height:370px; display:flex; }
+.rc-feature-image { position:absolute; inset:0; z-index:-2; background:#29323d; }
+.rc-feature-image img { width:100%; height:100%; object-fit:cover; object-position:center; }
+.rc-feature-main:after { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg,#11182030 10%,#111820e8 100%),linear-gradient(90deg,#111820b8,transparent 85%); }
+.rc-feature-copy { display:flex; flex-direction:column; justify-content:space-between; gap:32px; width:100%; padding:30px; }
+.rc-feature .rc-eyebrow { color:#f1d4ce; font-size:9px; margin:0; }
+.rc-feature .rc-eyebrow b { margin-left:auto; padding:5px 8px; border:1px solid #ffffff30; background:#171e26a8; border-radius:4px; color:#fff; font:650 11px/1.2 monospace; }
+.rc-eyebrow>.rc-live-dot { width:6px; height:6px; border-radius:50%; flex:none; background:#fa6a5f; box-shadow:0 0 0 4px #ff77751a; }
+.rc-feature-title>p { margin:0 0 8px; color:#c5ccd5; font:650 10px/1.4 Inter,sans-serif; letter-spacing:.1em; text-transform:uppercase; }
+.race-calendar .rc-feature-title h2 { color:#fff; font:800 clamp(38px,4.4vw,64px)/1.02 Inter,sans-serif; letter-spacing:-.055em; margin:0 0 13px; }
+.rc-feature-title>span { display:block; color:#b8c2ce; font-size:12px; line-height:1.5; }
+.rc-feature-bottom { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+.rc-weekend-date { display:flex; flex-direction:column; gap:7px; }
+.rc-weekend-date small { font:650 8px/1.5 Inter,sans-serif; letter-spacing:.13em; color:#9caab9; }
+.rc-weekend-date strong { color:#edf1f6; font:600 12px/1.5 Inter,sans-serif; white-space:nowrap; }
+.rc-feature-watermark { position:absolute; right:22px; bottom:40px; font:800 160px/1 Inter,sans-serif; letter-spacing:-.09em; color:#ffffff08; pointer-events:none; z-index:-1; }
+.rc-feature-program { padding:27px 25px 20px; background:linear-gradient(145deg,#252d37,#1e252e); border-left:1px solid var(--rc-line); display:flex; flex-direction:column; justify-content:center; }
+.rc-program-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding-bottom:15px; }
+.rc-program-heading h3 { font:700 13px/1.4 Inter,sans-serif; letter-spacing:-.015em; color:#e8edf4; margin:0; }
+[data-calendar-zone-badge] { color:#8593a4; font:600 9px/1.4 monospace; white-space:nowrap; }
+.rc-sessions { margin:0; }
+.rc-sessions>div { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 0; min-height:39px; border-bottom:1px solid #d4dce90c; }
+.rc-sessions>div:last-child { border-bottom:0; }
+.rc-sessions dt { display:flex; align-items:center; gap:8px; min-width:0; color:#aeb8c6; font:500 11px/1.35 Inter,sans-serif; margin:0; }
+.rc-session-marker { display:inline-flex; align-items:center; justify-content:center; width:27px; height:21px; flex:none; color:#7e8d9f; background:#1018204d; border:1px solid #dce8fa13; border-radius:4px; font:600 9px/1 monospace; }
+.rc-sessions dd { flex:none; margin:0; color:#dce3ed; font:600 11px/1.4 Inter,sans-serif; white-space:nowrap; }
+.rc-sessions .rc-session-race dt { color:#edf1f6; font-weight:650; }
+.rc-sessions .rc-session-race dd { color:#fff; font-weight:750; }
+.rc-race-marker { background:#ec554c12; border-color:#ef716a42; color:#f28d83; }
+.rc-sessions .rc-tbc { color:#788797; font:500 10px/1.4 Inter,sans-serif; }
+.rc-source-link { display:inline-flex; align-items:center; justify-content:space-between; gap:12px; color:#8b9bad!important; border-top:1px solid var(--rc-line); padding-top:15px; margin-top:14px; font:500 10px/1.5 Inter,sans-serif; }
+.rc-source-link svg { width:14px; height:14px; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-button { appearance:none; display:inline-flex; align-items:center; justify-content:center; gap:17px; min-height:42px; padding:11px 15px; border:1px solid #45515f; border-radius:7px; background:#2a333e; color:#edf1f6!important; font:650 11px/1.4 Inter,sans-serif; white-space:nowrap; box-shadow:none; transition:background .16s,border-color .16s; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-button:hover { background:#34404d; border-color:#687789; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-button-primary { background:#ed4843; border-color:#f7685e; color:#fff!important; flex:none; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-button-primary:hover { background:#d93c37; border-color:#fc7b71; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-button-source { background:#202831; border-color:#36434f; color:#a9b7c7!important; }
+.rc-toolbar { display:flex; align-items:center; justify-content:space-between; gap:18px; margin:36px 0 20px; }
+.race-calendar .rc-toolbar h2 { margin:0 0 6px; color:#eef2f7; font:750 21px/1.3 Inter,sans-serif; letter-spacing:-.03em; }
+.rc-toolbar>div>span { color:var(--rc-muted); font-size:11px; }
+.rc-toolbar i { font-style:normal; margin:0 6px; color:#5c6a7b; }
+.rc-timezone { display:flex; align-items:center; gap:12px; }
+.rc-timezone label { margin:0; }
+.rc-calendar-nav { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 0; border-block:1px solid var(--rc-line); margin-bottom:7px; }
+.rc-month-nav { display:flex; gap:3px; overflow-x:auto; scrollbar-width:none; min-width:0; }
+.rc-month-nav::-webkit-scrollbar { display:none; }
+.rc-month-nav a { flex:none; padding:9px 10px; border-radius:5px; color:#aab7c8!important; font:600 10px/1.4 Inter,sans-serif; }
+.rc-month-nav a:hover { background:#ffffff08; color:#fff!important; }
+.rc-filters { display:flex; flex:none; padding:3px; gap:2px; background:#11182066; border:1px solid #3c46524d; border-radius:8px; }
+.race-calendar .rc-filters button { appearance:none; -webkit-appearance:none; cursor:pointer; border:1px solid transparent; border-radius:5px; background:transparent; color:#8998aa; font:600 10px/1.4 Inter,sans-serif; padding:8px 10px; box-shadow:none; }
+.race-calendar .rc-filters button[aria-pressed=true] { background:#2b3541; border-color:#465464; color:#f0f3f7; }
+.rc-month { scroll-margin-top:110px; margin-bottom:28px; }
+.rc-month-heading { display:flex; align-items:center; gap:12px; padding:24px 0 17px; }
+.rc-month-heading>span { color:#6c7b8f; font:600 11px/1 monospace; }
+.rc-month-heading h3 { margin:0; color:#dce4ee; font:700 17px/1.3 Inter,sans-serif; letter-spacing:-.025em; }
+.rc-month-heading i { flex:1; height:1px; margin-left:7px; background:var(--rc-line); }
+.rc-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; align-items:stretch; }
+.rc-card { min-width:0; display:flex; flex-direction:column; overflow:hidden; border:1px solid var(--rc-line); border-radius:12px; background:var(--rc-bg); transition:border-color .18s; }
+.rc-card:hover { border-color:#596779; }
+.rc-card.is-next { border-color:#b55c55; }
+.rc-card-visual { position:relative; isolation:isolate; aspect-ratio:1.8; overflow:hidden; background:#29333f; }
+.rc-card-visual>img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.rc-card-visual:after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,#0c131c30,transparent 35%,#0c131cdd 100%); z-index:0; }
+.rc-card-badges { position:absolute; inset:12px 12px auto; display:flex; align-items:center; justify-content:space-between; gap:8px; z-index:1; }
+.rc-card-badges>span { padding:5px 7px; border:1px solid #ffffff25; border-radius:4px; background:#101923bf; color:#e7edf5; font:650 9px/1.4 monospace; letter-spacing:.04em; }
+.rc-card-badges .rc-sprint { color:#f5d5b8; border-color:#edbd8750; background:#372819bf; }
+.rc-card-title { position:absolute; inset:auto 18px 16px; z-index:1; }
+.rc-card-title p { margin:0 0 4px; color:#cad3df; text-transform:uppercase; font:650 9px/1.5 Inter,sans-serif; letter-spacing:.11em; }
+.rc-card-title h4 { margin:0; color:#fff; font:750 28px/1.1 Inter,sans-serif; letter-spacing:-.035em; }
+.rc-card-body { display:flex; flex:1; flex-direction:column; padding:18px; }
+.rc-card-date { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:22px; margin-bottom:4px; }
+.rc-card-date strong { color:#e3e9f1; font:650 12px/1.4 Inter,sans-serif; }
+.rc-status { color:#f29388; font:600 9px/1.3 Inter,sans-serif; }
+.rc-status.is-finished { color:#738293; }
+.rc-circuit-name { margin:0 0 13px; min-height:28px; color:#8897a8; font:400 10px/1.4 Inter,sans-serif; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-card-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; border-top:1px solid var(--rc-line); margin:auto 0 0; padding:15px 0 0; background:transparent; backdrop-filter:none; }
+.rc-card-body>.rc-sessions { margin-bottom:13px; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-card-footer .rc-button { flex:1; min-width:0; justify-content:space-between; }
+.rc-card-footer>[data-calendar-zone-badge] { max-width:70px; white-space:normal; text-align:right; overflow-wrap:anywhere; }
+body.apex-night-theme.editorial-theme .race-calendar .rc-footnote { margin:32px 0 0; padding:20px 0 0; border-top:1px solid var(--rc-line); color:#7d8c9e; background:transparent; backdrop-filter:none; font-size:11px; line-height:1.7; }
+.rc-footnote>p { margin:0 0 5px; }
+.rc-credits { margin-top:18px; }
+.rc-credits summary { display:list-item; cursor:pointer; padding:7px 0; color:#aab8ca; font-weight:600; }
+.rc-credits p { margin:10px 0; }
+.rc-credits ul { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px 25px; list-style:none; padding:0; margin:16px 0; }
+.rc-credits li { display:flex; flex-direction:column; font-size:10px; overflow-wrap:anywhere; }
+.rc-credits a { color:#b8c5d7!important; }
+.rc-credits a:hover { text-decoration:underline!important; }
+.rc-credits>a { display:inline-flex; align-items:center; gap:10px; margin:10px 0; }
+.rc-empty,.rc-season-finished { padding:28px; border:1px solid var(--rc-line); border-radius:12px; background:var(--rc-bg); }
+.rc-empty h2,.rc-season-finished h2 { font-size:24px; margin:0 0 10px; }
+.rc-empty p,.rc-season-finished p,.rc-filter-empty { color:var(--rc-muted); font-size:13px; }
+@media(min-width:1800px) { .rc-grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(max-width:1250px) { .rc-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .rc-calendar-nav { flex-wrap:wrap; } .rc-month-nav { width:100%; } .rc-filters { margin-left:auto; } .rc-feature { grid-template-columns:minmax(0,1fr) 310px; } .rc-feature-copy { padding:26px; } .rc-feature-program { padding-inline:20px; } }
+@media(max-width:800px) { .rc-feature { grid-template-columns:minmax(0,1fr); } .rc-feature-main { min-height:315px; } .rc-feature-program { border-left:0; border-top:1px solid var(--rc-line); padding:22px 26px 20px; } .rc-feature-program .rc-sessions>div { padding-block:9px; } .rc-feature-program .rc-sessions dt,.rc-feature-program .rc-sessions dd { font-size:12px; } }
+@media(max-width:600px) {
+  .rc-heading { align-items:start; margin:8px 0 24px; gap:12px; }
+  .race-calendar .rc-eyebrow { font-size:9px; }
+  .race-calendar h1 { font-size:31px; max-width:240px; }
+  .rc-intro { font-size:11px; max-width:235px; line-height:1.5; }
+  .rc-season-badge { font-size:8px; flex-direction:column; gap:5px; padding:9px 10px; }
+  .rc-feature { border-radius:12px; }
+  .rc-feature-main { min-height:300px; }
+  .rc-feature-copy { padding:22px; gap:30px; }
+  .rc-feature-title>p { font-size:9px; }
+  .race-calendar .rc-feature-title h2 { font-size:44px; }
+  .rc-feature-title>span { font-size:11px; }
+  .rc-feature .rc-eyebrow { font-size:8px; gap:8px; }
+  .rc-feature-bottom { gap:12px; }
+  .rc-weekend-date small { font-size:7px; }
+  .rc-weekend-date strong { font-size:10px; }
+  body.apex-night-theme.editorial-theme .race-calendar .rc-button { font-size:10px; gap:12px; padding:11px 12px; }
+  .rc-feature-program { padding:19px 20px 18px; }
+  .rc-program-heading h3 { font-size:12px; }
+  .rc-feature-program .rc-sessions dt,.rc-feature-program .rc-sessions dd { font-size:11px; }
+  .rc-toolbar { align-items:center; margin:28px 0 17px; gap:12px; }
+  .race-calendar .rc-toolbar h2 { font-size:19px; }
+  .rc-toolbar>div>span { font-size:9px; }
+  .rc-toolbar i { margin:0 3px; }
+  .rc-timezone { display:block; }
+  .rc-timezone label { margin-bottom:5px; font-size:9px; }
+  .race-calendar .rc-timezone select { font-size:10px; max-width:160px; padding:10px 28px 10px 9px; background-position:right 9px center; }
+  .rc-calendar-nav { gap:11px; padding:11px 0; }
+  .rc-month-nav { gap:2px; }
+  .rc-month-nav a { padding:8px 9px; font-size:10px; }
+  .rc-filters { width:100%; margin:0; }
+  .race-calendar .rc-filters button { flex:1; min-height:35px; font-size:10px; padding:8px; }
+  .rc-grid { grid-template-columns:minmax(0,1fr); gap:17px; }
+  .rc-card-visual { aspect-ratio:1.9; }
+  .rc-card-title h4 { font-size:30px; }
+  .rc-card-body { padding:18px; }
+  .rc-circuit-name { min-height:0; margin-bottom:14px; }
+  .rc-sessions dt,.rc-sessions dd { font-size:12px; }
+  .rc-sessions>div { padding:10px 0; }
+  .rc-month-heading { padding-top:20px; }
+  .rc-credits ul { grid-template-columns:minmax(0,1fr); }
+}
+@media(max-width:360px) {
+  .rc-feature-copy { padding:19px 17px; }
+  .rc-feature-program { padding-inline:17px; }
+  .rc-sessions dt,.rc-sessions dd { font-size:10px!important; }
+  .rc-sessions dt { gap:6px; }
+  .rc-session-marker { width:23px; font-size:8px; }
+  .rc-timezone label { font-size:8px; }
+  .race-calendar .rc-timezone select { max-width:140px; font-size:9px; }
+  .rc-card-body { padding:16px; }
+}
+@media(prefers-reduced-motion:reduce) { .race-calendar * { transition:none!important; scroll-behavior:auto!important; } }

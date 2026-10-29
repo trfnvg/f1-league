@@ -31,8 +31,9 @@ def run(browser_name, output):
     call_command("migrate", verbosity=0, interactive=False)
     now = datetime(2026, 10, 28, 12, tzinfo=timezone.utc)
     event = Event.objects.create(name="Мехико, Мексика", circuit="mexico", round_number=19,
-        deadline=now + timedelta(days=2), race_datetime=now + timedelta(days=4), season_year=2026)
-    with override_settings(ALLOWED_HOSTS=["testserver"], STORAGES={
+        deadline=now + timedelta(days=2), race_datetime=now + timedelta(days=4), season_year=2026,
+        cover_image="event_covers/my-mexico.jpg")
+    with override_settings(ALLOWED_HOSTS=["testserver"], MEDIA_URL="/media/", STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }), patch("league.race_calendar.timezone.now", return_value=now):
@@ -46,6 +47,9 @@ def run(browser_name, output):
             path = unquote(urlsplit(self.path).path)
             if path == "/calendar/":
                 body, content_type = page_html, "text/html; charset=utf-8"
+            elif path == "/media/event_covers/my-mexico.jpg":
+                body = (ROOT / "league/static/league/images/calendar/mexico.jpg").read_bytes()
+                content_type = "image/jpeg"
             elif path.startswith("/static/"):
                 filename = finders.find(path[len("/static/"):])
                 if not filename:
@@ -78,8 +82,22 @@ def run(browser_name, output):
                 assert page.locator(".rc-card").count() == 23
                 assert page.locator("#next-grand-prix").inner_text() == "Мехико"
                 assert page.locator(".rc-feature-times time").last.inner_text() == "01.11 · 23:00"
-                assert page.locator(".rc-feature a").get_attribute("href") == reverse("league:event_detail", args=[event.pk])
+                assert page.locator(".rc-feature-times [data-calendar-session]").count() == 5
+                assert page.locator(".rc-feature-times [data-calendar-session=Q] time").inner_text() == "01.11 · 00:00"
+                assert page.locator(".rc-feature .rc-button").get_attribute("href") == reverse("league:event_detail", args=[event.pk])
+                assert page.locator(".rc-feature-image img").get_attribute("src") == "/media/event_covers/my-mexico.jpg"
+                assert page.locator("#grand-prix-mexico .rc-card-visual img").get_attribute("src") == "/media/event_covers/my-mexico.jpg"
+                assert page.locator("#grand-prix-shanghai [data-calendar-session=SQ]").count() == 1
+                assert page.locator("#grand-prix-shanghai [data-calendar-session=FP2]").count() == 0
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
+                assert page.locator('.rc-card').evaluate_all('''cards => cards.every(card => {
+                    const bounds = card.getBoundingClientRect();
+                    return [...card.querySelectorAll('.rc-card-footer > *')].every(child => {
+                        const box = child.getBoundingClientRect();
+                        return box.left >= bounds.left && box.right <= bounds.right;
+                    });
+                })'''), (width, "card footer must not overflow")
+                assert page.locator('.rc-card-footer').first.evaluate("node => getComputedStyle(node).backgroundColor") == 'rgba(0, 0, 0, 0)'
                 assert page.locator(".rc-feature-image img").evaluate("image => image.complete && image.naturalWidth > 0")
                 page.screenshot(path=str(output / f"{width}-calendar.png"), full_page=True)
                 page.screenshot(path=str(output / f"{width}-calendar-top.png"))
@@ -102,7 +120,7 @@ def run(browser_name, output):
                 page.locator('.rc-month-nav a[href="#calendar-month-11"]').click()
                 assert page.locator("#calendar-month-11").is_visible()
                 page.locator(".rc-credits summary").click()
-                assert page.locator(".rc-credits li:visible").count() == 23
+                assert page.locator(".rc-credits li:visible").count() == 22
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
                 context.close()
             context = browser.new_context(java_script_enabled=False, viewport={"width": 390, "height": 900})
@@ -111,10 +129,10 @@ def run(browser_name, output):
             assert page.locator(".rc-card").count() == 23
             assert "01.11 · 23:00" in page.locator(".rc-feature-times").inner_text()
             assert page.locator("[data-calendar-timezone]").is_hidden()
-            assert page.locator(".rc-feature a").is_visible()
+            assert page.locator(".rc-feature .rc-button").is_visible()
             browser.close()
         assert not errors, errors
-        print(f"Calendar UI OK ({browser_name}): 5 sizes, 23 photos/cards, timezones + DST, filters, local storage, credits, no-JS fallback. {output}")
+        print(f"Calendar UI OK ({browser_name}): 5 sizes, 23 cards, five sessions, uploaded covers, sprint format, timezones + DST, filters, credits, no-JS fallback. {output}")
     finally:
         server.shutdown()
 

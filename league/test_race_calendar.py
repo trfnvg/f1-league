@@ -11,7 +11,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .calendar_assets import calendar_photos
-from .models import Event, Prediction, RaceCalendarRound, Season
+from .models import Event, EventPhoto, Prediction, RaceCalendarRound, Season
 from .race_calendar import calendar_rows
 
 
@@ -37,7 +37,7 @@ class RaceCalendarTests(TestCase):
                 race.full_clean()
                 self.assertIsNotNone(race.practice1_at)
                 self.assertIsNotNone(race.race_at)
-                self.assertEqual(race.checked_on.isoformat(), "2026-10-28")
+                self.assertEqual(race.checked_on.isoformat(), "2026-10-29")
 
     def test_calendar_is_public_with_links_in_navigation(self):
         response = self.get_page()
@@ -138,8 +138,8 @@ class RaceCalendarTests(TestCase):
                 self.assertEqual(hashlib.sha256(image).hexdigest(), photo["sha256"])
                 self.assertTrue(image.startswith(b"\xff\xd8"))
                 self.assertTrue(photo["author"])
-                self.assertTrue(photo["license"].startswith("CC BY"))
-                self.assertTrue(photo["license_url"].startswith("https://creativecommons.org/"))
+                self.assertTrue(photo["license"].startswith("CC BY") or photo["license"] in ("CC0", "Public domain"))
+                self.assertTrue(photo["license_url"].startswith(("https://creativecommons.org/", "http://creativecommons.org/")))
                 self.assertTrue(photo["source_url"].startswith("https://commons.wikimedia.org/wiki/File:"))
         self.assertContains(self.get_page(), "Фотографии и источники")
 
@@ -177,3 +177,78 @@ class RaceCalendarTests(TestCase):
         admin = User.objects.create_superuser("calendaradmin", password="test")
         self.client.force_login(admin)
         self.assertEqual(self.client.get(reverse("admin:league_racecalendarround_changelist")).status_code, 200)
+
+    def test_full_official_weekends_have_exactly_five_real_sessions(self):
+        rounds, _ = calendar_rows(2026, self.now)
+        for race in rounds:
+            with self.subTest(circuit=race.circuit):
+                race.full_clean()
+                expected = ["FP1", "SQ", "SPR", "Q", "GP"] if race.has_sprint else ["FP1", "FP2", "FP3", "Q", "GP"]
+                self.assertEqual([row["code"] for row in race.session_rows], expected)
+                times = [row["at"] for row in race.session_rows]
+                self.assertTrue(all(times))
+                self.assertEqual(times, sorted(times))
+        self.assertContains(self.get_page(), 'data-calendar-session=', count=120)  # 23 cards + hero, five each.
+
+    def test_qualifying_and_sprint_times_are_displayed_in_moscow(self):
+        response = self.get_page()
+        self.assertContains(response, "Практика 2")
+        self.assertContains(response, "Практика 3")
+        self.assertContains(response, "Квалификация к спринту")
+        self.assertContains(response, "31.10 · 01:00")  # Mexico FP2 crosses midnight in MSK.
+        self.assertContains(response, "31.10 · 20:30")  # Mexico FP3.
+        self.assertContains(response, "01.11 · 00:00")  # Mexico qualifying.
+
+    def test_uploaded_event_cover_used_in_card_and_feature_without_copy(self):
+        event = Event.objects.create(name="Мехико", circuit="mexico", season_year=2026, round_number=19,
+            deadline=self.now + timedelta(days=2), cover_image="event_covers/my-mexico.png")
+        response = self.get_page()
+        self.assertEqual(response.context["calendar_next"].cover_url, event.cover_image.url)
+        self.assertContains(response, event.cover_image.url, count=2)
+        self.assertFalse(response.context["calendar_next"].uses_stock_photo)
+        self.assertEqual(len(list(response.context["calendar_credits"])), 22)
+        RaceCalendarRound.objects.filter(circuit="mexico").update(cover_image="calendar_covers/override.png")
+        response = self.get_page()
+        self.assertContains(response, "/calendar_covers/override.png", count=2)
+
+    def test_old_uploaded_gallery_photo_is_used_if_cover_missing(self):
+        event = Event.objects.create(name="Мехико", circuit="mexico", season_year=2026, round_number=19,
+            deadline=self.now + timedelta(days=2))
+        photo = EventPhoto.objects.create(event=event, image="event_photos/my-old-cover.jpg")
+        self.assertEqual(self.get_page().context["calendar_next"].cover_url, photo.image.url)
+
+    def test_uploaded_covers_never_leak_from_different_seasons(self):
+        Event.objects.create(name="Мехико 2027", circuit="mexico", season_year=2027, round_number=19,
+            deadline=self.now + timedelta(days=400), cover_image="event_covers/future.png")
+        self.assertTrue(self.get_page().context["calendar_next"].uses_stock_photo)
+
+    def test_gallery_cover_queries_do_not_grow_per_card(self):
+        for number, circuit in enumerate(("mexico", "monaco", "shanghai"), 1):
+            event = Event.objects.create(name=circuit, circuit=circuit, season_year=2026,
+                round_number=number, deadline=self.now + timedelta(days=2))
+            EventPhoto.objects.create(event=event, image=f"event_photos/{circuit}.jpg")
+        with self.assertNumQueries(3):
+            rounds, _ = calendar_rows(2026, self.now)
+        self.assertEqual(sum(bool(race.cover_url) for race in rounds), 3)
+
+    def test_session_seed_does_not_overwrite_manually_edited_hours(self):
+        from django.apps import apps
+        from types import SimpleNamespace
+        seed = importlib.import_module("league.migrations.0061_seed_calendar_weekend_sessions").seed_sessions
+        race = RaceCalendarRound.objects.get(circuit="mexico")
+        custom = race.qualifying_at + timedelta(minutes=30)
+        race.qualifying_at = custom
+        race.save(update_fields=["qualifying_at"])
+        seed(apps, SimpleNamespace(connection=connection))
+        race.refresh_from_db()
+        self.assertEqual(race.qualifying_at, custom)
+
+    def test_session_validation_rejects_wrong_order_and_wrong_format(self):
+        race = RaceCalendarRound.objects.get(circuit="mexico")
+        race.qualifying_at = race.practice1_at - timedelta(minutes=30)
+        with self.assertRaises(ValidationError):
+            race.full_clean()
+        race.refresh_from_db()
+        race.sprint_at = race.practice3_at
+        with self.assertRaises(ValidationError):
+            race.full_clean()

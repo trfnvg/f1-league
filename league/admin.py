@@ -402,7 +402,7 @@ class RaceCalendarRoundAdmin(admin.ModelAdmin):
     autocomplete_fields = ("prediction_event",)
     fieldsets = (
         ("Этап", {"fields": ("season_year", "round_number", "circuit", "title", "location", "country", "circuit_name", "cover_image", "has_sprint")}),
-        ("Расписание", {"fields": ("starts_on", "ends_on", "venue_timezone", "practice1_at", "race_at"),
+        ("Расписание", {"fields": ("starts_on", "ends_on", "venue_timezone", "practice1_at", "practice2_at", "practice3_at", "sprint_qualifying_at", "sprint_at", "qualifying_at", "race_at"),
             "description": "Даты уик-энда — местные. Время сессий вводится в часовом поясе админки (МСК). Необъявленное время оставьте пустым."}),
         ("Прогнозы и источники", {"fields": ("prediction_event", "source_url", "checked_on"),
             "description": "Календарь не создаёт карточки прогнозов и не меняет их дедлайны."}),
