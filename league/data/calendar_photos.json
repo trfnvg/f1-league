@@ -1,0 +1,232 @@
+{
+  "melbourne": {
+    "path": "league/images/calendar/melbourne.jpg",
+    "alt": "Автодром Альберт-Парк, Мельбурн",
+    "author": "Planet Labs, Inc.",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Melbourne_Grand_Prix_Circuit,_March_22,_2018_SkySat_(cropped).jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8e/Melbourne_Grand_Prix_Circuit%2C_March_22%2C_2018_SkySat_%28cropped%29.jpg/1280px-Melbourne_Grand_Prix_Circuit%2C_March_22%2C_2018_SkySat_%28cropped%29.jpg",
+    "sha256": "3531b0cc623f66468fe3965063d5e10795a55a2e5167cd63f1f7492af59210f3"
+  },
+  "shanghai": {
+    "path": "league/images/calendar/shanghai.jpg",
+    "alt": "Гран-при Китая, автодром Шанхая",
+    "author": "Derrick Noh from NYC",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2009_Formula_1_Grand_Prix_of_China_-_Shanghai_Circuit_(3479323511).jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4a/2009_Formula_1_Grand_Prix_of_China_-_Shanghai_Circuit_%283479323511%29.jpg/1280px-2009_Formula_1_Grand_Prix_of_China_-_Shanghai_Circuit_%283479323511%29.jpg",
+    "sha256": "995adaecda49a3da96c95b77f12ce149cce0127043bcba4df8a4a104c1f0caf6"
+  },
+  "suzuka": {
+    "path": "league/images/calendar/suzuka.jpg",
+    "alt": "Автодром Судзука",
+    "author": "BWard 1997",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Suzuka_Circuit_21-09-2024.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/33/Suzuka_Circuit_21-09-2024.jpg/1280px-Suzuka_Circuit_21-09-2024.jpg",
+    "sha256": "88437d9a5c2a59406fc6fda4b3f5e9d0ac3c7964c3c0524f7e72d4a5c0b295dc"
+  },
+  "miami": {
+    "path": "league/images/calendar/miami.jpg",
+    "alt": "Автодром Майами во время гоночного уик-энда",
+    "author": "USACJack",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Start_of_the_Porsche_Sprint_Challenge_North_America_at_the_F1_Miami_GP_-_2022.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b9/Start_of_the_Porsche_Sprint_Challenge_North_America_at_the_F1_Miami_GP_-_2022.jpg/1280px-Start_of_the_Porsche_Sprint_Challenge_North_America_at_the_F1_Miami_GP_-_2022.jpg",
+    "sha256": "3b3fb72a3d3d5b144e8078d8d1399b5c2df42cad763fbbc094f12c6c4cc0f81d"
+  },
+  "montreal": {
+    "path": "league/images/calendar/montreal.jpg",
+    "alt": "Автодром имени Жиля Вильнёва, Монреаль",
+    "author": "Maela Ohana",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Circuit_Gilles_Villeneuve,_Montreal.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Circuit_Gilles_Villeneuve%2C_Montreal.jpg/1280px-Circuit_Gilles_Villeneuve%2C_Montreal.jpg",
+    "sha256": "4fcaa90336fc733a2ec53c77db8443cea235c0807118d234b81b4e8f7a92ef77"
+  },
+  "monaco": {
+    "path": "league/images/calendar/monaco.jpg",
+    "alt": "Порт Эркюль и Монако",
+    "author": "Gérard Kieffer",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Monaco_Hercule_Harbour_Panorama.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Monaco_Hercule_Harbour_Panorama.jpg/1280px-Monaco_Hercule_Harbour_Panorama.jpg",
+    "sha256": "10b2157da145f45c87f2226cfb25aa0549fcc2a725b3250d480990900789d1e6"
+  },
+  "barcelona": {
+    "path": "league/images/calendar/barcelona.jpg",
+    "alt": "Автодром Барселона-Каталунья",
+    "author": "Ank Kumar",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Barcelona,_Circuit_de_Catalunya_(Ank_kumar)_07.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a1/Barcelona%2C_Circuit_de_Catalunya_%28Ank_kumar%29_07.jpg/1280px-Barcelona%2C_Circuit_de_Catalunya_%28Ank_kumar%29_07.jpg",
+    "sha256": "84efd83e5f8d4ac613038e229949d6da2f5e1149d012ec3e08d3523cac86d500"
+  },
+  "spielberg": {
+    "path": "league/images/calendar/spielberg.jpg",
+    "alt": "Red Bull Ring, Шпильберг",
+    "author": "United Autosports",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2021_4_Hours_of_Red_Bull_Ring_-_The_Bull.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/2021_4_Hours_of_Red_Bull_Ring_-_The_Bull.jpg/1280px-2021_4_Hours_of_Red_Bull_Ring_-_The_Bull.jpg",
+    "sha256": "96f1779be3aea33865b923b5c9de70bfee0824c5d128c1602e5a2a4ed966d8d3"
+  },
+  "silverstone": {
+    "path": "league/images/calendar/silverstone.jpg",
+    "alt": "Автодром Сильверстоун",
+    "author": "BWard 1997",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:BRDC_Grandstand_Silverstone_Circuit_2026.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/BRDC_Grandstand_Silverstone_Circuit_2026.jpg/1280px-BRDC_Grandstand_Silverstone_Circuit_2026.jpg",
+    "sha256": "97238fdc3c7355f8e9d7a2835d2dc8ae228858e1ee65ab3d2e0ea20f4c496666"
+  },
+  "spa": {
+    "path": "league/images/calendar/spa.jpg",
+    "alt": "О-Руж, автодром Спа-Франкоршам",
+    "author": "United Autosports",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2022_6_Hours_of_Spa-Francorchamps_-_Eau_Rouge_Corner_stands.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/2022_6_Hours_of_Spa-Francorchamps_-_Eau_Rouge_Corner_stands.jpg/1280px-2022_6_Hours_of_Spa-Francorchamps_-_Eau_Rouge_Corner_stands.jpg",
+    "sha256": "6934e8c39ad509314ec394a13f8a9b322396e0bbd36617fa9eae6ff37365b01f"
+  },
+  "hungaroring": {
+    "path": "league/images/calendar/hungaroring.jpg",
+    "alt": "Хунгароринг, Венгрия",
+    "author": "Ank Kumar",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Hungaroring,_Mogyor%C3%B3d_10.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Hungaroring%2C_Mogyor%C3%B3d_10.jpg/1280px-Hungaroring%2C_Mogyor%C3%B3d_10.jpg",
+    "sha256": "7811eb27b00bb92ab9f6627aa16de4b8cdac4ca55905e58cd8c288cb43355805"
+  },
+  "zandvoort": {
+    "path": "league/images/calendar/zandvoort.jpg",
+    "alt": "Автодром Зандворт",
+    "author": "Ymnes",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Circuit_Zandvoort_-_binnenterrein_Mickey%27s_en_Paddock_Club.JPG",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e2/Circuit_Zandvoort_-_binnenterrein_Mickey%27s_en_Paddock_Club.JPG/1280px-Circuit_Zandvoort_-_binnenterrein_Mickey%27s_en_Paddock_Club.JPG",
+    "sha256": "6b4efa616017c4cb3ef05d0f708dc754948812fe46c55163f28cd928a4291622"
+  },
+  "monza": {
+    "path": "league/images/calendar/monza.jpg",
+    "alt": "Автодром Монца",
+    "author": "United Autosports",
+    "license": "CC BY-SA 2.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:2022_6_Hours_of_Monza_-_The_trrack.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/2022_6_Hours_of_Monza_-_The_trrack.jpg/1280px-2022_6_Hours_of_Monza_-_The_trrack.jpg",
+    "sha256": "d03d93f827db213af3fa368207c919cc56d1e839317760b5bc0774abeee27d43"
+  },
+  "madrid": {
+    "path": "league/images/calendar/madrid.jpg",
+    "alt": "Мадрид — город проведения Гран-при Испании",
+    "author": "Luis García (Zaqarbal)",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Edificios_Skyline_Madrid_01.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f3/Edificios_Skyline_Madrid_01.jpg/1280px-Edificios_Skyline_Madrid_01.jpg",
+    "sha256": "3d9afe6ac44611955e4a73de84f76d8d349923a72070767acd586311933515e1"
+  },
+  "baku": {
+    "path": "league/images/calendar/baku.jpg",
+    "alt": "Городская трасса Баку",
+    "author": "Planet Labs, Inc.",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Baku_City_Circuit,_April_9,_2018_SkySat.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6d/Baku_City_Circuit%2C_April_9%2C_2018_SkySat.jpg/1280px-Baku_City_Circuit%2C_April_9%2C_2018_SkySat.jpg",
+    "sha256": "3c6b3434a3de10730ba16e964dcd12b713c9679aa21d07497d3f4e528f02f00b"
+  },
+  "sepang": {
+    "path": "league/images/calendar/sepang.jpg",
+    "alt": "Международный автодром Сепанг",
+    "author": "Leminhel",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Sepang_International_Circuit_1.JPG",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Sepang_International_Circuit_1.JPG/1280px-Sepang_International_Circuit_1.JPG",
+    "sha256": "87d4510f21238e7f5e8f3c3b1d97face107dc07b97c8873d613b91f9a4966941"
+  },
+  "singapore": {
+    "path": "league/images/calendar/singapore.jpg",
+    "alt": "Марина-Бэй, Сингапур",
+    "author": "Bijay Chaurasia",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Marina_Bay_Singapore-3499.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Marina_Bay_Singapore-3499.jpg/1280px-Marina_Bay_Singapore-3499.jpg",
+    "sha256": "e6fc59c65f4dd251c9dc611b2799e790467bd7bbaff6ce390152656e0e9096f4"
+  },
+  "austin": {
+    "path": "league/images/calendar/austin.jpg",
+    "alt": "Circuit of the Americas, Остин",
+    "author": "Zach Catanzareti Photo",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Circuit_of_the_americas_(52780065967).jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e7/Circuit_of_the_americas_%2852780065967%29.jpg/1280px-Circuit_of_the_americas_%2852780065967%29.jpg",
+    "sha256": "53f7d9ef51c81e7ffcedbb451db00943ae1f03d04ae18e946c72cc264a0abe8c"
+  },
+  "mexico": {
+    "path": "league/images/calendar/mexico.jpg",
+    "alt": "Автодром имени братьев Родригес, Мехико",
+    "author": "Wiper México",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Autodromo_Hermanos_Rodriguez_-_panoramio.jpg",
+    "download_url": "https://upload.wikimedia.org/wikipedia/commons/2/29/Autodromo_Hermanos_Rodriguez_-_panoramio.jpg",
+    "sha256": "da5428c0e2908d1aeca2e3044ae47bed614b93287c88c72585ae1b1fdccb4d3e"
+  },
+  "interlagos": {
+    "path": "league/images/calendar/interlagos.jpg",
+    "alt": "Интерлагос, Гран-при Сан-Паулу",
+    "author": "Governo do Estado de São Paulo",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Grande_Pr%C3%AAmio_S%C3%A3o_Paulo_de_F%C3%B3rmula_1_(52497080967).jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/59/Grande_Pr%C3%AAmio_S%C3%A3o_Paulo_de_F%C3%B3rmula_1_%2852497080967%29.jpg/1280px-Grande_Pr%C3%AAmio_S%C3%A3o_Paulo_de_F%C3%B3rmula_1_%2852497080967%29.jpg",
+    "sha256": "9c9d209e44d721473d11490ceae4df4841050383a0798f826bab6bc42f701f66"
+  },
+  "las-vegas": {
+    "path": "league/images/calendar/las-vegas.jpg",
+    "alt": "Лас-Вегас-Стрип",
+    "author": "King of Hearts",
+    "license": "CC BY-SA 4.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Las_Vegas_Strip_from_Resorts_World_February_2023_HDR_1.jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/32/Las_Vegas_Strip_from_Resorts_World_February_2023_HDR_1.jpg/1280px-Las_Vegas_Strip_from_Resorts_World_February_2023_HDR_1.jpg",
+    "sha256": "d9c455b2c98ce668b4b257deff89bddec69af7f585902816f027df861f7b41af"
+  },
+  "lusail": {
+    "path": "league/images/calendar/lusail.jpg",
+    "alt": "Трибуны международного автодрома Лусаил",
+    "author": "Trinidade",
+    "license": "CC BY-SA 3.0",
+    "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Grand_Stand.JPG",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f4/Grand_Stand.JPG/1280px-Grand_Stand.JPG",
+    "sha256": "0ff14c1ac7b59cf156f1362a0b74a69651a0b2282d81d6ac7aa96d96bfb1abf7"
+  },
+  "yas-marina": {
+    "path": "league/images/calendar/yas-marina.jpg",
+    "alt": "Автодром Яс-Марина, Абу-Даби",
+    "author": "Studio Sarah Lou from USA",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Race_car_-_Abu_Dhabi_(8645318195).jpg",
+    "download_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Race_car_-_Abu_Dhabi_%288645318195%29.jpg/1280px-Race_car_-_Abu_Dhabi_%288645318195%29.jpg",
+    "sha256": "fde8e28c7ff91cd9cebade90ee9522cc83e823ceea3ae4148d143edcb0c6d4eb"
+  }
+}

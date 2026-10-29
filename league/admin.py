@@ -24,6 +24,7 @@ from .models import (
     HomeResultImage,
     PlayerWildcard,
     Prediction,
+    RaceCalendarRound,
     Result,
     Score,
     ScoreRevision,
@@ -390,6 +391,22 @@ class EventWildcardQuestionInline(admin.TabularInline):
             obj.option_a,
             format_html("{}{}", obj.option_b, format_html(" · C: {}", obj.option_c) if obj.option_c else ""),
         )
+
+
+@admin.register(RaceCalendarRound)
+class RaceCalendarRoundAdmin(admin.ModelAdmin):
+    list_display = ("season_year", "round_number", "title", "starts_on", "practice1_at", "race_at", "has_sprint")
+    list_filter = ("season_year", "has_sprint")
+    search_fields = ("title", "location", "circuit_name")
+    ordering = ("-season_year", "round_number")
+    autocomplete_fields = ("prediction_event",)
+    fieldsets = (
+        ("Этап", {"fields": ("season_year", "round_number", "circuit", "title", "location", "country", "circuit_name", "cover_image", "has_sprint")}),
+        ("Расписание", {"fields": ("starts_on", "ends_on", "venue_timezone", "practice1_at", "race_at"),
+            "description": "Даты уик-энда — местные. Время сессий вводится в часовом поясе админки (МСК). Необъявленное время оставьте пустым."}),
+        ("Прогнозы и источники", {"fields": ("prediction_event", "source_url", "checked_on"),
+            "description": "Календарь не создаёт карточки прогнозов и не меняет их дедлайны."}),
+    )
 
 
 @admin.register(Event)
