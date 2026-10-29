@@ -1,4 +1,4 @@
-/* Pit-wall feedback: finite animations, no moving table rows or looping lights. */
+/* Pit-wall feedback: restrained motion, no moving table rows or flashing lights. */
 [data-count-to] { display:inline-block; font-variant-numeric:tabular-nums; text-align:inherit; }
 .race-save-receipt { position:relative; display:flex; align-items:center; gap:14px; padding:16px 20px; overflow:hidden; border:1px solid #48534f; border-radius:12px; background:#232b2b; color:#f1f4f2; }
 .race-save-receipt>div { min-width:0; }
@@ -21,10 +21,13 @@
 form[data-save-state="sending"] button[type="submit"] { cursor:progress; }
 form[data-save-state="confirmed"] button[type="submit"]::after { content:" ✓"; }
 
-.race-finish { position:relative; isolation:isolate; display:grid; grid-template-columns:36px minmax(0,1fr) auto auto; align-items:center; gap:22px; margin:20px 0 26px; padding:24px; overflow:hidden; border:1px solid #424a55; border-radius:14px; background:#242a32; }
+.race-finish { position:relative; isolation:isolate; display:grid; grid-template-columns:52px minmax(0,1fr) auto auto; align-items:center; gap:22px; margin:20px 0 26px; padding:24px; overflow:hidden; border:1px solid #424a55; border-radius:14px; background:#242a32; }
 .race-finish::before { content:""; position:absolute; z-index:-1; top:0; bottom:0; left:0; width:38%; opacity:0; background:conic-gradient(#ffffff09 25%,transparent 0 50%,#ffffff09 0 75%,transparent 0) 0 0 / 24px 24px; pointer-events:none; }
 .race-finish.is-finishing::before { animation:race-finish-pass 1.25s ease-out both; }
-.race-finish-flag { display:block; width:32px; height:30px; background:conic-gradient(#c2c8d0 25%,#303741 0 50%,#c2c8d0 0 75%,#303741 0) 0 0 / 16px 16px; border:1px solid #66717f; border-radius:2px; }
+.race-finish-flag { display:block; width:52px; height:56px; pointer-events:none; }
+.race-finish-flag svg { display:block; width:100%; height:100%; overflow:visible; }
+.race-flag-cloth { transform-origin:15px 30px; animation:race-flag-breeze 3.6s ease-in-out infinite; }
+.race-flag-fold { animation:race-flag-fold 3.6s ease-in-out infinite; }
 .race-finish-copy { min-width:0; }
 .race-finish-copy>small { color:#ee978c; font:500 9px/1.5 "SFMono-Regular",Consolas,monospace; letter-spacing:.1em; }
 body.apex-night-theme .race-finish-copy h3 { margin:7px 0; color:#f2f3f5; font:650 18px/1.3 Inter,sans-serif; letter-spacing:-.025em; overflow-wrap:anywhere; }
@@ -65,10 +68,12 @@ body.apex-night-theme.editorial-theme .ns-live .radio-message-open { margin:-4px
 @keyframes race-radio-signal { 0%,100% { opacity:.55; } 20%,75% { opacity:1; stroke:#ef9e91; } }
 @keyframes race-position { from { opacity:.3; } to { opacity:1; } }
 @keyframes race-finish-pass { 0% { transform:translateX(-100%); opacity:0; } 20% { opacity:1; } 100% { transform:translateX(270%); opacity:0; } }
+@keyframes race-flag-breeze { 0%,100% { transform:skewY(-3deg) scaleX(1); } 50% { transform:skewY(4deg) scaleX(.94); } }
+@keyframes race-flag-fold { 0%,100% { transform:translateX(-9px); opacity:.8; } 50% { transform:translateX(12px); opacity:1; } }
 body.apex-night-theme .classification .classification-movement[data-position-change].is-moving { animation:race-position .7s ease-out!important; }
 @media(max-width:700px) {
-  .race-finish { grid-template-columns:24px minmax(0,1fr) auto; gap:12px; padding:18px 16px; }
-  .race-finish-flag { width:22px; height:24px; background-size:12px 12px; }
+  .race-finish { grid-template-columns:36px minmax(0,1fr) auto; gap:12px; padding:18px 16px; }
+  .race-finish-flag { width:36px; height:42px; }
   body.apex-night-theme .race-finish-copy h3 { font-size:15px; }
   .race-finish-copy p { font-size:10px; }
   .race-finish-points strong { font-size:30px; }
@@ -80,6 +85,7 @@ body.apex-night-theme .classification .classification-movement[data-position-cha
 }
 @media(prefers-reduced-motion:reduce) {
   .race-save-receipt *, .prediction-save-status::before, .race-finish::before,
+  .race-flag-cloth, .race-flag-fold,
   .ns-live .radio-message-wave, .ns-live .radio-message-wave i,
   .ns-live .paddock-radio-index>span, .ns-live .paddock-radio-wave,
   body.apex-night-theme .classification .classification-movement[data-position-change].is-moving { animation:none!important; transition:none!important; }

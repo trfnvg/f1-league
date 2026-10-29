@@ -1,5 +1,33 @@
 <section class="race-finish" data-race-finish="{{ user.id }}:{% if finish_league %}{{ finish_league.league_id }}{% else %}global{% endif %}:{{ finish_event.id }}:{{ finish_score.points }}" aria-label="Твой результат этапа">
-  <span class="race-finish-flag" aria-hidden="true"></span>
+  <span class="race-finish-flag" aria-hidden="true">
+    <svg viewBox="0 0 76 72" focusable="false">
+      <defs>
+        <pattern id="finish-checks-{{ finish_event.pk }}" width="16" height="16" patternUnits="userSpaceOnUse">
+          <rect width="16" height="16" fill="#dce2e9"/>
+          <path d="M0 0h8v8H0zm8 8h8v8H8z" fill="#252d38"/>
+        </pattern>
+        <linearGradient id="finish-fold-{{ finish_event.pk }}" x1="0" x2="1">
+          <stop stop-color="#fff" stop-opacity=".08"/>
+          <stop offset=".3" stop-color="#0b111b" stop-opacity=".48"/>
+          <stop offset=".58" stop-color="#fff" stop-opacity=".25"/>
+          <stop offset="1" stop-color="#101722" stop-opacity=".2"/>
+        </linearGradient>
+        <clipPath id="finish-cloth-{{ finish_event.pk }}">
+          <path d="M15 14C31 3 46 23 66 11L63 45C45 57 31 36 15 47Z"/>
+        </clipPath>
+      </defs>
+      <path d="M11 10v53" fill="none" stroke="#8995a5" stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="11" cy="8" r="3" fill="#d6dfe8"/>
+      <path d="M6 64h11" fill="none" stroke="#556171" stroke-width="2" stroke-linecap="round"/>
+      <g class="race-flag-cloth">
+        <path d="M15 14C31 3 46 23 66 11L63 45C45 57 31 36 15 47Z" fill="url(#finish-checks-{{ finish_event.pk }})"/>
+        <g clip-path="url(#finish-cloth-{{ finish_event.pk }})">
+          <rect class="race-flag-fold" x="-12" y="0" width="104" height="62" fill="url(#finish-fold-{{ finish_event.pk }})"/>
+        </g>
+        <path d="M15 14C31 3 46 23 66 11L63 45C45 57 31 36 15 47Z" fill="none" stroke="#d4dde8" stroke-opacity=".4" stroke-width=".8"/>
+      </g>
+    </svg>
+  </span>
   <div class="race-finish-copy"><small>ФИНИШ / R{{ finish_event.round_number|stringformat:'02d' }}</small><h3>{{ finish_event.name }}</h3><p>{% if finish_league %}{{ finish_league.league.name }}{% else %}Общий зачёт{% endif %}{% if finish_movement != None %}<span class="race-finish-movement">{% if finish_movement > 0 %}↑ {{ finish_movement }} в таблице{% elif finish_movement < 0 %}↓ {{ finish_movement|stringformat:'d'|slice:'1:' }} в таблице{% else %}Позиция без изменений{% endif %}</span>{% endif %}</p></div>
   <div class="race-finish-points" aria-label="{{ finish_score.points }} очков"><strong data-count-to="{{ finish_score.points }}" aria-hidden="true">{{ finish_score.points }}</strong><small>ОЧКОВ ЗА ЭТАП</small></div>
   <a class="race-finish-link" href="{% if finish_league %}{% url 'league:friend_league_score' finish_league.league_id finish_event.id user.id %}{% else %}{% url 'league:score_detail' finish_event.id user.id %}{% endif %}">Разбор очков {% include 'ui_arrow.html' %}</a>

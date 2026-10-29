@@ -945,6 +945,19 @@ def run(output, widths, engine):
                 finish = page.locator('[data-race-finish]')
                 finish.scroll_into_view_if_needed()
                 assert 'is-finishing' not in (finish.get_attribute('class') or ''), 'Repeated visits must not replay the finish'
+                flag = finish.locator('.race-flag-cloth')
+                assert flag.is_visible()
+                assert flag.evaluate('e=>getComputedStyle(e).animationName') == 'race-flag-breeze'
+                first_transform = flag.evaluate('e=>getComputedStyle(e).transform')
+                finish_box = finish.bounding_box()
+                page.wait_for_timeout(250)
+                assert flag.evaluate('e=>getComputedStyle(e).transform') != first_transform
+                assert finish.bounding_box() == finish_box, 'Flag animation must not shift the result card'
+                page.emulate_media(reduced_motion='reduce')
+                assert flag.evaluate('e=>getComputedStyle(e).animationName') == 'none'
+                assert finish.locator('.race-flag-fold').evaluate('e=>getComputedStyle(e).animationName') == 'none'
+                page.emulate_media(reduced_motion='no-preference')
+                assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 finish.screenshot(path=str(output/f'{width}-race-finish.png'))
                 feed_url = page.locator('#live-paddock-list').get_attribute('data-feed-url')
                 long_text = 'Новое сообщение командного радио: ' + 'на трассе идёт борьба за позиции. '*12
