@@ -1,7 +1,7 @@
 {% extends 'leagues/base.html' %}
 {% load static %}
 {% block title %}{{ league.name }} · Fastlap{% endblock %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=5"><link rel="stylesheet" href="{% static 'league/league-dashboard.css' %}?v=1">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=5"><link rel="stylesheet" href="{% static 'league/league-dashboard.css' %}?v=2">{% endblock %}
 {% block league_page_class %}league-dashboard{% endblock %}
 {% block league_breadcrumb %}{% endblock %}
 {% block league_content %}
@@ -26,8 +26,8 @@
 {% else %}<p class="league-season-note">В этом сезоне пока нет предстоящих гонок. Результаты чемпионата — ниже.</p>{% endif %}
 {% if invite_link %}
 <section class="league-share" aria-labelledby="league-share-title">
-  <div class="league-share-copy"><span class="league-share-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m10 13 4-4m-6 6-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 3 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/></svg></span><div><h2 id="league-share-title">Пригласить друзей</h2><p>Одна ссылка — вся ваша компания.</p></div></div>
-  <div class="league-share-actions"><a class="league-share-url" id="league-invite-link" href="{{ invite_link }}" aria-label="Открыть приглашение в лигу {{ league.name }}">{{ invite_link }}</a><button class="league-share-copy-button" type="button" data-copy-invite><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="10" rx="2"/><path d="M12 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3"/></svg>Скопировать</button></div>
+  <div class="league-share-copy"><span class="league-share-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6m3 3v6m-3-3h6"/></svg></span><div><h2 id="league-share-title">Пригласить друзей</h2><p>Отправь ссылку — друг вступит в вашу лигу.</p></div></div>
+  <div class="league-share-actions"><a class="league-share-url" id="league-invite-link" href="{{ invite_link }}" aria-label="Открыть приглашение в лигу {{ league.name }}">{{ invite_link }}</a><button class="league-share-copy-button" type="button" data-copy-invite><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="16" rx="2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6m-6 4h4"/></svg>Скопировать ссылку</button></div>
   <p class="league-share-status" role="status" data-copy-status>{% if can_configure %}Изменить ссылку можно в <a href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title">управлении лигой</a>.{% else %}Отправьте ссылку другу — он сможет вступить после входа в аккаунт.{% endif %}</p>
 </section>
 {% elif can_manage and invites_enabled %}<section class="league-share league-share-empty"><div class="league-share-copy"><div><h2>Пригласить друзей</h2><p>Создайте постоянную ссылку для своей компании.</p></div></div><a class="league-share-copy-button" href="{% if can_configure %}{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title{% else %}{% url 'league:friend_league_invites' league.id %}?year={{ season.year }}{% endif %}">Создать приглашение {% include 'ui_arrow.html' %}</a></section>{% endif %}

@@ -194,3 +194,9 @@ body.apex-night-theme.editorial-theme .event-stage-hero { display:block; opacity
 .event-stage-fallback>span { font:700 9px/1.5 Inter,sans-serif; letter-spacing:.2em; }
 .event-stage-fallback>strong { margin-top:12px; color:#c4cbd5; font:700 55px/1 monospace; letter-spacing:-.07em; }
 @media(max-width:600px) { .event-stage-layout { grid-template-columns:1fr; }.event-stage-copy { padding:24px 22px; }.event-stage-media { grid-column:1; grid-row:2; min-height:0; height:auto; aspect-ratio:16/9; }.event-stage-fallback { min-height:0; }.event-stage-track { inset:8px 26px; } }
+
+/* Links stay recognisable through weight, colour and keyboard focus, not underlines. */
+body.apex-night-theme.editorial-theme a,
+body.apex-night-theme.editorial-theme a:hover { text-decoration: none !important; }
+body.apex-night-theme.editorial-theme .main-content :is(p,li,dd,td,th,small) a,
+body.apex-night-theme.editorial-theme .main-content a:not([class]) { font-weight: 600; }

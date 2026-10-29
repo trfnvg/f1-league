@@ -173,6 +173,8 @@ class DuelChallengeTests(TestCase):
         )
         home_page = self.client.get(reverse("league:home"))
         self.assertContains(home_page, "Тебе бросили вызов")
+        feed_url = reverse('league:activity_feed') + '?season=2026'
+        self.assertEqual(self.client.get(feed_url).json()['pending_duel_ids'], [duel.pk])
         response = self.client.post(
             reverse("league:respond_event_duel", kwargs={"duel_id": duel.id, "action": "accept"})
         )
@@ -180,6 +182,11 @@ class DuelChallengeTests(TestCase):
         duel.refresh_from_db()
         self.assertEqual(duel.status, DuelChallenge.Status.ACCEPTED)
         self.assertIsNotNone(duel.responded_at)
+        self.assertEqual(self.client.get(feed_url).json()['pending_duel_ids'], [])
+        self.assertNotContains(self.client.get(reverse('league:home')), 'class="ns-duel-notice"')
+        self.client.force_login(self.challenger)
+        self.assertNotContains(self.client.get(reverse('league:home')), 'class="ns-duel-notice"')
+        self.client.force_login(self.opponent)
         self.assertContains(
             self.client.get(reverse("league:event_detail", args=(self.event.id,))),
             "Ставка зафиксирована",

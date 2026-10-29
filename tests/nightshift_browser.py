@@ -701,6 +701,15 @@ def run(output, widths, engine):
                         notice.focus()
                         assert notice.evaluate("e=>getComputedStyle(e).outlineStyle") == 'solid'
                         notice.evaluate('e=>e.blur()')
+                        feed_url = page.locator('#live-paddock-list').get_attribute('data-feed-url')
+                        feed_html = page.locator('#live-paddock-list').inner_html()
+                        def accepted_duel_feed(request_route):
+                            request_route.fulfill(json={'html': feed_html, 'pending_duel_ids': []})
+                        page.route('**'+feed_url, accepted_duel_feed)
+                        with page.expect_response('**'+feed_url):
+                            page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                        page.wait_for_function("!document.querySelector('.ns-duel-notice')")
+                        page.unroute('**'+feed_url, accepted_duel_feed)
                     if route == "/closed/":
                         assert page.locator(".ns-deadline").inner_text().startswith("ДО СТАРТА ГОНКИ")
                         assert "Время гонки." not in page.locator('#featured-gp-title').inner_text()

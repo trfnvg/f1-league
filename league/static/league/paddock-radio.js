@@ -98,6 +98,11 @@
       });
       if (!response.ok) return;
       const data = await response.json();
+      if (Array.isArray(data.pending_duel_ids)) {
+        document.querySelectorAll('.ns-duel-notice[data-duel-id]').forEach(notice => {
+          if (!data.pending_duel_ids.includes(Number(notice.dataset.duelId))) notice.remove();
+        });
+      }
       // Don't replace an active link while somebody is using the keyboard.
       if (typeof data.html === 'string' && lastHTML !== data.html && !list.contains(document.activeElement)
           && !list.querySelector('.is-open')) {

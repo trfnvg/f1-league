@@ -1142,7 +1142,12 @@ def activity_feed_updates(request):
         {"activity_feed": activity_feed, "season": season},
         request=request,
     )
-    response = JsonResponse({"html": html})
+    pending_duel_ids = []
+    if request.user.is_authenticated:
+        pending_duel_ids = list(DuelChallenge.objects.filter(
+            event__season_year=season.year, status=DuelChallenge.Status.PENDING,
+        ).filter(Q(challenger=request.user) | Q(opponent=request.user)).values_list('id', flat=True))
+    response = JsonResponse({"html": html, "pending_duel_ids": pending_duel_ids})
     response["Cache-Control"] = "no-store, no-cache, must-revalidate"
     return response
 

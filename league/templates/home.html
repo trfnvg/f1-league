@@ -59,11 +59,11 @@
 {% include 'race_finish.html' with finish_event=personal_dashboard.latest_event finish_score=personal_dashboard.latest_score finish_movement=personal_dashboard.movement finish_league=home_league %}
 {% endif %}
 
-{% if personal_dashboard.next_duel %}
+{% if personal_dashboard.next_duel.status == 'pending' %}
 {% with duel=personal_dashboard.next_duel %}
-<a class="ns-duel-notice" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}#event-duel">
+<a class="ns-duel-notice" data-duel-id="{{ duel.id }}" href="{% url 'league:event_detail' event_id=personal_dashboard.next_event.id %}#event-duel">
   <span class="ns-duel-players" aria-hidden="true"><span class="mini-avatar">{% if duel.challenger.league_profile.avatar %}<img src="{{ duel.challenger.league_profile.avatar.url }}" alt="">{% else %}{{ duel.challenger|player_name|slice:':1'|upper }}{% endif %}</span><span class="mini-avatar">{% if duel.opponent.league_profile.avatar %}<img src="{{ duel.opponent.league_profile.avatar.url }}" alt="">{% else %}{{ duel.opponent|player_name|slice:':1'|upper }}{% endif %}</span></span>
-  <span class="ns-duel-summary"><small>{% if duel.status == 'pending' and duel.opponent_id == user.id %}Тебе бросили вызов{% elif duel.status == 'pending' %}Вызов отправлен{% else %}Дуэль принята{% endif %}</small><strong>{{ duel.challenger|player_name }} <span>против</span> {{ duel.opponent|player_name }}</strong><span>{{ personal_dashboard.next_event.name }}</span></span>
+  <span class="ns-duel-summary"><small>{% if duel.opponent_id == user.id %}Тебе бросили вызов{% else %}Вызов отправлен{% endif %}</small><strong>{{ duel.challenger|player_name }} <span>против</span> {{ duel.opponent|player_name }}</strong><span>{{ personal_dashboard.next_event.name }}</span></span>
   <span class="ns-duel-stake"><strong>{{ duel.stake }}</strong><small>очков на кону</small></span><span class="ns-duel-arrow" aria-hidden="true">{% include 'ui_arrow.html' %}</span>
 </a>
 {% endwith %}
@@ -193,4 +193,4 @@
 </div>
 {% endblock %}
 
-{% block extra_scripts %}<script src="{% static 'league/home-race-clock.js' %}?v=1" defer></script><script src="{% static 'league/paddock-radio.js' %}?v=3-responsive-feed" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/home-race-clock.js' %}?v=1" defer></script><script src="{% static 'league/paddock-radio.js' %}?v=4-duel-status" defer></script>{% endblock %}
