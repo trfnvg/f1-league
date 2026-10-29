@@ -67,6 +67,7 @@ urlpatterns = [
     path("events/<int:event_id>/wildcard/draw/", views.draw_event_wildcard, name="draw_event_wildcard"),
     path("events/<int:event_id>/wildcard/answer/", views.answer_event_wildcard, name="answer_event_wildcard"),
     path("events/<int:event_id>/duels/create/", views.create_event_duel, name="create_event_duel"),
+    path("events/<int:event_id>/duels/availability/", views.duel_opponent_availability, name="duel_opponent_availability"),
     path("duels/<int:duel_id>/cancel/", views.cancel_event_duel, name="cancel_event_duel"),
     path("duels/<int:duel_id>/<str:action>/", views.respond_event_duel, name="respond_event_duel"),
     path("players/<int:user_id>/", views.player_profile, name="player_profile"),

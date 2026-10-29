@@ -836,6 +836,37 @@ def run(output, widths, engine):
                         if route == '/duel-accepted/':
                             assert page.locator('.stage-duel-locked').is_visible()
                     if route == '/event/':
+                        page.locator('.stage-sections a[href="#event-duel"]').click()
+                        availability_mode = {'busy': True, 'error': False}
+                        def availability_response(request_route):
+                            if availability_mode['error']:
+                                request_route.fulfill(status=503, body='Unavailable')
+                            else:
+                                request_route.fulfill(json={'available': not availability_mode['busy'], 'message': 'Участник уже бросил вызов другому игроку.' if availability_mode['busy'] else ''})
+                        page.route('**/duels/availability/**', availability_response)
+                        duel_select = page.locator('.stage-duel-form select[name="opponent"]')
+                        candidate = duel_select.locator('option').nth(1).get_attribute('value')
+                        duel_select.select_option(candidate)
+                        status = page.locator('[data-duel-opponent-status]')
+                        page.wait_for_function("document.querySelector('[data-duel-opponent-status]').dataset.unavailable==='true'")
+                        assert 'уже бросил вызов' in status.inner_text()
+                        assert page.locator('.stage-duel-form button[type="submit"]').is_disabled()
+                        assert duel_select.get_attribute('aria-invalid') == 'true'
+                        availability_mode['busy'] = False
+                        duel_select.select_option('')
+                        duel_select.select_option(candidate)
+                        page.wait_for_function("document.querySelector('[data-duel-opponent-status]').hidden")
+                        assert page.locator('.stage-duel-form button[type="submit"]').is_enabled()
+                        assert duel_select.get_attribute('aria-invalid') is None
+                        availability_mode['error'] = True
+                        duel_select.select_option('')
+                        duel_select.select_option(candidate)
+                        page.wait_for_function("document.querySelector('[data-duel-opponent-status]').textContent.includes('Не удалось')")
+                        assert page.locator('.stage-duel-form button[type="submit"]').is_enabled(), 'Server-side validation remains available during network failures'
+                        duel_select.select_option('')
+                        assert status.is_hidden()
+                        page.unroute('**/duels/availability/**', availability_response)
+                        page.locator('.stage-sections a[href="#stage-prediction"]').click()
                         for index, key in enumerate(['norris', 'piastri', 'russell']):
                             page.locator('.prediction-podium-slot').nth(index).click()
                             assert page.locator('#driver-picker-dialog').is_visible()

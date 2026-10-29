@@ -603,8 +603,7 @@ def build_activity_feed(leaderboard, limit=5):
     duels = (
         DuelChallenge.objects.filter(
             event__season_year=season_year,
-            status__in=(DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
-            responded_at__isnull=False,
+            status__in=(DuelChallenge.Status.PENDING, DuelChallenge.Status.ACCEPTED, DuelChallenge.Status.SETTLED),
         )
         .select_related("event", "challenger", "opponent", "winner")
         .order_by("responded_at", "id")
@@ -612,6 +611,20 @@ def build_activity_feed(leaderboard, limit=5):
     duel_news = []
     for duel in duels:
         stake_word = _russian_plural(duel.stake, ("очко", "очка", "очков"))
+        if duel.status == DuelChallenge.Status.PENDING:
+            duel_news.append({
+                'type': 'duel-challenge',
+                'text': f'{display_name(duel.challenger)} бросил вызов игроку {display_name(duel.opponent)}',
+                'meta': f'R{duel.event.round_number} · ставка {duel.stake} {stake_word}',
+                'user_id': duel.challenger_id,
+                'event_id': duel.event_id,
+                'source_event_id': duel.event_id,
+                'anchor': '#event-duel',
+                'occurred_at': duel.created_at,
+            })
+            continue
+        if not duel.responded_at:
+            continue
         duel_news.append(
             {
                 "type": "duel-accepted",
@@ -647,6 +660,7 @@ def build_activity_feed(leaderboard, limit=5):
             "crazy-veto": 99,
             "arcade-winner": 98,
             "duel-accepted": 85,
+            "duel-challenge": 84,
         }
         return sorted(
             items,
@@ -868,6 +882,7 @@ def build_activity_feed(leaderboard, limit=5):
                 "arcade-leader": 92,
                 "leader": 90,
                 "duel-accepted": 85,
+                "duel-challenge": 84,
                 "movement": 80,
                 "perfect-podium": 75,
                 "record": 70,

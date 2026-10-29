@@ -9,7 +9,7 @@ from django.utils import timezone
 from .duels import DuelActionError, available_opponents, create_duel_challenge, respond_to_duel
 from .models import DuelChallenge, DuelSettings, Event, Prediction, Result, Score
 from .scoring import publish_event_scores
-from .services import build_leaderboard
+from .services import build_activity_feed, build_leaderboard
 
 
 TEST_STORAGES = {
@@ -32,6 +32,71 @@ class DuelChallengeTests(TestCase):
         self.challenger = User.objects.create_user(username="Cowboy", password="test-pass")
         self.opponent = User.objects.create_user(username="Ranger", password="test-pass")
         self.third = User.objects.create_user(username="Sheriff", password="test-pass")
+
+    def availability(self, opponent=None):
+        return self.client.get(reverse('league:duel_opponent_availability', args=[self.event.pk]),
+            {'opponent': (opponent or self.challenger).pk})
+
+    def test_pending_challenge_appears_in_live_paddock(self):
+        duel = create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        feed = build_activity_feed(build_leaderboard(2026))
+        news = next(item for item in feed if item['type'] == 'duel-challenge')
+        self.assertIn('Cowboy бросил вызов игроку Ranger', news['text'])
+        self.assertEqual(news['occurred_at'], duel.created_at)
+        self.assertEqual(news['anchor'], '#event-duel')
+        self.assertEqual(news['source_event_id'], self.event.pk)
+        self.client.force_login(self.third)
+        self.assertContains(self.client.get(reverse('league:home')), 'is-duel-challenge')
+        from .duels import cancel_duel_challenge
+        cancel_duel_challenge(duel, self.challenger)
+        self.assertFalse(any(item['type'] == 'duel-challenge' for item in build_activity_feed(build_leaderboard(2026))))
+
+    def test_busy_opponent_is_visible_but_explained_and_rejected(self):
+        create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        self.client.force_login(self.third)
+        response = self.availability()
+        self.assertFalse(response.json()['available'])
+        self.assertIn('Cowboy уже бросил вызов игроку Ranger', response.json()['message'])
+        self.assertIn('no-store', response['Cache-Control'])
+        page = self.client.get(reverse('league:event_detail', args=[self.event.pk]))
+        self.assertContains(page, 'Cowboy · занят')
+        self.assertContains(page, 'data-duel-opponent-status')
+        response = self.client.post(reverse('league:create_event_duel', args=[self.event.pk]),
+            {'opponent': self.challenger.pk, 'stake': 5}, follow=True)
+        self.assertContains(response, 'Cowboy уже бросил вызов игроку Ranger')
+        self.assertEqual(DuelChallenge.objects.count(), 1)
+
+    def test_availability_tracks_received_accepted_and_declined_challenges(self):
+        self.client.force_login(self.third)
+        self.assertTrue(self.availability().json()['available'])
+        duel = create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        self.assertIn('уже получил вызов', self.availability(self.opponent).json()['message'])
+        respond_to_duel(duel, self.opponent, accept=False)
+        self.assertTrue(self.availability().json()['available'])
+        duel = create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        respond_to_duel(duel, self.opponent, accept=True)
+        self.assertIn('уже участвует в дуэли', self.availability().json()['message'])
+
+    def test_availability_requires_login_and_obeys_deadline_and_eligibility(self):
+        self.assertEqual(self.availability().status_code, 302)
+        self.client.force_login(self.third)
+        self.assertFalse(self.availability(self.third).json()['available'])
+        url = reverse('league:duel_opponent_availability', args=[self.event.pk])
+        self.assertEqual(self.client.post(url).status_code, 405)
+        for value in ('not-an-id', '9' * 100, '-1'):
+            self.assertFalse(self.client.get(url, {'opponent': value}).json()['available'])
+        self.event.deadline = timezone.now() - timedelta(seconds=1)
+        self.event.save(update_fields=['deadline'])
+        self.assertIn('Приём вызовов закрыт', self.availability().json()['message'])
+
+    def test_stale_opponent_selection_cannot_create_second_challenge(self):
+        self.client.force_login(self.third)
+        self.assertTrue(self.availability().json()['available'])
+        create_duel_challenge(self.event, self.challenger, self.opponent, 5)
+        response = self.client.post(reverse('league:create_event_duel', args=[self.event.pk]),
+            {'opponent': self.challenger.pk, 'stake': 5}, follow=True)
+        self.assertContains(response, 'уже бросил вызов')
+        self.assertEqual(DuelChallenge.objects.count(), 1)
 
     def _prediction(self, user, *, strong):
         if strong:

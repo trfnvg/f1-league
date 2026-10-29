@@ -23,7 +23,9 @@ from .duels import (
     DuelActionError,
     cancel_duel_challenge,
     create_duel_challenge,
+    duel_candidates,
     get_user_event_duel,
+    opponent_unavailability,
     respond_to_duel,
 )
 from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, RegisterForm, SeasonPredictionForm
@@ -1899,6 +1901,29 @@ def answer_event_wildcard(request, event_id: int):
             )
         messages.success(request, "Ответ на личную карту сохранён.")
     return redirect(f"{reverse('league:event_detail', args=(event.id,))}#personal-wildcard")
+
+
+@login_required(login_url="login")
+def duel_opponent_availability(request, event_id: int):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(('GET',))
+    event = get_object_or_404(Event, pk=event_id)
+    raw_id = request.GET.get('opponent', '')
+    opponent = None
+    if raw_id.isascii() and raw_id.isdecimal() and len(raw_id) <= 10:
+        opponent = duel_candidates(event, request.user).filter(pk=int(raw_id)).first()
+    reason = ''
+    if event.voting_state() != 'open':
+        reason = 'Приём вызовов закрыт вместе с дедлайном прогнозов.'
+    elif get_user_event_duel(event, request.user):
+        reason = 'У тебя уже есть активная дуэль на этот этап.'
+    elif opponent is None:
+        reason = 'Этого участника нельзя вызвать на дуэль.'
+    else:
+        reason = opponent_unavailability(event, opponent)
+    response = JsonResponse({'available': not bool(reason), 'message': reason})
+    response['Cache-Control'] = 'no-store, private'
+    return response
 
 
 @login_required(login_url="login")

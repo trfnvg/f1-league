@@ -44,18 +44,20 @@
   const months = [...calendar.querySelectorAll('[data-calendar-month]')];
   if (filters) {
     filters.hidden = false;
-    filters.addEventListener('click', event => {
-      const button = event.target.closest('[data-filter]');
-      if (!button) return;
-      const filter = button.dataset.filter;
-      filters.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item === button)));
-      cards.forEach(card => { card.hidden = (filter === 'upcoming' && card.dataset.finished === 'true') || (filter === 'sprint' && card.dataset.sprint !== 'true'); });
+    function applyFilter(filter) {
+      filters.querySelectorAll('button').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.filter === filter)));
+      cards.forEach(card => { card.hidden = filter === 'upcoming' && card.dataset.finished === 'true'; });
       months.forEach(month => {
         month.hidden = ![...month.querySelectorAll('[data-calendar-round]')].some(card => !card.hidden);
         const anchor = calendar.querySelector(`.rc-month-nav a[href="#${month.id}"]`);
         if (anchor) anchor.hidden = month.hidden;
       });
       calendar.querySelector('[data-calendar-empty]').hidden = cards.some(card => !card.hidden);
+    }
+    filters.addEventListener('click', event => {
+      const button = event.target.closest('[data-filter]');
+      if (button) applyFilter(button.dataset.filter);
     });
+    applyFilter('upcoming');
   }
 })();

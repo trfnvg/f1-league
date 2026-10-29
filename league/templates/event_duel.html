@@ -49,10 +49,11 @@
       </div>
     </article>
   {% elif duel_form %}
-    <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="stage-duel-form">
+    <form method="post" action="{% url 'league:create_event_duel' event_id=event.id %}" class="stage-duel-form" data-duel-availability="{% url 'league:duel_opponent_availability' event.id %}">
       {% csrf_token %}
       <div class="stage-duel-form-note"><span aria-hidden="true">VS</span><div><strong>Новый вызов</strong><small>Выбери соперника и размер ставки. Одного и того же соперника нельзя выбирать два этапа подряд.</small></div></div>
       <label><span>Соперник</span>{{ duel_form.opponent }}</label>
+      <p class="duel-opponent-status" id="duel-opponent-status" data-duel-opponent-status role="status" aria-live="polite" hidden></p>
       <label class="stage-duel-stake-field"><span>Ставка · 1–10 очков</span>{{ duel_form.stake }}</label>
       <button type="submit" class="stage-duel-btn is-challenge">Бросить вызов <span aria-hidden="true">→</span></button>
     </form>

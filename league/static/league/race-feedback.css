@@ -39,6 +39,10 @@ body.apex-night-theme .race-finish-copy h3 { margin:7px 0; color:#f2f3f5; font:6
 body.apex-night-theme .race-finish-link { display:inline-flex; align-items:center; gap:10px; padding:12px 0 12px 22px; border-left:1px solid #ffffff15; color:#e7ebf0; font:550 12px/1.5 Inter,sans-serif; text-decoration:none; }
 .race-finish-link svg { width:16px; height:16px; flex:none; }
 .race-finish-link:focus-visible { outline:2px solid #e99488; outline-offset:4px; }
+.stage-duel-form .duel-opponent-status { grid-column:1/-1; grid-row:3; margin:0; padding:11px 14px; border:1px solid #ffffff15; border-radius:8px; color:#b9c4d1; background:#ffffff04; font:400 12px/1.6 Inter,sans-serif; overflow-wrap:anywhere; }
+.stage-duel-form .duel-opponent-status[data-unavailable="true"] { border-color:#e994883d; color:#efb1a8; background:#e9948808; }
+.stage-duel-form .duel-opponent-status[hidden] { display:none; }
+.stage-duel-form .stage-duel-btn:disabled { opacity:.45; cursor:not-allowed; }
 
 .paddock-radio-index { position:relative; }
 .radio-message-wave { position:absolute; inset:0; display:flex; align-items:center; justify-content:flex-end; gap:2px; opacity:0; color:#e99a8d; }

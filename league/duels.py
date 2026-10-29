@@ -82,6 +82,28 @@ def available_opponents(event, user):
     return queryset.order_by("username")
 
 
+def duel_candidates(event, user):
+    """Keep busy players visible so the UI can explain why they are unavailable."""
+    return (User.objects.filter(is_active=True, is_staff=False)
+            .exclude(pk=user.pk)
+            .exclude(pk__in=previous_event_duel_targets(event, user))
+            .order_by("username"))
+
+
+def opponent_unavailability(event, opponent):
+    from .identity import display_name
+    duel = get_user_event_duel(event, opponent)
+    if not duel:
+        return ""
+    name = display_name(opponent)
+    if duel.status == DuelChallenge.Status.PENDING:
+        if duel.challenger_id == opponent.pk:
+            return f"{name} уже бросил вызов игроку {display_name(duel.opponent)} на этом этапе. Выбери другого соперника."
+        return f"{name} уже получил вызов от {display_name(duel.challenger)} на этом этапе. Выбери другого соперника."
+    other = duel.opponent if duel.challenger_id == opponent.pk else duel.challenger
+    return f"{name} уже участвует в дуэли с {display_name(other)} на этом этапе. Выбери другого соперника."
+
+
 @transaction.atomic
 def create_duel_challenge(event, challenger, opponent, stake):
     event = Event.objects.select_for_update().get(pk=event.pk)
@@ -100,7 +122,7 @@ def create_duel_challenge(event, challenger, opponent, stake):
     if locked_duels.filter(Q(challenger=challenger) | Q(opponent=challenger)).exists():
         raise DuelActionError("У тебя уже есть активная дуэль на этот этап.")
     if locked_duels.filter(Q(challenger=opponent) | Q(opponent=opponent)).exists():
-        raise DuelActionError("У этого участника уже есть активная дуэль на этот этап.")
+        raise DuelActionError("У этого участника уже есть активная дуэль на этот этап. " + opponent_unavailability(event, opponent))
 
     return DuelChallenge.objects.create(
         event=event,

@@ -2,7 +2,7 @@
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
-from .duels import available_opponents
+from .duels import active_duels_for, duel_candidates, opponent_unavailability
 from .models import Prediction, SeasonPrediction, UserProfile
 
 
@@ -270,5 +270,15 @@ class DuelChallengeForm(forms.Form):
     def __init__(self, *args, event, user, **kwargs):
         super().__init__(*args, **kwargs)
         from .identity import display_name
-        self.fields["opponent"].label_from_instance = display_name
-        self.fields["opponent"].queryset = available_opponents(event, user)
+        self.event = event
+        occupied = {pk for pair in active_duels_for(event).values_list('challenger_id', 'opponent_id') for pk in pair}
+        self.fields["opponent"].label_from_instance = lambda player: display_name(player) + (' · занят' if player.pk in occupied else '')
+        self.fields["opponent"].queryset = duel_candidates(event, user)
+        self.fields["opponent"].widget.attrs['aria-describedby'] = 'duel-opponent-status'
+
+    def clean_opponent(self):
+        opponent = self.cleaned_data['opponent']
+        reason = opponent_unavailability(self.event, opponent)
+        if reason:
+            raise forms.ValidationError(reason)
+        return opponent

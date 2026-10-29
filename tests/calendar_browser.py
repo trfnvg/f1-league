@@ -80,6 +80,10 @@ def run(browser_name, output):
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base + "/calendar/", wait_until="networkidle")
                 assert page.locator(".rc-card").count() == 23
+                assert page.locator('[data-calendar-filters] button').all_text_contents() == ['Предстоящие', 'Все']
+                assert page.locator('[data-filter="sprint"]').count() == 0
+                assert page.locator('[data-filter="upcoming"]').get_attribute('aria-pressed') == 'true'
+                assert page.locator('.rc-card:visible').count() == 5
                 assert page.locator('#mainMenu .menu-item').first.text_content().strip() == "Главная"
                 assert page.locator('#mainMenu .menu-item').first.get_attribute('href') == '/'
                 for link in page.locator('[data-prediction-nav]').all():
@@ -116,8 +120,6 @@ def run(browser_name, output):
                 page.locator('[data-filter="upcoming"]').click()
                 assert page.locator(".rc-card:visible").count() == 5
                 assert page.locator('[data-filter="upcoming"]').get_attribute("aria-pressed") == "true"
-                page.locator('[data-filter="sprint"]').click()
-                assert page.locator(".rc-card:visible").count() == 6
                 page.locator('[data-filter="all"]').click()
                 assert page.locator(".rc-card:visible").count() == 23
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
