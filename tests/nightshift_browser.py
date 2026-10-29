@@ -875,6 +875,26 @@ def run(output, widths, engine):
                             assert page.locator(f'[data-driver-field="{name}"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(255, 173, 97)'
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
                         assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
+                        page.evaluate('''() => {
+                            window.predictionStableNodes = [...document.querySelectorAll('.prediction-podium-slot,.prediction-category-choice')].map(button=>({button, photo:button.querySelector('img')}));
+                            window.predictionUnrelatedMutations = 0;
+                            window.predictionObserver = new MutationObserver(records=>window.predictionUnrelatedMutations += records.length);
+                            const watched = [...document.querySelectorAll('.prediction-podium-slot,.prediction-category-choice,[data-prediction-progress],[data-progress-bar],[data-save-status],.event-status-badge')];
+                            const lines = [...document.querySelectorAll('[data-summary-lines] dd')];
+                            watched.push(...lines.slice(0,-1));
+                            watched.forEach(node=>window.predictionObserver.observe(node,{subtree:true,childList:true,attributes:true,characterData:true}));
+                        }''')
+                        page.locator('#id_crazy_prediction').press_sequentially(' — ещё несколько символов', delay=5)
+                        page.locator('#id_crazy_prediction').blur()
+                        assert 'ещё несколько символов' in page.locator('[data-summary-lines]').inner_text()
+                        assert page.evaluate('window.predictionUnrelatedMutations') == 0, 'Typing must only update the crazy answer, not portraits, progress or unchanged status'
+                        assert page.evaluate('window.predictionStableNodes.every(({button,photo})=>button.querySelector("img")===photo && photo.isConnected)')
+                        page.evaluate('window.predictionObserver.disconnect()')
+                        page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
+                        page.locator('#id_pole').evaluate("e=>{e.value='leclerc';for(const type of ['input','change'])e.dispatchEvent(new Event(type,{bubbles:true}));}")
+                        assert 'Леклер' in page.locator('[data-driver-field="pole"]').inner_text()
+                        assert page.evaluate('window.predictionStableNodes.filter(({button})=>button.dataset.driverField!=="pole").every(({button,photo})=>button.querySelector("img")===photo)')
+                        page.locator('#id_pole').evaluate("e=>{e.value='norris';e.dispatchEvent(new Event('change',{bubbles:true}));}")
                         assert page.locator('#race-prediction-form').evaluate('f=>f.checkValidity()')
                         assert page.locator('#race-prediction-form').evaluate("f=>new FormData(f).get('p1')") == 'norris'
                         page.mouse.move(0, 0)

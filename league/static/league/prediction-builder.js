@@ -13,6 +13,7 @@
   const driverFields = [...form.querySelectorAll('select')];
   const requiredFields = driverFields.filter(field => field.required);
   const categoryButtons = new Map();
+  const renderedDrivers = new WeakMap();
   let targetField = null;
   const error = form.querySelector('[data-podium-error]');
   const labels = ['Победитель', 'Второе место', 'Третье место'];
@@ -124,35 +125,43 @@
     summary.append(line);
     return value;
   });
-  function render() {
-    slotButtons.forEach((button, index) => {
-      renderDriverButton(button, podium[index]);
-      button.setAttribute('aria-label', `${labels[index]}: ${valueText(podium[index])}`);
-    });
-    categoryButtons.forEach((button, name) => {
-      const field = form.elements.namedItem(name);
-      renderDriverButton(button, field);
-      if (field.value) button.removeAttribute('aria-invalid');
-    });
-    let filled = 0;
+  const progress = form.querySelector('[data-prediction-progress]');
+  const bar = form.querySelector('[data-progress-bar]');
+  bar.max = fields.length;
+  function render(event) {
+    // Typing in one answer must not recreate portraits in unrelated categories.
+    // A native select may emit both input and change for the same value.
+    const changedField = event?.target;
     fields.forEach((field, i) => {
+      if (changedField && changedField !== field) return;
+      const index = podium.indexOf(field);
+      const button = index >= 0 ? slotButtons[index] : categoryButtons.get(field.name);
+      if (button) {
+        if (renderDriverButton(button, field) && index >= 0) {
+          button.setAttribute('aria-label', `${labels[index]}: ${valueText(field)}`);
+        }
+        if (field.value && button.hasAttribute('aria-invalid')) button.removeAttribute('aria-invalid');
+      }
       const hasValue = field.value.trim() !== '';
-      filled += Number(hasValue);
-      summaryValues[i].textContent = valueText(field);
+      const text = valueText(field);
+      if (summaryValues[i].textContent !== text) summaryValues[i].textContent = text;
       summaryValues[i].classList.toggle('is-empty', !hasValue);
     });
-    form.querySelector('[data-prediction-progress]').textContent = `${filled} из ${fields.length} ответов заполнено`;
-    const bar = form.querySelector('[data-progress-bar]');
-    bar.max = fields.length;
-    bar.value = filled;
-    if (podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
+    const filled = fields.filter(field => field.value.trim() !== '').length;
+    const progressText = `${filled} из ${fields.length} ответов заполнено`;
+    if (progress.textContent !== progressText) progress.textContent = progressText;
+    if (bar.value !== filled) bar.value = filled;
+    if (!error.hidden && podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
   }
   function renderDriverButton(button, field) {
+    if (renderedDrivers.get(button) === field.value) return false;
     const profile = profiles.get(field.value);
     const name = field.value ? valueText(field) : 'Выбери гонщика';
     const meta = element('span', 'driver-choice-meta');
     meta.append(element('strong', '', name), teamLabel(profile, field.value ? 'Выбрано' : 'Не выбрано'));
     button.replaceChildren(portrait(profile, valueText(field)), meta);
+    renderedDrivers.set(button, field.value);
+    return true;
   }
   form.addEventListener('input', render);
   form.addEventListener('change', render);

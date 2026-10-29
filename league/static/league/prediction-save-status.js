@@ -15,9 +15,10 @@
     const badge = form.closest('.event-page')?.querySelector('.event-status-badge');
     let sending = false;
     let confirmed = receipt;
+    const setText = (node, text) => { if (node.textContent !== text) node.textContent = text; };
     const setState = state => {
-      status.dataset.state = state;
-      form.dataset.saveState = state;
+      if (status.dataset.state !== state) status.dataset.state = state;
+      if (form.dataset.saveState !== state) form.dataset.saveState = state;
       buttons.forEach(button => {
         const text = state === 'sending' ? 'Сохраняем…' : state === 'confirmed' ? 'Прогноз принят' : buttonLabels.get(button);
         // Replacing an unchanged label during textarea blur can cancel a tap in WebKit.
@@ -35,14 +36,14 @@
       if (changed) confirmed = false;
       if (Date.now() >= Date.parse(status.dataset.deadline)) {
         setState('locked');
-        label.textContent = 'Прогнозы зафиксированы';
-        note.textContent = changed ? 'Изменения на этой странице не сохранены. Дедлайн уже прошёл.' : 'Приём прогнозов завершён.';
+        setText(label, 'Прогнозы зафиксированы');
+        setText(note, changed ? 'Изменения на этой странице не сохранены. Дедлайн уже прошёл.' : 'Приём прогнозов завершён.');
       } else {
         setState(changed ? 'dirty' : confirmed ? 'confirmed' : status.dataset.saved === 'yes' ? 'saved' : 'empty');
-        label.textContent = changed ? 'Есть несохранённые изменения' : confirmed ? 'Прогноз принят' : originalLabel;
-        note.textContent = changed ? 'Нажми «Сохранить прогноз», чтобы ответы попали в зачёт.' : originalNote;
+        setText(label, changed ? 'Есть несохранённые изменения' : confirmed ? 'Прогноз принят' : originalLabel);
+        setText(note, changed ? 'Нажми «Сохранить прогноз», чтобы ответы попали в зачёт.' : originalNote);
       }
-      if (badge) badge.textContent = label.textContent;
+      if (badge) setText(badge, label.textContent);
     };
     form.addEventListener('input', render);
     form.addEventListener('change', render);
