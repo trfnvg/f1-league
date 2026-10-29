@@ -7,13 +7,14 @@
     <section class="prediction-form-panel">
       <header class="prediction-panel-head"><span>01 / ОСНОВНОЕ</span><h2>Предскажи подиум</h2><p>Выбери место, затем пилота. Один пилот — одна позиция на подиуме.</p></header>
       <div class="prediction-panel-body">
-        <h3>Кто финиширует в первой тройке?</h3><p class="prediction-help">Начни с победителя, затем выбери второе и третье место.</p>
+        <h3>Кто финиширует в первой тройке?</h3><p class="prediction-help">Для обмена местами выбери гонщика, который уже стоит на другой позиции.</p>
         <div class="prediction-native-podium" data-native-podium>
           <div><label for="{{ form.p1.id_for_label }}">P1 · Победитель</label>{{ form.p1 }}</div>
           <div><label for="{{ form.p2.id_for_label }}">P2 · Второе место</label>{{ form.p2 }}</div>
           <div><label for="{{ form.p3.id_for_label }}">P3 · Третье место</label>{{ form.p3 }}</div>
         </div>
         <div class="prediction-podium" data-podium-slots hidden></div>
+        <div class="prediction-podium-actions" data-podium-actions hidden><span>Остальные ответы не изменятся.</span><button type="button" class="prediction-podium-clear" data-clear-podium>Сбросить подиум</button></div>
         {{ form.p1.errors }}{{ form.p2.errors }}{{ form.p3.errors }}
         <p class="prediction-builder-error" data-podium-error role="alert" hidden></p>
       </div>

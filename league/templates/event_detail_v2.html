@@ -3,7 +3,7 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=7"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=2">{% include 'social_assets.html' %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=7"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=3-podium">{% include 'social_assets.html' %}{% endblock %}
 
 {% block content %}
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
@@ -473,7 +473,7 @@
 </div>
 </div>
 <script src="{% static 'league/event-workspace.js' %}?v=2" defer></script>
-<script src="{% static 'league/prediction-builder.js' %}?v=7" defer></script>
+<script src="{% static 'league/prediction-builder.js' %}?v=8-podium" defer></script>
 <script src="{% static 'league/duel-availability.js' %}?v=1" defer></script>
 <script src="{% static 'league/wildcard.js' %}"></script>
 <script>

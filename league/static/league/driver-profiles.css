@@ -40,4 +40,11 @@ body.apex-night-theme.editorial-theme .event-page :is(.prediction-podium-slot,.p
 .event-page .prediction-more .form-label { min-height:18px; margin-bottom:8px; font:550 12px/1.5 Inter,sans-serif; }
 body.apex-night-theme.editorial-theme .event-page .prediction-workbench .prediction-more :is(.form-control,input,textarea) { background:var(--prediction-control); border-color:var(--prediction-border); border-radius:10px; color:var(--prediction-text); }
 body.apex-night-theme.editorial-theme .event-page .prediction-more input[type="number"] { min-height:76px; height:76px; padding:12px; }
-@media(max-width:600px) { .event-page .prediction-podium { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px 10px; } body.apex-night-theme.editorial-theme .event-page :is(.prediction-podium-slot,.prediction-category-choice) { padding:10px; gap:8px; } .event-page .prediction-podium-slot .driver-choice-photo,.event-page .prediction-category-choice .driver-choice-photo { width:40px; height:40px; flex-basis:40px; } }
+.prediction-podium-actions { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 16px; margin-top:16px; }
+.prediction-podium-actions[hidden] { display:none; }
+.prediction-podium-actions>span { color:var(--prediction-muted); font:400 11px/1.5 Inter,sans-serif; }
+body.apex-night-theme.editorial-theme .event-page .prediction-podium-clear { min-height:44px; padding:10px 14px; border:1px solid var(--prediction-border); border-radius:8px; background:transparent; color:var(--prediction-text); font:550 12px/1.4 Inter,sans-serif; box-shadow:none; }
+body.apex-night-theme.editorial-theme .event-page .prediction-podium-clear:hover:not(:disabled) { border-color:#9da9b9; background:#ffffff06; }
+body.apex-night-theme.editorial-theme .event-page .prediction-podium-clear:disabled { opacity:.4; cursor:default; }
+body.apex-night-theme.editorial-theme .event-page .prediction-podium-clear:focus-visible { outline:2px solid #d4dce7; outline-offset:3px; }
+@media(max-width:700px) { .event-page :is(.prediction-podium,.prediction-native-podium) { grid-template-columns:minmax(0,1fr); gap:18px; } body.apex-night-theme.editorial-theme .event-page :is(.prediction-podium-slot,.prediction-category-choice) { padding:10px; gap:8px; } .event-page .prediction-podium-slot .driver-choice-photo,.event-page .prediction-category-choice .driver-choice-photo { width:40px; height:40px; flex-basis:40px; } }

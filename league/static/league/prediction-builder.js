@@ -14,6 +14,7 @@
   const requiredFields = driverFields.filter(field => field.required);
   const categoryButtons = new Map();
   const renderedDrivers = new WeakMap();
+  const clearPodium = form.querySelector('[data-clear-podium]');
   let targetField = null;
   const error = form.querySelector('[data-podium-error]');
   const labels = ['Победитель', 'Второе место', 'Третье место'];
@@ -82,15 +83,19 @@
       button.type = 'button';
       button.dataset.driver = option.value;
       const index = names.includes(targetField.name) ? podium.findIndex(field => field !== targetField && field.value === option.value) : -1;
-      button.disabled = index >= 0;
       button.setAttribute('aria-pressed', String(targetField.value === option.value));
       const meta = element('span', 'driver-choice-meta');
       meta.append(element('strong', '', surname), teamLabel(profile, team));
-      if (index >= 0) meta.append(element('small', '', 'Уже выбран на P' + (index + 1)));
+      if (index >= 0) meta.append(element('small', '', (targetField.value ? 'Поменять с P' : 'Перенести с P') + (index + 1)));
       button.append(portrait(profile, surname), meta, element('span', 'driver-choice-number', profile ? '#' + profile.number : ''));
       button.addEventListener('click', () => {
+        const previous = targetField.value;
+        // Change both native values before emitting events: validation and save
+        // status must never observe a temporary duplicate on the podium.
+        if (index >= 0) podium[index].value = previous;
         targetField.value = option.value;
         targetField.dispatchEvent(new Event('change', {bubbles: true}));
+        if (index >= 0) podium[index].dispatchEvent(new Event('change', {bubbles: true}));
         dialog.close();
       });
       options.append(button);
@@ -151,6 +156,8 @@
     const progressText = `${filled} из ${fields.length} ответов заполнено`;
     if (progress.textContent !== progressText) progress.textContent = progressText;
     if (bar.value !== filled) bar.value = filled;
+    const podiumEmpty = podium.every(field => !field.value);
+    if (clearPodium.disabled !== podiumEmpty) clearPodium.disabled = podiumEmpty;
     if (!error.hidden && podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
   }
   function renderDriverButton(button, field) {
@@ -165,6 +172,12 @@
   }
   form.addEventListener('input', render);
   form.addEventListener('change', render);
+  clearPodium.addEventListener('click', () => {
+    podium.forEach(field => { field.value = ''; });
+    podium.forEach(field => field.dispatchEvent(new Event('change', {bubbles: true})));
+    error.hidden = true;
+    slotButtons[0].focus();
+  });
   form.addEventListener('submit', event => {
     const missing = podium.findIndex(field => !field.value);
     if (missing >= 0 || new Set(podium.map(field => field.value)).size !== 3) {
@@ -189,6 +202,7 @@
   driverFields.forEach(field => { field.required = false; field.hidden = true; });
   form.querySelector('[data-native-podium]').hidden = true;
   slots.hidden = false;
+  form.querySelector('[data-podium-actions]').hidden = false;
 
   form.querySelector('[data-live-summary]').hidden = false;
   form.querySelector('[data-fallback-submit]').hidden = true;

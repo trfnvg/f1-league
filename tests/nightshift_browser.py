@@ -896,13 +896,27 @@ def run(output, widths, engine):
                                 assert page.locator('[data-picker-options] img').first.evaluate('e=>e.naturalWidth===e.naturalHeight')
                                 page.screenshot(path=str(output/f'{width}-driver-picker.png'), full_page=True)
                             if index == 1:
-                                assert page.locator('[data-driver="norris"]').is_disabled()
+                                assert page.locator('[data-driver="norris"]').is_enabled()
+                                assert 'Перенести с P1' in page.locator('[data-driver="norris"]').inner_text()
                             page.locator(f'[data-driver="{key}"]').click()
                             assert page.locator('#driver-picker-dialog').is_hidden()
                             assert page.locator('.prediction-podium-slot').nth(index).locator('img').is_visible()
                         assert page.locator('#id_p1').input_value() == 'norris'
                         assert page.locator('#id_p2').input_value() == 'piastri'
                         assert page.locator('#id_p3').input_value() == 'russell'
+                        boxes = page.locator('.prediction-podium-field').evaluate_all('nodes=>nodes.map(e=>({x:e.getBoundingClientRect().x,y:e.getBoundingClientRect().y}))')
+                        if width <= 700:
+                            assert len({round(box['x']) for box in boxes}) == 1
+                            assert boxes[0]['y'] < boxes[1]['y'] < boxes[2]['y']
+                        else:
+                            assert boxes[0]['x'] < boxes[1]['x'] < boxes[2]['x']
+                        page.locator('.prediction-podium-slot').first.click()
+                        assert 'Поменять с P3' in page.locator('[data-driver="russell"]').inner_text()
+                        page.locator('[data-driver="russell"]').click()
+                        assert [page.locator('#id_'+name).input_value() for name in ('p1','p2','p3')] == ['russell','piastri','norris']
+                        page.locator('.prediction-podium-slot').first.click()
+                        page.locator('[data-driver="norris"]').click()
+                        assert [page.locator('#id_'+name).input_value() for name in ('p1','p2','p3')] == ['norris','piastri','russell']
                         assert page.locator('.prediction-podium-slot').nth(2).locator('.driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(98, 223, 205)'
                         assert 'Норрис' in page.locator('[data-summary-lines]').inner_text()
                         assert page.locator('[data-more-predictions]').is_visible()
@@ -914,6 +928,17 @@ def run(output, widths, engine):
                             assert page.locator(f'[data-driver-field="{name}"] img').is_visible()
                             assert page.locator(f'[data-driver-field="{name}"] .driver-team-name').evaluate('e=>getComputedStyle(e).color') == 'rgb(255, 173, 97)'
                         page.locator('#id_crazy_prediction').fill('Тест сохранения черновика')
+                        assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
+                        other_answers = page.locator('#race-prediction-form').evaluate("f=>[...new FormData(f)].filter(([name])=>!['p1','p2','p3'].includes(name))")
+                        page.locator('[data-clear-podium]').click()
+                        assert [page.locator('#id_'+name).input_value() for name in ('p1','p2','p3')] == ['', '', '']
+                        assert page.locator('[data-clear-podium]').is_disabled()
+                        assert page.locator('[data-prediction-progress]').inner_text() == '6 из 9 ответов заполнено'
+                        assert other_answers == page.locator('#race-prediction-form').evaluate("f=>[...new FormData(f)].filter(([name])=>!['p1','p2','p3'].includes(name))")
+                        for index, key in enumerate(('norris','piastri','russell')):
+                            page.locator('.prediction-podium-slot').nth(index).click()
+                            page.locator(f'[data-driver="{key}"]').click()
+                        assert page.locator('[data-clear-podium]').is_enabled()
                         assert page.locator('[data-prediction-progress]').inner_text() == '9 из 9 ответов заполнено'
                         page.evaluate('''() => {
                             window.predictionStableNodes = [...document.querySelectorAll('.prediction-podium-slot,.prediction-category-choice')].map(button=>({button, photo:button.querySelector('img')}));
