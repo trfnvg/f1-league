@@ -5,16 +5,15 @@ from django.contrib.auth import views as auth_views
 from django.urls import path, include
 from league.auth_views import FastlapLoginView, FastlapPasswordResetView
 from league.brand_views import favicon
-from league import browser_errors, health
+from league.health import live, ready
 
 handler403 = "league.error_views.permission_denied"
 handler404 = "league.error_views.page_not_found"
 handler500 = "league.error_views.server_error"
 
 urlpatterns = [
-    path("health/live/", health.live, name="health_live"),
-    path("health/ready/", health.ready, name="health_ready"),
-    path("diagnostics/browser-error/", browser_errors.report, name="browser_error"),
+    path("health/live/", live, name="health_live"),
+    path("health/ready/", ready, name="health_ready"),
     path("favicon.ico", favicon, name="site_favicon"),
     path("admin/", admin.site.urls),
     path("accounts/login/", FastlapLoginView.as_view(), name="login"),

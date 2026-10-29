@@ -1,6 +1,6 @@
 # Retro background refresh
 
-Generated with the built-in GPT image tool (imagegen), editing the existing backgrounds with the unchanged cowboy hero sheet as style reference. New PNGs preserve generated resolution and cloud alpha. Camera/scroll logic unchanged. Superseded original backgrounds were removed from the current tree during the 2026-10-28 cleanup; they remain available in Git history. The edit targets below document the original generation process, not current runtime dependencies.
+Generated with the built-in GPT image tool (imagegen), editing the existing backgrounds with the unchanged cowboy hero sheet as style reference. Original assets retained. New PNGs preserve generated resolution and cloud alpha. Camera/scroll logic unchanged.
 
 Assets in `league/static/league/images/doodle-jump/`:
 

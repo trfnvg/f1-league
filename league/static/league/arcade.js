@@ -63,10 +63,6 @@
   let obstacles = [];
   let overlayTimer = 0;
   let attemptId = null;
-  let attemptToken = null;
-  let progressTimer = null;
-  let progressRequest = Promise.resolve();
-  let progressBusy = false;
   let runSequence = 0;
   const pendingRunScores = new Map();
   let refreshingBoard = false;
@@ -79,10 +75,6 @@
     deadlineClosed = true;
     state = "closed";
     attemptId = null;
-    attemptToken = null;
-    clearInterval(progressTimer);
-    progressRequest = Promise.resolve();
-    progressBusy = false;
     runSequence += 1;
     pendingRunScores.clear();
     overlay.classList.remove("is-gameover", "is-restarting");
@@ -224,27 +216,9 @@
           const completedScore = pendingRunScores.get(thisRun);
           if (completedScore !== undefined) {
             pendingRunScores.delete(thisRun);
-            if (completedScore > 0) submitResult(startedAttemptId, completedScore, startResult.run_token, Promise.resolve());
+            if (completedScore > 0) submitResult(startedAttemptId, completedScore);
           } else if (thisRun === runSequence && state === "playing") {
             attemptId = startedAttemptId;
-            attemptToken = startResult.run_token;
-            if (attemptId && attemptToken && canvas.dataset.progressUrl) {
-              progressTimer = setInterval(() => {
-                if (thisRun !== runSequence || state !== "playing" || progressBusy) return;
-                progressBusy = true;
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 8000);
-                progressRequest = fetch(canvas.dataset.progressUrl, {
-                  method: "POST", credentials: "same-origin", signal: controller.signal,
-                  headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
-                  body: JSON.stringify({attempt_id: attemptId, run_token: attemptToken, score})
-                }).then(async response => {
-                  if (!response.ok) throw new Error((await response.json()).error || "Заезд не подтверждён сервером.");
-                }).catch(error => {
-                  if (thisRun === runSequence && boardStatus) boardStatus.textContent = error.message;
-                }).finally(() => { clearTimeout(timeout); if (thisRun === runSequence) progressBusy = false; });
-              }, 10000);
-            }
           }
         } else if (response.status === 410) {
           closeGameAtDeadline();
@@ -273,7 +247,7 @@
       positionBananaSpeech();
     }
     if (score > best && (!isAuthenticated || attemptId)) {
-      if (!isAuthenticated) best = score;
+      best = score;
       if (!isAuthenticated) saveRecord(best);
       overlayMark.textContent = "НОВЫЙ РЕКОРД";
       overlayTitle.textContent = "Новый личный рекорд!";
@@ -284,12 +258,10 @@
       overlayCopy.textContent = `Пройдено ворот: ${score}.`;
     }
     if (score > 0) {
-      if (attemptId) submitResult(attemptId, score, attemptToken, progressRequest);
+      if (attemptId) submitResult(attemptId, score);
       else if (isAuthenticated) pendingRunScores.set(runSequence, score);
     }
     attemptId = null;
-    attemptToken = null;
-    clearInterval(progressTimer);
     startButton.innerHTML = 'Ещё круг <span aria-hidden="true">↻</span>';
     syncScores();
     overlayTimer = window.setTimeout(() => { overlay.hidden = false; }, 280);
@@ -386,10 +358,9 @@
     }
   }
 
-  async function submitResult(runId, runScore, token, checkpoint) {
+  async function submitResult(runId, runScore) {
     if (boardStatus) boardStatus.textContent = "Проверяем результат заезда…";
     try {
-      await checkpoint;
       const response = await fetch(canvas.dataset.finishUrl, {
         method: "POST",
         headers: {
@@ -398,13 +369,13 @@
           "X-Requested-With": "XMLHttpRequest",
         },
         credentials: "same-origin",
-        body: JSON.stringify({ attempt_id: runId, run_token: token, score: runScore }),
+        body: JSON.stringify({ attempt_id: runId, score: runScore }),
       });
       const result = await response.json();
       if (response.status === 410) closeGameAtDeadline();
       if (!response.ok) throw new Error(result.error || "Не удалось сохранить рекорд.");
       best = result.record;
-      if (!isAuthenticated) saveRecord(best);
+      saveRecord(best);
       canvas.dataset.record = String(best);
       syncScores();
       renderLeaderboard(result.records || []);

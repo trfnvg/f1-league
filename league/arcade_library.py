@@ -1,24 +1,21 @@
 """Published arcade library, durable event standings and all-time play."""
 import json
-from functools import wraps
+from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, F, Q, Sum, Window
-from django.db.models.functions import RowNumber
+from django.db.models import Count, F, Q, Sum
 from django.http import Http404, HttpResponseForbidden, JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
-from django.views.decorators.cache import never_cache
 
 from .models import (DRIVER_CHOICES, ArcadeAttempt, ArcadeCompetition, ArcadeRecord, ArcadeSettings,
                      ArcadeWheelSpin, DoodleAttempt, DoodleRecord, Event, Prediction)
 from .services import get_selected_season
 from . import arcade_rewards as rewards
-from . import arcade_validation as validation
 
 GAMES = {
     "flappy": {"title": "Pit Lane Flight", "subtitle": "Банан Леклер · Flappy Bird", "cover": "league/images/arcade-flappy-cover-v1.png", "description": "Пролетай между воротами солнечного паддока и держи ритм."},
@@ -30,16 +27,6 @@ GAMES = {
 PREVIEW_GAMES = {
     "tetris": {"title": "Pit Stack", "subtitle": "F1-тетрис · закрытый тест", "cover": "league/images/tetris-pit-garage-v1.png"},
 }
-
-
-def require_game_user(view):
-    @wraps(view)
-    def wrapped(request, *args, **kwargs):
-        if not request.user.is_authenticated or not request.user.is_active:
-            # Never return a login-page redirect as a successful JSON save.
-            return JsonResponse({"error": "Войди в аккаунт и начни новый заезд, чтобы сохранить результат."}, status=401)
-        return view(request, *args, **kwargs)
-    return wrapped
 
 
 def models_for(game):
@@ -62,21 +49,15 @@ def contest_rows(contest):
     attempts = Attempt.objects.filter(competition=contest, user__is_staff=False,
         started_at__gte=contest.opened_at, started_at__lt=contest.event.deadline)
     counts = dict(attempts.values("user_id").annotate(count=Count("pk")).values_list("user_id", "count"))
-    rows = []
+    rows, seen = [], set()
     finished = attempts.filter(score__isnull=False, finished_at__lte=contest.event.deadline,
-                              user__is_active=True)
-    # Pick one best run per player in SQL rather than transferring every run
-    # (including its verification payload) to Python on each leaderboard poll.
-    finished = finished.annotate(best_position=Window(
-        expression=RowNumber(), partition_by=[F("user_id")],
-        order_by=[F("score").desc(), F("finished_at").asc(), F("pk").asc()],
-    )).filter(best_position=1).order_by("-score", "finished_at", "user_id").values(
-        "user_id", "score", "user__first_name", "user__last_name", "user__username",
-    )
+                              user__is_active=True).select_related("user").order_by("-score", "finished_at", "user_id")
     for attempt in finished:
-        name = f"{attempt['user__first_name']} {attempt['user__last_name']}".strip()
-        rows.append({"user_id": attempt["user_id"], "username": name or attempt["user__username"],
-                     "score": attempt["score"], "attempts": counts[attempt["user_id"]], "rank": len(rows) + 1})
+        if attempt.user_id in seen:
+            continue
+        seen.add(attempt.user_id)
+        rows.append({"user_id": attempt.user_id, "username": attempt.user.get_full_name().strip() or attempt.user.username,
+                     "score": attempt.score, "attempts": counts[attempt.user_id], "rank": len(rows) + 1})
     return rows, sum(counts.values())
 
 
@@ -127,6 +108,14 @@ def board(user, game):
     return data
 
 
+def history(game, user):
+    result = []
+    for item in ArcadeCompetition.objects.filter(game_key=game).select_related("event"):
+        item = freeze(item)
+        rows, total = (item.standings, item.total_attempts) if item.frozen_at else contest_rows(item)
+        result.append({"event": item.event, "frozen": bool(item.frozen_at), "total": total,
+                       "rows": [{**r, "is_current_user": user.is_authenticated and r["user_id"] == user.pk} for r in rows[:20]]})
+    return result
 
 
 @require_GET
@@ -146,7 +135,6 @@ def library(request):
         "arcade_settings_admin_url": reverse("league:arcade_control")})
 
 
-@never_cache
 @require_GET
 def game(request, game_key):
     if game_key in PREVIEW_GAMES:
@@ -170,7 +158,7 @@ def game(request, game_key):
         "board_own_score": data["board_record"], "board_own_attempts": data["board_attempts"],
         "doodle_records": data["records"], "doodle_total_attempts": data["total_attempts"]}
     suffix = "?admin_test=1" if admin_test else ""
-    for key, name in [("doodle_attempt_start_url", "doodle_attempt_start"), ("doodle_attempt_finish_url", "doodle_attempt_finish"), ("doodle_attempt_progress_url", "doodle_attempt_progress"), ("doodle_leaderboard_url", "doodle_leaderboard")]:
+    for key, name in [("doodle_attempt_start_url", "doodle_attempt_start"), ("doodle_attempt_finish_url", "doodle_attempt_finish"), ("doodle_leaderboard_url", "doodle_leaderboard")]:
         context[key] = reverse("league:" + name) + suffix
     wheel_period = bool(contest and (not contest.event.race_datetime or timezone.now() < contest.event.race_datetime)
                         and contest.event.status != Event.Status.SCORED)
@@ -190,40 +178,25 @@ def minesweeper_preview(request):
     """Keep the old prototype in the lab, never publish it accidentally."""
     if not request.user.is_active or not request.user.is_staff:
         return HttpResponseForbidden()
-    from .views import _minesweeper_leaderboard_data
-    data = _minesweeper_leaderboard_data(request.user)
-    return render(request, "arcade_minesweeper.html", {
-        "minesweeper_attempts": data["attempts"],
-        "minesweeper_records": data["records"],
-        "minesweeper_total_attempts": data["total_attempts"],
-        "minesweeper_week_start": data["week_start"],
-        "arcade_admin_preview": True, "arcade_test_mode": True,
-        "arcade_scoring_open": True, "arcade_game_key": ArcadeSettings.Game.MINESWEEPER,
-        "arcade_settings_admin_url": reverse("league:arcade_control"),
-        "minesweeper_attempt_start_url": reverse("league:minesweeper_attempt_start") + "?admin_test=1",
-        "minesweeper_attempt_finish_url": reverse("league:minesweeper_attempt_finish") + "?admin_test=1",
-        "minesweeper_leaderboard_url": reverse("league:minesweeper_leaderboard") + "?admin_test=1",
-    })
+    from .views import arcade
+    request.GET = request.GET.copy()
+    request.GET["admin_test"] = ArcadeSettings.Game.MINESWEEPER
+    return arcade(request)
 
 
-@never_cache
 @require_GET
 def leaderboard(request, game_key="flappy"):
-    if game_key not in GAMES:
-        raise Http404
     return JsonResponse(board(request.user, game_key))
 
 
-@never_cache
-@require_game_user
+@login_required
 @require_POST
 @transaction.atomic
 def attempt_start(request, game_key="flappy"):
     if game_key not in GAMES:
         raise Http404
-    if request.user.is_staff:
-        return JsonResponse({"attempt_id": None, "run_token": None, **board(request.user, game_key)})
-    validation.lock_player(request.user)
+    if request.user.is_staff and request.GET.get("admin_test") == "1":
+        return JsonResponse({"attempt_id": None, **board(request.user, game_key)})
     settings, contest = selected_contest()
     now = timezone.now()
     if contest:
@@ -232,54 +205,39 @@ def attempt_start(request, game_key="flappy"):
         and contest.opened_at <= now < contest.event.deadline and not request.user.is_staff)
     Attempt, Record = models_for(game_key)
     attempt = Attempt.objects.create(user=request.user, competition=contest if eligible else None)
-    token = validation.start(request, attempt)
     record, _ = Record.objects.select_for_update().get_or_create(user=request.user)
     Record.objects.filter(pk=record.pk).update(total_attempts=F("total_attempts") + 1)
-    return JsonResponse({"attempt_id": attempt.pk, "run_token": token, **board(request.user, game_key)})
+    return JsonResponse({"attempt_id": attempt.pk, **board(request.user, game_key)})
 
 
-@never_cache
-@require_game_user
+@login_required
 @require_POST
 @transaction.atomic
 def attempt_finish(request, game_key="flappy"):
-    return _attempt_update(request, game_key, final=True)
-
-
-@never_cache
-@require_game_user
-@require_POST
-@transaction.atomic
-def attempt_progress(request, game_key="flappy"):
-    return _attempt_update(request, game_key, final=False)
-
-
-def _attempt_update(request, game_key, *, final):
-    if game_key not in GAMES:
-        raise Http404
-    if request.user.is_staff:
-        return JsonResponse({"error": "Тестовые заезды не записываются в рейтинг."}, status=403)
     try:
-        payload = validation.payload(request)
-    except validation.InvalidRun as error:
-        return JsonResponse({"error": str(error)}, status=error.status)
-    attempt_id, score = payload["attempt_id"], payload["score"]
-    validation.lock_player(request.user)
+        payload = json.loads(request.body or b"{}")
+        attempt_id, score = payload.get("attempt_id"), payload.get("score")
+        if type(attempt_id) is not int or type(score) is not int or not 0 <= score <= (500 if game_key == "flappy" else 2_147_483_647):
+            raise ValueError
+    except (ValueError, TypeError, AttributeError):
+        return JsonResponse({"error": "Некорректный результат."}, status=400)
     Attempt, Record = models_for(game_key)
     stub = Attempt.objects.filter(pk=attempt_id, user=request.user).first()
     if not stub:
         return JsonResponse({"error": "Заезд не найден."}, status=409)
-    if final and stub.competition_id:
+    if stub.competition_id:
         freeze(ArcadeCompetition.objects.get(pk=stub.competition_id))
     attempt = Attempt.objects.select_for_update().get(pk=stub.pk)
-    try:
-        now = validation.check(request, attempt, payload, game_key, final=final)
-    except validation.InvalidRun as error:
-        return JsonResponse({"error": str(error)}, status=error.status)
-    if not final:
-        return JsonResponse({"ok": True})
+    if attempt.finished_at:
+        return JsonResponse({"error": "Заезд уже сохранён."}, status=409)
+    now = timezone.now()
+    duration = (now - attempt.started_at).total_seconds()
+    if game_key == "flappy" and score > 0 and not 3 + (score - 1) * 1.15 <= duration <= 12 + (score - 1) * 2.6:
+        attempt.finished_at = now
+        attempt.save(update_fields=("finished_at",))
+        return JsonResponse({"error": "Время заезда не соответствует результату."}, status=400)
     attempt.finished_at, attempt.score = now, score
-    attempt.save(update_fields=("finished_at", "score", "verification"))
+    attempt.save(update_fields=("finished_at", "score"))
     record, _ = Record.objects.select_for_update().get_or_create(user=request.user)
     if score > record.best_score:
         record.best_score = score

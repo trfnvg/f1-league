@@ -21,8 +21,6 @@
   const fullscreenButton = document.getElementById("doodle-fullscreen-toggle");
   const leaderboardNode = document.getElementById("doodle-leaderboard-list");
   const totalAttemptsNode = document.getElementById("doodle-total-attempts");
-  const runStatusNode = document.getElementById("doodle-run-status");
-  const authenticated = canvas.dataset.authenticated === "true";
   const csrfToken = document.querySelector("#doodle-csrf-form [name=csrfmiddlewaretoken]")?.value || "";
   const bestStorageKey = "f1-doodle-gp-best-v1";
   const introStorageKey = "f1-cowboy-skip-intro-v1";
@@ -103,7 +101,7 @@
   const backgroundZoneNames = ["Паддок Рассела", "Подъём по каньону", "Над облаками", "Космос"];
 
   let storedBest = "0";
-  try { storedBest = authenticated ? canvas.dataset.record || "0" : localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
+  try { storedBest = localStorage.getItem(bestStorageKey) || "0"; } catch (error) { /* Private browsing can disable storage. */ }
   const numericBest = Number(storedBest);
   let best = Number.isFinite(numericBest) && numericBest > 0 ? numericBest : 0;
   let width = 1;
@@ -168,11 +166,6 @@
   let lastEnemyVariant = -1;
   let lastPowerupSpawnY = -Infinity;
   let attemptId = null;
-  let attemptToken = null;
-  let attemptGeneration = 0;
-  let progressTimer = null;
-  let progressRequest = Promise.resolve();
-  let progressBusy = false;
   let scoreSubmitted = false;
   let pendingFinish = false;
 
@@ -2480,9 +2473,6 @@
     rocketTimer = 0;
     lastPowerupSpawnY = -Infinity;
     attemptId = null;
-    attemptToken = null;
-    attemptGeneration++;
-    clearInterval(progressTimer);
     scoreSubmitted = false;
     pendingFinish = false;
     elapsed = 0;
@@ -2597,7 +2587,7 @@
       scoreNode.dataset.value = String(displayScore);
       scoreNode.textContent = String(displayScore);
     }
-    const displayBest = String(authenticated ? best : Math.max(best, score));
+    const displayBest = String(Math.max(best, score));
     if (bestNode.dataset.value !== displayBest) {
       bestNode.dataset.value = displayBest;
       bestNode.textContent = displayBest;
@@ -2638,8 +2628,6 @@
   }
 
   function postJSON(url, payload = {}) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
     return fetch(url, {
       method: "POST",
       credentials: "same-origin",
@@ -2649,12 +2637,11 @@
         "X-Requested-With": "XMLHttpRequest",
       },
       body: JSON.stringify(payload),
-      signal: controller.signal,
     }).then(async (response) => {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Не удалось сохранить результат.");
       return data;
-    }).finally(() => clearTimeout(timeout));
+    });
   }
 
   function renderLeaderboard(records) {
@@ -2688,11 +2675,6 @@
 
   function applyLeaderboard(data) {
     if (!data) return;
-    if (authenticated && Number.isFinite(data.record)) {
-      best = data.record;
-      canvas.dataset.record = String(best);
-      updateHud();
-    }
     const title = document.getElementById("doodle-leaderboard-title");
     if (title && data.board_title) title.textContent = data.board_title;
     if (Array.isArray(data.records)) renderLeaderboard(data.records);
@@ -2701,36 +2683,14 @@
 
   function registerAttempt() {
     if (adminSandbox || adminBossTestMode) return;
-    if (!authenticated || !canvas.dataset.startUrl || !csrfToken) return;
-    const generation = ++attemptGeneration;
-    clearInterval(progressTimer);
-    progressBusy = false;
-    progressRequest = Promise.resolve();
-    if (runStatusNode) runStatusNode.hidden = true;
+    if (!canvas.dataset.startUrl || !csrfToken) return;
     postJSON(canvas.dataset.startUrl).then((data) => {
-      if (generation !== attemptGeneration) return;
       attemptId = data.attempt_id || null;
-      attemptToken = data.run_token || null;
       applyLeaderboard(data);
       if (pendingFinish) submitScore();
-      else if (attemptId && attemptToken && canvas.dataset.progressUrl) {
-        progressTimer = setInterval(() => {
-          if (generation !== attemptGeneration || mode !== "running" || progressBusy) return;
-          progressBusy = true;
-          progressRequest = postJSON(canvas.dataset.progressUrl, {
-            attempt_id: attemptId, run_token: attemptToken, score: runScore()
-          }).then(() => { if (generation === attemptGeneration && runStatusNode) runStatusNode.hidden = true; })
-            .catch((error) => { if (generation === attemptGeneration) showRunError(error.message); })
-            .finally(() => { if (generation === attemptGeneration) progressBusy = false; });
-        }, 10000);
-      }
     }).catch(() => {
-      if (generation === attemptGeneration) showRunError("Нет связи с сервером. Этот забег не попадёт в рейтинг.");
+      // Guests can still play locally; only authenticated runs are ranked.
     });
-  }
-
-  function showRunError(message) {
-    if (runStatusNode) { runStatusNode.textContent = message; runStatusNode.hidden = false; }
   }
 
   function submitScore() {
@@ -2742,13 +2702,9 @@
     }
     pendingFinish = false;
     scoreSubmitted = true;
-    clearInterval(progressTimer);
-    const generation = attemptGeneration;
-    const payload = { attempt_id: attemptId, run_token: attemptToken, score: finalScore };
-    // Serialize finish AFTER an in-flight checkpoint; neither may overtake it.
-    progressRequest.then(() => postJSON(canvas.dataset.finishUrl, payload))
-      .then((data) => { if (generation === attemptGeneration) { applyLeaderboard(data); showRunError("Результат сохранён на сервере."); } })
-      .catch((error) => { if (generation === attemptGeneration) { scoreSubmitted = false; showRunError(error.message); } });
+    postJSON(canvas.dataset.finishUrl, { attempt_id: attemptId, score: finalScore })
+      .then(applyLeaderboard)
+      .catch(() => { scoreSubmitted = false; });
   }
 
   function finishIntro() {
@@ -3008,8 +2964,8 @@
     somersault = null;
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30 + marshalBonus + bossBonus;
-    lastWasRecord = !authenticated && !adminBossTestMode && finalScore > best;
-    if (!authenticated && !adminSandbox && !adminBossTestMode && finalScore > best) {
+    lastWasRecord = !adminBossTestMode && finalScore > best;
+    if (!adminSandbox && !adminBossTestMode && finalScore > best) {
       best = finalScore;
       try { localStorage.setItem(bestStorageKey, String(best)); } catch (error) { /* Keep the run playable without storage. */ }
     }

@@ -7,12 +7,10 @@ from . import driver_profiles
 from . import auth_views
 from . import score_details
 from . import reactions
-from . import race_calendar
 
 app_name = "league"
 
 urlpatterns = [
-    path("calendar/", race_calendar.calendar, name="calendar"),
     path("events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="race_recap"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="friend_league_recap"),
     path("events/<int:event_id>/predictions/<int:prediction_id>/reactions/", reactions.react, name="crazy_reaction"),
@@ -48,7 +46,6 @@ urlpatterns = [
     path("arcade/doodle-jump/leaderboard/", arcade_library.leaderboard, {"game_key": "doodle_jump"}, name="doodle_leaderboard"),
     path("arcade/doodle-jump/attempt/start/", arcade_library.attempt_start, {"game_key": "doodle_jump"}, name="doodle_attempt_start"),
     path("arcade/doodle-jump/attempt/finish/", arcade_library.attempt_finish, {"game_key": "doodle_jump"}, name="doodle_attempt_finish"),
-    path("arcade/doodle-jump/attempt/progress/", arcade_library.attempt_progress, {"game_key": "doodle_jump"}, name="doodle_attempt_progress"),
     path("arcade/leaderboard/", arcade_library.leaderboard, name="arcade_leaderboard"),
     path("arcade/minesweeper/leaderboard/", views.minesweeper_leaderboard, name="minesweeper_leaderboard"),
     path("arcade/minesweeper/attempt/start/", views.minesweeper_attempt_start, name="minesweeper_attempt_start"),
@@ -56,7 +53,6 @@ urlpatterns = [
     path("arcade/wheel/test/", views.arcade_wheel_test, name="arcade_wheel_test"),
     path("arcade/run/start/", arcade_library.attempt_start, name="arcade_run_start"),
     path("arcade/run/finish/", arcade_library.attempt_finish, name="arcade_run_finish"),
-    path("arcade/run/progress/", arcade_library.attempt_progress, name="arcade_run_progress"),
     path("arcade/wheel/spin/", views.arcade_wheel_spin, name="arcade_wheel_spin"),
     path("arcade/wheel/activate/", views.arcade_wheel_activate, name="arcade_wheel_activate"),
     path("duel/", views.duel, name="duel"),

@@ -476,15 +476,12 @@ class CompetitiveFeaturesTests(TestCase):
 
         started = self.client.post(reverse("league:arcade_run_start"))
         attempt_id = started.json()["attempt_id"]
-        token = started.json()["run_token"]
-        attempt = ArcadeAttempt.objects.get(pk=attempt_id)
         ArcadeAttempt.objects.filter(pk=attempt_id).update(
-            started_at=timezone.now() - timedelta(seconds=20),
-            verification={**attempt.verification, "seen": (timezone.now()-timedelta(seconds=20)).timestamp()},
+            started_at=timezone.now() - timedelta(seconds=20)
         )
         finished = self.client.post(
             reverse("league:arcade_run_finish"),
-            data=json.dumps({"attempt_id": attempt_id, "run_token": token, "score": 11}),
+            data=json.dumps({"attempt_id": attempt_id, "score": 11}),
             content_type="application/json",
         )
 

@@ -232,29 +232,6 @@ class AccountSettingsForm(forms.Form):
 
 
 class AvatarUploadForm(forms.ModelForm):
-    def clean_avatar(self):
-        upload = self.cleaned_data.get("avatar")
-        if not upload or not hasattr(upload, "content_type"):
-            return upload
-        if upload.size > 5*1024*1024:
-            raise forms.ValidationError("Размер аватара — не больше 5 МБ.")
-        from io import BytesIO
-        from uuid import uuid4
-        from PIL import Image, ImageOps
-        from django.core.files.base import ContentFile
-        try:
-            upload.seek(0)
-            with Image.open(upload) as original:
-                if original.format not in {"JPEG", "PNG", "WEBP", "GIF"} or max(original.size) > 4096:
-                    raise ValueError
-                image = ImageOps.contain(ImageOps.exif_transpose(original).convert("RGBA"),
-                    (1024, 1024), Image.Resampling.LANCZOS)
-                output = BytesIO()
-                image.save(output, "WEBP", lossless=True)
-            return ContentFile(output.getvalue(), name=f"{uuid4().hex}.webp")
-        except (OSError, ValueError, Image.DecompressionBombError):
-            raise forms.ValidationError("Загрузи изображение размером до 4096 × 4096.")
-
     class Meta:
         model = UserProfile
         fields = ("avatar",)

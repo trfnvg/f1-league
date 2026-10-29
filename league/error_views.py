@@ -13,7 +13,6 @@ def _page(request, status, title, message, *, retry=False):
     # No request context: a database outage must not run context processors.
     response = HttpResponse(render_to_string("errors/recovery.html", {
         "status": status, "title": title, "message": message, "retry_url": retry_url,
-        "request_id": getattr(request, "request_id", "") if status in (403, 500) else "",
     }), status=status)
     patch_cache_control(response, no_store=True, private=True)
     response["Referrer-Policy"] = "same-origin"

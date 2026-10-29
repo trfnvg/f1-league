@@ -54,11 +54,9 @@ TELEGRAM_PROXY_SECRET = os.getenv("TELEGRAM_PROXY_SECRET", "").strip()
 SITE_URL = os.getenv("SITE_URL", "").strip()
 
 # Timeweb App Platform передаёт DJANGO_ALLOWED_HOSTS; можно задать и ALLOWED_HOSTS
-_allowed = (os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS")
-            or "fastlap.ru,www.fastlap.ru,localhost,127.0.0.1,[::1]")
+_allowed = os.getenv("ALLOWED_HOSTS") or os.getenv("DJANGO_ALLOWED_HOSTS") or "*"
 ALLOWED_HOSTS = [h.strip() for h in _allowed.split(",") if h.strip()]
-# Timeweb probes the container using localhost, even when only public domains
-# are configured in env. These are exact loopback hosts, never an external '*'.
+# Keep hosting probes reachable when env lists public domains only.
 ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS + ["localhost", "127.0.0.1", "[::1]"]))
 CSRF_TRUSTED_ORIGINS = _env_list("CSRF_TRUSTED_ORIGINS")
 CSRF_FAILURE_VIEW = "league.error_views.csrf_failure"
@@ -72,8 +70,6 @@ AUTH_TRUSTED_PROXIES = os.getenv("AUTH_TRUSTED_PROXIES", "").split(",")
 if not DEBUG:
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SECURE = True
-    # Short initial HSTS window; do not pin unrelated subdomains or preload.
-    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "300"))
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -94,7 +90,6 @@ INSTALLED_APPS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 MIDDLEWARE = [
-    'config.observability.RequestMonitoringMiddleware',
     'django.middleware.security.SecurityMiddleware',
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -120,7 +115,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'league.context_processors.league_context',
-                'league.browser_errors.monitoring_context',
             ],
         },
     },
@@ -210,23 +204,3 @@ else:
 
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
-
-# Local structured logs always work; Sentry is optional and off without a DSN.
-SLOW_REQUEST_MS = max(100, int(os.getenv("SLOW_REQUEST_MS", "1500")))
-BROWSER_ERROR_REPORTING = os.getenv("BROWSER_ERROR_REPORTING", "True").lower() == "true"
-SENTRY_DSN = os.getenv("SENTRY_DSN", "").strip()
-APP_ENVIRONMENT = os.getenv("APP_ENVIRONMENT", "development" if DEBUG else "production")
-APP_RELEASE = os.getenv("APP_RELEASE", "").strip()
-LOGGING = {
-    "version": 1, "disable_existing_loggers": False,
-    "formatters": {"operational": {"()": "config.observability.OperationalFormatter"}},
-    "handlers": {"operational": {"class": "logging.StreamHandler", "formatter": "operational"}},
-    "root": {"handlers": ["operational"], "level": "WARNING"},
-    "loggers": {
-        "fastlap.operations": {"handlers": ["operational"], "level": "INFO", "propagate": False},
-        "django": {"handlers": ["operational"], "level": "WARNING", "propagate": False},
-    },
-}
-
-from config.observability import configure_error_monitoring
-configure_error_monitoring(SENTRY_DSN, environment=APP_ENVIRONMENT, release=APP_RELEASE)

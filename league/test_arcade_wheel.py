@@ -222,9 +222,9 @@ class ArcadeWheelTests(TestCase):
             data='{"attempt_id": %d, "score": 0}' % unfinished.pk,
             content_type="application/json",
         )
-        self.assertEqual(rejected.status_code, 400)  # Old clients cannot bypass the new run protocol.
+        self.assertEqual(rejected.status_code, 200)
         unfinished.refresh_from_db()
-        self.assertIsNone(unfinished.score)
+        self.assertEqual(unfinished.score, 0)
         contest.refresh_from_db()
         self.assertEqual(contest.standings[0]["score"], 12)
 
