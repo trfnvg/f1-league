@@ -97,8 +97,8 @@ body.apex-night-theme.editorial-theme .ns-live { background:linear-gradient(125d
 .paddock-radio-channel { display:block; color:#98a5b6; font:500 8px/1.4 "SFMono-Regular",Consolas,monospace; letter-spacing:.08em; }
 .paddock-radio-title h3 { margin:5px 0 0; color:#edf0f5; font:650 19px/1.2 Inter,sans-serif; letter-spacing:-.035em; }
 .paddock-radio-signal { display:flex; align-items:center; gap:14px; margin-left:auto; }
-.paddock-radio-status { display:inline-flex; align-items:center; gap:6px; color:#b6cbbd; font:500 8px/1.5 "SFMono-Regular",Consolas,monospace; letter-spacing:.07em; }
-.paddock-radio-status .ns-live-pip { flex:0 0 4px; width:4px; height:4px; margin:0; background:#91b6a0; box-shadow:none; }
+.paddock-radio-status { display:inline-flex; align-items:center; gap:6px; color:#ff655e; font:500 8px/1.5 "SFMono-Regular",Consolas,monospace; letter-spacing:.07em; }
+.paddock-radio-status .ns-live-pip { flex:0 0 4px; width:4px; height:4px; margin:0; background:#ef4940; box-shadow:none; }
 .paddock-radio-wave { display:block; width:44px; height:24px; flex:none; fill:none; stroke:#a7b9c5; stroke-width:1.4; stroke-linecap:round; opacity:.55; }
 .paddock-radio-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; margin:0 20px; padding:0; border-top:1px solid #ffffff0d; color:#8e9aab; font:450 9px/1.5 "SFMono-Regular",Consolas,monospace; }
 body.apex-night-theme.editorial-theme .ns-live .paddock-radio-toggle { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; margin:0 -8px 0 0; padding:8px; border:0; border-radius:5px; background:none; color:#d5dee8; font:550 11px/1.4 Inter,sans-serif; letter-spacing:0; text-transform:none; box-shadow:none; transform:none; }
