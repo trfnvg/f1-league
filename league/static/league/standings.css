@@ -30,6 +30,12 @@ body.apex-night-theme .classification .classification-controls button { display:
 body.apex-night-theme .classification .classification-controls button:disabled { opacity: .25; cursor: default; }
 .classification-controls svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .classification-viewport {
+  /* Anchor absolutely positioned screen-reader labels inside this scroller.
+     Without a containing block, labels in offscreen score cells can enlarge
+     Safari's document viewport despite overflow-x:auto on the table wrapper. */
+  position: relative;
+  min-width: 0;
+  width: 100%;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;

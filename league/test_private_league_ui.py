@@ -295,8 +295,22 @@ class PrivateLeagueUITests(TestCase):
         self.assertFalse(LeagueInvite.objects.filter(league_season=self.a).exists())
         response = self.client.get(self.url())
         self.assertIsNone(response.context["invite_link"])
-        self.assertContains(response, "Создать в управлении")
+        self.assertContains(response, "Создать приглашение")
+        self.assertContains(response, f'href="{self.url("friend_league_settings")}?year=2027#manage-invites-title"')
         self.assertFalse(LeagueInvite.objects.filter(league_season=self.a).exists())
+
+    def test_dashboard_has_one_score_table_and_keeps_management_owner_only(self):
+        response = self.client.get(self.url())
+        self.assertContains(response, 'league-dashboard.css')
+        self.assertContains(response, '<title>Private Alpha · Fastlap</title>', html=True)
+        self.assertContains(response, 'class="classification-table"', count=1)
+        self.assertContains(response, f'href="{self.url("friend_league_settings")}?year=2027"')
+        self.enter()
+        self.client.force_login(self.player)
+        response = self.client.get(self.url())
+        self.assertNotContains(response, f'href="{self.url("friend_league_settings")}?year=2027"')
+        self.assertContains(response, 'data-copy-invite', count=1)
+        self.assertContains(response, f'href="{self.url("friend_league_event", event_id=self.event.pk)}"')
 
     def test_https_join_without_origin_uses_same_origin_referer_and_keeps_csrf(self):
         _, token = create_invite(actor=self.owner, league_season=self.a)

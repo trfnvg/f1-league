@@ -1,26 +1,22 @@
 {% extends 'leagues/base.html' %}
 {% load static %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=4">{% endblock %}
+{% block title %}{{ league.name }} · Fastlap{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=5"><link rel="stylesheet" href="{% static 'league/league-dashboard.css' %}?v=1">{% endblock %}
+{% block league_page_class %}league-dashboard{% endblock %}
 {% block league_breadcrumb %}{% endblock %}
 {% block league_content %}
 <header class="league-dashboard-head league-dashboard-head-premium">
   <div class="league-identity">{% if league.avatar %}<img class="league-logo" src="{{ league.avatar.url }}" alt="">{% else %}<span class="league-logo league-logo-placeholder">{{ league.name|first }}</span>{% endif %}<div><p class="leagues-kicker">{{ season.year }} <span aria-hidden="true">/</span> {{ league_season.get_ruleset_display }} <span aria-hidden="true">/</span> Участников: {{ page.paginator.count }}</p><h1>{{ league.name }}</h1>{% if is_owner %}<span class="league-role">Владелец лиги</span>{% endif %}</div></div>
-  <div class="league-dashboard-actions"><details class="league-switch"><summary>Сменить лигу ▾</summary><div>{% for choice in league_choices %}<a href="{% url 'league:friend_league' choice.league_id %}?year={{ choice.season.year }}" {% if choice.pk == league_season.pk %}aria-current="page"{% endif %}>{{ choice.league.name }} <small>{{ choice.season.year }}</small></a>{% endfor %}<a href="{% url 'league:friend_league_create' %}">＋ Создать лигу</a><a href="{% url 'league:friend_leagues' %}?all=1">Все лиги</a></div></details>{% if can_manage and invites_enabled %}<a class="leagues-button leagues-button-secondary" href="{% url 'league:friend_league_invites' league.id %}?year={{ season.year }}">Пригласить</a>{% endif %}{% if can_configure %}<a class="leagues-button leagues-button-secondary" href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}">Управление</a>{% endif %}</div>
+  <div class="league-dashboard-actions"><details class="league-switch"><summary>Сменить лигу <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg></summary><div>{% for choice in league_choices %}<a href="{% url 'league:friend_league' choice.league_id %}?year={{ choice.season.year }}" {% if choice.pk == league_season.pk %}aria-current="page"{% endif %}>{{ choice.league.name }} <small>{{ choice.season.year }}</small></a>{% endfor %}<a href="{% url 'league:friend_league_create' %}">Создать лигу</a><a href="{% url 'league:friend_leagues' %}?all=1">Все лиги</a></div></details>{% if can_configure %}<a class="leagues-button leagues-button-secondary" href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}">Управление {% include 'ui_arrow.html' %}</a>{% endif %}</div>
 </header>
-{% if invite_link %}
-<section class="league-share" aria-labelledby="league-share-title">
-  <div class="league-share-copy"><span class="league-share-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m10 13 4-4m-6 6-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 3 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/></svg></span><div><h2 id="league-share-title">Пригласить друзей</h2><p>Одна ссылка — вся ваша компания.</p></div></div>
-  <div class="league-share-actions"><a class="league-share-url" id="league-invite-link" href="{{ invite_link }}" aria-label="Открыть приглашение в лигу {{ league.name }}">{{ invite_link }}</a><button class="league-share-copy-button" type="button" data-copy-invite><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="10" rx="2"/><path d="M12 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3"/></svg>Скопировать</button></div>
-  <p class="league-share-status" role="status" data-copy-status>{% if can_configure %}Изменить ссылку можно в <a href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title">управлении лигой</a>.{% else %}Отправьте ссылку другу — он сможет вступить после входа в аккаунт.{% endif %}</p>
-</section>
-{% elif can_configure and invites_enabled %}<section class="league-share league-share-empty"><div class="league-share-copy"><div><h2>Пригласить друзей</h2><p>Создайте постоянную ссылку для своей компании.</p></div></div><a class="league-share-copy-button" href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title">Создать в управлении {% include 'ui_arrow.html' %}</a></section>{% endif %}
+<div class="league-overview">
 {% if next_event %}
 <section class="league-race-card" aria-labelledby="current-gp-title">
   <div class="league-race-copy">
     <div class="league-race-topline"><span class="league-round-label">ЭТАП {{ next_event.round_number|stringformat:'02d' }}</span><span class="league-race-status {% if prediction_open %}is-open{% elif prediction_soon %}is-soon{% else %}is-closed{% endif %}"><i aria-hidden="true"></i>{% if prediction_open %}Прогнозы открыты{% elif prediction_soon %}Скоро приём прогнозов{% else %}Прогнозы закрыты{% endif %}</span></div>
     <h2 id="current-gp-title">{{ next_event.name }}</h2>
     <div class="league-race-timing"><div><span>СТАРТ ГОНКИ · МСК</span><strong>{% if next_event.race_datetime %}{{ next_event.race_datetime|date:'d.m · H:i' }}{% else %}Время уточняется{% endif %}</strong></div><div><span>ДЕДЛАЙН ПРОГНОЗОВ · МСК</span><strong>{{ next_event.deadline|date:'d.m · H:i' }}</strong></div></div>
-    <div class="league-race-bottom"><a class="leagues-button league-race-cta" href="{% url 'league:friend_league_event' league.id next_event.id %}{% if not prediction_open and not prediction_soon %}?manage=1{% endif %}">{% if prediction_open %}Мой прогноз{% elif prediction_soon %}Перейти к этапу{% else %}Смотреть прогнозы{% endif %}<span aria-hidden="true">↗</span></a>{% if not prediction_open and not prediction_soon %}<p>Прогнозы зафиксированы.<br>Ждём старта гонки.</p>{% endif %}</div>
+    <div class="league-race-bottom"><a class="leagues-button league-race-cta" href="{% url 'league:friend_league_event' league.id next_event.id %}{% if not prediction_open and not prediction_soon %}?manage=1{% endif %}">{% if prediction_open %}Мой прогноз{% elif prediction_soon %}Перейти к этапу{% else %}Смотреть прогнозы{% endif %}{% include 'ui_arrow.html' %}</a>{% if not prediction_open and not prediction_soon %}<p>Прогнозы зафиксированы.<br>Ждём старта гонки.</p>{% endif %}</div>
   </div>
   <div class="league-race-visual" aria-hidden="true">
     {% if next_event.circuit_visual %}{% include 'circuit_track.html' with circuit=next_event.circuit_visual track_id='league' animated=True %}{% elif next_event.cover_image %}<img src="{{ next_event.cover_image.url }}" alt="" data-race-cover decoding="async">{% endif %}
@@ -28,6 +24,14 @@
   </div>
 </section>
 {% else %}<p class="league-season-note">В этом сезоне пока нет предстоящих гонок. Результаты чемпионата — ниже.</p>{% endif %}
+{% if invite_link %}
+<section class="league-share" aria-labelledby="league-share-title">
+  <div class="league-share-copy"><span class="league-share-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m10 13 4-4m-6 6-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 3 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/></svg></span><div><h2 id="league-share-title">Пригласить друзей</h2><p>Одна ссылка — вся ваша компания.</p></div></div>
+  <div class="league-share-actions"><a class="league-share-url" id="league-invite-link" href="{{ invite_link }}" aria-label="Открыть приглашение в лигу {{ league.name }}">{{ invite_link }}</a><button class="league-share-copy-button" type="button" data-copy-invite><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="10" rx="2"/><path d="M12 7V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h3"/></svg>Скопировать</button></div>
+  <p class="league-share-status" role="status" data-copy-status>{% if can_configure %}Изменить ссылку можно в <a href="{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title">управлении лигой</a>.{% else %}Отправьте ссылку другу — он сможет вступить после входа в аккаунт.{% endif %}</p>
+</section>
+{% elif can_manage and invites_enabled %}<section class="league-share league-share-empty"><div class="league-share-copy"><div><h2>Пригласить друзей</h2><p>Создайте постоянную ссылку для своей компании.</p></div></div><a class="league-share-copy-button" href="{% if can_configure %}{% url 'league:friend_league_settings' league.id %}?year={{ season.year }}#manage-invites-title{% else %}{% url 'league:friend_league_invites' league.id %}?year={{ season.year }}{% endif %}">Создать приглашение {% include 'ui_arrow.html' %}</a></section>{% endif %}
+</div>
 {% include 'leagues/standings.html' %}
 {% if page.has_other_pages %}<nav class="leagues-pagination" aria-label="Страницы участников">{% if page.has_previous %}<a href="?year={{ season.year }}&page={{ page.previous_page_number }}">← Назад</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?year={{ season.year }}&page={{ page.next_page_number }}">Далее →</a>{% endif %}</nav>{% endif %}
 {% endblock %}

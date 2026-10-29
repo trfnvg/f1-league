@@ -1,0 +1,131 @@
+/* Explicit inline sizing keeps a long season inside its own scroll region.
+   Do not disable browser zoom or clip the whole document to conceal overflow. */
+.leagues-page.league-dashboard {
+  width: 100%;
+  min-width: 0;
+  max-width: 1200px;
+  contain: inline-size;
+  padding-top: 0;
+}
+.league-dashboard > *, .league-dashboard .league-overview > * {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+body.apex-night-theme.editorial-theme .league-dashboard .league-dashboard-head-premium {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  padding: 26px;
+  margin-bottom: 20px;
+  background: #20252d !important;
+  box-shadow: none !important;
+}
+.league-dashboard .league-identity { min-width: 0; gap: 18px; }
+.league-dashboard .league-identity > div { min-width: 0; }
+body.apex-night-theme.editorial-theme .league-dashboard .league-identity h1 {
+  margin: 4px 0 0;
+  font-size: clamp(25px, 2.5vw, 35px);
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+  letter-spacing: -.045em;
+}
+.league-dashboard .league-identity .league-logo {
+  width: 64px; height: 64px; flex-basis: 64px;
+  border: 0; background: #191e25; border-radius: 12px;
+}
+.league-dashboard .league-identity .leagues-kicker { margin: 0; color: #a4adb9; font-size: 10px; letter-spacing: .04em; }
+.league-dashboard .league-role { display: inline-block; margin-top: 9px; color: #a5aebb !important; font-size: 11px !important; }
+.league-dashboard .league-dashboard-actions { gap: 8px; max-width: none; }
+body.apex-night-theme .league-dashboard :is(.leagues-button-secondary, .league-switch summary) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 44px; padding: 10px 14px; margin: 0;
+  border: 1px solid #414852; border-radius: 9px;
+  background: #272d35; color: #e5e8ed; box-shadow: none;
+  font: 550 12px/1.4 Inter, sans-serif; text-decoration: none;
+}
+.league-dashboard .league-switch summary { list-style: none; cursor: pointer; }
+.league-dashboard .league-switch summary::-webkit-details-marker { display: none; }
+.league-dashboard .league-switch summary svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+.league-dashboard .league-switch[open] summary svg { transform: rotate(180deg); }
+.league-dashboard .league-switch > div { width: 280px; max-width: min(280px, calc(100vw - 60px)); background: #242a33; border-color: #454d59; }
+.league-dashboard .league-switch a { overflow-wrap: anywhere; }
+.league-dashboard .league-overview { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: 18px; margin-bottom: 22px; }
+.league-dashboard .league-overview > :only-child { grid-column: 1 / -1; }
+body.apex-night-theme.editorial-theme .league-dashboard .league-race-card {
+  display: block; margin: 0; background: #20252d !important;
+  box-shadow: none !important; min-height: 246px;
+}
+.league-dashboard .league-race-copy { padding: 26px; }
+.league-dashboard .league-race-copy h2 { max-width: 100%; margin-bottom: 22px; font: 650 clamp(25px, 2.3vw, 32px)/1.2 Inter, sans-serif; letter-spacing: -.04em; }
+.league-dashboard .league-race-topline { gap: 12px; margin-bottom: 18px; }
+.league-dashboard .league-round-label { color: #ff918b; background: #f34d4610; border-color: #f34d462c; font-size: 10px; }
+.league-dashboard .league-race-status { font-size: 11px; color: #adb5c1; }
+.league-dashboard .league-race-timing { gap: 20px; margin-bottom: 24px; }
+.league-dashboard .league-race-timing span { font-size: 9px; letter-spacing: .04em; }
+.league-dashboard .league-race-timing strong { font: 550 15px/1.4 Inter, sans-serif; font-variant-numeric: tabular-nums; }
+body.apex-night-theme .league-dashboard .league-race-cta { min-height: 46px; min-width: 160px; padding: 12px 18px; background: #ee4943; border: 1px solid #ff6862; border-radius: 9px; box-shadow: none; font: 600 13px/1.4 Inter, sans-serif; }
+.league-dashboard .league-race-bottom p { font-size: 11px; }
+body.apex-night-theme.editorial-theme .league-dashboard .league-race-visual {
+  position: absolute; inset: 0; z-index: 0; min-height: 0;
+  opacity: .14; background: none; pointer-events: none;
+  contain: strict;
+}
+body.apex-night-theme.editorial-theme .league-dashboard .league-race-visual .circuit-visual {
+  inset: 0; width: 100%; height: 100%; max-height: none; overflow: hidden;
+}
+.league-dashboard .league-race-watermark { display: none; }
+.league-dashboard .league-share {
+  display: flex; flex-direction: column; justify-content: center; align-items: stretch;
+  gap: 16px; padding: 22px; margin: 0;
+  background: #1e232b; border: 1px solid #3b434f; border-radius: 16px;
+}
+.league-dashboard .league-share-copy { gap: 12px; }
+.league-dashboard .league-share-copy h2 { font: 600 16px/1.4 Inter, sans-serif; letter-spacing: -.02em; }
+.league-dashboard .league-share-copy p { margin-top: 5px; font-size: 12px; }
+.league-dashboard .league-share-mark { width: 34px; height: 34px; flex-basis: 34px; background: transparent; border-color: #414852; color: #b8c1ce; }
+.league-dashboard .league-share-actions { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; min-width: 0; max-width: 100%; }
+.league-dashboard .league-share-url { flex: 1 1 100%; width: 100%; min-width: 0; font-size: 12px; }
+.league-dashboard .league-share-copy-button { width: 100%; min-height: 44px; border-color: #414852; background: #2b323c; color: #e5e8ed; font-size: 12px; }
+.league-dashboard .league-share-status { margin: 0; font-size: 11px; line-height: 1.65; color: #9da7b5; }
+.league-dashboard .classification { width: 100%; contain: inline-size; }
+.league-dashboard .classification-viewport { width: 100%; min-width: 0; max-width: 100%; }
+.league-dashboard .classification-head { padding: 24px; }
+.league-dashboard .classification-head .classification-last-winner { font-size: 11px; }
+body.apex-night-theme .league-dashboard .classification-result a { text-decoration: none; }
+body.apex-night-theme .league-dashboard .classification-result a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.league-dashboard :is(a, button, summary):focus-visible { outline: 2px solid #e1e6ee; outline-offset: 3px; }
+@media (max-width: 1000px) {
+  body.apex-night-theme.editorial-theme .league-dashboard .league-dashboard-head-premium { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .league-dashboard .league-dashboard-actions { justify-content: flex-start; }
+  .league-dashboard .league-overview { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .league-dashboard .league-share { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 20px; gap: 14px 20px; }
+  .league-dashboard .league-share-status { grid-column: 1 / -1; }
+  .league-dashboard .league-share-empty { display: flex; flex-direction: row; align-items: center; }
+  .league-dashboard .league-share-empty > a { width: auto; }
+}
+@media (max-width: 600px) {
+  .leagues-page.league-dashboard { padding-bottom: 24px; }
+  body.apex-night-theme.editorial-theme .league-dashboard .league-dashboard-head-premium { padding: 20px 16px; gap: 18px; margin-bottom: 14px; }
+  .league-dashboard .league-identity { gap: 12px; align-items: center; }
+  .league-dashboard .league-identity .league-logo { width: 50px; height: 50px; flex-basis: 50px; }
+  .league-dashboard .league-identity .leagues-kicker { font-size: 9px; line-height: 1.7; }
+  .league-dashboard .league-identity .leagues-kicker span { margin-inline: 3px; }
+  .league-dashboard .league-role { margin-top: 6px; }
+  .league-dashboard .league-dashboard-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); width: 100%; }
+  .league-dashboard .league-switch { min-width: 0; }
+  .league-dashboard .league-switch summary { width: 100%; }
+  .league-dashboard .league-switch > div { left: 0; right: auto; }
+  .league-dashboard .league-race-copy { padding: 22px 18px; }
+  .league-dashboard .league-race-timing { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .league-dashboard .league-race-timing span { font-size: 8px; line-height: 1.6; }
+  .league-dashboard .league-race-timing strong { font-size: 14px; }
+  .league-dashboard .league-race-cta { width: 100%; }
+  .league-dashboard .league-race-bottom { gap: 12px; }
+  .league-dashboard .league-share { display: flex; align-items: stretch; padding: 18px; gap: 12px; }
+  .league-dashboard .league-share-empty { flex-direction: column; }
+  .league-dashboard .league-share-empty > a { width: 100%; }
+  .league-dashboard .classification-head { padding: 20px 16px; }
+  .league-dashboard .classification-name { font-size: 12px; }
+  .league-dashboard .classification-player-copy > small { font-size: 10px; }
+  .league-dashboard .classification-foot { font-size: 10px; }
+}
