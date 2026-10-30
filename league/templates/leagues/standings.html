@@ -1,5 +1,5 @@
 {% load league_extras %}
-<section class="classification" aria-labelledby="classification-title">
+<section class="classification" aria-labelledby="classification-title"{% if prediction_presence.event %} data-prediction-status-url="{% url 'league:friend_league_prediction_status' league.id %}?year={{ season.year }}" data-prediction-event="{{ prediction_presence.event.id }}"{% endif %}>
   <header class="classification-head">
     <div>
       <span class="classification-kicker">СЕЗОН {{ season.year }}</span>
@@ -9,6 +9,12 @@
     </div>
     <span class="classification-count">{% if page %}{{ page.paginator.count }}{% else %}{{ rows|length }}{% endif %}<small>Участников</small></span>
   </header>
+  {% if prediction_presence.event %}
+  <div class="classification-presence" data-presence-panel>
+    <div class="classification-presence-title"><span>ПРОГНОЗЫ · R{{ prediction_presence.event.round|stringformat:'02d' }}</span><strong data-presence-count>{{ prediction_presence.saved }} / {{ prediction_presence.eligible }}</strong><small data-presence-connection>{% if prediction_presence.event.closed %}Приём закрыт{% else %}Сохранено{% endif %}</small><a href="" data-presence-reload hidden>Обновить</a></div>
+    <div class="classification-presence-legend"><span><i class="presence-dot is-saved" aria-hidden="true"></i>Сохранён</span><span><i class="presence-dot is-missing" aria-hidden="true"></i>Не сохранён</span>{% if 'ineligible' in prediction_presence.statuses.values %}<span><i class="presence-dot is-ineligible" aria-hidden="true"></i>Не в зачёте</span>{% endif %}</div>
+  </div>
+  {% endif %}
   {% if rows %}
   <div class="classification-toolbar">
     <span>Очки по этапам <small>От последнего к первому</small></span>
@@ -34,11 +40,14 @@
         {% for r in rows %}
         <tr class="classification-entry">
           <th scope="row" class="classification-identity">
+            <div class="classification-player-line">
             <a class="classification-player" href="{% url 'league:player_profile' r.user.id %}?season={{ season.year }}" title="{{ r.user|player_name }}">
               <span class="classification-position"><strong><span class="visually-hidden">Место </span>{{ r.rank|stringformat:'02d' }}</strong><span class="classification-movement" {% if r.movement > 0 %}aria-label="Поднялся на {{ r.movement }}"{% elif r.movement < 0 %}aria-label="Опустился на {{ r.movement|stringformat:'d'|slice:'1:' }}"{% else %}aria-label="Без изменения позиции"{% endif %}>{% if r.movement > 0 %}↑{{ r.movement }}{% elif r.movement < 0 %}↓{{ r.movement|stringformat:'d'|slice:'1:' }}{% else %}—{% endif %}</span></span>
               <span class="table-avatar classification-avatar">{% if r.avatar_url %}<img src="{{ r.avatar_url }}" alt="" loading="lazy" width="32" height="32">{% else %}{{ r.user|player_name|slice:':1'|upper }}{% endif %}</span>
               <span class="classification-player-copy"><span class="classification-name">{{ r.user|player_name }}</span>{% if r.user.id == user.id %}<small>Вы</small>{% endif %}</span>
             </a>
+            {% if prediction_presence.event %}<button type="button" class="classification-prediction-status" data-presence-user="{{ r.user.id }}" data-presence-state="{{ r.prediction_status }}" data-player-name="{{ r.user|player_name }}" aria-label="{% if r.prediction_status == 'saved' %}Прогноз сохранён{% elif r.prediction_status == 'missing' %}Прогноз не сохранён{% else %}Не участвует в этом этапе{% endif %} · R{{ prediction_presence.event.round|stringformat:'02d' }}" title="{% if r.prediction_status == 'saved' %}Прогноз сохранён{% elif r.prediction_status == 'missing' %}Прогноз не сохранён{% else %}Не участвует в этом этапе{% endif %} · R{{ prediction_presence.event.round|stringformat:'02d' }}"><span class="presence-dot is-{{ r.prediction_status }}" aria-hidden="true"></span></button>{% endif %}
+            </div>
           </th>
           <td class="classification-pinned-total"><strong class="classification-total" aria-label="{{ r.total }} очков"><span data-count-to="{{ r.total }}" aria-hidden="true">{{ r.total }}</span></strong></td>
           {% for e in result_events %}{% score_for scores_map r.user.id e.id as s %}

@@ -68,7 +68,26 @@ def run():
                     context = browser.new_context(viewport={'width': width, 'height': 844},
                         is_mobile=width < 900, has_touch=width < 900, device_scale_factor=2)
                     page = context.new_page()
+                    presence_mode = {'error': False, 'saved_user': None, 'rollover': False}
+                    def presence_response(request_route):
+                        if presence_mode['error']:
+                            request_route.fulfill(status=503, body='Unavailable')
+                            return
+                        payload = page.evaluate('''() => {
+                            const board=document.querySelector('[data-prediction-status-url]');
+                            const statuses=Object.fromEntries([...board.querySelectorAll('[data-presence-user]')].map(e=>[e.dataset.presenceUser,e.dataset.presenceState]));
+                            const [saved,eligible]=board.querySelector('[data-presence-count]').textContent.split('/').map(Number);
+                            return {event:{id:Number(board.dataset.predictionEvent),round:19,closed:false},statuses,saved,eligible};
+                        }''')
+                        if presence_mode['saved_user']:
+                            payload['statuses'][presence_mode['saved_user']] = 'saved'
+                            payload['saved'] = sum(state == 'saved' for state in payload['statuses'].values())
+                        if presence_mode['rollover']:
+                            payload['event']['id'] += 1
+                        request_route.fulfill(json=payload)
+                    page.route('**/prediction-status/**', presence_response)
                     for route in ('/league/', '/league-long/', '/league-owner/', '/league-many/', '/league-no-event/'):
+                        presence_mode.update(error=False, saved_user=None, rollover=False)
                         page.goto(f'http://127.0.0.1:{server.server_port}{route}', wait_until='networkidle')
                         page.wait_for_timeout(300)
                         metrics = page.evaluate('''() => ({inner:innerWidth,
@@ -104,7 +123,34 @@ def run():
                             assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                             page.set_viewport_size({'width': width, 'height': 844})
                             assert page.evaluate('innerWidth===390 && Math.abs(visualViewport.scale-1)<.01')
+                        indicators = page.locator('[data-presence-user]')
+                        if indicators.count():
+                            indicator = indicators.first
+                            presence_mode['saved_user'] = indicator.get_attribute('data-presence-user')
+                            page.evaluate("window.presenceImages=[...document.querySelectorAll('.classification-avatar img')];window.presencePlayers=[...document.querySelectorAll('.classification-player')]")
+                            scroll_left = frame.evaluate('e=>e.scrollLeft')
+                            page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                            page.wait_for_function("document.querySelector('[data-presence-user]').dataset.presenceState==='saved'")
+                            assert frame.evaluate('e=>e.scrollLeft') == scroll_left
+                            assert page.evaluate("presenceImages.every(e=>e.isConnected)&&presencePlayers.every(e=>e.isConnected)")
+                            current_url = page.url
+                            indicator.click()
+                            assert page.locator('.league-presence-toast').is_visible()
+                            assert 'Прогноз сохранён' in page.locator('.league-presence-toast').inner_text()
+                            assert page.url == current_url, 'Status tap must not open the profile'
+                            presence_mode['error'] = True
+                            page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                            page.wait_for_function("document.querySelector('.classification').dataset.presenceStale==='true'")
+                            assert page.locator('[data-presence-connection]').inner_text() == 'Нет обновления'
+                            presence_mode['error'] = False
+                            page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                            page.wait_for_function("document.querySelector('.classification').dataset.presenceStale==='false'")
                         page.screenshot(path=str(output/f'{engine}-{width}-{route.strip("/")}.png'), full_page=True)
+                        if indicators.count():
+                            presence_mode['rollover'] = True
+                            page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+                            page.wait_for_function("!document.querySelector('[data-presence-reload]').hidden")
+                            assert indicators.first.is_hidden()
                     context.close()
                 browser.close()
     finally:

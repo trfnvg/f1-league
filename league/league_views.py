@@ -5,7 +5,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Case, Count, IntegerField, Q, Value, When
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -19,6 +19,7 @@ from .league_management import decide_crazy, decide_day, delete_league, require_
 from .league_standings import standings
 from .home_events import select_current_event
 from .prediction_submission import save_shared_prediction
+from .prediction_presence import prediction_presence
 from .leagues import (
     accept_invite, create_invite, create_league, current_invite, invite_for_token, membership_for,
     require_moderator, revoke_invite, set_member_role,
@@ -119,11 +120,15 @@ def detail(request, league_id):
     request.session["active_friend_league"] = str(league.pk)
     request.session["active_friend_league_year"] = season.season.year
     data = standings(season)
-    page = Paginator(data.pop("entries"), 50).get_page(request.GET.get("page"))
+    entries = data.pop("entries")
+    page = Paginator(entries, 50).get_page(request.GET.get("page"))
     visible = {entry.membership.user_id for entry in page}
     data["rows"] = [r for r in data["rows"] if r["user"].pk in visible]
     now = timezone.now()
     next_event = select_current_event(data["events"], now)
+    presence = prediction_presence(season, entries=entries, events=data['events'], now=now)
+    for row in data['rows']:
+        row['prediction_status'] = presence['statuses'].get(row['user'].pk, 'ineligible')
     prediction_open = bool(next_event and next_event.voting_state() == "open" and now < next_event.deadline)
     prediction_soon = bool(next_event and next_event.voting_state() == "soon")
     choices = LeagueSeason.objects.filter(league__memberships__user=request.user,
@@ -131,11 +136,20 @@ def detail(request, league_id):
     token = current_invite(actor=request.user, league=league)
     invite_link = request.build_absolute_uri(reverse("league:friend_league_join", args=[token])) if token else None
     context = dict(league=league, league_season=season, season=season.season, league_choices=choices,
-        invite_link=invite_link,
+        invite_link=invite_link, prediction_presence=presence,
         invites_enabled=not season.is_legacy or league.legacy_key == "original-friends",
         page=page, next_event=next_event, prediction_open=prediction_open, prediction_soon=prediction_soon,
         **data, **_rights(request.user, league))
     return render(request, "leagues/detail.html", context)
+
+
+@login_required
+@never_cache
+@require_GET
+def prediction_status(request, league_id):
+    league = _league(request, league_id)
+    season = _season(request, league)
+    return JsonResponse(prediction_presence(season))
 
 @login_required
 @never_cache

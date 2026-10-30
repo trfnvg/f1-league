@@ -25,6 +25,7 @@ urlpatterns = [
     path("leagues/new/", league_views.create, name="friend_league_create"),
     path("leagues/join/<str:token>/", league_views.join, name="friend_league_join"),
     path("leagues/<uuid:league_id>/", league_views.detail, name="friend_league"),
+    path("leagues/<uuid:league_id>/prediction-status/", league_views.prediction_status, name="friend_league_prediction_status"),
     path("leagues/<uuid:league_id>/settings/", league_views.settings, name="friend_league_settings"),
     path("leagues/<uuid:league_id>/delete/", league_views.delete, name="friend_league_delete"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/day/", league_views.day_decision, name="friend_league_day"),

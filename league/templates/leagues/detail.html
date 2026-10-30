@@ -1,7 +1,7 @@
 {% extends 'leagues/base.html' %}
 {% load static %}
 {% block title %}{{ league.name }} · Fastlap{% endblock %}
-{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=5"><link rel="stylesheet" href="{% static 'league/league-dashboard.css' %}?v=2">{% endblock %}
+{% block extra_head %}{{ block.super }}<link rel="stylesheet" href="{% static 'league/standings.css' %}?v=6-presence"><link rel="stylesheet" href="{% static 'league/league-dashboard.css' %}?v=2">{% endblock %}
 {% block league_page_class %}league-dashboard{% endblock %}
 {% block league_breadcrumb %}{% endblock %}
 {% block league_content %}
@@ -35,4 +35,4 @@
 {% include 'leagues/standings.html' %}
 {% if page.has_other_pages %}<nav class="leagues-pagination" aria-label="Страницы участников">{% if page.has_previous %}<a href="?year={{ season.year }}&page={{ page.previous_page_number }}">← Назад</a>{% endif %}<span>{{ page.number }} / {{ page.paginator.num_pages }}</span>{% if page.has_next %}<a href="?year={{ season.year }}&page={{ page.next_page_number }}">Далее →</a>{% endif %}</nav>{% endif %}
 {% endblock %}
-{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/standings.js' %}?v=3" defer></script>{% endblock %}
+{% block extra_scripts %}{{ block.super }}<script src="{% static 'league/standings.js' %}?v=3" defer></script><script src="{% static 'league/prediction-presence.js' %}?v=1" defer></script>{% endblock %}
