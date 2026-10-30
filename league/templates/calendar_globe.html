@@ -2,17 +2,21 @@
 {% if globe_rounds %}
 <section class="race-globe" data-race-globe hidden aria-label="Интерактивный глобус Гран-при" data-day-texture="{% static 'league/images/globe/earth-day.jpg' %}" data-night-texture="{% static 'league/images/globe/earth-night.jpg' %}">
   <div class="rg-copy">
-    <p class="rg-kicker"><span></span> FASTLAP / WORLD TOUR {{ calendar_year }}</p>
+    <p class="rg-kicker"><span></span> WORLD TOUR <b>{{ calendar_year }}</b></p>
     <h2>Весь сезон.<br><span>На одной планете.</span></h2>
-    <p class="rg-intro">Вращай глобус. Открывай трассы.<br>Находи свой следующий Гран-при.</p>
-    <article class="rg-card" aria-labelledby="globe-race-title">
+    <p class="rg-intro">От первого старта до финального флага.<br>Твой маршрут по миру Формулы-1.</p>
+    <article class="rg-card" data-globe-card aria-labelledby="globe-race-title">
       <img class="rg-cover" data-globe-cover alt="" hidden>
       <div class="rg-card-top"><span data-globe-round></span><span data-globe-state></span></div>
       <p class="rg-country" data-globe-country></p>
       <h3 id="globe-race-title" data-globe-location></h3>
       <p class="rg-circuit" data-globe-circuit></p>
-      <div class="rg-card-middle"><div><span>УИК-ЭНД</span><strong data-globe-dates></strong><span class="rg-time-caption" data-globe-zone>ГОНКА · МСК</span><strong data-globe-race-time></strong></div><svg class="rg-track" viewBox="0 0 620 370" aria-hidden="true"><path data-globe-track d=""/></svg></div>
-      <p class="rg-countdown" data-globe-countdown></p>
+      <div class="rg-card-middle"><div><span>УИК-ЭНД</span><strong data-globe-dates></strong><span class="rg-time-caption" data-globe-zone>ГОНКА · МСК</span><strong data-globe-race-time></strong></div><div class="rg-track-wrap"><svg class="rg-track" viewBox="0 0 620 370" aria-hidden="true"><path class="rg-track-bed" data-globe-track-bed d=""/><path data-globe-track d=""/><circle data-globe-track-start r="9" hidden/></svg><span>СХЕМА ТРАССЫ</span></div></div>
+      <div class="rg-departure" data-globe-departure>
+        <p class="rg-clock-caption">ДО СТАРТА ГОНКИ</p>
+        <div class="rg-clock" data-globe-clock aria-hidden="true" hidden><div><strong data-globe-clock-value>00</strong><span>ДНЕЙ</span></div><i>:</i><div><strong data-globe-clock-value>00</strong><span>ЧАСОВ</span></div><i>:</i><div><strong data-globe-clock-value>00</strong><span>МИНУТ</span></div><i>:</i><div><strong data-globe-clock-value>00</strong><span>СЕКУНД</span></div></div>
+        <p class="rg-countdown" data-globe-countdown></p>
+      </div>
       <div class="rg-actions"><a class="rc-button rc-button-primary" data-globe-open href="#">Открыть этап {% include 'ui_arrow.html' %}</a><a class="rg-schedule" data-globe-schedule href="#">Расписание {% include 'ui_arrow.html' %}</a></div>
       <details class="rg-sessions"><summary>Все сессии уик-энда</summary><dl data-globe-sessions></dl></details>
     </article>
@@ -24,11 +28,11 @@
       <div class="rg-markers" data-globe-markers></div>
       <span class="rg-compass" aria-hidden="true">N<br><i></i></span>
     </div>
-    <div class="rg-world-top"><span><i></i> {{ globe_rounds|length }} ЭТАПА НА КАРТЕ</span><button type="button" data-globe-motion aria-pressed="false" aria-label="Включить вращение глобуса">Вращение</button></div>
-    <div class="rg-world-bottom"><p id="globe-instructions">Вращай мышью или пальцем<br><span>Точка на карте — информация об этапе</span></p><div class="rg-controls"><button type="button" data-globe-zoom="-1" aria-label="Отдалить глобус">−</button><button type="button" data-globe-home aria-label="Вернуться к ближайшему этапу">⌖</button><button type="button" data-globe-zoom="1" aria-label="Приблизить глобус">+</button></div></div>
+    <div class="rg-world-top"><span><i></i> {{ globe_rounds|length }} ЭТАПА <em>/</em> ОДНА ПЛАНЕТА</span><button type="button" data-globe-motion aria-pressed="false" aria-label="Включить вращение глобуса"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="rg-motion-play" d="m6 4 6 4-6 4Z"/><path class="rg-motion-pause" d="M6 4v8m4-8v8"/></svg><span data-globe-motion-label>Вращение</span></button></div>
+    <div class="rg-world-bottom"><p id="globe-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V5a2 2 0 0 1 4 0v8-5a2 2 0 0 1 4 0v5-2a2 2 0 0 1 4 0v4c0 4-2 7-6 7h-1c-3 0-4-2-6-4l-3-4a2 2 0 0 1 3-2l3 3"/></svg><span>Вращай и исследуй<small>Выбери точку, чтобы открыть этап</small></span></p><div class="rg-controls"><button type="button" data-globe-zoom="-1" aria-label="Отдалить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button><button type="button" data-globe-home aria-label="Вернуться к ближайшему этапу"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/><circle cx="12" cy="12" r="1"/></svg></button><button type="button" data-globe-zoom="1" aria-label="Приблизить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button></div></div>
     <p class="rg-fallback" data-globe-fallback hidden>3D недоступно. Выбирай этапы в ленте ниже — расписание работает.</p>
     <p class="rg-loading" data-globe-loading role="status">Загружаем карту Земли…</p>
-    <small class="rg-credit">Earth textures: <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener noreferrer">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>
+    <small class="rg-credit">Earth imagery © <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener noreferrer">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>
   </div>
   <div class="rg-tour"><button class="rg-tour-arrow" type="button" data-globe-step="-1" aria-label="Предыдущий этап">{% include 'ui_arrow.html' %}</button><div class="rg-tour-list" data-globe-tour role="group" aria-label="Выбрать Гран-при на глобусе"></div><button class="rg-tour-arrow" type="button" data-globe-step="1" aria-label="Следующий этап">{% include 'ui_arrow.html' %}</button></div>
 </section>

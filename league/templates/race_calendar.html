@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static tz i18n %}
 {% block title %}Календарь Формулы-1 {{ calendar_year }} · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/race-calendar.css' %}"><link rel="stylesheet" href="{% static 'league/calendar-globe.css' %}?v=1">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/race-calendar.css' %}"><link rel="stylesheet" href="{% static 'league/calendar-globe.css' %}?v=2">{% endblock %}
 {% block content %}
 {% language 'ru' %}
 <div class="race-calendar" data-race-calendar>
@@ -71,4 +71,4 @@
 </div>
 {% endlanguage %}
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/race-calendar.js' %}?v=2" defer></script><script src="{% static 'league/calendar-globe.js' %}?v=1" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/race-calendar.js' %}?v=2" defer></script><script src="{% static 'league/calendar-globe.js' %}?v=2" defer></script>{% endblock %}

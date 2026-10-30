@@ -26,7 +26,7 @@
     return Array.from({length:33},(_,step) => {
       const t=step/32, denominator=Math.sin(angle)||1;
       const a=Math.sin((1-t)*angle)/denominator, b=Math.sin(t*angle)/denominator;
-      const lift=1.018+.065*Math.sin(Math.PI*t);
+      const lift=1.006+.014*Math.sin(Math.PI*t);
       return start.map((value,axis)=>(value*a+end[axis]*b)*lift);
     });
   });
@@ -35,6 +35,7 @@
     if(text!==undefined)node.textContent=text; return node;
   };
   const zoneSelector=document.getElementById('calendar-timezone');
+  const clockValues=[...root.querySelectorAll('[data-globe-clock-value]')];
   function raceTime(value,race) {
     if(!value)return 'Время уточняется';
     const valueZone=zoneSelector?.value;
@@ -44,6 +45,8 @@
   function tick() {
     const race=races[displayed]; if(!race)return;
     const remaining=race.raceAt?new Date(race.raceAt).getTime()-Date.now():null;
+    const counting=!race.finished&&remaining!==null&&remaining>0;
+    $('departure').classList.toggle('is-counting',counting);$('clock').hidden=!counting;
     let text='Время старта уточняется';
     if(race.finished)text='Этап завершён';
     else if(remaining!==null && remaining<=0)text='Старт гонки прошёл';
@@ -52,13 +55,17 @@
       const days=Math.floor(seconds/86400);seconds%=86400;
       const hours=Math.floor(seconds/3600);seconds%=3600;
       const minutes=Math.floor(seconds/60);seconds%=60;
+      [days,hours,minutes,seconds].forEach((value,index)=>{
+        const next=String(value).padStart(2,'0');if(clockValues[index].textContent!==next)clockValues[index].textContent=next;
+      });
       text=`До старта: ${days}д ${String(hours).padStart(2,'0')}ч ${String(minutes).padStart(2,'0')}м ${String(seconds).padStart(2,'0')}с`;
     }
     if($('countdown').textContent!==text)$('countdown').textContent=text;
   }
   function showCard(index,force=false) {
     if(displayed===index&&!force)return;
-    displayed=index;const race=races[index];
+    const changed=displayed!==index;displayed=index;const race=races[index];
+    if(changed&&!reduced.matches&&visible)$('card').animate([{opacity:.6},{opacity:1}],{duration:180,easing:'ease-out'});
     $('round').textContent=`R${String(race.round).padStart(2,'0')}`;
     $('state').textContent=race.next?'БЛИЖАЙШИЙ ЭТАП':race.finished?'ЗАВЕРШЁН':race.sprint?'SPRINT WEEKEND':'ГРАН-ПРИ';
     for(const key of ['country','location','circuit','dates'])$(key).textContent=race[key];
@@ -67,6 +74,10 @@
     const cover=$('cover');cover.hidden=!race.cover;
     if(race.cover&&cover.getAttribute('src')!==race.cover)cover.src=race.cover;
     $('track').setAttribute('d',race.track||'');
+    $('track-bed').setAttribute('d',race.track||'');
+    $('track').closest('.rg-track-wrap').hidden=!race.track;
+    const start=$('track-start');start.toggleAttribute('hidden',!race.track);
+    if(race.track){const point=$('track').getPointAtLength(0);start.setAttribute('cx',point.x);start.setAttribute('cy',point.y);}
     const link=$('open');link.href=race.url;
     link.firstChild.textContent=race.external?'На сайте F1 ':'Открыть этап ';
     if(race.external){link.target='_blank';link.rel='noopener noreferrer';}else{link.removeAttribute('target');link.removeAttribute('rel');}
@@ -80,7 +91,7 @@
   function setAuto(value) {
     auto=value&&!reduced.matches&&!!renderer;
     motion.setAttribute('aria-pressed',String(auto));
-    motion.textContent=auto?'Пауза':'Вращение';
+    $('motion-label').textContent=auto?'Пауза':'Вращение';
     motion.setAttribute('aria-label',auto?'Остановить вращение глобуса':'Включить вращение глобуса');
     requestFrame();
   }
@@ -111,7 +122,10 @@
     pin.addEventListener('blur',()=>{hovered=false;showCard(selected);requestFrame();});
     pin.addEventListener('click',()=>select(index));markerLayer.append(pin);pinButtons.push(pin);
     const button=create('button','rg-tour-item');button.type='button';button.dataset.globeRace=race.key;
-    button.append(create('small','',`R${String(race.round).padStart(2,'0')} · ${race.dates.slice(0,5)}${race.next?' · NEXT':''}`),create('strong','',race.location));
+    const meta=create('small','',`R${String(race.round).padStart(2,'0')}`);
+    meta.append(create('span','',race.dates.slice(0,5)));
+    button.classList.toggle('is-finished',race.finished);button.classList.toggle('is-next',race.next);
+    button.append(meta,create('strong','',race.location));
     button.setAttribute('aria-label',`Показать ${race.title}, ${race.dates}`);
     button.addEventListener('click',()=>select(index));tour.append(button);tourButtons.push(button);
   });
@@ -156,14 +170,15 @@
     if(routeContext) {
       routeContext.setTransform(dpr,0,0,dpr,0,0);routeContext.clearRect(0,0,width,height);
       arcVectors.forEach((points,index)=>{
+        const active=index===selected||index+1===selected;
         routeContext.beginPath();let started=false;
         points.forEach(point=>{
           const p=project(point,axes,radius);
-          if(p.z<.02){started=false;return;}
+          if(p.z<.08){started=false;return;}
           if(started)routeContext.lineTo(p.x,p.y);else{routeContext.moveTo(p.x,p.y);started=true;}
         });
-        routeContext.lineWidth=index+1===selected?1.1:.65;
-        routeContext.strokeStyle=index+1===selected?'#ff746b85':'#e6565542';routeContext.stroke();
+        routeContext.lineWidth=active?1.2:.6;
+        routeContext.strokeStyle=active?'#ff756aa6':'#9aa8b32d';routeContext.stroke();
       });
     }
     root.dataset.globeFrame=String(++frameCount);
@@ -203,14 +218,17 @@
     uniform sampler2D dayMap;uniform sampler2D nightMap;
     void main(){
       vec2 p=(gl_FragCoord.xy-resolution*.5)/radius;float r=length(p);
-      if(r>1.){float glow=exp(-(r-1.)*27.)*.26;gl_FragColor=vec4(.23,.43,.65,glow);return;}
+      if(r>1.){float glow=exp(-(r-1.)*42.)*.34;gl_FragColor=vec4(.38,.50,.63,glow);return;}
       vec3 n=vec3(p,sqrt(max(0.,1.-dot(p,p))));vec3 world=axes*n;
       vec2 uv=vec2(atan(world.z,world.x)/6.2831853+.5,asin(clamp(world.y,-1.,1.))/3.14159265+.5);
       vec3 day=texture2D(dayMap,uv).rgb;vec3 night=texture2D(nightMap,uv).rgb;
       float light=max(0.,dot(n,normalize(vec3(-.7,.5,1.))));
-      float gray=dot(day,vec3(.21,.72,.07));day=mix(vec3(gray),day,.55);
-      vec3 color=day*(.12+.48*light)+night*(1.15-.35*light);
-      color+=vec3(.07,.18,.29)*pow(1.-n.z,3.)*.7;
+      float gray=dot(day,vec3(.21,.72,.07));
+      float ocean=smoothstep(.015,.085,day.b-day.r)*(1.-smoothstep(.17,.45,gray));
+      day=mix(vec3(gray),day,.32);day=mix(day,vec3(.018,.027,.039),ocean*.93);
+      night=max(night-vec3(.035,.045,.075),vec3(0.));
+      vec3 color=day*(.17+.58*light)+night*vec3(1.18,1.02,.82)*(1.28-.4*light);
+      color+=vec3(.12,.20,.29)*pow(1.-n.z,4.)*.8;
       gl_FragColor=vec4(color,1.-smoothstep(.995,1.,r));
     }`;
   function loadImage(url) {

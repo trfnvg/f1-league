@@ -80,6 +80,7 @@ def run(browser_name, output):
                 # The calendar/globe is entirely local. Keep QA independent of font/CDN availability.
                 context.route("https://**", lambda route: route.abort())
                 page = context.new_page()
+                page.clock.set_fixed_time(now)
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base + "/calendar/", wait_until="networkidle")
                 assert page.locator(".rc-card").count() == 23
@@ -111,6 +112,10 @@ def run(browser_name, output):
                 assert page.locator('[data-globe-open]').get_attribute('href') == reverse('league:event_detail', args=[event.pk])
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
                 assert page.locator('[data-globe-race-time]').inner_text() == '01.11 · 23:00'
+                assert page.locator('[data-globe-clock]').is_visible()
+                assert page.locator('[data-globe-clock-value]').all_text_contents() == ['04', '08', '00', '00']
+                assert page.locator('[data-globe-track-start]').get_attribute('cx') is not None
+                assert page.locator('[data-globe-motion] svg').count() == 1
                 # Idle WebGL does not spin a permanent requestAnimationFrame loop.
                 page.wait_for_timeout(120)
                 idle_frame = globe.get_attribute('data-globe-frame')
@@ -133,6 +138,8 @@ def run(browser_name, output):
                 page.locator('[data-globe-race=melbourne]').click()
                 page.locator('[data-globe-stage]').scroll_into_view_if_needed()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мельбурн'
+                assert page.locator('[data-globe-clock]').is_hidden()
+                assert page.locator('[data-globe-countdown]').inner_text() == 'Этап завершён'
                 try:
                     page.wait_for_function("!document.querySelector('[data-globe-pin=melbourne]').hidden", timeout=5000)
                 except Exception:
@@ -152,6 +159,7 @@ def run(browser_name, output):
                 page.locator('[data-globe-zoom="1"]').click()
                 page.locator('[data-globe-home]').click()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                assert page.locator('[data-globe-clock]').is_visible()
                 page.locator('[data-globe-pin=mexico]').hover()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
                 page.locator('[data-globe-pin=las-vegas]').hover()
