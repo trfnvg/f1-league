@@ -1,0 +1,71 @@
+.race-globe { position:relative; isolation:isolate; display:grid; grid-template-columns:minmax(260px,.88fr) minmax(0,1.45fr); min-width:0; margin:0 0 28px; border:1px solid #37414e; border-radius:18px; background:#11171f; overflow:hidden; }
+.race-globe::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none; background:radial-gradient(ellipse at 76% 34%,#2a445525,transparent 65%),linear-gradient(120deg,#1c232c30,transparent 75%); }
+.rg-copy { min-width:0; padding:32px 0 28px 30px; z-index:2; }
+.race-globe .rg-kicker { display:flex; align-items:center; gap:8px; margin:0 0 18px; color:#b7bec8; font:500 8px/1.5 ui-monospace,monospace; letter-spacing:.12em; }
+.rg-kicker>span { width:18px; height:3px; background:#f2544c; transform:skew(-25deg); }
+.race-calendar .race-globe h2 { margin:0 0 14px; color:#f2f5f8; font:750 clamp(29px,3vw,43px)/1.08 Inter,sans-serif; letter-spacing:-.05em; }
+.race-globe h2>span { color:#b0bbc9; }
+.rg-intro { margin:0 0 24px; color:#9da8b6; font:400 12px/1.7 Inter,sans-serif; }
+.rg-card { position:relative; isolation:isolate; padding:20px; max-width:390px; min-width:0; border:1px solid #4d434a; border-radius:12px; background:#20252e; overflow:hidden; }
+.rg-cover { position:absolute; inset:0; z-index:-2; width:100%; height:100%; object-fit:cover; opacity:.24; }
+.rg-card::before { content:''; position:absolute; inset:0; z-index:-1; background:linear-gradient(125deg,#171e28d9,#171e2899 80%),linear-gradient(0deg,#141a24,transparent 80%); }
+.rg-card-top { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; font:600 9px/1.4 ui-monospace,monospace; letter-spacing:.05em; }
+.rg-card-top>span:first-child { color:#ff9285; }.rg-card-top>span:last-child { color:#c4ccd7; }
+.race-globe .rg-country { margin:0 0 5px; color:#abb6c5; font-size:10px; }
+.race-calendar .race-globe h3 { margin:0 0 7px; color:#f6f7f9; font:700 27px/1.15 Inter,sans-serif; letter-spacing:-.04em; overflow-wrap:anywhere; }
+.rg-circuit { min-height:18px; margin:0 0 16px; color:#b3bdcb; font:400 10px/1.5 Inter,sans-serif; }
+.rg-card-middle { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.rg-card-middle>div { min-width:0; }.rg-card-middle span { display:block; margin-bottom:4px; color:#9ba6b8; font:500 8px/1.5 ui-monospace,monospace; letter-spacing:.04em; }
+.rg-card-middle strong { display:block; color:#e5eaf1; font:550 11px/1.5 ui-monospace,monospace; }.rg-card-middle .rg-time-caption { margin-top:10px; }
+.race-calendar svg.rg-track { width:100px; height:72px; flex:none; fill:none; stroke:#c8d5e4; stroke-width:5; stroke-linecap:round; stroke-linejoin:round; }
+.rg-countdown { min-height:18px; margin:0 0 14px; color:#f3a299; font:500 11px/1.5 ui-monospace,monospace; font-variant-numeric:tabular-nums; }
+.rg-actions { display:flex; align-items:center; flex-wrap:wrap; gap:14px; }
+.race-globe .rc-button { min-height:42px; padding:10px 13px; font-size:11px; }
+.rg-schedule { display:inline-flex; align-items:center; gap:6px; min-height:42px; color:#c3cdda!important; font:600 11px/1.5 Inter,sans-serif; }
+.rg-schedule svg { width:14px; height:14px; }
+.rg-sessions { margin-top:14px; border-top:1px solid #ffffff15; padding-top:11px; }
+.rg-sessions summary { min-height:30px; color:#aebccc; font:500 10px/1.5 Inter,sans-serif; cursor:pointer; }
+.rg-sessions dl { margin:8px 0 0; }.rg-sessions dl>div { display:flex; justify-content:space-between; gap:12px; margin:8px 0; font:400 10px/1.5 Inter,sans-serif; }.rg-sessions dt { color:#b1bece; font-weight:400; }.rg-sessions dd { flex:none; margin:0; color:#e5ebf3; font-variant-numeric:tabular-nums; }
+.rg-world { position:relative; min-width:0; min-height:570px; }
+.rg-stage { position:absolute; inset:0; touch-action:pan-y; outline-offset:-5px!important; cursor:grab; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
+.rg-stage.is-dragging { cursor:grabbing; }
+.rg-stage:focus-visible { outline:1px solid #d78070; }
+.rg-stage canvas { position:absolute; inset:0; display:block; width:100%; height:100%; pointer-events:none; }
+.rg-stage::before { content:''; position:absolute; inset:0; opacity:.5; background-image:radial-gradient(1px 1px at 16% 22%,#c4d7eb80 98%,transparent),radial-gradient(1px 1px at 73% 16%,#c4d7eb70 98%,transparent),radial-gradient(1px 1px at 90% 64%,#c4d7eb80 98%,transparent),radial-gradient(1px 1px at 18% 72%,#c4d7eb50 98%,transparent),radial-gradient(1px 1px at 80% 83%,#c4d7eb70 98%,transparent); pointer-events:none; }
+.rg-markers { position:absolute; inset:0; pointer-events:none; }
+.race-globe .rg-pin { position:absolute; left:0; top:0; display:grid; place-items:center; width:26px; height:26px; min-height:26px; margin:0; padding:0; border:0; border-radius:50%; background:none; box-shadow:none; color:#f37065; transform:translate(-50%,-50%); cursor:pointer; pointer-events:auto; }
+.rg-pin::before { content:''; width:6px; height:6px; border:1px solid #ffb0a5; border-radius:50%; background:#eb4c41; box-shadow:0 0 7px #ff574d90; }
+.rg-pin.is-next::before { box-shadow:0 0 0 4px #ff655023,0 0 12px #ff655090; }
+.race-globe .rg-pin[aria-pressed="true"]::before { width:9px; height:9px; border-color:#ffe4dd; background:#ff6554; box-shadow:0 0 0 5px #ff65502e,0 0 16px #ff6550b0; }
+.rg-pin-label { position:absolute; left:27px; top:50%; transform:translateY(-50%); padding:5px 7px; border:1px solid #65708244; border-radius:4px; background:#101720c9; color:#e2eaf3; white-space:nowrap; font:600 9px/1.4 Inter,sans-serif; pointer-events:none; opacity:0; }
+.rg-pin.is-labelled .rg-pin-label,.rg-pin:hover .rg-pin-label,.rg-pin:focus-visible .rg-pin-label { opacity:1; }.rg-pin.is-label-left .rg-pin-label { left:auto; right:27px; }
+.rg-world-top { position:absolute; z-index:3; top:24px; left:24px; right:24px; display:flex; align-items:center; justify-content:space-between; gap:8px; pointer-events:none; }
+.rg-world-top>span { display:flex; align-items:center; gap:8px; color:#95a4b7; font:500 8px/1.5 ui-monospace,monospace; letter-spacing:.05em; }.rg-world-top i { width:4px; height:4px; border-radius:50%; background:#f46c5b; }
+.race-globe [data-globe-motion] { padding:7px 10px; min-height:34px; border:1px solid #4b576755; border-radius:6px; background:#151d28a6; color:#9caabe; font:500 9px/1.5 Inter,sans-serif; pointer-events:auto; }
+.race-globe [data-globe-motion][aria-pressed="true"] { border-color:#b76f6144; color:#efb6aa; }
+.rg-world-bottom { position:absolute; z-index:3; bottom:42px; left:24px; right:24px; display:flex; align-items:center; justify-content:space-between; gap:12px; pointer-events:none; }
+.rg-world-bottom p { margin:0; color:#c1cbd8; font:500 10px/1.7 Inter,sans-serif; }.rg-world-bottom p>span { color:#8090a5; font-weight:400; }
+.rg-controls { display:flex; gap:5px; pointer-events:auto; }
+.race-globe .rg-controls button,.race-globe .rg-tour-arrow { display:grid; place-items:center; width:36px; height:36px; min-height:36px; padding:0; border:1px solid #4d5b6c66; border-radius:8px; background:#17202cc9; color:#b9c8da; font:500 20px/1 Inter,sans-serif; box-shadow:none; }
+.rg-compass { position:absolute; top:72px; right:24px; color:#697c93; font:500 8px/1.5 ui-monospace,monospace; text-align:center; pointer-events:none; }.rg-compass i { display:block; margin:4px auto; width:1px; height:22px; background:linear-gradient(#f06e60,#65708055); }
+.rg-credit { position:absolute; left:24px; bottom:16px; color:#607085; font:400 8px/1.5 Inter,sans-serif; }.rg-credit a { color:#8396ae; }
+.rg-fallback { position:absolute; left:22px; right:22px; top:45%; margin:0; padding:14px; border:1px solid #596a8060; border-radius:10px; background:#17202deb; color:#b9c7d9; font:400 12px/1.7 Inter,sans-serif; text-align:center; }
+.rg-loading { position:absolute; inset:48% 20px auto; color:#93a6be; font:500 11px/1.7 Inter,sans-serif; text-align:center; pointer-events:none; }
+.rg-tour { grid-column:1/-1; display:flex; align-items:center; gap:10px; min-width:0; padding:14px 20px; border-top:1px solid #ffffff0e; background:#141b24; }
+.rg-tour-list { display:flex; gap:8px; min-width:0; flex:1; overflow-x:auto; scrollbar-width:thin; scrollbar-color:#4b5666 transparent; overscroll-behavior-x:contain; padding:3px 2px 9px; }
+.race-globe .rg-tour-item { display:block; flex:0 0 142px; min-height:68px; padding:11px 13px; border:1px solid #394451; border-radius:9px; background:#1d2631; color:#d8e0eb; text-align:left; box-shadow:none; }
+.rg-tour-item small { display:block; margin-bottom:6px; color:#8e9eb3; font:500 8px/1.4 ui-monospace,monospace; }.rg-tour-item strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:600 12px/1.4 Inter,sans-serif; }
+.race-globe .rg-tour-item[aria-pressed="true"] { border-color:#e36e60; background:#3a282b; }.rg-tour-item[aria-pressed="true"] small { color:#eeb0a2; }
+.race-globe .rg-tour-arrow { flex:none; }.rg-tour-arrow:first-child svg { transform:rotate(180deg); }
+.race-globe.is-fallback .rg-stage { cursor:default; }.race-globe.is-fallback .rg-world-top,.race-globe.is-fallback .rg-world-bottom { opacity:.45; }
+@media(max-width:1100px) { .race-globe { grid-template-columns:minmax(240px,1fr) minmax(0,1.25fr); }.rg-copy { padding:26px 0 24px 22px; }.rg-card { padding:16px; }.rg-world { min-height:590px; }.rg-world-bottom { left:18px; right:18px; }.rg-world-bottom p>span { display:none; }.rg-controls button { width:32px; } }
+@media(max-width:700px) {
+  .race-globe { grid-template-columns:minmax(0,1fr); border-radius:14px; }
+  .rg-copy { display:contents; }.race-globe .rg-kicker,.race-globe .rg-copy>h2,.race-globe .rg-intro { display:none; }
+  .rg-world { grid-row:1; min-height:0; height:390px; }
+  .rg-card { grid-row:2; max-width:none; margin:0 14px 16px; padding:18px; }.rg-card-middle { margin-bottom:10px; }.rg-card-top { margin-bottom:12px; }
+  .rg-world-top { top:16px; left:16px; right:16px; }.rg-compass { top:60px; right:18px; }.rg-world-bottom { bottom:30px; left:16px; right:16px; }.rg-world-bottom p { font-size:9px; }
+  .rg-credit { bottom:9px; left:16px; font-size:7px; }.rg-tour { grid-row:3; padding:12px 10px; gap:5px; }.rg-tour-list { gap:6px; }.race-globe .rg-tour-item { flex-basis:128px; min-height:62px; }.race-globe .rg-tour-arrow { width:28px; height:34px; min-height:34px; }
+  .rg-world .rg-pin-label { font-size:8px; padding:3px 5px; }.race-calendar .race-globe h3 { font-size:25px; }.rg-actions { gap:12px; }
+}
+@media(max-width:360px) { .rg-world { height:340px; }.rg-world-top>span { font-size:7px; }.rg-world-bottom p { max-width:130px; }.rg-card { margin-inline:10px; }.rg-actions { gap:8px; }.rg-schedule { font-size:10px; } }

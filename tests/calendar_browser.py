@@ -75,7 +75,10 @@ def run(browser_name, output):
             browser = getattr(pw, browser_name).launch()
             for width in (320, 390, 768, 1440, 1920):
                 context = browser.new_context(viewport={"width": width, "height": 1000},
-                    timezone_id="America/Los_Angeles", reduced_motion="reduce")
+                    timezone_id="America/Los_Angeles", reduced_motion="reduce",
+                    device_scale_factor=3 if width == 390 else 1)
+                # The calendar/globe is entirely local. Keep QA independent of font/CDN availability.
+                context.route("https://**", lambda route: route.abort())
                 page = context.new_page()
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base + "/calendar/", wait_until="networkidle")
@@ -97,6 +100,22 @@ def run(browser_name, output):
                 assert page.locator("#grand-prix-mexico .rc-card-visual img").get_attribute("src") == "/media/event_covers/my-mexico.jpg"
                 assert page.locator("#grand-prix-shanghai [data-calendar-session=SQ]").count() == 1
                 assert page.locator("#grand-prix-shanghai [data-calendar-session=FP2]").count() == 0
+                globe = page.locator('[data-race-globe]')
+                assert globe.is_visible()
+                page.wait_for_function("document.querySelector('[data-race-globe]').dataset.globeRenderer")
+                assert globe.get_attribute('data-globe-renderer') == 'webgl', (browser_name, width)
+                assert page.locator('[data-globe-canvas]').evaluate('node => node.width <= Math.ceil(node.getBoundingClientRect().width * 2)')
+                assert page.locator('[data-globe-race]').count() == 23
+                assert page.locator('[data-globe-race][aria-pressed=true]').get_attribute('data-globe-race') == 'mexico'
+                assert page.locator('[data-globe-cover]').get_attribute('src') == '/media/event_covers/my-mexico.jpg'
+                assert page.locator('[data-globe-open]').get_attribute('href') == reverse('league:event_detail', args=[event.pk])
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                assert page.locator('[data-globe-race-time]').inner_text() == '01.11 · 23:00'
+                # Idle WebGL does not spin a permanent requestAnimationFrame loop.
+                page.wait_for_timeout(120)
+                idle_frame = globe.get_attribute('data-globe-frame')
+                page.wait_for_timeout(180)
+                assert globe.get_attribute('data-globe-frame') == idle_frame
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
                 assert page.locator('.rc-card').evaluate_all('''cards => cards.every(card => {
                     const bounds = card.getBoundingClientRect();
@@ -109,8 +128,44 @@ def run(browser_name, output):
                 assert page.locator(".rc-feature-image img").evaluate("image => image.complete && image.naturalWidth > 0")
                 page.screenshot(path=str(output / f"{width}-calendar.png"), full_page=True)
                 page.screenshot(path=str(output / f"{width}-calendar-top.png"))
+                globe.screenshot(path=str(output / f"{width}-globe.png"))
+                # Strip selection centres the Earth; arrows/zoom/drag work on the same renderer.
+                page.locator('[data-globe-race=melbourne]').click()
+                page.locator('[data-globe-stage]').scroll_into_view_if_needed()
+                assert page.locator('[data-globe-location]').inner_text() == 'Мельбурн'
+                try:
+                    page.wait_for_function("!document.querySelector('[data-globe-pin=melbourne]').hidden", timeout=5000)
+                except Exception:
+                    page.screenshot(path=str(output / f'{width}-globe-failure.png'))
+                    print('Globe state:', width, globe.get_attribute('data-globe-renderer'), globe.get_attribute('data-globe-visible'), flush=True)
+                    raise
+                stage = page.locator('[data-globe-stage]')
+                stage.focus()
+                before = page.locator('[data-globe-pin=melbourne]').get_attribute('style')
+                page.keyboard.press('ArrowLeft')
+                page.wait_for_function("node => node.getAttribute('style') !== " + repr(before), arg=page.locator('[data-globe-pin=melbourne]').element_handle())
+                stage_box = stage.bounding_box()
+                page.mouse.move(stage_box['x'] + stage_box['width'] * .22, stage_box['y'] + stage_box['height'] * .6)
+                page.mouse.down()
+                page.mouse.move(stage_box['x'] + stage_box['width'] * .4, stage_box['y'] + stage_box['height'] * .6, steps=6)
+                page.mouse.up()
+                page.locator('[data-globe-zoom="1"]').click()
+                page.locator('[data-globe-home]').click()
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                page.locator('[data-globe-pin=mexico]').hover()
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                page.locator('[data-globe-pin=las-vegas]').hover()
+                assert page.locator('[data-globe-location]').inner_text() == 'Лас-Вегас'
+                page.locator('[data-globe-home]').hover()
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                page.locator('[data-globe-step="1"]').click()
+                assert page.locator('[data-globe-location]').inner_text() == 'Сан-Паулу'
+                page.locator('[data-globe-step="-1"]').click()
+                page.locator('[data-globe-motion]').click()
+                assert page.locator('[data-globe-motion]').get_attribute('aria-pressed') == 'false'  # Reduced motion.
                 page.select_option("#calendar-timezone", "device")
                 assert page.locator(".rc-feature-times time").last.inner_text() == "01.11 · 12:00"
+                assert page.locator('[data-globe-race-time]').inner_text() == '01.11 · 12:00'
                 page.select_option("#calendar-timezone", "venue")
                 assert page.locator(".rc-feature-times time").last.inner_text() == "01.11 · 14:00"
                 assert "по месту проведения" in page.locator("[data-calendar-zone-note]").inner_text()
@@ -128,17 +183,76 @@ def run(browser_name, output):
                 page.locator(".rc-credits summary").click()
                 assert page.locator(".rc-credits li:visible").count() == 22
                 assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1"), width
+                page.locator('[data-globe-race=melbourne]').click()
+                page.locator('[data-filter="upcoming"]').click()
+                assert page.locator('#grand-prix-melbourne').is_hidden()
+                page.locator('[data-globe-schedule]').click()
+                assert page.locator('#grand-prix-melbourne').is_visible()
+                assert page.locator('[data-filter="all"]').get_attribute('aria-pressed') == 'true'
                 context.close()
+            # Real touch input, orientation changes, automatic rotation suspended off-screen.
+            context = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
+            context.route('https://**', lambda route: route.abort())
+            page = context.new_page()
+            page.on('pageerror', lambda error: errors.append(str(error)))
+            page.goto(base + '/calendar/', wait_until='networkidle')
+            page.wait_for_function("document.querySelector('[data-race-globe]').dataset.globeRenderer === 'webgl'")
+            page.locator('[data-globe-race=monaco]').tap()
+            assert page.locator('[data-globe-location]').inner_text() == 'Монако'
+            page.locator('[data-globe-stage]').scroll_into_view_if_needed()
+            page.locator('[data-globe-motion]').tap()
+            page.wait_for_timeout(500)
+            active_frames = int(page.locator('[data-race-globe]').get_attribute('data-globe-frame'))
+            page.wait_for_timeout(250)
+            assert int(page.locator('[data-race-globe]').get_attribute('data-globe-frame')) > active_frames
+            page.locator('.rc-credits').scroll_into_view_if_needed()
+            page.wait_for_timeout(150)
+            stopped = page.locator('[data-race-globe]').get_attribute('data-globe-frame')
+            page.wait_for_timeout(250)
+            assert page.locator('[data-race-globe]').get_attribute('data-globe-frame') == stopped
+            page.set_viewport_size({'width': 844, 'height': 390})
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+            # Context loss must leave accessible race buttons and the original schedule intact.
+            lost_context = page.evaluate_handle("document.querySelector('[data-globe-canvas]').getContext('webgl').getExtension('WEBGL_lose_context')")
+            lost_context.evaluate('extension => extension.loseContext()')
+            page.wait_for_function("document.querySelector('[data-race-globe]').dataset.globeRenderer === 'fallback'")
+            page.locator('[data-globe-race=melbourne]').click()
+            assert page.locator('[data-globe-location]').inner_text() == 'Мельбурн'
+            assert page.locator('[data-globe-fallback]').is_visible()
+            page.locator('[data-globe-stage]').scroll_into_view_if_needed()
+            lost_context.evaluate('extension => extension.restoreContext()')
+            page.wait_for_function("document.querySelector('[data-race-globe]').dataset.globeRenderer === 'webgl'")
+            page.wait_for_function("!document.querySelector('[data-globe-pin=melbourne]').hidden")
+            context.close()
+            context = browser.new_context(viewport={'width': 390, 'height': 900})
+            context.route('https://**', lambda route: route.abort())
+            context.add_init_script("""(() => {
+                const original=HTMLCanvasElement.prototype.getContext;
+                HTMLCanvasElement.prototype.getContext=function(type,...args) {
+                    return type==='webgl'?null:original.call(this,type,...args);
+                };
+            })();""")
+            page = context.new_page()
+            page.on('pageerror', lambda error: errors.append(str(error)))
+            page.goto(base + '/calendar/', wait_until='networkidle')
+            page.wait_for_function("document.querySelector('[data-race-globe]').dataset.globeRenderer === 'fallback'")
+            page.locator('[data-globe-race=suzuka]').click()
+            assert page.locator('[data-globe-location]').inner_text() == 'Судзука'
+            assert page.locator('[data-globe-loading]').is_hidden()
+            assert page.locator('.rc-card').count() == 23
+            context.close()
             context = browser.new_context(java_script_enabled=False, viewport={"width": 390, "height": 900})
+            context.route('https://**', lambda route: route.abort())
             page = context.new_page()
             page.goto(base + "/calendar/", wait_until="networkidle")
             assert page.locator(".rc-card").count() == 23
             assert "01.11 · 23:00" in page.locator(".rc-feature-times").inner_text()
             assert page.locator("[data-calendar-timezone]").is_hidden()
             assert page.locator(".rc-feature .rc-button").is_visible()
+            assert page.locator('[data-race-globe]').is_hidden()
             browser.close()
         assert not errors, errors
-        print(f"Calendar UI OK ({browser_name}): 5 sizes, 23 cards, five sessions, uploaded covers, sprint format, timezones + DST, filters, credits, no-JS fallback. {output}")
+        print(f"Calendar UI OK ({browser_name}): 5 sizes, WebGL globe, selection/drag/zoom, touch, idle/offscreen pause, context-loss fallback, 23 cards, five sessions, uploaded covers, timezones + DST, filters, credits, no-JS fallback. {output}")
     finally:
         server.shutdown()
 

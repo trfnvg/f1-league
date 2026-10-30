@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET
 
 from .calendar_assets import calendar_photos
+from .calendar_globe import globe_rounds
 from .circuits import resolve_circuit
 from .models import Event, EventPhoto, RaceCalendarRound
 
@@ -91,9 +92,11 @@ def calendar(request):
         if items:
             months.append({"number": month, "name": MONTHS[month], "rounds": items})
     credits = {item.circuit: item.photo for item in rounds if item.photo and item.uses_stock_photo}
+    globe = globe_rounds(rounds)
     return render(request, "race_calendar.html", {
         "calendar_year": year, "calendar_years": years, "calendar_months": months,
         "calendar_rounds": rounds, "calendar_next": upcoming,
+        "globe_rounds": globe,
         "calendar_completed": sum(item.is_finished for item in rounds),
         "calendar_credits": credits.values(),
         "calendar_checked_on": min((item.checked_on for item in rounds if item.checked_on), default=None),

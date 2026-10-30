@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static tz i18n %}
 {% block title %}Календарь Формулы-1 {{ calendar_year }} · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/race-calendar.css' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/race-calendar.css' %}"><link rel="stylesheet" href="{% static 'league/calendar-globe.css' %}?v=1">{% endblock %}
 {% block content %}
 {% language 'ru' %}
 <div class="race-calendar" data-race-calendar>
@@ -9,6 +9,8 @@
     <div><p class="rc-eyebrow"><span></span> FORMULA 1 · {{ calendar_year }}</p><h1>Гоночный календарь</h1><p class="rc-intro">От первой практики до клетчатого флага.</p></div>
     {% if calendar_years|length > 1 %}<form method="get" class="rc-season"><label for="calendar-season">Сезон</label><div class="rc-select"><select id="calendar-season" name="season">{% for year in calendar_years %}<option value="{{ year }}"{% if year == calendar_year %} selected{% endif %}>{{ year }}</option>{% endfor %}</select><button type="submit" aria-label="Открыть выбранный сезон">{% include 'ui_arrow.html' %}</button></div></form>{% else %}<span class="rc-season-badge">СЕЗОН <b>{{ calendar_year }}</b></span>{% endif %}
   </header>
+
+  {% include 'calendar_globe.html' %}
 
   {% if calendar_next %}{% with race=calendar_next %}
   <section class="rc-feature" aria-labelledby="next-grand-prix">
@@ -69,4 +71,4 @@
 </div>
 {% endlanguage %}
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/race-calendar.js' %}?v=2" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/race-calendar.js' %}?v=2" defer></script><script src="{% static 'league/calendar-globe.js' %}?v=1" defer></script>{% endblock %}

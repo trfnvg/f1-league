@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone as dt_timezone
 import hashlib
 import importlib
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .calendar_assets import calendar_photos
+from .calendar_globe import COORDINATES, globe_rounds
 from .models import Event, EventPhoto, Prediction, RaceCalendarRound, Season
 from .race_calendar import calendar_rows
 
@@ -204,12 +206,65 @@ class RaceCalendarTests(TestCase):
             deadline=self.now + timedelta(days=2), cover_image="event_covers/my-mexico.png")
         response = self.get_page()
         self.assertEqual(response.context["calendar_next"].cover_url, event.cover_image.url)
-        self.assertContains(response, event.cover_image.url, count=2)
+        self.assertContains(response, event.cover_image.url, count=3)  # Hero, card and globe JSON.
         self.assertFalse(response.context["calendar_next"].uses_stock_photo)
         self.assertEqual(len(list(response.context["calendar_credits"])), 22)
         RaceCalendarRound.objects.filter(circuit="mexico").update(cover_image="calendar_covers/override.png")
         response = self.get_page()
-        self.assertContains(response, "/calendar_covers/override.png", count=2)
+        self.assertContains(response, "/calendar_covers/override.png", count=3)
+
+    def test_globe_covers_every_round_without_extra_database_queries(self):
+        rounds, _ = calendar_rows(2026, self.now)
+        with self.assertNumQueries(0):
+            globe = globe_rounds(rounds)
+        self.assertEqual(len(globe), 23)
+        self.assertEqual(len({race['key'] for race in globe}), 23)
+        self.assertEqual([race['round'] for race in globe], list(range(1, 24)))
+        self.assertEqual([race['key'] for race in globe if race['next']], ['mexico'])
+        for race in globe:
+            with self.subTest(circuit=race['key']):
+                self.assertTrue(-90 <= race['lat'] <= 90)
+                self.assertTrue(-180 <= race['lon'] <= 180)
+                self.assertEqual(len(race['sessions']), 5)
+                self.assertTrue(race['cover'].startswith('/static/'))
+                self.assertTrue(race['url'].startswith('https://www.formula1.com/'))
+                self.assertTrue(race['external'])
+
+    def test_globe_uses_existing_event_links_covers_and_session_data(self):
+        event = Event.objects.create(name='Mexico', circuit='mexico', season_year=2026,
+            round_number=19, deadline=self.now + timedelta(days=3), cover_image='event_covers/existing.jpg')
+        response = self.get_page()
+        mexico = next(race for race in response.context['globe_rounds'] if race['key'] == 'mexico')
+        self.assertEqual(mexico['cover'], event.cover_image.url)
+        self.assertEqual(mexico['url'], reverse('league:event_detail', args=[event.pk]))
+        self.assertFalse(mexico['external'])
+        self.assertTrue(mexico['track'])
+        self.assertEqual([s['code'] for s in mexico['sessions']], ['FP1', 'FP2', 'FP3', 'Q', 'GP'])
+        self.assertEqual(mexico['raceAt'], response.context['calendar_next'].race_at.isoformat())
+
+    def test_globe_handles_unknown_coordinates_hours_and_escaped_names(self):
+        malicious = '</script><script>alert(1)</script>'
+        RaceCalendarRound.objects.filter(circuit='mexico').update(location=malicious, race_at=None)
+        response = self.get_page()
+        payload = response.content.decode().split('id="calendar-globe-data" type="application/json">')[1].split('</script>')[0]
+        parsed = json.loads(payload)
+        mexico = next(race for race in parsed if race['key'] == 'mexico')
+        self.assertEqual(mexico['location'], malicious)
+        self.assertIsNone(mexico['raceAt'])
+        self.assertNotIn('<script>', payload)
+        rounds, _ = calendar_rows(2026, self.now)
+        with patch.dict(COORDINATES, {}, clear=True):
+            self.assertEqual(globe_rounds(rounds), [])
+
+    def test_globe_textures_are_small_local_jpegs_with_attribution(self):
+        from PIL import Image
+        folder = Path(__file__).parent / 'static/league/images/globe'
+        for filename in ('earth-day.jpg', 'earth-night.jpg'):
+            with Image.open(folder / filename) as image:
+                self.assertEqual(image.format, 'JPEG')
+                self.assertEqual(image.width, image.height * 2)
+            self.assertLess((folder / filename).stat().st_size, 500_000)
+        self.assertIn('CC BY 4.0', (folder / 'ATTRIBUTION.md').read_text())
 
     def test_old_uploaded_gallery_photo_is_used_if_cover_missing(self):
         event = Event.objects.create(name="Мехико", circuit="mexico", season_year=2026, round_number=19,
