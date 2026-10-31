@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=mobile-fullscreen-v19">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=toolbar-v20">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -34,7 +34,6 @@
     <div class="tetris-toolbar">
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
       <div class="tetris-toolbar-actions">
-        <button type="button" id="tetris-ghost" class="tetris-icon-button" aria-label="Скрыть контур приземления" aria-pressed="true" title="Контур приземления включён"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 14h8v8H8zM0 14h8v8H0zM16 14h8v8h-8zM8 6h8v8H8z" stroke-dasharray="2 2"/><path d="M12 1v3m-2-2 2 2 2-2"/></svg></button>
         <button type="button" id="tetris-pause" title="Пауза — P или Esc" disabled>Пауза</button>
         <button type="button" id="tetris-fullscreen" aria-pressed="false">На весь экран</button>
         <div class="tetris-audio-control">
@@ -88,6 +87,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=mobile-fullscreen-v19" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=toolbar-v20" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

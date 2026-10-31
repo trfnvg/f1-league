@@ -35,8 +35,6 @@
 .tetris-wordmark b { color: #f35e5e; font-weight: inherit; }
 .tetris-wordmark small { color: #9caab8; font: 9px "Manrope",sans-serif; margin-left: 12px; letter-spacing: .15em; }
 .tetris-toolbar-actions { display: flex; gap: 6px; }
-.tetris-toolbar .tetris-icon-button { width: 30px; padding: 5px; display: flex; align-items: center; justify-content: center; color: #b7d5d1; }
-.tetris-toolbar .tetris-icon-button[aria-pressed="false"] { color: #758494; }
 .tetris-audio-control { position: relative; display: flex; align-items: center; }
 .tetris-toolbar #tetris-sound { display: flex; align-items: center; justify-content: center; align-self: stretch; width: 32px; padding: 5px; color: #b7d5d1; }
 .tetris-speaker-slash, .is-muted .tetris-speaker-waves { display: none; }
@@ -145,8 +143,8 @@ body.tetris-fullscreen > :not(#tetris-machine) { visibility: hidden !important; 
   .tetris-machine { grid-template-rows: auto minmax(0,1fr); }
   .tetris-machine .tetris-toolbar { display: grid; grid-template-columns: minmax(0,1fr); gap: 6px; padding: 8px 10px; min-width: 0; }
   .tetris-wordmark { justify-content: center; }
-  .tetris-toolbar-actions { display: grid; grid-template-columns: 40px minmax(0,1fr) minmax(0,1fr) 40px; gap: 6px; min-width: 0; }
-  .tetris-toolbar button, .tetris-toolbar .tetris-icon-button, .tetris-toolbar #tetris-sound { width: 100%; min-width: 0; min-height: 40px; padding: 6px; }
+  .tetris-toolbar-actions { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 40px; gap: 6px; min-width: 0; }
+  .tetris-toolbar button, .tetris-toolbar #tetris-sound { width: 100%; min-width: 0; min-height: 40px; padding: 6px; }
   .tetris-toolbar .tetris-audio-control { min-width: 0; }
   .tetris-machine.is-fullscreen { max-height: none; min-height: 0; grid-template-rows: auto minmax(0,1fr); }
 }

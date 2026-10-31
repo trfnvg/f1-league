@@ -35,20 +35,6 @@
     })) machine.style.setProperty(`--tetris-viewport-${key}`, `${value}px`);
   }
   const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
-  const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
-  let showGhost=true;
-  try {showGhost=localStorage.getItem(ghostKey)!=='false';} catch {}
-  function ghostLabel() {
-    ghostButton.setAttribute('aria-pressed',String(showGhost));
-    ghostButton.setAttribute('aria-label',showGhost?'Скрыть контур приземления':'Показать контур приземления');
-    ghostButton.title=showGhost?'Контур приземления включён':'Контур приземления выключен';
-  }
-  ghostLabel();
-  ghostButton.addEventListener('click',()=>{
-    showGhost=!showGhost;ghostLabel();
-    try {localStorage.setItem(ghostKey,String(showGhost));} catch {}
-    renderedRevision=-1;schedule();
-  });
 
   function block(type) {
     if (blockCache.has(type)) return blockCache.get(type);
@@ -109,7 +95,7 @@
     for (let x=1;x<10;x++) { ctx.moveTo(x*32,0); ctx.lineTo(x*32,640); }
     for (let y=1;y<20;y++) { ctx.moveTo(0,y*32); ctx.lineTo(320,y*32); }
     ctx.stroke();
-    if(showGhost && game.piece) {
+    if(game.piece) {
       const landing=game.landing();
       if(landing && landing.y!==game.piece.y) {
         const projected=cells(landing).filter(cell=>cell.y>=0);

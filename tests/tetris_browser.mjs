@@ -49,11 +49,9 @@ async function checkFeedback(page,name) {
     return [...ctx.getImageData(Math.floor((p.x*32+16)*c.width/320),Math.floor((p.y*32+1)*c.height/640),1,1).data].slice(0,3).reduce((a,b)=>a+b);
   });
   const before=await snapshot(),on=await sample();
-  await page.locator('#tetris-ghost').click();await nextFrame();
-  const off=await sample();assert.ok(on>off+30,`${name}: thin ghost outline is visible and can be disabled (${on}/${off})`);
+  assert.ok(on>90,`${name}: landing outline remains visible without a toolbar toggle (${on})`);
+  assert.equal(await page.locator('#tetris-ghost').count(),0);
   assert.equal(await snapshot(),before,'Ghost toggle is read-only');
-  await page.locator('#tetris-ghost').click();await nextFrame();
-  assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'true');
   await page.evaluate(()=>{
     const g=window.__game;g.board.forEach(row=>row.fill(null));
     for(let y=16;y<20;y++){g.board[y].fill('J');g.board[y][5]=null;}
@@ -391,11 +389,10 @@ try {
     await page.waitForFunction(()=>window.__game.phase==='running');
     assert.equal(await page.evaluate(()=>window.__game.score),0,'Space restarts after game over');
     await page.locator('#tetris-sound').click();
-    await page.locator('#tetris-ghost').click();
     await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
     assert.equal(await page.locator('#tetris-sound').getAttribute('aria-pressed'),'false','Muted preference survives reload');
     assert.equal(await page.locator('#tetris-volume').inputValue(),'23','Volume survives reload');
-    assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'false','Ghost preference survives reload');
+    assert.equal(await page.locator('#tetris-ghost').count(),0,'Removed control stays absent after reload');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(m=>m.paused),true);
     await context.close();
   }

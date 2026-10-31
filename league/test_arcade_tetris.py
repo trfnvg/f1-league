@@ -72,6 +72,7 @@ class TetrisReleaseTests(TestCase):
             self.assertContains(page, "Всего попыток")
             self.assertNotContains(page, "Твоё место:")
             self.assertNotContains(page, 'id="tetris-own-rank"')
+            self.assertNotContains(page, 'id="tetris-ghost"')
             self.assertNotContains(page, "Управление аркадами ↗")
             self.assertNotContains(page, "Лаборатория · закрытый тест")
             self.assertNotContains(page, 'id="tetris-mascot"')
