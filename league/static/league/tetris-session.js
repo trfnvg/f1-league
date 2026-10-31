@@ -14,10 +14,9 @@
     });
     if(!rows.length)rows.push(text('li','Пока нет рекордов — начни первый заезд.','arcade-board-empty'));
     list.replaceChildren(...rows);
-    const title=byId('leaderboard-title'),total=byId('total-attempts'),own=byId('own-rank');
+    const title=byId('leaderboard-title'),total=byId('total-attempts');
     if(title)title.textContent=data.board_title;
     if(total)total.textContent=Number(data.total_attempts||0).toLocaleString('ru-RU');
-    if(own){own.hidden=!data.rank;own.textContent=data.rank?`Твоё место: ${data.rank} · рекорд ${Number(data.board_record||0).toLocaleString('ru-RU')} · попыток ${data.board_attempts||0}`:'';}
   }
   async function post(url,payload) {
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);

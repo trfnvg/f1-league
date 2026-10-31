@@ -76,7 +76,6 @@
     {% include "arcade_results_heading.html" with game_label="PIT STACK" board_title=leaderboard_title title_id="tetris-leaderboard-title" total_id="tetris-total-attempts" total=arcade_total_attempts %}
     {% include "arcade_results_labels.html" %}
     <ol class="tetris-leaderboard-list arcade-results-list" id="tetris-leaderboard-list">{% for record in arcade_records %}<li{% if record.is_current_user %} class="is-you"{% endif %}><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong></span><span class="arcade-attempt-count"><strong>{{ record.attempts }}</strong></span></li>{% empty %}<li class="arcade-board-empty">Пока нет рекордов — начни первый заезд.</li>{% endfor %}</ol>
-    <p class="arcade-own-rank" id="tetris-own-rank"{% if not arcade_own_rank %} hidden{% endif %}>Твоё место: {{ arcade_own_rank }} · рекорд {{ board_own_score }} · попыток {{ board_own_attempts }}</p>
   </section>
   {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
   <noscript><p>Для запуска Pit Stack включи JavaScript в браузере.</p></noscript>
@@ -84,7 +83,7 @@
 {% endblock %}
 {% block extra_scripts %}
 <script src="{% static 'league/tetris-engine.js' %}?v=public-release-v18" defer></script>
-<script src="{% static 'league/tetris-session.js' %}?v=1" defer></script>
+<script src="{% static 'league/tetris-session.js' %}?v=2-table-only" defer></script>
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>

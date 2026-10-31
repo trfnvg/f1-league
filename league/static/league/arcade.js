@@ -211,7 +211,6 @@
           if (deadlineClosed || thisRun !== runSequence) return;
           const startedAttemptId = startResult.attempt_id;
           renderLeaderboard(startResult.records || []);
-          syncOwnRank(startResult);
           syncLeaderboardStats(startResult);
           const completedScore = pendingRunScores.get(thisRun);
           if (completedScore !== undefined) {
@@ -307,24 +306,6 @@
     }
   }
 
-  function syncOwnRank(result) {
-    if (!isAuthenticated) return;
-    const ownRankLine = document.getElementById("arcade-own-rank-line");
-    if (!ownRankLine) return;
-    ownRankLine.hidden = !result.rank || result.rank <= 10;
-    ownRankLine.replaceChildren(document.createTextNode("Твоё место: "));
-    const rankValue = document.createElement("strong");
-    rankValue.textContent = String(result.rank || "—");
-    ownRankLine.append(rankValue, document.createTextNode(" · рекорд "));
-    const ownScore = document.createElement("strong");
-    ownScore.textContent = String(result.board_record ?? result.record ?? 0);
-    ownRankLine.append(ownScore, document.createTextNode(" · попыток "));
-    const attempts = document.createElement("strong");
-    attempts.id = "arcade-own-attempts";
-    attempts.textContent = String(result.board_attempts ?? result.attempts ?? 0);
-    ownRankLine.append(attempts);
-  }
-
   function syncLeaderboardStats(result) {
     const title = document.getElementById("arcade-leaderboard-title");
     if (title && result.board_title) title.textContent = result.board_title;
@@ -344,7 +325,6 @@
       if (!response.ok) return;
       const result = await response.json();
       renderLeaderboard(result.records || []);
-      syncOwnRank(result);
       syncLeaderboardStats(result);
       if (isAuthenticated) {
         best = Number(result.record || 0);
@@ -379,7 +359,6 @@
       canvas.dataset.record = String(best);
       syncScores();
       renderLeaderboard(result.records || []);
-      syncOwnRank(result);
       syncLeaderboardStats(result);
       if (boardStatus) boardStatus.textContent = result.is_record
         ? `Новый рекорд сохранён · место ${result.rank}`

@@ -100,7 +100,6 @@
           <li class="arcade-board-empty" id="arcade-board-empty">{% if arcade_closed_event %}До дедлайна не было завершённых заездов.{% else %}Пока нет рекордов — первым в таблице можешь стать ты.{% endif %}</li>
         {% endfor %}
       </ol>
-      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · рекорд <strong id="arcade-own-score">{{ board_own_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ board_own_attempts }}</strong></p>
     {% else %}
       <ol class="arcade-leaderboard-list arcade-results-list" id="arcade-leaderboard-list">
         {% for record in arcade_records %}
@@ -120,4 +119,4 @@
 {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 </section>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/arcade.js' %}?v=single-board-v4" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/arcade.js' %}?v=table-only-v5" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endblock %}

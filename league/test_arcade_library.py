@@ -90,8 +90,10 @@ class ArcadeLibraryTests(TestCase):
                 self.assertContains(page, '<span>Результат</span>')
                 self.assertNotContains(page, 'онлайн-обновление')
                 self.assertNotContains(page, 'ВСЕГО ПОПЫТОК')
+                self.assertNotContains(page, 'Твоё место:')
+                self.assertNotContains(page, 'arcade-own-rank')
 
-    def test_global_place_is_available_below_top_ten(self):
+    def test_global_place_remains_in_api_but_has_no_extra_line_below_table(self):
         ArcadeRecord.objects.create(user=self.user, best_score=5, total_attempts=3)
         for i in range(11):
             rival = User.objects.create_user(f"ranked-{i}")
@@ -101,7 +103,7 @@ class ArcadeLibraryTests(TestCase):
         self.assertEqual(data["rank"], 12)
         self.assertEqual(data["board_record"], 5)
         page = self.client.get(reverse("league:arcade_game", args=["flappy"]))
-        self.assertContains(page, 'id="arcade-own-rank">12</strong>')
+        self.assertNotContains(page, 'arcade-own-rank')
 
     def test_single_board_switches_at_deadline_and_when_paused(self):
         DoodleRecord.objects.create(user=self.user, best_score=900, total_attempts=20)

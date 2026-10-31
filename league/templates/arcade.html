@@ -98,7 +98,6 @@
           <li class="arcade-board-empty" id="arcade-board-empty">{% if arcade_closed_event %}До дедлайна не было завершённых заездов.{% else %}Пока нет рекордов — первым в таблице можешь стать ты.{% endif %}</li>
         {% endfor %}
       </ol>
-      <p class="arcade-own-rank" id="arcade-own-rank-line" {% if not arcade_own_rank or arcade_own_rank <= 10 %}hidden{% endif %}>Твоё место: <strong id="arcade-own-rank">{{ arcade_own_rank }}</strong> · {% if arcade_closed_event %}результат <strong id="arcade-own-score">{{ arcade_own_closed_record.score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_closed_record.attempts }}</strong>{% else %}рекорд <strong id="arcade-own-score">{{ arcade_own_record.best_score }}</strong> · попыток <strong id="arcade-own-attempts">{{ arcade_own_record.total_attempts }}</strong>{% endif %}</p>
     {% else %}
       <div class="arcade-board-login">
         <p>Войди в аккаунт, чтобы рекорд попал в общую таблицу.</p>
