@@ -20,7 +20,6 @@
   let messageTimer = 0, startTimer = 0, countdown = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
-  const mascot = new window.PitStackMascot(byId('mascot'),reduceMotion);
   const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
   let showGhost=true;
   try {showGhost=localStorage.getItem(ghostKey)!=='false';} catch {}
@@ -59,7 +58,6 @@
     const width = Math.floor(Math.min((availableH-4)/2, rect.width-sidebar-gap-10));
     if (width < 20) return;
     board.style.width = `${width+4}px`; board.style.height = `${width*2+4}px`;
-    machine.style.setProperty('--tetris-board-width', `${width+4}px`);
     const dpr = Math.min(3,window.devicePixelRatio||1);
     const pixelWidth = Math.round(width*dpr), pixelHeight = pixelWidth*2;
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
@@ -86,7 +84,6 @@
   }
   function draw() {
     feedback.observe(game);
-    mascot.observe(game);
     ctx.setTransform(canvas.width/320,0,0,canvas.height/640,0,0);
     ctx.fillStyle = '#07090f'; ctx.fillRect(0,0,320,640);
     ctx.strokeStyle = '#161b25'; ctx.lineWidth = .5;
@@ -216,7 +213,6 @@
     if(!countdown && !game.paused) { updateHeld(dt); game.update(dt); }
     feedback.observe(game);
     feedback.step(dt,game.paused || countdown);
-    mascot.step(dt,game.paused || countdown);
     updatePace();
     if(renderedRevision !== game.revision || feedback.dirty) draw();
     if(!game.paused && ['running','clearing'].includes(game.phase)) schedule();
@@ -241,7 +237,6 @@
     soundtrack.setPlaying(true,true);
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
     feedback.reset();
-    mascot.reset();
     scenery.reset();
     startButton.disabled = true;
     byId('overlay-caption').textContent = 'ПЯТЬ КРАСНЫХ ОГНЕЙ';

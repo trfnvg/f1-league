@@ -63,7 +63,6 @@ async function checkFeedback(page,name) {
   });
   await page.locator('#tetris-canvas').focus();await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.__game.phase==='clearing' && window.__feedback.charge?.rows.length===4);
-  await page.waitForFunction(()=>document.getElementById('tetris-mascot').dataset.state==='anticipate');
   await page.evaluate(()=>{window.__game.clearClock=90;window.__game.revision++;});await nextFrame();
   const sweep=await page.evaluate(()=>{
     const c=document.getElementById('tetris-feedback'),ctx=c.getContext('2d');
@@ -83,9 +82,6 @@ async function checkFeedback(page,name) {
   });
   assert.equal(await page.evaluate(()=>window.__game.score),1200);
   assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>node.classList.contains('is-celebrating')),true);
-  assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'celebrate','Alonso celebrates a four-line clear');
-  assert.equal(await page.locator('.tetris-mascot-burst b').count(),8,'One bounded burst, not accumulating particles');
-  assert.equal(await page.locator('.tetris-mascot-burst').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
   assert.equal(await page.locator('#tetris-track-lights i').count(),10);
   assert.equal(await page.locator('#tetris-feedback').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
   assert.match(await page.locator('#tetris-track-lights').evaluate(node=>getComputedStyle(node,'::before').animationName),/tetris-pole-frame/);
@@ -107,21 +103,6 @@ async function checkFeedback(page,name) {
   if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-feedback-${name}.png`)});
   await page.evaluate(()=>{window.__game.score=1200000;window.__game.revision++;});await nextFrame();
   assert.ok(await page.locator('#tetris-score').evaluate(node=>node.scrollWidth<=node.clientWidth),'Large scores also fit the mobile panel');
-  if(process.env.TETRIS_PREVIEW_DIR) {
-    for(const [pose,clock] of [['fists',240],['thumbs',1500]]) {
-      await page.evaluate(clock=>{
-        window.__freezeMascot=true;
-        window.__mascot.setState('celebrate',true);
-        window.__mascot.clock=clock;window.__mascot.updateFrame();
-        document.getElementById('tetris-mascot').getAnimations({subtree:true}).forEach(animation=>animation.pause());
-      },clock);
-      await page.locator('#tetris-mascot').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-alonso-${pose}-${name}.png`)});
-    }
-    await page.evaluate(()=>{
-      window.__freezeMascot=false;
-      document.getElementById('tetris-mascot').getAnimations({subtree:true}).forEach(animation=>animation.play());
-    });
-  }
   await page.evaluate(()=>{
     const g=window.__game;window.__freezeFeedback=false;window.__feedback.reset();
     g.board.forEach(row=>row.fill(null));g.lines=0;g.level=1;g.score=0;
@@ -261,24 +242,17 @@ try {
       const observe=window.PitStackFeedback.prototype.observe,step=window.PitStackFeedback.prototype.step;
       window.PitStackFeedback.prototype.observe=function(game){window.__feedback=this;return observe.call(this,game);};
       window.PitStackFeedback.prototype.step=function(...args){if(!window.__freezeFeedback)return step.apply(this,args);};
-      const mascotObserve=window.PitStackMascot.prototype.observe,mascotStep=window.PitStackMascot.prototype.step;
-      window.PitStackMascot.prototype.observe=function(game){window.__mascot=this;return mascotObserve.call(this,game);};
-      window.PitStackMascot.prototype.step=function(...args){if(!window.__freezeMascot)return mascotStep.apply(this,args);};
     });
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
+    assert.equal(await page.locator('[id="tetris-mascot"],script[src*="tetris-mascot"],img[src*="alonso-"]').count(),0,'No character markup or resources');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
-    await page.locator('#tetris-mascot img').evaluate(image=>image.decode());
-    assert.deepEqual(await page.locator('#tetris-mascot img').evaluate(image=>[image.naturalWidth,image.naturalHeight]),[1536,1024]);
-    assert.equal(await page.locator('#tetris-mascot img').evaluate(image=>getComputedStyle(image).imageRendering),'pixelated','Crisp pixel-art sampling');
-    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle');
-    assert.equal(await page.locator('#tetris-mascot figcaption').count(),0,'No captions under Alonso');
     assert.ok(await page.locator('#tetris-overlay').evaluate(node=>{
       const area=node.getBoundingClientRect();
       return [...node.children].every(child=>{
         const rect=child.getBoundingClientRect();return rect.top>=area.top && rect.bottom<=area.bottom;
       });
     }),`${name}: start instructions and button fit inside the board`);
-    if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-alonso-title-${name}.png`)});
+    if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-title-${name}.png`)});
     await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game?.phase==='running');
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
@@ -320,8 +294,6 @@ try {
     await page.keyboard.up('KeyP');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'Music pauses with the game');
     assert.equal(await page.evaluate(()=>window.__game.paused),true);
-    await page.waitForFunction(()=>document.getElementById('tetris-mascot').dataset.paused==='true');
-    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-paused'),'true');
     assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause,'P pauses without dropping');
     const snapshot=await page.evaluate(()=>JSON.stringify(window.__game.piece));
     await page.waitForTimeout(900);
@@ -365,12 +337,9 @@ try {
       const machine=document.getElementById('tetris-machine').getBoundingClientRect();
       const canvas=document.getElementById('tetris-canvas'),board=canvas.getBoundingClientRect();
       const telemetry=document.querySelector('.tetris-telemetry').getBoundingClientRect();
-      const mascot=document.getElementById('tetris-mascot').getBoundingClientRect();
       return {aspect:board.height/board.width,canvasAspect:canvas.height/canvas.width,top:board.top-machine.top,
         bottom:machine.bottom-board.bottom,
         gap:telemetry.left-board.right,overflow:document.documentElement.scrollWidth-window.innerWidth,
-        mascotFits:mascot.left>=machine.left && mascot.right<=machine.right && mascot.top>=machine.top && mascot.bottom<=machine.bottom,
-        mascotClear:mascot.right<=board.left || mascot.left>=board.right,
         fullscreen:document.body.classList.contains('tetris-fullscreen'), machineWidth:machine.width,
         toolbarButtons:Array.from(document.querySelectorAll('.tetris-toolbar button')).map(button=>{
           const rect=button.getBoundingClientRect();return [rect.left-machine.left,rect.right-machine.right];
@@ -384,11 +353,9 @@ try {
     assert.equal(metrics.canvasAspect,2);assert.ok(metrics.gap>0);assert.ok(metrics.top>=0);assert.ok(metrics.bottom>0);
     assert.ok(metrics.overflow<=1,`${name}: no page overflow`);
     assert.ok(metrics.toolbarFits,`${name}: toolbar buttons stay inside cabinet ${JSON.stringify(metrics)}`);
-    assert.ok(metrics.mascotFits && metrics.mascotClear,`${name}: Alonso fits without covering field ${JSON.stringify(metrics)}`);
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>document.getElementById('tetris-machine').classList.contains('is-fullscreen'));
     metrics=await measure();assert.ok(metrics.fullscreen);assert.ok(metrics.top>=0);
-    assert.ok(metrics.mascotFits && metrics.mascotClear,`${name}: fullscreen Alonso stays outside field ${JSON.stringify(metrics)}`);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     await page.waitForFunction(()=>{
       const canvas=document.getElementById('tetris-canvas');
@@ -413,11 +380,9 @@ try {
       window.__game.paused=false;window.__game.finish();window.dispatchEvent(new Event('resize'));
     });
     await page.waitForFunction(()=>document.getElementById('tetris-overlay-title').textContent==='Финиш!');
-    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'over');
     await page.locator('#tetris-canvas').focus();await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game.phase==='running');
     assert.equal(await page.evaluate(()=>window.__game.score),0,'Space restarts after game over');
-    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle','New run resets Alonso');
     await page.locator('#tetris-sound').click();
     await page.locator('#tetris-ghost').click();
     await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
@@ -425,18 +390,6 @@ try {
     assert.equal(await page.locator('#tetris-volume').inputValue(),'23','Volume survives reload');
     assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'false','Ghost preference survives reload');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(m=>m.paused),true);
-    await page.emulateMedia({reducedMotion:'reduce'});
-    await page.locator('#tetris-mascot').evaluate(node=>{node.dataset.state='celebrate';});
-    assert.equal(await page.locator('.tetris-mascot-motion').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables mascot movement');
-    assert.equal(await page.locator('.tetris-mascot-art > i').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables sparkle');
-    assert.equal(await page.locator('.tetris-mascot-burst b').first().evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables block burst');
-    const alpha=await page.locator('#tetris-mascot img').evaluate(async image=>{
-      await image.decode();
-      const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
-      const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
-      return ctx.getImageData(0,0,1,1).data[3];
-    });
-    assert.equal(alpha,0,'Original atlas retains genuine transparency');
     await context.close();
   }
   assert.deepEqual(errors,[],'No browser script errors');

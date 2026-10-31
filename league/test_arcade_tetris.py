@@ -39,11 +39,12 @@ class TetrisPreviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "arcade_tetris.html")
         for text in ("Pit Stack", 'id="tetris-canvas"', "tetris-engine.js", "tetris-gestures.js",
-                     "tetris-scenery.js", "tetris-mascot.js", 'id="tetris-mascot"',
-                     "alonso-pixel-builder-v2.png", "Лаборатория · закрытый тест"):
+                     "tetris-scenery.js", "Лаборатория · закрытый тест"):
             self.assertContains(response, text)
         self.assertEqual([model.objects.count() for model in tracked], before)
         self.assertNotContains(response, 'id="arcade-wheel-panel"')
+        self.assertNotContains(response, 'id="tetris-mascot"')
+        self.assertNotContains(response, 'alonso-')
         for text in ('class="tetris-controls"', 'id="tetris-level"', 'id="tetris-status"',
                      'class="tetris-rules"', 'class="tetris-key-hint"',
                      "Классическая механика. Гоночный ритм.", "Тестовый заезд. Результат не сохраняется."):

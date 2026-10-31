@@ -47,10 +47,6 @@ hint appropriate to the input device. The level and
 its progress bar are removed from the HUD; scoring multipliers remain line-based.
 The compact tempo indicator describes increasing pressure without a level number.
 
-Alonso assembles a block-built car outside the playfield, acknowledges line clears,
-celebrates four lines and reacts to game over. His atlas, generation prompt and
-responsive/reduced-motion behavior are documented in [tetris-alonso-art.md](tetris-alonso-art.md).
-
 Mobile input follows the [official Tetris Mobile swipe scheme](https://playstudios.helpshift.com/hc/en/16-tetris-mobile/faq/2953-tetris-controls/?l=en&p=web):
 relative horizontal drag moves the piece, right-side tap rotates clockwise,
 left-side tap rotates counterclockwise. Slow downward dragging soft-drops;
