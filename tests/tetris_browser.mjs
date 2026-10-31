@@ -357,7 +357,9 @@ try {
     assert.equal(metrics.canvasAspect,2);assert.ok(metrics.gap>0);assert.ok(metrics.top>=0);assert.ok(metrics.bottom>0);
     assert.ok(metrics.overflow<=1,`${name}: no page overflow`);
     assert.ok(metrics.toolbarFits,`${name}: toolbar buttons stay inside cabinet ${JSON.stringify(metrics)}`);
-    await page.locator('#tetris-fullscreen').click();
+    // Starting/resuming on a touch device may already have entered fullscreen.
+    if(!await page.locator('#tetris-machine').evaluate(el=>el.classList.contains('is-fullscreen')))
+      await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>document.getElementById('tetris-machine').classList.contains('is-fullscreen'));
     metrics=await measure();assert.ok(metrics.fullscreen);assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
@@ -368,6 +370,7 @@ try {
     });
     if(process.env.TETRIS_PREVIEW_DIR) await page.screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-${name}.png`)});
     if(mobile) await checkTouch(page,context);
+    assert.equal(await page.locator('#tetris-machine').evaluate(el=>el.classList.contains('is-fullscreen')),true,'Touch gestures keep fullscreen open');
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>!document.body.classList.contains('tetris-fullscreen'));
     // Chromium's native window can finish exiting fullscreen after the DOM event.

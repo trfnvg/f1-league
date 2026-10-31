@@ -76,8 +76,35 @@ try {
     if(process.env.TETRIS_PREVIEW_DIR) {
       await page.locator('#arcade-wheel-panel').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-bonus-${width}.png`)});
     }
+    if(width<500) await page.evaluate(()=>{
+      // Emulate iPhone's CSS fallback, including a transformed site container.
+      document.getElementById('tetris-machine').requestFullscreen=undefined;
+      document.querySelector('.pit-stack-page').style.transform='translateZ(0)';
+    });
     await page.locator('#tetris-start').click();
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
+    const checkMobileFullscreen=async()=>{
+      const metrics=await page.locator('#tetris-machine').evaluate(el=>{
+        const r=el.getBoundingClientRect(),v=visualViewport;
+        return {parent:el.parentElement.tagName,width:r.width,height:r.height,x:r.x,y:r.y,
+          viewportWidth:v.width,viewportHeight:v.height,selection:getComputedStyle(el).webkitUserSelect,
+          controlsFit:[...el.querySelectorAll('.tetris-toolbar button')].every(button=>{
+            const b=button.getBoundingClientRect();return b.left>=r.left && b.right<=r.right && b.bottom<=r.bottom;
+          }),
+          atBottom:el.contains(document.elementFromPoint(innerWidth/2,innerHeight-5)),
+          selectionBlocked:!el.dispatchEvent(new Event('selectstart',{bubbles:true,cancelable:true})),
+          contextBlocked:!el.dispatchEvent(new Event('contextmenu',{bubbles:true,cancelable:true}))};
+      });
+      assert.equal(metrics.parent,'BODY');
+      assert.ok(Math.abs(metrics.width-metrics.viewportWidth)<2 && Math.abs(metrics.height-metrics.viewportHeight)<2,JSON.stringify(metrics));
+      assert.ok(Math.abs(metrics.x)<2 && Math.abs(metrics.y)<2,JSON.stringify(metrics));
+      assert.ok(metrics.controlsFit && metrics.atBottom && metrics.selectionBlocked && metrics.contextBlocked,JSON.stringify(metrics));
+      assert.equal(metrics.selection,'none');
+    };
+    if(width<500) {
+      await checkMobileFullscreen();
+      if(process.env.TETRIS_PREVIEW_DIR) await page.screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-mobile-fullscreen-${width}.png`)});
+    }
     await page.keyboard.press('KeyP');
     const ticks=await page.evaluate(()=>window.PitStackActiveSession.ticks);
     await page.waitForTimeout(180);
@@ -92,6 +119,20 @@ try {
     assert.equal(await page.locator('#tetris-leaderboard-list .arcade-record-score').textContent(),board.board_record.toLocaleString('ru-RU'));
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     if(process.env.TETRIS_PREVIEW_DIR)await page.screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-release-${width}.png`),fullPage:true});
+    if(width<500) {
+      await page.setViewportSize({width:844,height:390});
+      await page.waitForTimeout(100);
+      await checkMobileFullscreen();
+      await page.setViewportSize({width,height:650});
+      await page.waitForTimeout(100);
+      await checkMobileFullscreen();
+      await page.locator('#tetris-fullscreen').click();
+      assert.equal(await page.locator('#tetris-machine').evaluate(el=>el.parentElement.className),'pit-stack-page');
+      assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('tetris-fullscreen')),false);
+      assert.equal(await page.locator('body').evaluate(el=>el.style.position),'');
+      await page.locator('#tetris-fullscreen').click();
+      await checkMobileFullscreen();
+    }
     await context.close();
     console.log(`Pit Stack public ${width}px: seed issued, pause excluded, keyboard hard drops, server-verified finish, saved leaderboard and no overflow passed.`);
   }

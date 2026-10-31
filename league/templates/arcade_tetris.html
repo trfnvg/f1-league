@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=public-release-v18">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=mobile-fullscreen-v19">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -89,6 +89,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=public-release-v18" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=mobile-fullscreen-v19" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

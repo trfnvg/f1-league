@@ -21,6 +21,19 @@
   let request = 0, lastTime = 0, renderedRevision = -1, clearSerial = 0;
   let messageTimer = 0, startTimer = 0, countdown = false, preparing = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fullscreenHome = document.createComment('Pit Stack inline position');
+  let savedScroll = null, savedBodyStyles = null, lastGeometry = '', changingFullscreen = false;
+  function syncViewport() {
+    if (!machine.classList.contains('is-fullscreen')) return;
+    const viewport = window.visualViewport;
+    const native = document.fullscreenElement === machine;
+    for (const [key,value] of Object.entries({
+      width: native ? innerWidth : viewport?.width ?? innerWidth,
+      height: native ? innerHeight : viewport?.height ?? innerHeight,
+      top: native ? 0 : viewport?.offsetTop ?? 0,
+      left: native ? 0 : viewport?.offsetLeft ?? 0,
+    })) machine.style.setProperty(`--tetris-viewport-${key}`, `${value}px`);
+  }
   const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
   const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
   let showGhost=true;
@@ -51,16 +64,19 @@
     blockCache.set(type,tile); return tile;
   }
   function resize() {
-    clearHeld();
     const rect = deck.getBoundingClientRect();
     const style = getComputedStyle(deck);
     const sidebar = machine.querySelector('.tetris-telemetry').getBoundingClientRect().width;
     const availableH = rect.height-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom);
     const gap = parseFloat(style.columnGap)||16;
+    const dpr = Math.min(3,window.devicePixelRatio||1);
+    const geometry = [rect.width,availableH,sidebar,gap,dpr].join(':');
+    if (geometry === lastGeometry) return;
+    lastGeometry = geometry;
+    clearHeld();
     const width = Math.floor(Math.min((availableH-4)/2, rect.width-sidebar-gap-10));
     if (width < 20) return;
     board.style.width = `${width+4}px`; board.style.height = `${width*2+4}px`;
-    const dpr = Math.min(3,window.devicePixelRatio||1);
     const pixelWidth = Math.round(width*dpr), pixelHeight = pixelWidth*2;
     if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
       canvas.width = pixelWidth; canvas.height = pixelHeight;
@@ -234,6 +250,7 @@
   }
   async function start() {
     if(countdown || preparing) return;
+    if (window.matchMedia('(pointer:coarse)').matches && !machine.classList.contains('is-fullscreen')) enterFullscreen();
     if(game.paused) { togglePause(); return; }
     // Disabling a focused start button emits focusout with no relatedTarget.
     // Move focus inside the board first, so countdown does not pause its music.
@@ -267,6 +284,10 @@
   const sample = e => ({id:e.pointerId,x:e.clientX,y:e.clientY,time:e.timeStamp});
   const gesturePiece = () => game.active && !countdown ? game.spawnSerial : -1;
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
+  for (const type of ['selectstart','dragstart','contextmenu']) machine.addEventListener(type,e=>e.preventDefault());
+  machine.addEventListener('touchmove',e=>{
+    if (!e.target.closest('input[type="range"]')) e.preventDefault();
+  },{passive:false});
   canvas.addEventListener('pointerdown',e=>{
     if(e.button!==0 || !game.active || countdown) return;
     e.preventDefault(); canvas.focus({preventScroll:true});
@@ -330,22 +351,50 @@
   }
   document.addEventListener('visibilitychange',()=>{ if(document.hidden) autoPause(); });
   window.addEventListener('blur',autoPause);
-  machine.addEventListener('focusout',e=>{ if(!machine.contains(e.relatedTarget)) autoPause(); });
+  machine.addEventListener('focusout',e=>{
+    if(!changingFullscreen && !machine.classList.contains('is-fullscreen') && !machine.contains(e.relatedTarget)) autoPause();
+  });
   function setFullscreen(on) {
+    if (on === machine.classList.contains('is-fullscreen')) return;
+    changingFullscreen = true;
+    if (on) {
+      savedScroll = {x:window.scrollX,y:window.scrollY};
+      savedBodyStyles = ['position','top','left','width'].map(key=>[key,document.body.style.getPropertyValue(key),document.body.style.getPropertyPriority(key)]);
+      machine.before(fullscreenHome);
+      // Escape transformed/clipped page ancestors and the site's stacking contexts.
+      document.body.append(machine);
+      Object.assign(document.body.style,{position:'fixed',top:`-${savedScroll.y}px`,left:'0px',width:'100%'});
+      window.getSelection()?.removeAllRanges();
+    }
     machine.classList.toggle('is-fullscreen',on);
     document.body.classList.toggle('tetris-fullscreen',on);
-    fullscreenButton.textContent=on?'Выйти из экрана':'На весь экран';
+    fullscreenButton.textContent=on?'Выйти':'На весь экран';
     fullscreenButton.setAttribute('aria-pressed',String(on));
+    if (!on) {
+      fullscreenHome.replaceWith(machine);
+      for (const [key,value,priority] of savedBodyStyles || []) {
+        if (value) document.body.style.setProperty(key,value,priority);
+        else document.body.style.removeProperty(key);
+      }
+      for (const key of ['top','left','width','height']) machine.style.removeProperty(`--tetris-viewport-${key}`);
+      if (savedScroll) window.scrollTo({left:savedScroll.x,top:savedScroll.y,behavior:'instant'});
+      savedScroll = null;
+    }
+    syncViewport();
     resize();
+    changingFullscreen = false;
+  }
+  function enterFullscreen() {
+    setFullscreen(true);
+    // iPhone Safari uses the same viewport-filling fallback when the API is absent.
+    if (machine.requestFullscreen) machine.requestFullscreen().catch(()=>{});
   }
   fullscreenButton.addEventListener('click',async()=>{
     if(machine.classList.contains('is-fullscreen')) {
       if(document.fullscreenElement) await document.exitFullscreen().catch(()=>{});
       setFullscreen(false);
     } else {
-      setFullscreen(true);
-      // Fixed-viewport fallback also works on iPhones without element fullscreen.
-      if(machine.requestFullscreen) await machine.requestFullscreen().catch(()=>{});
+      enterFullscreen();
     }
     canvas.focus({preventScroll:true});
   });
@@ -353,8 +402,10 @@
     if(!document.fullscreenElement && machine.classList.contains('is-fullscreen')) { autoPause(); setFullscreen(false); }
   });
   const observer = new ResizeObserver(resize); observer.observe(deck);
-  window.addEventListener('resize',resize);
-  window.visualViewport?.addEventListener('resize',resize);
+  const viewportChanged = () => { syncViewport(); resize(); };
+  window.addEventListener('resize',viewportChanged);
+  window.visualViewport?.addEventListener('resize',viewportChanged);
+  window.visualViewport?.addEventListener('scroll',viewportChanged);
   window.addEventListener('pagehide',()=>{
     autoPause(); clearTimeout(startTimer);
     if(countdown) {
