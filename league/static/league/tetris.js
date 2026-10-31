@@ -182,7 +182,7 @@
   }
   function updatePace() {
     soundtrack.setPace(game.pace);
-    const pace=Math.min(4,Math.floor(game.pace/3));
+    const pace=game.pace>=29?4:game.pace>=19?3:game.pace>=9?2:game.pace>=4?1:0;
     if(shownPace===pace) return;
     shownPace=pace;
     byId('pace').textContent=['СТАРТ','РАЗГОН','АТАКА','НА ПРЕДЕЛЕ','МАКСИМУМ'][pace];

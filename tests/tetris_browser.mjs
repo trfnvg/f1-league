@@ -126,11 +126,15 @@ async function checkMusic(page) {
   assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serial,'Space on sound button must not hard-drop');
   await sound.click();await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);
   await page.evaluate(()=>{window.__game.elapsed=45000*6;window.__game.revision++;});
+  await page.waitForTimeout(50);
+  assert.equal(await page.evaluate(()=>window.__game.gravity),800,'Time alone cannot accelerate gravity');
+  assert.equal(await media.evaluate(m=>m.playbackRate),1,'Time alone cannot accelerate music');
+  await page.evaluate(()=>{window.__game.lines=60;window.__game.level=7;window.__game.revision++;});
   await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').playbackRate>1.02);
   await media.evaluate(m=>{m.currentTime=m.duration-.12;});
   await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').currentTime<1);
   assert.equal(await media.evaluate(m=>m.paused),false,'Track loops across the end');
-  await page.evaluate(()=>{window.__game.elapsed=0;window.__game.revision++;window.dispatchEvent(new Event('blur'));});
+  await page.evaluate(()=>{window.__game.elapsed=0;window.__game.lines=0;window.__game.level=1;window.__game.revision++;window.dispatchEvent(new Event('blur'));});
   assert.equal(await media.evaluate(m=>m.paused),true,'Background/focus loss stops the soundtrack');
   assert.equal(await page.evaluate(()=>window.__game.paused),true);
   await page.locator('#tetris-start').click();await page.waitForFunction(()=>!document.getElementById('tetris-soundtrack').paused);

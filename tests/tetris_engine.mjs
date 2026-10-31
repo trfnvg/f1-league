@@ -21,15 +21,43 @@ assert.equal(TYPES.length,7);
 {
   const game=new Game(()=>0);game.start();
   game.elapsed=44990;game.update(10);
-  assert.equal(game.pace,1);assert.equal(game.gravity,624);
+  assert.equal(game.pace,0);assert.equal(game.gravity,800,'45 seconds no longer increases difficulty');
+  game.elapsed=3600000;
+  assert.equal(game.pace,0);assert.equal(game.gravity,800,'Even a long run cannot increase speed without lines');
   game.pause();const elapsed=game.elapsed;
   for(let i=0;i<100;i++)game.update(100);
   assert.equal(game.elapsed,elapsed,'Pause must not increase difficulty');
   game.start();assert.equal(game.elapsed,0);assert.equal(game.gravity,800);
   game.level=999;game.update(100);
-  assert.equal(game.piece.y,0);assert.equal(game.fallClock,35);
-  game.update(100);assert.equal(game.piece.y,2);assert.equal(game.fallClock,5);
+  assert.equal(game.piece.y,5);assert.ok(game.fallClock<1e-6);
+  game.update(50);assert.equal(game.piece.y,8);assert.ok(game.fallClock<1e-6);
   assert.equal(game.lockDelay,220);
+}
+{
+  const frames=[48,43,38,33,28,23,18,13,8,6,5,5,5,4,4,4,3,3,3,2,2,2,2,2,2,2,2,2,2,1];
+  const game=new Game(()=>0);game.start();
+  for(let index=0;index<frames.length;index++) {
+    game.level=index+1;
+    assert.equal(game.pace,index);
+    assert.equal(game.gravity,frames[index]*1000/60,`NES speed tier ${index}`);
+  }
+  for(const before of [9,19,49,89,99,119,129,159,189,279,289,299,999]) {
+    game.start();game.lines=before;game.level=1+Math.floor(before/10);
+    game.board[19].fill('J');game.clearing=[19];game.phase='clearing';game.resolveClear();
+    assert.equal(game.lines,before+1);
+    assert.equal(game.level,1+Math.floor((before+1)/10),'Every ten cleared lines advances exactly one tier');
+    assert.equal(game.gravity,frames[Math.min(29,Math.floor((before+1)/10))]*1000/60);
+  }
+  for(const [steps,dt] of [[2,100],[4,50],[12,1000/60]]) {
+    game.start();game.level=30;
+    for(let i=0;i<steps;i++)game.update(dt);
+    assert.equal(game.piece.y,11,'Fast gravity handles multiple cells and different frame intervals');
+    assert.ok(game.fallClock<1e-6);
+  }
+  game.start();game.level=30;game.fallClock=16;
+  game.down();assert.equal(game.piece.y,0);assert.equal(game.fallClock,16);
+  game.update(1);assert.equal(game.piece.y,1,'Soft drop must not postpone natural high-speed gravity');
+  assert.equal(game.score,1,'Natural gravity adds no soft-drop points');
 }
 for(const type of TYPES) assert.equal(SHAPES[type].flat().filter(Boolean).length,4);
 for(let index=0;index<TYPES.length;index++)for(let turns=0;turns<4;turns++) {
@@ -76,7 +104,7 @@ for(let count=1;count<=4;count++){
   const y=game.piece.y;game.pause();for(let i=0;i<100;i++)game.update(100);
   assert.equal(game.piece.y,y);assert.equal(game.drop(),false);assert.equal(game.move(1),false);
   game.pause();for(let i=0;i<10;i++)game.update(100);assert.ok(game.piece.y>y);
-  game.level=999;assert.equal(game.gravity,65);
+  game.level=999;assert.equal(game.gravity,1000/60);
 }
 {
   const game=new Game(()=>3/7+.001);game.start();
@@ -100,4 +128,4 @@ for(let step=0;step<150000;step++){
   if(action===3)game.down();if(action===4)game.drop();
   game.update(20+random()*80);boardInvariant(game);
 }
-console.log(`Pit Stack rules passed: seven shapes, walls/rotation, 1–4 line clears/scoring, level-up, pause, soft/hard drop, lock delay, game-over/restart; 150000 stress steps across ${runs} runs.`);
+console.log(`Pit Stack rules passed: all 30 NES speed tiers, line-only progression, no timer acceleration, high-speed frame independence, seven shapes, walls/rotation, clears/scoring, pause, soft/hard drop, lock delay, restart; 150000 stress steps across ${runs} runs.`);

@@ -26,11 +26,20 @@ movement/rotation resets. No hold, enemies or wheel bonuses.
 
 Full rows clear together after a 180 ms visual effect. 1/2/3/4 rows award
 40/100/300/1200 × the current one-based level; soft drop awards 1 per cell, hard
-drop 2. Every ten lines increases the score multiplier. Difficulty uses the larger
-of cleared-line tier and active-time tier (45 seconds per tier): gravity is
-800 × 0.78^tier, bounded at 65 ms per cell; lock grace decreases by 8 ms per tier,
-bounded at 220 ms. Pauses/hidden tabs do not accrue time. Accumulated fractional
-gravity time is retained, including multiple cell steps when required by a frame.
+drop 2. Every ten lines increases the score multiplier and advances the gravity
+table by one level. Time played never increases difficulty or music tempo.
+Gravity follows the NES NTSC frames-per-cell table, mapped to logical 60 Hz:
+48,43,38,33,28,23,18,13,8,6,5,5,5,4,4,4,3,3,3,2,2,2,2,2,2,2,2,2,2,1.
+Our level 1 corresponds to NES level 0: 800 ms per cell initially, 100 ms at
+90 lines, 33.33 ms at 190 lines, 16.67 ms at 290+ lines. This is a speed-curve
+adaptation, not cycle-exact NES emulation; randomization, rotation, modern hard
+drop/ghost and lock grace remain our existing rules. Table reference:
+[NES disassembly, framesPerDropTable](https://raw.githubusercontent.com/CelestialAmber/TetrisNESDisasm/master/main.asm).
+Lock grace decreases by 8 ms per line-based tier, bounded at 220 ms.
+Pauses/hidden tabs do not accrue time. Fractional gravity time is retained,
+with a tiny floating-point tolerance for exact frame boundaries and multiple
+cell steps when needed. Soft drop never resets pending natural-gravity time,
+so holding Down cannot slow a fast falling piece.
 New-piece obstruction or lock above the board ends the run.
 
 Arrows or physical A/D/W/S (also work with Russian keyboard layout), X for

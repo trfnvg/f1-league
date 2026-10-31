@@ -2,6 +2,12 @@
 (function (root) {
   'use strict';
   const COLS = 10, ROWS = 20;
+  // NES NTSC frames per cell, mapped to our one-based levels at logical 60 Hz.
+  // Source: TetrisNESDisasm/main.asm, framesPerDropTable (NTSC branch).
+  const GRAVITY_FRAMES = Object.freeze([
+    48,43,38,33,28,23,18,13,8,6,5,5,5,4,4,4,3,3,3,
+    2,2,2,2,2,2,2,2,2,2,1,
+  ]);
   const SHAPES = {
     I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
     J: [[1,0,0],[1,1,1],[0,0,0]],
@@ -58,8 +64,8 @@
         (y < 0 || this.board[y][x] === null));
     }
     get active() { return this.phase === 'running' && !this.paused; }
-    get pace() { return Math.max(this.level-1, Math.floor(this.elapsed/45000)); }
-    get gravity() { return Math.max(65, 800*Math.pow(.78, this.pace)); }
+    get pace() { return Math.max(0, this.level-1); }
+    get gravity() { return GRAVITY_FRAMES[Math.min(GRAVITY_FRAMES.length-1,this.pace)]*1000/60; }
     get lockDelay() { return Math.max(220, 350-this.pace*8); }
     grounded() { return this.piece && !this.fits({...this.piece, y: this.piece.y+1}); }
     landing() {
@@ -98,7 +104,10 @@
       if (!this.active) return false;
       const moved = {...this.piece, y: this.piece.y+1};
       if (!this.fits(moved)) return false;
-      this.piece = moved; this.fallClock = 0; this.lockClock = 0;
+      this.piece = moved;
+      // A soft drop adds a step, without postponing faster natural gravity.
+      if (!soft) this.fallClock = 0;
+      this.lockClock = 0;
       if (soft) this.score++;
       this.revision++;
       return true;
@@ -148,8 +157,8 @@
       }
       this.lockClock = 0; this.fallClock += dt;
       // Preserve fractional time at high speeds, independently of frame rate.
-      while (this.fallClock >= this.gravity && !this.grounded()) {
-        const remainder = this.fallClock-this.gravity;
+      while (this.fallClock+1e-7 >= this.gravity && !this.grounded()) {
+        const remainder = Math.max(0,this.fallClock-this.gravity);
         this.down(false); this.fallClock = remainder;
       }
     }
