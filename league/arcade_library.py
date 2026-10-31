@@ -359,6 +359,12 @@ def control(request):
         target = reverse("league:arcade_control") + f"?season={season.year}"
         if event:
             target += f"&event={event.pk}"
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest" and action == "select":
+            notices = list(messages.get_messages(request))
+            # This action always adds one notice. Earlier flash messages belong
+            # to earlier requests, not to the result of this autosave.
+            ok = bool(notices and notices[-1].level < messages.ERROR)
+            return JsonResponse({"ok": ok, "message": str(notices[-1]) if notices else ""}, status=200 if ok else 400)
         return redirect(target + "#lab-competition")
     event_list = list(events)
     selected_event = next((event for event in event_list if str(event.pk) == request.GET.get("event")), None)

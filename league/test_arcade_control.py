@@ -37,7 +37,7 @@ class ArcadeControlTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "arcade-control.css")
-        self.assertContains(response, 'league/arcade-control.js?v=1')
+        self.assertContains(response, 'league/arcade-control.js?v=2')
         self.assertContains(response, 'class="lab-game-card"', count=4)
         cards = response.context["test_games"]
         self.assertEqual([card["key"] for card in cards], ["doodle_jump", "flappy", "minesweeper", "tetris"])
@@ -68,6 +68,42 @@ class ArcadeControlTests(TestCase):
         self.assertEqual(self.settings.competition_event_id, self.event.pk)
         self.assertTrue(self.settings.public_enabled)
         self.assertIsNone(self.contest.frozen_at)
+
+    def test_autosave_only_changes_draft_and_returns_json_without_redirect(self):
+        event = Event.objects.create(name="Next GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now() + timedelta(days=8))
+        for key in ("tetris", "flappy"):
+            response = self.client.post(self.url, {"action": "select", "competition_event": event.pk,
+                "active_game": key}, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(response.json()["ok"])
+            draft = ArcadeCompetition.objects.get(event=event)
+            self.assertEqual(draft.game_key, key)
+            self.assertIsNone(draft.opened_at)
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.competition_event_id, self.event.pk)
+        self.assertEqual(self.settings.active_game, "doodle_jump")
+        self.assertTrue(self.settings.public_enabled)
+
+    def test_autosave_rejects_expired_or_published_changes_and_requires_staff(self):
+        data = {"action": "select", "competition_event": self.event.pk, "active_game": "flappy"}
+        response = self.client.post(self.url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(response.json()["ok"])
+        self.event.deadline = timezone.now() - timedelta(seconds=1)
+        self.event.save(update_fields=["deadline"])
+        data["active_game"] = "doodle_jump"
+        self.assertEqual(self.client.post(self.url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest").status_code, 400)
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.post(self.url, data, HTTP_X_REQUESTED_WITH="XMLHttpRequest").status_code, 403)
+
+    def test_autosave_keeps_csrf_protection(self):
+        from django.test import Client
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.staff)
+        response = client.post(self.url, {"action": "select", "competition_event": self.event.pk,
+            "active_game": "doodle_jump"}, HTTP_X_REQUESTED_WITH="XMLHttpRequest")
+        self.assertEqual(response.status_code, 403)
 
     def test_test_attempt_endpoints_do_not_record_results(self):
         for name in ("doodle_attempt_start", "arcade_run_start", "minesweeper_attempt_start"):

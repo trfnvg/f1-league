@@ -129,3 +129,7 @@
 .lab-library-option strong { color:#f0f3f7; font-size:14px; }
 .lab-library-option small { color:#a7b5c1; font-size:11px; margin-top:6px; }
 @media(max-width:700px) { .lab-library { padding:18px; } .lab-library-options { grid-template-columns:1fr; } }
+.arcade-control [hidden] { display: none !important; }
+#lab-stage-status { min-height: 1.5em; margin-block: .5rem; }
+#lab-stage-content { overflow-anchor: none; }
+.lab-save-status { min-height: 1.5em; }

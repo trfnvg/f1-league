@@ -46,6 +46,7 @@ def fixtures():
     response = client.get(reverse('league:arcade_control'))
     cards = response.context['test_games']
     pages = {reverse('league:arcade_control'): response.content}
+    pages[reverse('league:arcade_control') + f'?season={season.year}&event={event.pk}'] = response.content
     future_url = reverse('league:arcade_control') + f'?season={season.year}&event={future.pk}'
     pages[future_url] = client.get(future_url).content
     for card in cards:
@@ -144,15 +145,57 @@ def run(engine, output):
                     page.locator('#test-wheel-apply').click()
                     expect(page.locator('#test-wheel-outcome-summary')).to_contain_text('+2')
                     page.goto(base + '/arcade/control/', wait_until='networkidle')
+                    page.evaluate('window.labDocumentMarker = "same-document"')
+                    page.locator('.lab-library-option input[value="tetris"]').uncheck()
                     original_event_id = page.locator('#arcade-event-select').input_value()
+                    page.locator('#arcade-event-select').scroll_into_view_if_needed()
+                    scroll_before = page.evaluate('scrollY')
                     page.select_option('#arcade-event-select', str(future_id))
                     expect(page.locator('#arcade-game-select')).to_have_value('flappy')
                     expect(page.locator('.lab-competition-form [name=competition_event]')).to_have_value(str(future_id))
                     expect(page.locator('.lab-competition-form [value=publish]')).to_be_disabled()
-                    expect(page.locator('.lab-competition-form [value=select]')).to_be_enabled()
+                    expect(page.locator('.lab-competition-form [value=select]')).to_be_hidden()
                     expect(page.locator('.lab-selected-stage strong')).to_have_text('Сан-Паулу, Бразилия')
+                    assert page.evaluate('window.labDocumentMarker') == 'same-document'
+                    assert abs(page.evaluate('scrollY') - scroll_before) < 3
+                    expect(page.locator('.lab-library-option input[value="tetris"]')).not_to_be_checked()
+                    # Only autosave is permitted; it must never publish the contest.
+                    fail_save = [True]
+                    def save_route(route):
+                        if route.request.method != 'POST':
+                            route.continue_()
+                            return
+                        assert 'name="action"\r\n\r\nselect' in route.request.post_data
+                        route.fulfill(status=400 if fail_save[0] else 200,
+                            content_type='application/json', body='{"ok":false,"message":"Test failure"}' if fail_save[0] else '{"ok":true}')
+                    page.route('**/arcade/control/**', save_route)
+                    page.select_option('#arcade-game-select', 'tetris')
+                    expect(page.locator('.lab-save-status')).to_contain_text('Не удалось подтвердить сохранение')
+                    expect(page.locator('.lab-competition-form [value=select]')).to_be_visible()
+                    fail_save[0] = False
+                    page.locator('.lab-competition-form [value=select]').click()
+                    expect(page.locator('.lab-save-status')).to_contain_text('Сохранено')
+                    expect(page.locator('#arcade-event-select')).to_be_enabled()
+                    expect(page.locator('.lab-competition-form [value=select]')).to_be_hidden()
+                    expect(page.locator('#arcade-game-select')).to_have_value('tetris')
+                    assert page.evaluate('window.labDocumentMarker') == 'same-document'
                     page.screenshot(path=str(output / f'{width}-future-stage.png'), full_page=True)
                     page.go_back(wait_until='networkidle')
+                    expect(page.locator('.lab-selected-stage strong')).to_have_text('Мехико, Мексика')
+                    expect(page.locator('#arcade-event-select')).to_have_value(original_event_id)
+                    assert page.evaluate('window.labDocumentMarker') == 'same-document'
+                    # Failed reads keep the previous editor and restore its selected GP.
+                    def failed_read(route):
+                        route.fulfill(status=503, body='Unavailable')
+                    page.route('**/arcade/control/?season=*&event=*', failed_read)
+                    page.select_option('#arcade-event-select', str(future_id))
+                    expect(page.locator('#lab-stage-status')).to_contain_text('Не удалось загрузить')
+                    expect(page.locator('#arcade-event-select')).to_have_value(original_event_id)
+                    expect(page.locator('.lab-selected-stage strong')).to_have_text('Мехико, Мексика')
+                    page.unroute('**/arcade/control/?season=*&event=*', failed_read)
+                    page.select_option('#arcade-event-select', str(future_id))
+                    page.select_option('#arcade-event-select', original_event_id)
+                    expect(page.locator('#lab-stage-status')).to_be_empty()
                     expect(page.locator('.lab-selected-stage strong')).to_have_text('Мехико, Мексика')
                     expect(page.locator('#arcade-event-select')).to_have_value(original_event_id)
                     for card in cards:
@@ -184,8 +227,8 @@ def run(engine, output):
             context.close()
             browser.close()
         assert not errors, errors
-        assert not writes, writes
-        print(f'Arcade lab OK ({engine}): seven widths, automatic stage selection without a button, four real test links, empty/active/expired states, disclosures, isolated minesweeper, no POSTs. {output}')
+        assert len(writes) == 4, writes  # One failed autosave + one explicit retry at each test width.
+        print(f'Arcade lab OK ({engine}): seven widths, same-document stage selection/back, stable scroll, unsaved library retained, autosave/retry, failed reads, four test games, no publishing. {output}')
     finally:
         server.shutdown()
 
