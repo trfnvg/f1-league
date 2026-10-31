@@ -10,15 +10,40 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const rad = Math.PI / 180;
   const clamp = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
-  const wrap = value => ((value + 540) % 360 + 360) % 360 - 180;
-  const vector = (lat, lon) => [Math.cos(lat*rad)*Math.cos(lon*rad), Math.sin(lat*rad), Math.cos(lat*rad)*Math.sin(lon*rad)];
+  const vector = (lat, lon) => [Math.cos(lat*rad)*Math.sin(lon*rad), Math.sin(lat*rad), Math.cos(lat*rad)*Math.cos(lon*rad)];
   const dot = (a,b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross = (a,b) => [a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const unit = values => {const length=Math.hypot(...values)||1;return values.map(value=>value/length);};
+  // Camera-to-world quaternion: unlike latitude clamps, this permits complete
+  // turns over either pole and diagonal/rolling gestures without a singularity.
+  const multiply = (a,b) => [
+    a[3]*b[0]+a[0]*b[3]+a[1]*b[2]-a[2]*b[1],
+    a[3]*b[1]-a[0]*b[2]+a[1]*b[3]+a[2]*b[0],
+    a[3]*b[2]+a[0]*b[1]-a[1]*b[0]+a[2]*b[3],
+    a[3]*b[3]-a[0]*b[0]-a[1]*b[1]-a[2]*b[2],
+  ];
+  const rotation = (axis,angle) => [...axis.map(value=>value*Math.sin(angle/2)),Math.cos(angle/2)];
+  const lookAt = (lat,lon) => multiply(rotation([0,1,0],lon*rad),rotation([1,0,0],-lat*rad));
+  function between(from,to) {
+    const cosine=clamp(dot(from,to),-1,1);
+    if(cosine<-.999999)return rotation(unit(cross(from,Math.abs(from[0])<.8?[1,0,0]:[0,1,0])),Math.PI);
+    return unit([...cross(from,to),1+cosine]);
+  }
+  function interpolate(from,to,t) {
+    let cosine=from.reduce((sum,value,index)=>sum+value*to[index],0);
+    if(cosine<0){to=to.map(value=>-value);cosine=-cosine;}
+    if(cosine>.9995)return unit(from.map((value,index)=>value+(to[index]-value)*t));
+    const angle=Math.acos(clamp(cosine,-1,1)),denominator=Math.sin(angle);
+    return from.map((value,index)=>(value*Math.sin((1-t)*angle)+to[index]*Math.sin(t*angle))/denominator);
+  }
   const vectors = races.map(race => vector(race.lat,race.lon));
   const initial = Math.max(0,races.findIndex(race => race.next));
-  let selected = initial, displayed = -1, lat = races[initial].lat*.7, lon = races[initial].lon+12;
+  let selected = initial, displayed = -1, labelled = -1;
+  let orientation=lookAt(races[initial].lat*.7,races[initial].lon+12);
   let zoom = 1, width = 1, height = 1, dpr = 1, visible = false, initialized = false;
   let renderer, animation, raf = 0, lastFrame = 0, auto = false, hovered = false, dragging;
   let countdownTimer, frameCount = 0, renderGeneration = 0;
+  const contacts=new Map();let pinch;
   const routeContext = routes.getContext('2d');
   const pinButtons = [], tourButtons = [];
   const arcVectors = vectors.slice(1).map((end,index) => {
@@ -95,15 +120,16 @@
     motion.setAttribute('aria-label',auto?'Остановить вращение глобуса':'Включить вращение глобуса');
     requestFrame();
   }
-  function select(index,center=true,scroll=true) {
+  function select(index,center=true,scroll=true,reveal=true) {
     selected=(index+races.length)%races.length;hovered=false;showCard(selected);
+    labelled=reveal?selected:-1;
     pinButtons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===selected)));
     tourButtons.forEach((button,i)=>button.setAttribute('aria-pressed',String(i===selected)));
     setAuto(false);
     if(center) {
-      const targetLat=clamp(races[selected].lat*.8,-72,72), targetLon=races[selected].lon+8;
-      if(reduced.matches||!visible){lat=targetLat;lon=wrap(targetLon);animation=null;}
-      else animation={start:performance.now(),lat,lon,toLat:targetLat,toLon:lon+wrap(targetLon-lon)};
+      const target=lookAt(races[selected].lat*.8,races[selected].lon+8);
+      if(reduced.matches||!visible){orientation=target;animation=null;}
+      else animation={start:performance.now(),from:orientation.slice(),to:target};
     }
     if(scroll) {
       const item=tourButtons[selected],box=item.getBoundingClientRect(),list=tour.getBoundingClientRect();
@@ -116,11 +142,14 @@
     pin.dataset.globePin=race.key;pin.hidden=true;
     pin.setAttribute('aria-label',`R${race.round} · ${race.location} · ${race.dates}`);
     pin.append(create('span','rg-pin-label',race.location));
-    pin.addEventListener('pointerenter',()=>{if(!dragging){hovered=true;showCard(index);}});
-    pin.addEventListener('pointerleave',()=>{hovered=false;if(!dragging)showCard(selected);requestFrame();});
-    pin.addEventListener('focus',()=>{hovered=true;showCard(index);});
-    pin.addEventListener('blur',()=>{hovered=false;showCard(selected);requestFrame();});
-    pin.addEventListener('click',()=>select(index));markerLayer.append(pin);pinButtons.push(pin);
+    // Hover/focus never reveals labels or replaces the selected race card.
+    pin.addEventListener('pointerenter',()=>{hovered=true;});
+    pin.addEventListener('pointerleave',()=>{hovered=false;requestFrame();});
+    pin.addEventListener('focus',()=>{hovered=true;});
+    pin.addEventListener('blur',()=>{hovered=false;requestFrame();});
+    // Pointer taps are resolved on pointerup so a drag may start on a marker.
+    // Native keyboard/assistive-technology activation still uses click.
+    pin.addEventListener('click',event=>{if(event.detail===0)select(index);});markerLayer.append(pin);pinButtons.push(pin);
     const button=create('button','rg-tour-item');button.type='button';button.dataset.globeRace=race.key;
     const meta=create('small','',`R${String(race.round).padStart(2,'0')}`);
     meta.append(create('span','',race.dates.slice(0,5)));
@@ -129,7 +158,7 @@
     button.setAttribute('aria-label',`Показать ${race.title}, ${race.dates}`);
     button.addEventListener('click',()=>select(index));tour.append(button);tourButtons.push(button);
   });
-  root.hidden=false;select(initial,false);
+  root.hidden=false;select(initial,false,true,false);
   $('cover').addEventListener('error',()=>{$('cover').hidden=true;});
   zoneSelector?.addEventListener('change',()=>showCard(displayed,true));
   $('schedule').addEventListener('click',event=>{
@@ -141,8 +170,10 @@
     card.scrollIntoView({behavior:reduced.matches?'auto':'smooth',block:'start'});
   });
   function basis() {
-    const a=lat*rad,b=lon*rad;
-    return [[-Math.sin(b),0,Math.cos(b)],[-Math.sin(a)*Math.cos(b),Math.cos(a),-Math.sin(a)*Math.sin(b)],[Math.cos(a)*Math.cos(b),Math.sin(a),Math.cos(a)*Math.sin(b)]];
+    const [x,y,z,w]=orientation;
+    return [[1-2*(y*y+z*z),2*(x*y+z*w),2*(x*z-y*w)],
+      [2*(x*y-z*w),1-2*(x*x+z*z),2*(y*z+x*w)],
+      [2*(x*z+y*w),2*(y*z-x*w),1-2*(x*x+y*y)]];
   }
   function project(point,axes,radius) {
     return {x:width/2+dot(point,axes[0])*radius,y:height/2-dot(point,axes[1])*radius,z:dot(point,axes[2])};
@@ -152,19 +183,13 @@
     const axes=basis(),radius=Math.min(width,height)*.43*zoom;
     renderer(axes,radius*dpr);
     const positions=vectors.map(point=>project(point,axes,radius));
-    const labelled=[selected];
-    const candidates=positions.map((point,index)=>({point,index})).filter(({point})=>point.z>.4).sort((a,b)=>b.point.z-a.point.z);
-    for(const {point,index} of candidates) {
-      if(labelled.length>=3)break;
-      if(labelled.every(other=>Math.hypot(point.x-positions[other].x,point.y-positions[other].y)>95))labelled.push(index);
-    }
     pinButtons.forEach((button,index)=>{
       const point=positions[index],hidden=point.z<.055||point.x<10||point.x>width-10||point.y<45||point.y>height-55;
       if(button.hidden!==hidden)button.hidden=hidden;
+      button.classList.toggle('is-labelled',index===labelled);
       if(hidden)return;
       button.style.transform=`translate(${point.x.toFixed(2)}px,${point.y.toFixed(2)}px) translate(-50%,-50%)`;
       button.style.zIndex=String(index===selected?5:Math.round(point.z*3));
-      button.classList.toggle('is-labelled',labelled.includes(index));
       button.classList.toggle('is-label-left',point.x>width*.66);
     });
     if(routeContext) {
@@ -188,9 +213,9 @@
     const elapsed=lastFrame?Math.min(80,time-lastFrame):16;lastFrame=time;
     if(animation) {
       const t=clamp((time-animation.start)/420,0,1),ease=1-Math.pow(1-t,3);
-      lat=animation.lat+(animation.toLat-animation.lat)*ease;lon=animation.lon+(animation.toLon-animation.lon)*ease;
+      orientation=interpolate(animation.from,animation.to,ease);
       if(t===1)animation=null;
-    }else if(auto&&!hovered&&!dragging)lon=wrap(lon+elapsed*.004);
+    }else if(auto&&!hovered&&!dragging)orientation=unit(multiply(orientation,rotation([0,1,0],elapsed*.004*rad)));
     draw();
     if(animation||(auto&&!hovered&&!dragging))requestFrame();
   }
@@ -202,9 +227,11 @@
       const w=Math.round(width*dpr),h=Math.round(height*dpr);
       if(node.width!==w)node.width=w;if(node.height!==h)node.height=h;
     }
+    for(const point of contacts.values())point.ball=ball(point.x,point.y);
     requestFrame();
   }
   function fallback() {
+    cancelGesture();
     renderGeneration++; // Invalidate texture loads belonging to a lost/failed context.
     renderer=null;root.dataset.globeRenderer='fallback';root.classList.add('is-fallback');
     $('loading').hidden=true;
@@ -218,17 +245,18 @@
     uniform sampler2D dayMap;uniform sampler2D nightMap;
     void main(){
       vec2 p=(gl_FragCoord.xy-resolution*.5)/radius;float r=length(p);
-      if(r>1.){float glow=exp(-(r-1.)*42.)*.34;gl_FragColor=vec4(.38,.50,.63,glow);return;}
+      if(r>1.){gl_FragColor=vec4(0.);return;}
       vec3 n=vec3(p,sqrt(max(0.,1.-dot(p,p))));vec3 world=axes*n;
-      vec2 uv=vec2(atan(world.z,world.x)/6.2831853+.5,asin(clamp(world.y,-1.,1.))/3.14159265+.5);
+      vec2 uv=vec2(atan(world.x,world.z)/6.2831853+.5,asin(clamp(world.y,-1.,1.))/3.14159265+.5);
       vec3 day=texture2D(dayMap,uv).rgb;vec3 night=texture2D(nightMap,uv).rgb;
       float light=max(0.,dot(n,normalize(vec3(-.7,.5,1.))));
       float gray=dot(day,vec3(.21,.72,.07));
       float ocean=smoothstep(.015,.085,day.b-day.r)*(1.-smoothstep(.17,.45,gray));
-      day=mix(vec3(gray),day,.32);day=mix(day,vec3(.018,.027,.039),ocean*.93);
+      day=mix(vec3(gray),day,.72);day=mix(day,vec3(.13,.32,.44),ocean*.65);
       night=max(night-vec3(.035,.045,.075),vec3(0.));
-      vec3 color=day*(.17+.58*light)+night*vec3(1.18,1.02,.82)*(1.28-.4*light);
-      color+=vec3(.12,.20,.29)*pow(1.-n.z,4.)*.8;
+      vec3 color=day*(.36+.64*light)*(.84+.16*sqrt(n.z))+night*vec3(1.05,.95,.8)*(.12-.08*light);
+      float reflection=pow(max(0.,dot(n,normalize(vec3(-.4,.7,1.)))),24.)*ocean*.045;
+      color+=vec3(.75,.8,.78)*reflection+vec3(.5,.54,.56)*pow(1.-n.z,5.)*.035;
       gl_FragColor=vec4(color,1.-smoothstep(.995,1.,r));
     }`;
   function loadImage(url) {
@@ -289,7 +317,7 @@
     if(entries[entries.length-1].isIntersecting){tick();countdownTimer=setInterval(()=>{if(!document.hidden)tick();},1000);}
   }).observe(root);
   new ResizeObserver(resize).observe(stage);
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){if(raf)cancelAnimationFrame(raf);raf=0;}else{lastFrame=0;requestFrame();tick();}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelGesture();if(raf)cancelAnimationFrame(raf);raf=0;}else{lastFrame=0;requestFrame();tick();}});
   motion.addEventListener('click',()=>setAuto(!auto));
   $('home').addEventListener('click',()=>{zoom=1;select(initial);});
   root.querySelectorAll('[data-globe-step]').forEach(button=>button.addEventListener('click',()=>select(selected+Number(button.dataset.globeStep))));
@@ -300,22 +328,54 @@
     event.preventDefault();setAuto(false);animation=null;
     if(event.key==='Home'){zoom=1;select(initial);}
     else if(['+','=','-'].includes(event.key))changeZoom(event.key==='-'?-.15:.15);
-    else{lon=wrap(lon+(event.key==='ArrowRight'?12:event.key==='ArrowLeft'?-12:0));lat=clamp(lat+(event.key==='ArrowUp'?10:event.key==='ArrowDown'?-10:0),-75,75);requestFrame();}
+    else{
+      const horizontal=event.key==='ArrowLeft'||event.key==='ArrowRight';
+      const angle=(event.key==='ArrowRight'||event.key==='ArrowDown'?12:-12)*rad;
+      orientation=unit(multiply(orientation,rotation(horizontal?[0,1,0]:[1,0,0],angle)));requestFrame();
+    }
   });
+  function ball(x,y) {
+    const box=stage.getBoundingClientRect(),radius=Math.min(width,height)*.43*zoom;
+    const px=(x-box.left-width/2)/radius,py=(height/2-y+box.top)/radius;
+    const squared=px*px+py*py;
+    return squared<=1?[px,py,Math.sqrt(1-squared)]:unit([px,py,0]);
+  }
+  const distance=()=>{const [a,b]=[...contacts.values()];return Math.hypot(a.x-b.x,a.y-b.y);};
   stage.addEventListener('pointerdown',event=>{
-    if(event.target.closest('button')||event.button!==0||!renderer)return;
-    dragging={id:event.pointerId,x:event.clientX,y:event.clientY};animation=null;setAuto(false);
-    stage.setPointerCapture(event.pointerId);stage.classList.add('is-dragging');
+    if((event.pointerType==='mouse'&&event.button!==0)||!renderer||contacts.size>=2)return;
+    event.preventDefault();animation=null;hovered=false;setAuto(false);dragging=true;
+    const pin=event.target.closest('[data-globe-pin]');
+    contacts.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,
+      ball:ball(event.clientX,event.clientY),pin:pin?pinButtons.indexOf(pin):-1,moved:false,pinched:false});
+    stage.setPointerCapture(event.pointerId);
+    if(contacts.size>1){for(const point of contacts.values())point.pinched=true;pinch={distance:Math.max(1,distance()),zoom};}
     if(event.pointerType==='mouse')stage.focus({preventScroll:true});
   });
   stage.addEventListener('pointermove',event=>{
-    if(!dragging||dragging.id!==event.pointerId)return;
-    const dx=event.clientX-dragging.x,dy=event.clientY-dragging.y;
-    lon=wrap(lon-dx/Math.min(width,height)*190);lat=clamp(lat+dy/Math.min(width,height)*150,-75,75);
-    dragging.x=event.clientX;dragging.y=event.clientY;requestFrame();
+    const point=contacts.get(event.pointerId);if(!point)return;
+    if(event.cancelable)event.preventDefault();point.x=event.clientX;point.y=event.clientY;
+    if(contacts.size>1){zoom=clamp(pinch.zoom*distance()/pinch.distance,.8,1.8);requestFrame();return;}
+    if(!point.moved&&Math.hypot(point.x-point.startX,point.y-point.startY)<4)return;
+    point.moved=true;stage.classList.add('is-dragging');
+    const next=ball(point.x,point.y);
+    orientation=unit(multiply(orientation,between(next,point.ball)));point.ball=next;requestFrame();
   });
-  const release=()=>{dragging=null;stage.classList.remove('is-dragging');};
+  function release(event) {
+    const point=contacts.get(event.pointerId);if(!point)return;
+    contacts.delete(event.pointerId);pinch=null;
+    if(event.type==='pointerup'&&!point.moved&&!point.pinched&&point.pin>=0)select(point.pin);
+    for(const remaining of contacts.values()){remaining.ball=ball(remaining.x,remaining.y);remaining.moved=true;}
+    if(!contacts.size){dragging=false;stage.classList.remove('is-dragging');}
+    if(stage.hasPointerCapture(event.pointerId))stage.releasePointerCapture(event.pointerId);
+  }
+  function cancelGesture() {
+    const ids=[...contacts.keys()];contacts.clear();pinch=null;dragging=false;stage.classList.remove('is-dragging');
+    for(const id of ids)if(stage.hasPointerCapture(id))stage.releasePointerCapture(id);
+  }
+  window.addEventListener('blur',cancelGesture);
   stage.addEventListener('pointerup',release);stage.addEventListener('pointercancel',release);stage.addEventListener('lostpointercapture',release);
-  stage.addEventListener('wheel',event=>{if(document.activeElement!==stage||event.ctrlKey||event.metaKey)return;event.preventDefault();changeZoom(event.deltaY>0?-.07:.07);},{passive:false});
-  reduced.addEventListener('change',()=>{if(reduced.matches){setAuto(false);if(animation){lat=animation.toLat;lon=animation.toLon;animation=null;}}requestFrame();});
+  // This is deliberately local to the map; page scrolling/zooming outside it
+  // remains native. Wheel scrolling is never hijacked to zoom the Earth.
+  stage.addEventListener('touchmove',event=>{if(renderer&&event.cancelable)event.preventDefault();},{passive:false});
+  reduced.addEventListener('change',()=>{if(reduced.matches){setAuto(false);if(animation){orientation=animation.to;animation=null;}}requestFrame();});
 })();

@@ -116,6 +116,9 @@ def run(browser_name, output):
                 assert page.locator('[data-globe-clock-value]').all_text_contents() == ['04', '08', '00', '00']
                 assert page.locator('[data-globe-track-start]').get_attribute('cx') is not None
                 assert page.locator('[data-globe-motion] svg').count() == 1
+                assert page.locator('.rg-pin.is-labelled').count() == 0
+                assert page.locator('.rg-pin-label').evaluate_all("labels => labels.every(node => getComputedStyle(node).opacity === '0')")
+                assert page.locator('[data-globe-stage]').evaluate("node => getComputedStyle(node).touchAction") == 'none'
                 # Idle WebGL does not spin a permanent requestAnimationFrame loop.
                 page.wait_for_timeout(120)
                 idle_frame = globe.get_attribute('data-globe-frame')
@@ -148,6 +151,21 @@ def run(browser_name, output):
                     raise
                 stage = page.locator('[data-globe-stage]')
                 stage.focus()
+                if width == 1440:
+                    get_axes = """node => {const gl=node.getContext('webgl'),program=gl.getParameter(gl.CURRENT_PROGRAM);
+                        return Array.from(gl.getUniform(program,gl.getUniformLocation(program,'axes')));}"""
+                    canvas = page.locator('[data-globe-canvas]')
+                    start_axes = canvas.evaluate(get_axes)
+                    for direction in ('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'):
+                        for _ in range(30):
+                            page.keyboard.press(direction)
+                        page.wait_for_timeout(80)
+                        axes = canvas.evaluate(get_axes)
+                        assert max(abs(a-b) for a,b in zip(axes,start_axes)) < .005, (direction, axes)
+                    for offset in (0, 3, 6):
+                        assert abs(sum(value*value for value in axes[offset:offset+3])-1) < .0001
+                    for a, b in ((0, 3), (0, 6), (3, 6)):
+                        assert abs(sum(axes[a+i]*axes[b+i] for i in range(3))) < .0001
                 before = page.locator('[data-globe-pin=melbourne]').get_attribute('style')
                 page.keyboard.press('ArrowLeft')
                 page.wait_for_function("node => node.getAttribute('style') !== " + repr(before), arg=page.locator('[data-globe-pin=melbourne]').element_handle())
@@ -156,6 +174,12 @@ def run(browser_name, output):
                 page.mouse.down()
                 page.mouse.move(stage_box['x'] + stage_box['width'] * .4, stage_box['y'] + stage_box['height'] * .6, steps=6)
                 page.mouse.up()
+                if width == 1440:
+                    before_scroll = page.evaluate('scrollY')
+                    page.mouse.wheel(0, 160)
+                    page.wait_for_timeout(150)
+                    assert page.evaluate('scrollY') > before_scroll + 20, 'Focused map must not hijack wheel scrolling'
+                    stage.scroll_into_view_if_needed()
                 page.locator('[data-globe-zoom="1"]').click()
                 page.locator('[data-globe-home]').click()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
@@ -163,7 +187,13 @@ def run(browser_name, output):
                 page.locator('[data-globe-pin=mexico]').hover()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
                 page.locator('[data-globe-pin=las-vegas]').hover()
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
+                assert page.locator('[data-globe-pin=las-vegas] .rg-pin-label').evaluate("node => getComputedStyle(node).opacity") == '0'
+                page.locator('[data-globe-pin=las-vegas]').click()
                 assert page.locator('[data-globe-location]').inner_text() == 'Лас-Вегас'
+                page.wait_for_function("document.querySelector('[data-globe-pin=las-vegas]').classList.contains('is-labelled')")
+                assert page.locator('.rg-pin.is-labelled').count() == 1
+                page.locator('[data-globe-home]').click()
                 page.locator('[data-globe-home]').hover()
                 assert page.locator('[data-globe-location]').inner_text() == 'Мехико'
                 page.locator('[data-globe-step="1"]').click()
@@ -208,6 +238,81 @@ def run(browser_name, output):
             page.locator('[data-globe-race=monaco]').tap()
             assert page.locator('[data-globe-location]').inner_text() == 'Монако'
             page.locator('[data-globe-stage]').scroll_into_view_if_needed()
+            stage = page.locator('[data-globe-stage]')
+            page.locator('[data-globe-home]').tap()
+            page.wait_for_timeout(500)
+            page.locator('[data-globe-pin=las-vegas]').tap()
+            assert page.locator('[data-globe-location]').inner_text() == 'Лас-Вегас'
+            assert page.locator('.rg-pin.is-labelled').count() == 1
+            page.locator('[data-globe-home]').tap()
+            page.wait_for_timeout(500)
+            if browser_name == 'chromium':
+                # Trusted mobile touch input, not synthetic JS pointer events.
+                # CDP is restricted to this disposable Playwright test context.
+                touch = context.new_cdp_session(page)
+                box = stage.bounding_box()
+                cx, cy = box['x'] + box['width'] / 2, box['y'] + box['height'] / 2
+                get_axes = """node => {const gl=node.getContext('webgl'),program=gl.getParameter(gl.CURRENT_PROGRAM);
+                    return Array.from(gl.getUniform(program,gl.getUniformLocation(program,'axes')));}"""
+                get_radius = """node => {const gl=node.getContext('webgl'),program=gl.getParameter(gl.CURRENT_PROGRAM);
+                    return gl.getUniform(program,gl.getUniformLocation(program,'radius'));}"""
+                canvas = page.locator('[data-globe-canvas]')
+                initial_scroll = page.evaluate('[scrollX, scrollY, visualViewport.scale]')
+
+                def swipe(start, end):
+                    touch.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': start[0], 'y': start[1], 'id': 1}]})
+                    for step in range(1, 7):
+                        x = start[0] + (end[0]-start[0])*step/6
+                        y = start[1] + (end[1]-start[1])*step/6
+                        touch.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': x, 'y': y, 'id': 1}]})
+                        page.wait_for_timeout(20)
+                    touch.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+                    page.wait_for_timeout(80)
+
+                for dx, dy in ((0, -70), (0, 70), (-65, 0), (65, 0), (45, -50)):
+                    before = canvas.evaluate(get_axes)
+                    swipe((cx, cy), (cx+dx, cy+dy))
+                    after = canvas.evaluate(get_axes)
+                    assert max(abs(a-b) for a,b in zip(before,after)) > .01, (dx, dy)
+                    assert page.evaluate('[scrollX, scrollY, visualViewport.scale]') == initial_scroll
+                    assert page.locator('[data-globe-race][aria-pressed=true]').get_attribute('data-globe-race') == 'mexico'
+                # Pinching zooms the Earth, never the browser viewport.
+                radius = canvas.evaluate(get_radius)
+                touch.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': cx-30, 'y': cy, 'id': 1}, {'x': cx+30, 'y': cy, 'id': 2}]})
+                for spread in (35, 45, 55, 65):
+                    touch.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': cx-spread, 'y': cy, 'id': 1}, {'x': cx+spread, 'y': cy, 'id': 2}]})
+                    page.wait_for_timeout(30)
+                touch.send('Input.dispatchTouchEvent', {'type': 'touchEnd', 'touchPoints': []})
+                page.wait_for_timeout(80)
+                assert canvas.evaluate(get_radius) > radius * 1.3
+                assert page.evaluate('[scrollX, scrollY, visualViewport.scale]') == initial_scroll
+                # Cancellation must release pointer state, allowing the next gesture.
+                touch.send('Input.dispatchTouchEvent', {'type': 'touchStart', 'touchPoints': [{'x': cx, 'y': cy, 'id': 1}]})
+                touch.send('Input.dispatchTouchEvent', {'type': 'touchMove', 'touchPoints': [{'x': cx+20, 'y': cy+20, 'id': 1}]})
+                assert stage.evaluate("node => node.classList.contains('is-dragging')")
+                touch.send('Input.dispatchTouchEvent', {'type': 'touchCancel', 'touchPoints': []})
+                assert not stage.evaluate("node => node.classList.contains('is-dragging')")
+                page.locator('[data-globe-home]').tap()
+                page.wait_for_timeout(500)
+                pin_box = page.locator('[data-globe-pin=las-vegas]').bounding_box()
+                px, py = pin_box['x'] + pin_box['width']/2, pin_box['y'] + pin_box['height']/2
+                swipe((px, py), (px+45, py+25))
+                assert page.locator('[data-globe-location]').inner_text() == 'Мехико', 'Dragging a marker must not select it'
+                # A browser-height change must not resize the map or shift the layout sideways.
+                old_width = stage.bounding_box()['width']
+                page.set_viewport_size({'width': 390, 'height': 720})
+                assert stage.bounding_box()['width'] == old_width
+                assert page.evaluate('scrollX === 0 && document.documentElement.scrollWidth <= innerWidth + 1')
+                page.set_viewport_size({'width': 390, 'height': 844})
+                page.locator('[data-globe-card]').scroll_into_view_if_needed()
+                card_box = page.locator('[data-globe-card]').bounding_box()
+                before_scroll = page.evaluate('scrollY')
+                swipe((card_box['x']+25, card_box['y']+150), (card_box['x']+25, card_box['y']+50))
+                assert page.evaluate('scrollY') > before_scroll + 20, 'Page scrolling outside the map must stay native'
+                touch.detach()
+                stage.scroll_into_view_if_needed()
+            page.locator('[data-globe-home]').tap()
+            stage.scroll_into_view_if_needed()
             page.locator('[data-globe-motion]').tap()
             page.wait_for_timeout(500)
             active_frames = int(page.locator('[data-race-globe]').get_attribute('data-globe-frame'))
@@ -260,7 +365,7 @@ def run(browser_name, output):
             assert page.locator('[data-race-globe]').is_hidden()
             browser.close()
         assert not errors, errors
-        print(f"Calendar UI OK ({browser_name}): 5 sizes, WebGL globe, selection/drag/zoom, touch, idle/offscreen pause, context-loss fallback, 23 cards, five sessions, uploaded covers, timezones + DST, filters, credits, no-JS fallback. {output}")
+        print(f"Calendar UI OK ({browser_name}): 5 sizes, click-only labels, full 360-degree rotation, selection/drag/zoom, mobile gestures, native page scroll, idle/offscreen pause, context-loss fallback, 23 cards, sessions, covers, timezones, filters, no-JS fallback. {output}")
     finally:
         server.shutdown()
 

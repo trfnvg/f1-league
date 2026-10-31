@@ -1,10 +1,11 @@
 {% load static %}
 {% if globe_rounds %}
 <section class="race-globe" data-race-globe hidden aria-label="Интерактивный глобус Гран-при" data-day-texture="{% static 'league/images/globe/earth-day.jpg' %}" data-night-texture="{% static 'league/images/globe/earth-night.jpg' %}">
+  <header class="rg-heading">
+    <div><p class="rg-kicker"><span></span> АТЛАС ГРАН-ПРИ <b>{{ calendar_year }}</b></p><h2>Весь мир. <span>Один чемпионат.</span></h2></div>
+    <p class="rg-intro">Выбирай этап на карте.<br>Все детали уик-энда — рядом.</p>
+  </header>
   <div class="rg-copy">
-    <p class="rg-kicker"><span></span> WORLD TOUR <b>{{ calendar_year }}</b></p>
-    <h2>Весь сезон.<br><span>На одной планете.</span></h2>
-    <p class="rg-intro">От первого старта до финального флага.<br>Твой маршрут по миру Формулы-1.</p>
     <article class="rg-card" data-globe-card aria-labelledby="globe-race-title">
       <img class="rg-cover" data-globe-cover alt="" hidden>
       <div class="rg-card-top"><span data-globe-round></span><span data-globe-state></span></div>
@@ -26,10 +27,9 @@
       <canvas data-globe-canvas aria-hidden="true"></canvas>
       <canvas class="rg-routes" data-globe-routes aria-hidden="true"></canvas>
       <div class="rg-markers" data-globe-markers></div>
-      <span class="rg-compass" aria-hidden="true">N<br><i></i></span>
     </div>
-    <div class="rg-world-top"><span><i></i> {{ globe_rounds|length }} ЭТАПА <em>/</em> ОДНА ПЛАНЕТА</span><button type="button" data-globe-motion aria-pressed="false" aria-label="Включить вращение глобуса"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="rg-motion-play" d="m6 4 6 4-6 4Z"/><path class="rg-motion-pause" d="M6 4v8m4-8v8"/></svg><span data-globe-motion-label>Вращение</span></button></div>
-    <div class="rg-world-bottom"><p id="globe-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 10V5a2 2 0 0 1 4 0v8-5a2 2 0 0 1 4 0v5-2a2 2 0 0 1 4 0v4c0 4-2 7-6 7h-1c-3 0-4-2-6-4l-3-4a2 2 0 0 1 3-2l3 3"/></svg><span>Вращай и исследуй<small>Выбери точку, чтобы открыть этап</small></span></p><div class="rg-controls"><button type="button" data-globe-zoom="-1" aria-label="Отдалить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button><button type="button" data-globe-home aria-label="Вернуться к ближайшему этапу"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/><circle cx="12" cy="12" r="1"/></svg></button><button type="button" data-globe-zoom="1" aria-label="Приблизить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button></div></div>
+    <div class="rg-world-top"><span><i></i> {{ globe_rounds|length }} ГРАН-ПРИ <em>/</em> {{ calendar_year }}</span><div class="rg-controls"><button type="button" data-globe-zoom="-1" aria-label="Отдалить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg></button><button type="button" data-globe-home aria-label="Вернуться к ближайшему этапу"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/><circle cx="12" cy="12" r="1"/></svg></button><button type="button" data-globe-zoom="1" aria-label="Приблизить глобус"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6v12"/></svg></button></div></div>
+    <div class="rg-world-bottom"><p id="globe-instructions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 9-3 3 3 3m14-6 3 3-3 3M9 5l3-3 3 3m-6 14 3 3 3-3M3 12h18M12 3v18"/></svg><span>Вращай в любую сторону<small>Нажми на точку, чтобы открыть этап</small></span></p><button type="button" data-globe-motion aria-pressed="false" aria-label="Включить вращение глобуса"><svg viewBox="0 0 16 16" aria-hidden="true"><path class="rg-motion-play" d="m6 4 6 4-6 4Z"/><path class="rg-motion-pause" d="M6 4v8m4-8v8"/></svg><span data-globe-motion-label>Вращение</span></button></div>
     <p class="rg-fallback" data-globe-fallback hidden>3D недоступно. Выбирай этапы в ленте ниже — расписание работает.</p>
     <p class="rg-loading" data-globe-loading role="status">Загружаем карту Земли…</p>
     <small class="rg-credit">Earth imagery © <a href="https://www.solarsystemscope.com/textures/" target="_blank" rel="noopener noreferrer">Solar System Scope</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></small>
