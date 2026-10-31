@@ -1,6 +1,7 @@
 /* Shared player-facing chrome. Game canvases and fullscreen geometry are owned
    by their individual game stylesheets. */
-:is(.arcade-page,.doodle-page,.arcade-library){
+:is(.arcade-page,.doodle-page,.arcade-library,.pit-stack-page){
+  --arcade-line:rgba(209,222,237,.14);--arcade-muted:#a7b2c0;
   --room-bg:#101820;--room-panel:#151e27;--room-line:#2c3843;
   --room-text:#eef2f6;--room-muted:#9aa9b7;--room-accent:#e46b70;
   font-family:Manrope,system-ui,sans-serif;

@@ -13,11 +13,17 @@ import django;django.setup()
 from django.test import override_settings
 from django.template.loader import render_to_string
 from django.contrib.auth.models import User
+from django.utils import timezone
+from datetime import timedelta
+from types import SimpleNamespace
+from league.arcade_rewards import WHEEL_SECTORS
 with override_settings(STORAGES={'default':{'BACKEND':'django.core.files.storage.FileSystemStorage'},'staticfiles':{'BACKEND':'django.contrib.staticfiles.storage.StaticFilesStorage'}}):
     print(render_to_string('arcade_tetris.html',dict(user=User(id=1,username='Release player'),
         arcade_scoring_open=True,arcade_library_mode=True,tetris_save_results=True,
         tetris_start_url='/start',tetris_finish_url='/finish',tetris_board_url='/board',
-        leaderboard_title='Глобальный рейтинг',current_season={'year':2026})))
+        leaderboard_title='Глобальный рейтинг',current_season={'year':2026},
+        wheel_event=SimpleNamespace(id=1,name='Сан-Паулу, Бразилия',deadline=timezone.now()+timedelta(days=1)),
+        wheel_sectors=list(WHEEL_SECTORS),now=timezone.now())))
 `],{cwd:root,env:{...process.env,DATABASE_URL:'sqlite:///:memory:'},encoding:'utf8'});
 assert.equal(rendered.status,0,rendered.stderr);
 const attempts=new Map(),proofs=[];let serial=0,board={records:[],total_attempts:0,board_title:'Глобальный рейтинг'};
@@ -55,6 +61,21 @@ try {
     const page=await context.newPage();page.on('pageerror',error=>errors.push(String(error)));
     await page.route('https://**/*',route=>route.abort());
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
+    // The live bonus panel must load its shared CSS, not render as an unstyled
+    // gradient strip and an original-size hub image below the new game.
+    await page.locator('.arcade-wheel-label').first().waitFor();
+    const wheel=await page.locator('.arcade-wheel-machine').boundingBox();
+    assert.ok(wheel.width>150 && wheel.width<=380);
+    assert.ok(Math.abs(wheel.width-wheel.height)<2,'Wheel must remain square');
+    const disc=await page.locator('#arcade-wheel-disc').boundingBox();
+    assert.ok(disc.width>130 && Math.abs(disc.width-disc.height)<2);
+    const hub=await page.locator('.arcade-wheel-hub img').boundingBox();
+    assert.ok(hub.width<=90 && hub.height<=90,'Hub image must be constrained');
+    assert.equal(await page.locator('.arcade-wheel-layout').evaluate(el=>getComputedStyle(el).display),'grid');
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+    if(process.env.TETRIS_PREVIEW_DIR) {
+      await page.locator('#arcade-wheel-panel').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-bonus-${width}.png`)});
+    }
     await page.locator('#tetris-start').click();
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
     await page.keyboard.press('KeyP');

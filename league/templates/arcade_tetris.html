@@ -1,6 +1,8 @@
 {% extends "base.html" %}{% load static %}
 {% block title %}Pit Stack · F1-тетрис · Fastlap{% endblock %}
 {% block extra_head %}
+<link rel="stylesheet" href="{% static 'league/arcade.css' %}">
+<link rel="stylesheet" href="{% static 'league/arcade-library.css' %}">
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
