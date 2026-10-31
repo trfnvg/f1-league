@@ -52,6 +52,8 @@
 .arcade-control .lab-fields select { width:100%; min-width:0; min-height:46px; padding:10px 12px; color:#e8ecf2; background:#181d24; border:1px solid #414a57; border-radius:8px; font:400 13px/1.5 Inter,sans-serif; text-overflow:ellipsis; }
 .arcade-control .lab-fields select:disabled { opacity:.7; }
 .arcade-control .lab-stage-picker .lab-fields { grid-template-columns:minmax(0,1fr) auto; align-items:end; }
+.arcade-control .lab-stage-picker.is-auto .lab-fields { grid-template-columns:minmax(0,1fr); }
+.arcade-control .lab-stage-picker button[hidden] { display:none; }
 .arcade-control .lab-current-contest { color:var(--lab-muted); display:flex; flex-wrap:wrap; gap:9px; align-items:center; font-size:12px; margin:0 0 24px; }
 .arcade-control .lab-current-contest .lab-state { margin:0; }
 .arcade-control .lab-current-contest strong { color:#e5e9ef; }

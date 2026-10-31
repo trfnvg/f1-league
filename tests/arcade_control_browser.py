@@ -87,7 +87,10 @@ def run(engine, output):
             self.send_response(200)
             self.send_header('Content-Type', mime or 'application/octet-stream')
             self.end_headers()
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # A stage change can cancel an in-flight image request.
 
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -111,6 +114,7 @@ def run(engine, output):
                     assert page.locator('#lab-competition').evaluate('node=>node.open')
                     expect(page.locator('#arcade-game-select')).to_be_visible()
                     expect(page.locator('#arcade-event-select')).to_be_enabled()
+                    expect(page.locator('.lab-stage-picker button')).to_be_hidden()
                     assert page.locator('#test-wheel-spin').is_hidden()
                     for card in cards:
                         cover = page.locator(f'[data-test-game="{card["key"]}"] img')
@@ -138,14 +142,17 @@ def run(engine, output):
                     page.locator('#test-wheel-apply').click()
                     expect(page.locator('#test-wheel-outcome-summary')).to_contain_text('+2')
                     page.goto(base + '/arcade/control/', wait_until='networkidle')
+                    original_event_id = page.locator('#arcade-event-select').input_value()
                     page.select_option('#arcade-event-select', str(future_id))
-                    page.locator('.lab-stage-picker button').click()
                     expect(page.locator('#arcade-game-select')).to_have_value('flappy')
                     expect(page.locator('.lab-competition-form [name=competition_event]')).to_have_value(str(future_id))
                     expect(page.locator('.lab-competition-form [value=publish]')).to_be_disabled()
                     expect(page.locator('.lab-competition-form [value=select]')).to_be_enabled()
                     expect(page.locator('.lab-selected-stage strong')).to_have_text('Сан-Паулу, Бразилия')
                     page.screenshot(path=str(output / f'{width}-future-stage.png'), full_page=True)
+                    page.go_back(wait_until='networkidle')
+                    expect(page.locator('.lab-selected-stage strong')).to_have_text('Мехико, Мексика')
+                    expect(page.locator('#arcade-event-select')).to_have_value(original_event_id)
                     for card in cards:
                         page.goto(base + '/arcade/control/', wait_until='networkidle')
                         page.locator(f'[data-test-game="{card["key"]}"] a').click()
@@ -161,10 +168,22 @@ def run(engine, output):
                             page.locator('.minesweeper-cell').first.click()
                             expect(page.locator('.minesweeper-cell.is-open').first).to_be_visible()
                 context.close()
+            # Progressive enhancement: manual GET navigation still works without JS.
+            context = browser.new_context(viewport={'width': 390, 'height': 900}, java_script_enabled=False)
+            context.route('https://**', lambda route: route.abort())
+            page = context.new_page()
+            page.goto(base + '/arcade/control/', wait_until='networkidle')
+            expect(page.locator('.lab-stage-picker button')).to_be_visible()
+            page.select_option('#arcade-event-select', str(future_id))
+            expect(page.locator('.lab-selected-stage strong')).to_have_text('Мехико, Мексика')
+            page.locator('.lab-stage-picker button').click()
+            expect(page.locator('.lab-selected-stage strong')).to_have_text('Сан-Паулу, Бразилия')
+            expect(page.locator('#arcade-game-select')).to_have_value('flappy')
+            context.close()
             browser.close()
         assert not errors, errors
         assert not writes, writes
-        print(f'Arcade lab OK ({engine}): seven widths, four real test links, empty/active/expired states, disclosures, isolated minesweeper, no POSTs. {output}')
+        print(f'Arcade lab OK ({engine}): seven widths, automatic stage selection without a button, four real test links, empty/active/expired states, disclosures, isolated minesweeper, no POSTs. {output}')
     finally:
         server.shutdown()
 

@@ -3,7 +3,7 @@
 {% block title %}Тестирование аркад · Fastlap{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
-<link rel="stylesheet" href="{% static 'league/arcade-control.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'league/arcade-control.css' %}?v=3-auto-stage">
 {% endblock %}
 {% block content %}
 <main class="arcade-control" aria-labelledby="arcade-control-title">
@@ -58,4 +58,4 @@
   </section>
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/arcade-wheel-test.js' %}?v=2" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/arcade-control.js' %}?v=1" defer></script><script src="{% static 'league/arcade-wheel-test.js' %}?v=2" defer></script>{% endblock %}
