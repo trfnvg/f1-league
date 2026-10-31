@@ -84,24 +84,34 @@
 .tetris-mascot-art { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; overflow: hidden; }
 .tetris-mascot-motion { position: absolute; inset: 0; transform-origin: 50% 96%; animation: tetris-builder-idle 3.6s ease-in-out infinite; }
 .tetris-mascot img { display: block; width: 300%; max-width: none; height: 100%; object-fit: fill; image-rendering: auto; }
-.tetris-mascot figcaption { margin-top: 5px; color: #abc6be; font: 7px/1.4 "Manrope",sans-serif; font-weight: 800; letter-spacing: .08em; text-align: center; }
 .tetris-mascot-art > i { position: absolute; top: 36%; right: 10%; width: 9px; height: 9px; background: #f5d887; clip-path: polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); opacity: 0; }
+.tetris-mascot[data-state="anticipate"] .tetris-mascot-motion { animation: tetris-builder-anticipate 180ms ease-in both; }
 .tetris-mascot[data-state="placing"] .tetris-mascot-motion { animation: tetris-builder-place 650ms ease-in-out both; }
 .tetris-mascot[data-state="celebrate"] img { transform: translateX(-33.333333%); }
-.tetris-mascot[data-state="celebrate"] .tetris-mascot-motion { animation: tetris-builder-celebrate 1s ease-out 2 both; }
+.tetris-mascot[data-state="celebrate"] .tetris-mascot-motion { animation: tetris-builder-celebrate 2800ms ease-out both; }
 .tetris-mascot[data-state="celebrate"] .tetris-mascot-art > i { animation: tetris-builder-sparkle 900ms ease-out 2; }
-.tetris-mascot[data-state="celebrate"] figcaption { color: #f5d887; }
 .tetris-mascot[data-state="over"] img { transform: translateX(-66.666667%); }
 .tetris-mascot[data-state="over"] .tetris-mascot-motion { animation: tetris-builder-shrug 750ms ease-out both; }
-.tetris-mascot[data-paused="true"] .tetris-mascot-motion, .tetris-mascot[data-paused="true"] .tetris-mascot-art > i { animation-play-state: paused; }
+.tetris-mascot-burst { position: absolute; inset: 0; pointer-events: none; }
+.tetris-mascot-burst b { position: absolute; left: 50%; top: 54%; width: 4%; aspect-ratio: 1; background: #eebd57; opacity: 0; --burst-x: -36%; --burst-y: -36%; --burst-turn: 120deg; }
+.tetris-mascot-burst b:nth-child(2) { --burst-x: -44%; --burst-y: -10%; --burst-turn: -90deg; background: #68cbb4; }
+.tetris-mascot-burst b:nth-child(3) { --burst-x: -20%; --burst-y: -48%; --burst-turn: 180deg; background: #ed7970; }
+.tetris-mascot-burst b:nth-child(4) { --burst-x: -5%; --burst-y: -52%; --burst-turn: -150deg; background: #68cbb4; }
+.tetris-mascot-burst b:nth-child(5) { --burst-x: 20%; --burst-y: -46%; --burst-turn: 220deg; }
+.tetris-mascot-burst b:nth-child(6) { --burst-x: 35%; --burst-y: -32%; --burst-turn: -200deg; background: #ed7970; }
+.tetris-mascot-burst b:nth-child(7) { --burst-x: 43%; --burst-y: -8%; --burst-turn: 120deg; background: #68cbb4; }
+.tetris-mascot-burst b:nth-child(8) { --burst-x: 40%; --burst-y: 16%; --burst-turn: -160deg; }
+.tetris-mascot[data-state="celebrate"] .tetris-mascot-burst b { animation: tetris-builder-burst 1050ms cubic-bezier(.15,.6,.3,1) both; }
+.tetris-mascot[data-paused="true"] .tetris-mascot-motion, .tetris-mascot[data-paused="true"] .tetris-mascot-art > i, .tetris-mascot[data-paused="true"] .tetris-mascot-burst b { animation-play-state: paused; }
 @keyframes tetris-builder-idle { 0%,100% { transform: translateY(0) rotate(-.3deg); } 50% { transform: translateY(-1px) rotate(.3deg); } }
 @keyframes tetris-builder-place { 0%,100% { transform: rotate(0); } 45% { transform: translateY(1px) rotate(1.2deg); } }
-@keyframes tetris-builder-celebrate { 0%,100% { transform: translateY(0); } 25% { transform: translateY(-3px) rotate(-1deg); } 60% { transform: translateY(-1px) rotate(.7deg); } }
+@keyframes tetris-builder-anticipate { from { transform: scale(1); } to { transform: translateY(2px) scale(.97,1.02) rotate(-1deg); } }
+@keyframes tetris-builder-celebrate { 0% { transform: translateY(2px) scale(.97,1.02); } 10% { transform: translateY(-5px) scale(1.04,.98) rotate(-2deg); } 20% { transform: translateY(0) rotate(1deg); } 32% { transform: translateY(-3px) rotate(-1.3deg); } 46% { transform: translateY(0) rotate(.8deg); } 65%,100% { transform: translateY(0) rotate(0); } }
+@keyframes tetris-builder-burst { 0% { opacity: 0; transform: translate(0,0) scale(.3); } 12% { opacity: .95; } 100% { opacity: 0; transform: translate(calc(var(--burst-x) * 25),calc(var(--burst-y) * 25)) rotate(var(--burst-turn)) scale(.4); } }
 @keyframes tetris-builder-shrug { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-1.5deg); } 65% { transform: rotate(1deg); } }
 @keyframes tetris-builder-sparkle { 0%,100% { opacity: 0; transform: scale(.5) rotate(0); } 45% { opacity: .9; transform: scale(1) rotate(45deg); } }
 @media (min-width:1000px) and (min-height:701px) {
   .tetris-mascot { position: absolute; left: 18px; bottom: 26px; width: min(235px,calc((100% - var(--tetris-board-width,320px) - 164px)/2 - 28px)); }
-  .tetris-mascot figcaption { font-size: 9px; letter-spacing: .14em; }
 }
 .tetris-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; text-align: center; background: #080c14f5; }
 .tetris-overlay[hidden] { display: none; }
@@ -163,7 +173,6 @@ body.tetris-fullscreen { overflow: hidden; }
 @media (max-height:700px) {
   .tetris-telemetry { gap: 5px; }
   .tetris-mascot-art { width: min(100%,56px); }
-  .tetris-mascot figcaption { font-size: 6px; margin-top: 2px; }
 }
 @media (max-height:520px) and (orientation:landscape) {
   .tetris-machine.is-fullscreen { grid-template-rows: 38px minmax(0,1fr); }
@@ -185,5 +194,5 @@ body.tetris-fullscreen { overflow: hidden; }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating i { animation: none; background: #db7773; box-shadow: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating::before { animation: none; opacity: .35; box-shadow: none; } }
 @media (prefers-reduced-motion:reduce) {
-  .tetris-mascot[data-state] .tetris-mascot-motion, .tetris-mascot[data-state] .tetris-mascot-art > i { animation: none; }
+  .tetris-mascot[data-state] .tetris-mascot-motion, .tetris-mascot[data-state] .tetris-mascot-art > i, .tetris-mascot[data-state] .tetris-mascot-burst b { animation: none; }
 }

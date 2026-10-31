@@ -3,7 +3,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=alonso-builder-v13">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=alonso-reactions-v14">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -62,8 +62,7 @@
         <div class="tetris-circuit"><span>WORLD TOUR</span><strong id="tetris-venue">МОНАКО</strong><div class="tetris-route" aria-hidden="true"><i id="tetris-route-progress"></i></div></div>
         <div class="tetris-pace"><span>Темп</span><strong id="tetris-pace">СТАРТ</strong><div aria-hidden="true"><i></i><i></i><i></i><i></i></div></div>
         <figure class="tetris-mascot" id="tetris-mascot" data-state="idle" data-paused="false" aria-label="Алонсо собирает болид из блоков">
-          <div class="tetris-mascot-art" aria-hidden="true"><div class="tetris-mascot-motion"><img src="{% static 'league/images/tetris-gp/alonso-builder-v1.png' %}" width="2172" height="724" alt="" decoding="async" draggable="false"></div><i></i></div>
-          <figcaption>АЛОНСО · СБОРКА</figcaption>
+          <div class="tetris-mascot-art" aria-hidden="true"><div class="tetris-mascot-motion"><img src="{% static 'league/images/tetris-gp/alonso-builder-v1.png' %}" width="2172" height="724" alt="" decoding="async" draggable="false"></div><i></i><div class="tetris-mascot-burst"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div></div>
         </figure>
       </aside>
     </div>
@@ -77,6 +76,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris-mascot.js' %}?v=alonso-builder-v1" defer></script>
+<script src="{% static 'league/tetris-mascot.js' %}?v=alonso-reactions-v2" defer></script>
 <script src="{% static 'league/tetris.js' %}?v=alonso-builder-v13" defer></script>
 {% endblock %}

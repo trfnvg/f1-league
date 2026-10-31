@@ -63,6 +63,7 @@ async function checkFeedback(page,name) {
   });
   await page.locator('#tetris-canvas').focus();await page.keyboard.press('Enter');
   await page.waitForFunction(()=>window.__game.phase==='clearing' && window.__feedback.charge?.rows.length===4);
+  await page.waitForFunction(()=>document.getElementById('tetris-mascot').dataset.state==='anticipate');
   await page.evaluate(()=>{window.__game.clearClock=90;window.__game.revision++;});await nextFrame();
   const sweep=await page.evaluate(()=>{
     const c=document.getElementById('tetris-feedback'),ctx=c.getContext('2d');
@@ -83,6 +84,8 @@ async function checkFeedback(page,name) {
   assert.equal(await page.evaluate(()=>window.__game.score),1200);
   assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>node.classList.contains('is-celebrating')),true);
   assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'celebrate','Alonso celebrates a four-line clear');
+  assert.equal(await page.locator('.tetris-mascot-burst b').count(),8,'One bounded burst, not accumulating particles');
+  assert.equal(await page.locator('.tetris-mascot-burst').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
   assert.equal(await page.locator('#tetris-track-lights i').count(),10);
   assert.equal(await page.locator('#tetris-feedback').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
   assert.match(await page.locator('#tetris-track-lights').evaluate(node=>getComputedStyle(node,'::before').animationName),/tetris-pole-frame/);
@@ -249,6 +252,7 @@ try {
     await page.locator('#tetris-mascot img').evaluate(image=>image.decode());
     assert.deepEqual(await page.locator('#tetris-mascot img').evaluate(image=>[image.naturalWidth,image.naturalHeight]),[2172,724]);
     assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle');
+    assert.equal(await page.locator('#tetris-mascot figcaption').count(),0,'No captions under Alonso');
     assert.ok(await page.locator('#tetris-overlay').evaluate(node=>{
       const area=node.getBoundingClientRect();
       return [...node.children].every(child=>{
@@ -406,6 +410,7 @@ try {
     await page.locator('#tetris-mascot').evaluate(node=>{node.dataset.state='celebrate';});
     assert.equal(await page.locator('.tetris-mascot-motion').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables mascot movement');
     assert.equal(await page.locator('.tetris-mascot-art > i').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables sparkle');
+    assert.equal(await page.locator('.tetris-mascot-burst b').first().evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables block burst');
     const alpha=await page.locator('#tetris-mascot img').evaluate(async image=>{
       await image.decode();
       const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;

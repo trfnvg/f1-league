@@ -4,11 +4,12 @@
   class PitStackMascot {
     constructor(element) {
       this.element = element;
-      this.caption = element?.querySelector('figcaption');
       this.reset();
     }
     reset() {
       this.serial = 0;
+      this.anticipatedLock = -1;
+      this.lockSerial = 0;
       this.remaining = 0;
       this.setState('idle');
       this.setPaused(false);
@@ -16,10 +17,6 @@
     setState(state) {
       if (!this.element || this.element.dataset.state === state) return;
       this.element.dataset.state = state;
-      if (this.caption) this.caption.textContent = {
-        idle: 'АЛОНСО · СБОРКА', placing: 'ДЕТАЛЬ НА МЕСТЕ',
-        celebrate: 'БОЛИД ГОТОВ!', over: 'ЕЩЁ ОДНА ПОПЫТКА?',
-      }[state];
     }
     setPaused(paused) {
       if (this.element && this.element.dataset.paused !== String(paused))
@@ -33,11 +30,33 @@
         return;
       }
       if (game.clearSerial < this.serial || game.phase === 'ready') this.reset();
+      if (game.phase === 'clearing' && game.clearing?.length === 4 &&
+          this.anticipatedLock !== game.lockSerial) {
+        this.anticipatedLock = game.lockSerial;
+        this.remaining = 0;
+        this.setState('anticipate');
+      }
       if (game.clearSerial !== this.serial) {
         this.serial = game.clearSerial;
         // Small clears acknowledge the build; four lines finish the little car.
-        this.remaining = game.lastClear === 4 ? 2400 : 800;
+        // A small clear during a celebration must not cut off the big reaction.
+        if (game.lastClear !== 4 && this.element?.dataset.state === 'celebrate') return;
+        this.remaining = game.lastClear === 4 ? 3000 : 800;
         this.setState(game.lastClear === 4 ? 'celebrate' : 'placing');
+        if (game.lastClear === 4) {
+          // Consecutive Tetrises restart one bounded celebration, never queue it.
+          for (const animation of this.element?.getAnimations?.({subtree: true}) || []) {
+            animation.cancel();
+            animation.play();
+          }
+        }
+      }
+      if (game.lockSerial !== this.lockSerial) {
+        this.lockSerial = game.lockSerial;
+        if (!this.remaining && game.phase === 'running') {
+          this.remaining = 360;
+          this.setState('placing');
+        }
       }
     }
     step(ms, paused) {

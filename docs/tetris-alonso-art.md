@@ -11,7 +11,11 @@ Final generation prompt:
 
 Runtime: one image decode, CSS-composited movement; no extra animation loop,
 timers, canvas drawing or changes to deterministic game rules. Reactions run for
-800 ms (small clear) / 2400 ms (four lines), freeze on pause, reset on restart.
+360 ms (ordinary landing), 800 ms (small clear), 3000 ms (four lines), freeze on pause,
+reset on restart. Four-row charge triggers anticipation before the explosion;
+the clear then triggers a bounce and eight bounded, clipped block particles.
+Consecutive Tetrises restart rather than queue reactions; small clears do not
+interrupt a celebration. There are no visible captions below the character.
 Reduced-motion users see the same expressive poses without animation.
 Desktop uses the free space left of the board; narrow screens put the character
 under telemetry. Short fullscreen landscape hides decoration to preserve the field.
