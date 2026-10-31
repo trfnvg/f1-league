@@ -36,7 +36,12 @@ function fixture({saved=null,blockedStorage=false}={}) {
   assert.equal(JSON.parse(f.saved).enabled,false);
   f.volume.value='42';f.volume.events.input();f.requests.shift().resolve();await tick();
   assert.equal(f.music.enabled,true);assert.equal(f.music.volume,.42);assert.equal(f.contexts,1);
-  f.music.setPace(999);assert.equal(f.media.playbackRate,1.048);assert.equal(f.media.preservesPitch,true);
+  f.media.currentTime=37;
+  for(let i=0;i<30;i++)f.music.setPlaying(true);
+  assert.equal(f.media.playbackRate,1);assert.equal(f.media.preservesPitch,true);
+  assert.equal(f.media.currentTime,37,'Playing state updates do not seek or restart music');
+  assert.equal(f.requests.length,0,'Playing state updates never issue another play request');
+  assert.equal(f.media.preload,'auto','Buffer ahead once the user starts the game');
   f.music.setPlaying(false);assert.equal(f.media.paused,true);assert.equal(f.music.context.state,'suspended');
   const restored=fixture({saved:f.saved});assert.equal(restored.music.volume,.42);
   restored.music.setPlaying(true);restored.music.setPlaying(false);
@@ -57,4 +62,4 @@ function fixture({saved=null,blockedStorage=false}={}) {
     assert.equal(f.media.paused,true);assert.equal(f.music.blocked,false,'Stale rejection ignored');
   }
 }
-console.log('Pit Stack audio passed: no autoplay, preferences, gain reuse, mute/volume, pace cap, pause races, blocked playback retries and unavailable storage.');
+console.log('Pit Stack audio passed: no autoplay, preferences, gain reuse, mute/volume, steady playback without restarts, buffering, pause races, blocked retries and unavailable storage.');

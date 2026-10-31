@@ -187,7 +187,6 @@
     schedule();
   }
   function updatePace() {
-    soundtrack.setPace(game.pace);
     const pace=game.pace>=29?4:game.pace>=19?3:game.pace>=9?2:game.pace>=4?1:0;
     if(shownPace===pace) return;
     shownPace=pace;

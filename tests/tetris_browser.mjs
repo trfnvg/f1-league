@@ -34,6 +34,40 @@ const server=http.createServer(async(req,res)=>{
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true});
 const errors=[];
+async function checkContinuousClearAudio(page) {
+  await page.waitForFunction(()=>{
+    const m=document.getElementById('tetris-soundtrack');return !m.paused && m.readyState>=3;
+  });
+  await page.evaluate(()=>{
+    const media=document.getElementById('tetris-soundtrack');
+    window.__clearAudioEvents=[];
+    for(const event of ['pause','seeking','ratechange','waiting','stalled','ended'])
+      media.addEventListener(event,()=>window.__clearAudioEvents.push(event));
+  });
+  for(const count of [1,2,3,4]) {
+    const before=await page.evaluate(count=>{
+      const g=window.__game;g.board.forEach(row=>row.fill(null));
+      for(let y=20-count;y<20;y++){g.board[y].fill('J');g.board[y][5]=null;}
+      g.piece={type:'I',matrix:[[1],[1],[1],[1]],x:5,y:16};
+      g.lines=10-count;g.level=1;g.fallClock=-100000;g.revision++;
+      return {serial:g.clearSerial,time:document.getElementById('tetris-soundtrack').currentTime};
+    },count);
+    await page.locator('#tetris-canvas').focus();
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(serial=>window.__game.clearSerial>serial,before.serial);
+    const after=await page.evaluate(()=>({
+      lines:window.__game.lastClear,level:window.__game.level,
+      time:document.getElementById('tetris-soundtrack').currentTime,
+      paused:document.getElementById('tetris-soundtrack').paused,
+      rate:document.getElementById('tetris-soundtrack').playbackRate,
+      context:window.__sound.context?.state,events:window.__clearAudioEvents,
+    }));
+    assert.equal(after.lines,count);assert.equal(after.level,2);
+    assert.equal(after.paused,false);assert.equal(after.rate,1);assert.equal(after.context,'running');
+    assert.ok(after.time>before.time,'Music clock advances through the clear animation');
+    assert.deepEqual(after.events,[],'Clearing lines never pauses, seeks, changes speed or interrupts playback');
+  }
+}
 async function checkFeedback(page,name) {
   const nextFrame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   const snapshot=()=>page.evaluate(()=>JSON.stringify({board:window.__game.board,piece:window.__game.piece,score:window.__game.score}));
@@ -128,7 +162,8 @@ async function checkMusic(page) {
   assert.equal(await page.evaluate(()=>window.__game.gravity),800,'Time alone cannot accelerate gravity');
   assert.equal(await media.evaluate(m=>m.playbackRate),1,'Time alone cannot accelerate music');
   await page.evaluate(()=>{window.__game.lines=60;window.__game.level=7;window.__game.revision++;});
-  await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').playbackRate>1.02);
+  await page.waitForTimeout(100);
+  assert.equal(await media.evaluate(m=>m.playbackRate),1,'Level changes do not interrupt music by changing playback speed');
   await media.evaluate(m=>{m.currentTime=m.duration-.12;});
   await page.waitForFunction(()=>document.getElementById('tetris-soundtrack').currentTime<1);
   assert.equal(await media.evaluate(m=>m.paused),false,'Track loops across the end');
@@ -311,6 +346,7 @@ try {
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause+1,'Enter remains an alternative hard drop');
     await checkMusic(page);
+    await checkContinuousClearAudio(page);
     await checkFeedback(page,name);
     if(mobile) await checkTouch(page,context);
     // Exercise every actual renderer tile, not just colour constants in source.
