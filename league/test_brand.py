@@ -31,6 +31,7 @@ class BrowserIconTests(TestCase):
                 response = self.client.get(path)
                 self.assertContains(response, 'class="fl-wordmark"', count=3)
                 self.assertContains(response, '/static/league/fastlap-wordmark.svg', count=3)
+                self.assertContains(response, '/static/league/fastlap-wordmark.svg?v=4-orbits', count=3)
                 self.assertContains(response, 'alt="Fastlap"', count=3)
                 self.assertContains(response, 'class="fl-compactmark"', count=1)
                 self.assertNotContains(response, 'class="fl-brandmark"')
@@ -46,3 +47,20 @@ class BrowserIconTests(TestCase):
         self.assertEqual(svg.findall('.//svg:script', ns), [])
         self.assertLess((folder / 'fastlap-wordmark.svg').stat().st_size, 5000)
         self.assertEqual(ElementTree.parse(folder / 'fastlap-monogram.svg').getroot().tag, '{http://www.w3.org/2000/svg}svg')
+
+    def test_selected_orbit_logo_has_one_red_for_lap_f_terminal_and_both_arcs(self):
+        svg = ElementTree.parse(Path(__file__).parent / 'static/league/fastlap-wordmark.svg').getroot()
+        ns = {'svg': 'http://www.w3.org/2000/svg'}
+        accent = svg.find("svg:g[@data-brand-accent='red']", ns)
+        self.assertIsNotNone(accent)
+        self.assertEqual(accent.attrib['fill'], '#f15b50')
+        paths = accent.findall('.//svg:path', ns)
+        self.assertEqual([path.attrib['data-letter'] for path in paths if 'data-letter' in path.attrib], list('lap'))
+        self.assertCountEqual([path.attrib['data-part'] for path in paths if 'data-part' in path.attrib],
+                              ['f-terminal', 'orbit-top', 'orbit-bottom'])
+        # No descendant can darken the f terminal or override the shared red.
+        for element in accent.iter():
+            if element is not accent:
+                self.assertNotIn('fill', element.attrib)
+            for attribute in ('opacity', 'fill-opacity', 'style', 'filter'):
+                self.assertNotIn(attribute, element.attrib)

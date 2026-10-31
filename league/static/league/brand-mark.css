@@ -1,13 +1,13 @@
 /* Original outlined lettering: no webfont, layout shift or looping logo effects. */
-.fl-wordmark { display:block; width:176px; max-width:100%; height:auto; flex:none; }
+.fl-wordmark { display:block; width:200px; max-width:100%; height:auto; flex:none; }
 .fl-compactmark { display:none; width:42px; height:auto; flex:none; }
 .nightshift-brand { position:relative; flex-direction:column; align-items:flex-start; gap:0; padding:0 9px 31px; }
-.nightshift-brand .fl-wordmark { width:176px; }
+.nightshift-brand .fl-wordmark { width:200px; }
 .nightshift-brand .fl-brand-caption { display:block; margin:6px 0 0 4px; color:#858e9c; font:600 7px/1.6 Inter,sans-serif; letter-spacing:.19em; }
 .nightshift-mobile-brand { align-items:center; justify-content:flex-start; min-width:0; line-height:1; }
-.nightshift-mobile-brand .fl-wordmark { width:136px; height:auto; }
+.nightshift-mobile-brand .fl-wordmark { width:146px; height:auto; }
 .f1-menu .nightshift-mobile-brand { display:flex!important; }
-.f1-menu .nightshift-mobile-brand .fl-wordmark { width:162px; }
+.f1-menu .nightshift-mobile-brand .fl-wordmark { width:190px; }
 .nightshift-brand:focus-visible,.nightshift-mobile-brand:focus-visible { outline:2px solid #f17b6e; outline-offset:7px; border-radius:3px; }
 @media(min-width:781px) and (max-width:1100px) {
   .nightshift-brand { align-items:center; padding:0 0 28px; }
@@ -18,7 +18,7 @@
   body.apex-night-theme.editorial-theme .nightshift-mobile-brand { display:inline-flex; }
 }
 @media(max-width:360px) {
-  .site-header .nightshift-mobile-brand .fl-wordmark { width:123px; }
+  .site-header .nightshift-mobile-brand .fl-wordmark { width:128px; }
 }
 @media(prefers-reduced-motion:no-preference) {
   .nightshift-brand .fl-wordmark,.nightshift-mobile-brand .fl-wordmark { transition:opacity .16s ease; }
