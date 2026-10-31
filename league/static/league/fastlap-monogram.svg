@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="84" viewBox="0 0 108 84" role="img" aria-labelledby="title">
+  <title id="title">Fastlap</title>
+  <g fill="#f3f5f7" transform="matrix(1 0 -.14 1 12 0)">
+    <path d="M8 8H47L45 20H22V34H42L40 46H22V76H8Z"/>
+    <path d="M58 8H72V64H96L94 76H58Z"/>
+    <path fill="#f15b50" d="M37 8H47L45 20H35Z"/>
+  </g>
+</svg>

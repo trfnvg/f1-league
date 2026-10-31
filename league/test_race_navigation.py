@@ -86,7 +86,7 @@ class RaceNavigationTests(TestCase):
         profile.save(update_fields=["avatar"])
         response = self.client.get(reverse("league:home"))
         self.assertContains(response, 'src="/media/avatars/driver.png"')
-        self.assertContains(response, 'class="fl-brandmark"')
+        self.assertContains(response, 'class="fl-wordmark"')
         self.assertNotContains(response, "fastlap<span>.</span>")
         self.assertNotContains(response, 'href="'+reverse("league:season_predictions")+'"')
         self.assertNotContains(response, 'class="ns-mini-bars"')
