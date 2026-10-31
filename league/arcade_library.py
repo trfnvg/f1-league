@@ -293,8 +293,24 @@ def control(request):
                 settings.save()
                 messages.success(request, "Соревнование открыто до дедлайна выбранного этапа.")
         return redirect("league:arcade_control")
+    test_games = [
+        {**GAMES["doodle_jump"], "key": "doodle_jump", "genre": "Doodle Jump", "status": "В библиотеке",
+         "url": reverse("league:arcade_game", args=["doodle_jump"]) + "?admin_test=1"},
+        {**GAMES["flappy"], "key": "flappy", "genre": "Flappy Bird", "status": "В библиотеке",
+         "url": reverse("league:arcade_game", args=["flappy"]) + "?admin_test=1"},
+        {"key": "minesweeper", "title": "Pitwall Sweep", "genre": "Сапёр", "status": "Закрытый тест",
+         "description": "Расчисти пит-лейн: находи безопасные клетки и отмечай скрытые опасности.",
+         "cover": "league/images/arcade-minesweeper-pitlane.png", "url": reverse("league:arcade_minesweeper_preview")},
+        {**PREVIEW_GAMES["tetris"], "key": "tetris", "genre": "Тетрис", "status": "Закрытый тест",
+         "description": "Собирай ряды под гоночный саундтрек и проверяй темп на трассах Гран-при.",
+         "url": reverse("league:arcade_game", args=["tetris"])},
+    ]
+    contest_open = bool(previous and settings.public_enabled and previous.opened_at <= now < previous.event.deadline)
     return render(request, "arcade_library_control.html", {"settings": settings, "events": events, "games": GAMES.items(),
-        "preview_games": PREVIEW_GAMES.items(),
+        "test_games": test_games, "contest_open": contest_open,
+        "selected_event_expired": bool(settings.competition_event_id and settings.competition_event.deadline <= now),
+        "selected_game_public": settings.active_game in GAMES,
+        "active_game_title": GAMES.get(settings.active_game, {}).get("title", settings.get_active_game_display()),
         "arcade_wheel_sectors": list(rewards.WHEEL_SECTORS), "driver_choices": DRIVER_CHOICES})
 
 

@@ -30,6 +30,7 @@
       data-finish-url="{{ minesweeper_attempt_finish_url }}"
       data-leaderboard-url="{{ minesweeper_leaderboard_url }}"
       data-attempts="{{ minesweeper_attempts }}"
+      data-test-mode="{{ arcade_test_mode|yesno:'true,false' }}"
       data-authenticated="{{ user.is_authenticated|yesno:'true,false' }}">
       <h1 class="minesweeper-cabinet-title" id="minesweeper-title">САПЁР</h1>
 
@@ -132,6 +133,6 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script src="{% static 'league/arcade-minesweeper.js' %}?v=shared-results-v2" defer></script>
+  <script src="{% static 'league/arcade-minesweeper.js' %}?v=isolated-test-v3" defer></script>
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

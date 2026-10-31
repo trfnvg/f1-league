@@ -171,7 +171,7 @@
     const outcomes = {
       pit_wall: "Победителю недели добавились бы +2 очка к результату этапа.",
       card_boost: "За верную личную карту победитель получил бы ещё +3 очка.",
-      podium_edit: `В демо-прогнозе слот ${values.slot.toUpperCase()} изменён на ${driverLabels[values.driver] || values.driver}. Реальный прогноз не менялся.`,
+      podium_edit: `В демо-прогнозе слот ${(values.slot || "").toUpperCase()} изменён на ${driverLabels[values.driver] || values.driver}. Реальный прогноз не менялся.`,
       va_bank: `Прогноз «${fieldsRoot.querySelector('[name="field"] option:checked')?.textContent || values.field}» записан бы как Ва-банк: +4 за верный ответ или −1 за неверный после гонки.`,
       ruel_v_govne: `Для демо выбран игрок «${fieldsRoot.querySelector('[name="target_user"] option:checked')?.textContent || "участник"}»: после подсчёта с него снялись бы 3 очка.`,
       crazy_block: `Для демо выбран игрок «${fieldsRoot.querySelector('[name="target_user"] option:checked')?.textContent || "участник"}»: его Crazy Prediction дал бы 0 очков даже при совпадении.`,

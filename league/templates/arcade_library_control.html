@@ -1,53 +1,55 @@
-{% extends 'base.html' %}{% load static %}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Тестирование аркад · Fastlap{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
-<style>
-.arcade-lab-card { display:grid; grid-template-columns:220px minmax(0,1fr); gap:22px; align-items:center; padding:18px; margin:16px 0 26px; background:#131e29; border:1px solid #43515e; border-radius:12px; }
-.arcade-lab-card img { width:100%; aspect-ratio:3/2; object-fit:cover; border-radius:7px; }
-.arcade-lab-card h3 { margin:6px 0 8px; font:26px 'Russo One',sans-serif; }
-.arcade-lab-card p { color:#a9b6c3; font-size:13px; }
-.arcade-lab-card small { color:#e5bd7d; letter-spacing:.12em; font-size:10px; }
-.arcade-lab-play { display:inline-block; padding:10px 16px; border:1px solid #be6651; background:#672a24; border-radius:6px; color:#fff0df; text-decoration:none; font-size:13px; }
-.arcade-lab-play:hover { color:#fff; background:#84362d; }
-@media(max-width:575px) { .arcade-lab-card { grid-template-columns:1fr; gap:12px; } }
-</style>
+<link rel="stylesheet" href="{% static 'league/arcade-control.css' %}?v=1">
 {% endblock %}
 {% block content %}
-<main class="container py-4" style="max-width:1000px">
-  <a href="{% url 'league:arcade' %}">← Аркады</a>
-  <h1 class="mt-3">Управление аркадами</h1>
-  <p>Игры из библиотеки доступны всегда. Здесь открывается только соревнование с колесом для победителя.</p>
-  {% for message in messages %}<p role="status">{{ message }}</p>{% endfor %}
-  <form method="post" class="card bg-dark p-4 my-4">
-    {% csrf_token %}
-    <label for="arcade-game-select">Игра</label>
-    <select name="active_game" id="arcade-game-select" class="form-select mb-3">
-      {% for key, game in games %}<option value="{{ key }}"{% if settings.active_game == key %} selected{% endif %}>{{ game.title }}</option>{% endfor %}
-    </select>
-    <label for="event">Этап</label>
-    <select id="event" name="competition_event" class="form-select mb-3">
-      <option value="">Выбери этап</option>
-      {% for event in events %}<option value="{{ event.pk }}"{% if event.pk == settings.competition_event_id %} selected{% endif %}>R{{ event.round_number }} · {{ event.name }} · {{ event.deadline|date:'d.m H:i' }}</option>{% endfor %}
-    </select>
-    <div class="d-flex flex-wrap gap-3">
-      <button class="btn btn-outline-light" name="action" value="select">Сохранить выбор</button>
-      <button class="btn btn-danger" name="action" value="publish">Открыть участникам</button>
-      <button class="btn btn-outline-light" name="action" value="close">Приостановить зачёт</button>
+<main class="arcade-control" aria-labelledby="arcade-control-title">
+  <header class="lab-heading">
+    <div><p class="lab-eyebrow">FASTLAP / ЛАБОРАТОРИЯ</p><h1 id="arcade-control-title">Тестирование аркад</h1><p>Выбери игру и запускай тест — независимо от текущего соревнования.</p></div>
+    <a class="lab-button lab-button-secondary" href="{% url 'league:arcade' %}">Библиотека игр <span aria-hidden="true">→</span></a>
+  </header>
+
+  {% for message in messages %}<p class="lab-message{% if message.tags == 'error' %} lab-message-error{% endif %}" role="status">{{ message }}</p>{% endfor %}
+
+  <div class="lab-notice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7Z"/><path d="m8 12 3 3 5-6"/></svg><p><strong>Только для администратора.</strong> Тестовые попытки не попадают в рейтинги и не меняют зачёт игроков.</p></div>
+
+  <section aria-labelledby="lab-games-title">
+    <div class="lab-section-heading"><h2 id="lab-games-title">Все игры</h2><span>04 / ТЕСТОВЫЙ ЗАПУСК</span></div>
+    <div class="lab-game-grid">
+      {% for game in test_games %}
+      <article class="lab-game-card" data-test-game="{{ game.key }}">
+        <div class="lab-game-cover"><img src="{% static game.cover %}" alt="" width="768" height="512" decoding="async"{% if forloop.counter > 2 %} loading="lazy"{% endif %}><span class="lab-game-number" aria-hidden="true">{{ forloop.counter|stringformat:'02d' }}</span><span class="lab-game-status">{{ game.status }}</span></div>
+        <div class="lab-game-copy"><p class="lab-eyebrow">{{ game.genre }}</p><h3>{{ game.title }}</h3><p class="lab-game-description">{{ game.description }}</p><a class="lab-button lab-button-play" href="{{ game.url }}" aria-label="Тестировать {{ game.title }}">Тестировать <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 10 7-10 7Z"/></svg></a></div>
+      </article>
+      {% endfor %}
     </div>
-  </form>
-  <h2>Лаборатория · новые игры</h2>
-  {% for key, game in preview_games %}
-  <article class="arcade-lab-card">
-    <img src="{% static game.cover %}" alt="Гараж F1 для Pit Stack" width="1536" height="1024" loading="lazy">
-    <div><small>ТОЛЬКО АДМИНИСТРАТОР · ПРОТОТИП</small><h3>{{ game.title }}</h3><p>{{ game.subtitle }}. Не виден игрокам, не участвует в зачёте и не записывает результаты.</p><a class="arcade-lab-play" href="{% url 'league:arcade_game' key %}">Тестировать игру ↗</a></div>
-  </article>
-  {% endfor %}
-  <h2>Тестировать без записи результатов</h2>
-  <p><a href="{% url 'league:arcade_minesweeper_preview' %}">Сапёр · прежний прототип ↗</a></p>
-  <div class="d-flex flex-wrap gap-3">
-    {% for key, game in games %}<a class="btn btn-outline-info" href="{% url 'league:arcade_game' key %}?admin_test=1&flight=1">{{ game.title }} ↗</a>{% endfor %}
-  </div>
-  {% include 'arcade_wheel_test_panel.html' %}
+  </section>
+
+  <section class="lab-management" aria-labelledby="lab-management-title">
+    <div class="lab-section-heading"><h2 id="lab-management-title">Управление аркадами</h2><span>НАСТРОЙКИ ДЛЯ УЧАСТНИКОВ</span></div>
+    <details class="lab-disclosure" id="lab-competition">
+      <summary><span class="lab-disclosure-copy"><strong>Соревнование Гран-при</strong><span>{% if settings.competition_event %}{{ active_game_title }} · R{{ settings.competition_event.round_number }} · {{ settings.competition_event.name }}{% else %}Игра и этап ещё не выбраны{% endif %}</span></span><span class="lab-state{% if contest_open %} is-active{% endif %}">{% if contest_open %}Зачёт открыт{% elif selected_event_expired %}Дедлайн прошёл{% else %}Зачёт закрыт{% endif %}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary>
+      <div class="lab-disclosure-body">
+        <p class="lab-description">Тестирование выше не требует публикации. Здесь можно выбрать одну из выпущенных игр для соревнования участников.</p>
+        <form method="post" class="lab-competition-form">
+          {% csrf_token %}
+          <div class="lab-fields">
+            <div><label for="arcade-game-select">Игра для зачёта</label><select name="active_game" id="arcade-game-select" required>{% if not selected_game_public %}<option value="" selected disabled>Выбери выпущенную игру</option>{% endif %}{% for key, game in games %}<option value="{{ key }}"{% if settings.active_game == key %} selected{% endif %}>{{ game.title }}</option>{% endfor %}</select></div>
+            <div><label for="arcade-event-select">Этап</label><select id="arcade-event-select" name="competition_event" required><option value="">Выбери этап</option>{% if selected_event_expired %}<option value="{{ settings.competition_event_id }}" selected disabled>R{{ settings.competition_event.round_number }} · {{ settings.competition_event.name }} · дедлайн прошёл</option>{% endif %}{% for event in events %}<option value="{{ event.pk }}"{% if event.pk == settings.competition_event_id %} selected{% endif %}>R{{ event.round_number }} · {{ event.name }} · {{ event.deadline|date:'d.m H:i' }}</option>{% endfor %}</select></div>
+          </div>
+          <div class="lab-form-actions"><button class="lab-button lab-button-secondary" name="action" value="select">Сохранить выбор</button><button class="lab-button lab-button-play" name="action" value="publish">Открыть участникам</button><button class="lab-button lab-button-quiet" name="action" value="close" formnovalidate{% if not settings.public_enabled %} disabled{% endif %}>Приостановить зачёт</button></div>
+          <p class="lab-form-note">Зачёт действует до дедлайна прогнозов. После него результаты фиксируются, а победителю доступно колесо до старта гонки. Сменить закреплённую игру или этап можно после старта гонки.</p>
+        </form>
+      </div>
+    </details>
+    <details class="lab-disclosure" id="lab-wheel">
+      <summary><span class="lab-disclosure-copy"><strong>Тест колеса бонусов</strong><span>Демо секторов и применения призов без изменения очков</span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary>
+      <div class="lab-disclosure-body lab-wheel-body">{% include 'arcade_wheel_test_panel.html' %}</div>
+    </details>
+  </section>
 </main>
 {% endblock %}
-{% block extra_scripts %}{% load static %}<script src="{% static 'league/arcade-wheel-test.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/arcade-wheel-test.js' %}?v=2" defer></script>{% endblock %}

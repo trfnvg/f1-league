@@ -888,6 +888,8 @@ def arcade_run_finish(request):
 def minesweeper_attempt_start(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if _arcade_is_admin_test(request):
+        return JsonResponse({"attempt_id": None, **_minesweeper_leaderboard_data(request.user)})
     arcade_settings = _get_arcade_settings()
     if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)
@@ -908,6 +910,8 @@ def minesweeper_attempt_start(request):
 def minesweeper_attempt_finish(request):
     if request.method != "POST":
         return HttpResponseNotAllowed(["POST"])
+    if _arcade_is_admin_test(request):
+        return JsonResponse({"error": "Тестовые попытки не сохраняются."}, status=403)
     arcade_settings = _get_arcade_settings()
     if not _arcade_game_access_allowed(request, arcade_settings, ArcadeSettings.Game.MINESWEEPER):
         return JsonResponse({"error": "Аркада сейчас доступна только администраторам."}, status=403)

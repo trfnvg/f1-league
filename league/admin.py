@@ -9,13 +9,11 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import (
-    ArcadeRecord,
     ArcadeTrophyAward,
     ArcadeWheelSpin,
     DRIVER_CHOICES,
     DriverProfile,
     DuelChallenge,
-    DuelSettings,
     Event,
     EventPhoto,
     EventWildcardDeck,
@@ -37,9 +35,7 @@ from .models import (
     UserProfile,
     WildcardCardTemplate,
     WildcardSettings,
-    MinesweeperAttempt,
     DoodleAttempt,
-    DoodleRecord,
 )
 from .scoring import (
     calculate_season_scores,
@@ -645,15 +641,6 @@ class DuelChallengeAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(DuelSettings)
-class DuelSettingsAdmin(admin.ModelAdmin):
-    fields = ("cover_image", "updated_at")
-    readonly_fields = ("updated_at",)
-
-    def has_add_permission(self, request):
-        return not DuelSettings.objects.exists()
-
-
 @admin.register(WildcardSettings)
 class WildcardSettingsAdmin(admin.ModelAdmin):
     fields = ("card_back_image", "updated_at")
@@ -933,39 +920,6 @@ class TelegramBotStateAdmin(admin.ModelAdmin):
     readonly_fields = ("key", "updated_at")
 
 
-@admin.register(ArcadeRecord)
-class ArcadeRecordAdmin(admin.ModelAdmin):
-    list_display = ("user", "best_score", "updated_at")
-    list_editable = ("best_score",)
-    list_filter = ("updated_at",)
-    search_fields = ("user__username", "user__first_name", "user__last_name")
-    list_select_related = ("user",)
-    readonly_fields = ("updated_at",)
-    ordering = ("-best_score", "updated_at", "user__username")
-    actions = ("delete_selected", "reset_selected_records")
-
-    @admin.action(description="Обнулить рекорды выбранных участников")
-    def reset_selected_records(self, request, queryset):
-        count = queryset.update(best_score=0, updated_at=timezone.now())
-        self.message_user(request, f"Обнулено рекордов: {count}.")
-
-
-@admin.register(MinesweeperAttempt)
-class MinesweeperAttemptAdmin(admin.ModelAdmin):
-    list_display = ("user", "week_start", "completed", "elapsed_ms", "started_at", "finished_at")
-    list_filter = ("week_start", "completed")
-    search_fields = ("user__username",)
-    list_select_related = ("user",)
-    readonly_fields = tuple(field.name for field in MinesweeperAttempt._meta.fields)
-    ordering = ("-week_start", "elapsed_ms")
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
 @admin.register(DoodleAttempt)
 class DoodleAttemptAdmin(admin.ModelAdmin):
     list_display = ("user", "score", "started_at", "finished_at")
@@ -974,21 +928,6 @@ class DoodleAttemptAdmin(admin.ModelAdmin):
     list_select_related = ("user",)
     readonly_fields = tuple(field.name for field in DoodleAttempt._meta.fields)
     ordering = ("-started_at",)
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-
-@admin.register(DoodleRecord)
-class DoodleRecordAdmin(admin.ModelAdmin):
-    list_display = ("user", "best_score", "total_attempts", "updated_at")
-    search_fields = ("user__username",)
-    list_select_related = ("user",)
-    readonly_fields = tuple(field.name for field in DoodleRecord._meta.fields)
-    ordering = ("-best_score", "updated_at")
 
     def has_add_permission(self, request):
         return False

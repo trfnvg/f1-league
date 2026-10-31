@@ -16,6 +16,14 @@ Use case: stylized-concept. Production cover art for browser arcade library card
 
 The current competition retains the wheel through the race start. Archived games have no wheel; free play cannot alter its eligible attempts. The admin page explicitly selects a game and future-deadline event. Admin test links do not save results.
 
+## Staff test lab
+
+`/arcade/control/` puts Cowboy GP, Pit Lane Flight, Pitwall Sweep and Pit Stack in one card grid (two columns on phones). Every card launches its existing staff test route; the jumping game no longer enables the optional flight cheat automatically. Competition publishing and the isolated wheel demo are separate, initially collapsed sections. Only the two released games can be published. An expired event remains visible, and pausing does not require selecting a new event.
+
+Minesweeper test runs are local-only: no start/finish POSTs or leaderboard polling. Its server endpoints also refuse to persist staff test attempts, even if called directly. Ordinary players cannot enable this mode. Django admin registrations for Doodle records, Minesweeper attempts, duel artwork and Flappy records are removed; their models, data and migrations are unchanged.
+
+Regression coverage: `league.test_arcade_control` and `tests/arcade_control_browser.py --browser chromium|webkit --output-dir /tmp/fastlap-lab`. The browser fixture uses only an in-memory database and checks seven viewport widths, all four actual game links, active/expired/empty states, collapsible publishing tools and absence of test POSTs.
+
 Game pages display exactly one leaderboard: the selected open competition until its deadline, otherwise all-time records. Polling and attempt responses use the same selection and provide the current title, so the page switches without reloading. Personal all-time best remains separate from competition scores. Saved historical standings are retained in the database but are not rendered as extra tables on game pages. Featured artwork and library covers preserve the full original 3:2 composition; the featured text sits beside the image on desktop and below it on mobile.
 
 Cowboy GP requests fullscreen inside the play interaction and retains its fixed viewport fallback. Pit Lane Flight starts inline; an explicit fullscreen button and exit control remain available. Library cards list the newer Cowboy GP before Pit Lane Flight and use dark red play buttons. Standard-density desktop screens render Cowboy GP at twice CSS resolution. An admin-only post-Sid button previews the victory cinematic and enters the summit without recording a run. Actual browser testing was unavailable in this session. Server and native Canvas regression tests cover these behaviours along with deadline/late finish, frozen attempts, archival wheel removal, publication, test isolation and duplicate submissions.

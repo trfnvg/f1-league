@@ -52,7 +52,7 @@ class TetrisPreviewTests(TestCase):
         self.client.force_login(self.admin)
         control = self.client.get(reverse("league:arcade_control"))
         self.assertContains(control, self.url)
-        self.assertContains(control, "Лаборатория · новые игры")
+        self.assertContains(control, "Тестирование аркад")
         self.assertNotContains(control, '<option value="tetris"')
         for user in (self.admin, self.player):
             self.client.force_login(user)

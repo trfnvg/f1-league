@@ -1,6 +1,7 @@
 (() => {
   const screen = document.getElementById("minesweeper-game-screen");
   if (!screen) return;
+  const testMode = screen.dataset.testMode === "true";
 
   const machine = document.getElementById("minesweeper-machine");
   const boardNode = document.getElementById("minesweeper-board");
@@ -255,9 +256,9 @@
   }
 
   async function finishAttempt(completed) {
-    if (!runId) return;
     if (timerId) window.clearInterval(timerId);
     timerId = null;
+    if (!runId || testMode) return;
     const elapsed = Math.round(currentElapsed());
     const payload = { attempt_id: runId, completed };
     if (completed) payload.elapsed_ms = elapsed;
@@ -294,7 +295,7 @@
     flagCount = mineTotal;
     mode = "won";
     paint();
-    statusNode.textContent = "Поле чистое — результат сохранён в рейтинге недели.";
+    statusNode.textContent = testMode ? "Поле чистое — тест завершён без записи результата." : "Поле чистое — результат сохранён в рейтинге недели.";
     overlayTitle.textContent = "Чистый круг!";
     overlayCopy.textContent = `Поле пройдено за ${formatTime(currentElapsed())}. Попробуй побить это время в следующей попытке.`;
     startButton.innerHTML = "Новый заезд <span aria-hidden=\"true\">↻</span>";
@@ -354,7 +355,7 @@
     startButton.disabled = true;
     statusNode.textContent = "Готовим поле…";
     try {
-      const data = await postJSON(screen.dataset.startUrl);
+      const data = testMode ? { attempt_id: null, attempts: attempts + 1 } : await postJSON(screen.dataset.startUrl);
       runId = data.attempt_id;
       applyStats(data);
       mode = "playing";
@@ -440,5 +441,5 @@
     }
   });
   boardNode.addEventListener("keydown", handleGridKeydown);
-  if (screen.dataset.authenticated === "true") refreshLeaderboard();
+  if (!testMode && screen.dataset.authenticated === "true") refreshLeaderboard();
 })();
