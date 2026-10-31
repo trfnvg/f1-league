@@ -87,6 +87,11 @@
 .tetris-overlay h2 { color: #f2f5fa; font: clamp(19px,3vw,32px)/1.15 "Russo One",sans-serif; margin: 12px 0; }
 .tetris-overlay p:not(.pit-stack-eyebrow) { color: #acbac7; font-size: 11px; line-height: 1.8; margin: 0 0 17px; }
 .tetris-overlay .pit-stack-eyebrow { font-size: 8px; letter-spacing: .12em; }
+.tetris-help-touch { display:none; }
+@media(pointer:coarse) {
+  .tetris-help-keyboard { display:none; }
+  .tetris-help-touch { display:inline; }
+}
 #tetris-start { border: 1px solid #ec6969; background: #a52e34; color: #fff; border-radius: 5px; padding: 12px 15px; font-size: 12px; font-weight: 800; box-shadow: 0 3px #551b21; }
 #tetris-start span { margin-left: 8px; }
 .tetris-line-message { position: absolute; top: -18px; left: -3px; right: -3px; pointer-events: none; text-align: center; opacity: 0; white-space: nowrap; color: #f6dfb7; text-shadow: 1px 1px #07090f; font: 8px "Russo One",sans-serif; }

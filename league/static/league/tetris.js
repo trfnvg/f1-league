@@ -152,7 +152,7 @@
             soundtrack.setPlaying(false);
             byId('overlay-caption').textContent = 'КРАСНЫЙ ФЛАГ';
             byId('overlay-title').textContent = 'Пауза';
-            byId('overlay-text').textContent = 'Передохни. Гараж подождёт.';
+            byId('overlay-text').textContent = 'Пробел или Enter — продолжить. P / Esc — пауза.';
             startButton.textContent = 'Продолжить ↗';
           }
         }
@@ -280,25 +280,26 @@
   }
   canvas.addEventListener('pointercancel',cancelPointer);
   canvas.addEventListener('lostpointercapture',cancelPointer);
-  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down',Enter:'drop',NumpadEnter:'drop'};
+  const bindings = {ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',ArrowUp:'rotate',KeyW:'rotate',KeyX:'rotate',KeyZ:'rotateCCW',ArrowDown:'down',KeyS:'down'};
   document.addEventListener('keydown',e=>{
     const focused=document.activeElement;
     // Range arrows and focused toolbar buttons keep native keyboard controls.
     if(focused?.matches('input,select,textarea,[contenteditable="true"]'))return;
-    if(e.code==='Space') {
+    if(['Space','Enter','NumpadEnter'].includes(e.code)) {
       if(focused?.closest('button,a,[role="button"]'))return;
       const pageFocus=!focused || focused===document.body || focused===document.documentElement;
       if(!pageFocus && !machine.contains(focused) && !machine.classList.contains('is-fullscreen'))return;
       e.preventDefault();
-      if(e.repeat || countdown)return;
+      if(e.repeat || keys.has(e.code) || countdown)return;
+      keys.set(e.code,true);
       if(['ready','over'].includes(game.phase))start();
-      else togglePause();
+      else if(game.paused)togglePause();
+      else act('drop');
       return;
     }
     if(!machine.contains(focused) && !machine.classList.contains('is-fullscreen')) return;
-    if(['Enter','NumpadEnter'].includes(e.code) && focused?.closest('button,a,[role="button"]'))return;
     if(e.code==='Escape') {
-      if(game.active) togglePause();
+      if(!game.paused && ['running','clearing'].includes(game.phase)) togglePause();
       if(machine.classList.contains('is-fullscreen') && !document.fullscreenElement) setFullscreen(false);
       return;
     }

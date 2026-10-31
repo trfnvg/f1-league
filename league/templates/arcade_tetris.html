@@ -3,7 +3,7 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-line-fx-v11">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=classic-controls-v12">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -31,7 +31,7 @@
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
       <div class="tetris-toolbar-actions">
         <button type="button" id="tetris-ghost" class="tetris-icon-button" aria-label="Скрыть контур приземления" aria-pressed="true" title="Контур приземления включён"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M8 14h8v8H8zM0 14h8v8H0zM16 14h8v8h-8zM8 6h8v8H8z" stroke-dasharray="2 2"/><path d="M12 1v3m-2-2 2 2 2-2"/></svg></button>
-        <button type="button" id="tetris-pause" disabled>Пауза</button>
+        <button type="button" id="tetris-pause" title="Пауза — P или Esc" disabled>Пауза</button>
         <button type="button" id="tetris-fullscreen" aria-pressed="false">На весь экран</button>
         <div class="tetris-audio-control">
           <button type="button" id="tetris-sound" aria-label="Выключить музыку" aria-pressed="true" title="Музыка включена">
@@ -44,14 +44,14 @@
     <audio id="tetris-soundtrack" src="{% static 'league/audio/pit-stack-parc-ferme-v2.m4a' %}" preload="none" loop playsinline hidden></audio>
     <div class="tetris-deck" id="tetris-deck">
       <div class="tetris-board" id="tetris-board">
-        <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — сброс, медленное движение вниз — ускорение. С клавиатуры: стрелки — движение и поворот, Enter — сброс, пробел — старт, пауза и продолжение; P — пауза."></canvas>
+        <canvas id="tetris-canvas" width="320" height="640" tabindex="0" aria-label="Поле 10 на 20. Жест влево или вправо — движение. Тап слева или справа — поворот. Быстрый свайп вниз — мгновенный сброс, медленное движение вниз — ускорение. С клавиатуры: влево и вправо — движение, вверх или X — поворот по часовой стрелке, Z — против часовой, вниз — ускорение. Пробел или Enter — мгновенный сброс, старт или продолжение; P и Esc — пауза."></canvas>
         <canvas id="tetris-feedback" width="320" height="640" aria-hidden="true"></canvas>
         <div class="tetris-track-lights" id="tetris-track-lights" aria-hidden="true"><div><i></i><i></i><i></i><i></i><i></i></div><div><i></i><i></i><i></i><i></i><i></i></div></div>
         <div class="tetris-overlay" id="tetris-overlay">
           <div class="tetris-start-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="pit-stack-eyebrow" id="tetris-overlay-caption">ГОТОВНОСТЬ К СТАРТУ</p>
           <h2 id="tetris-overlay-title">Собери<br>свой темп.</h2>
-          <p id="tetris-overlay-text">Собирай линии.<br>Держи гоночный темп.</p>
+          <p id="tetris-overlay-text"><span class="tetris-help-keyboard">← → — движение · ↑ — поворот<br>↓ — ускорение · пробел — сброс<br>P / Esc — пауза</span><span class="tetris-help-touch">Тап — поворот · влево / вправо — движение<br>Быстро вниз — мгновенный сброс<br>Медленно вниз — ускорение</span></p>
           <button type="button" id="tetris-start">Начать заезд <span>↗</span></button>
         </div>
       </div>
@@ -73,5 +73,5 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=pit-stack-line-fx-v11" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=classic-controls-v12" defer></script>
 {% endblock %}

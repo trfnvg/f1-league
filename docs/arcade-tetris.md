@@ -34,13 +34,16 @@ gravity time is retained, including multiple cell steps when required by a frame
 New-piece obstruction or lock above the board ends the run.
 
 Arrows or physical A/D/W/S (also work with Russian keyboard layout), X for
-clockwise / Z for counterclockwise rotation, Enter/NumpadEnter to hard drop.
-Space starts from the title/game-over screen and pauses/resumes a running game;
-held-key repeats are ignored. It also works on initial page focus, without first
-clicking the canvas. P remains a pause shortcut. Editable controls and focused
+clockwise / Z for counterclockwise rotation. Space is the primary hard-drop key;
+Enter/NumpadEnter is an alternative. Both start from the title/game-over screen
+and resume a paused game, without dropping that resumed piece. P toggles pause;
+Esc pauses, including during a line clear. Held-key repeats never hard-drop the
+next piece. Start also works on initial page focus, without first clicking the
+canvas. Editable controls and focused
 buttons/links retain native keyboard handling.
 Keyboard hold-to-repeat is retained. There are no bottom action buttons, rules
-description, visible keyboard instructions or test-status text. The level and
+description or test-status text. The title overlay has a compact keyboard/touch
+hint appropriate to the input device. The level and
 its progress bar are removed from the HUD; scoring multipliers remain line-based.
 The compact tempo indicator describes increasing pressure without a level number.
 
