@@ -23,7 +23,7 @@ def league_context(request):
         events = Event.objects.filter(season_year=selected_year).order_by("round_number")
     current_event = select_current_event(events, now)
     prediction_target = (reverse("league:event_detail", args=[current_event.pk]) if current_event
-                         else reverse("league:home") + "#calendar")
+                         else reverse("league:calendar"))
     prediction_entry_url = (prediction_target if request.user.is_authenticated else
                             reverse("login") + "?" + urlencode({"next": prediction_target}))
     viewer_profile = getattr(request.user, "league_profile", None) if request.user.is_authenticated else None

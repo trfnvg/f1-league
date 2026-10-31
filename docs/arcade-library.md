@@ -18,7 +18,9 @@ The current competition retains the wheel through the race start. Archived games
 
 ## Staff test lab
 
-`/arcade/control/` puts Cowboy GP, Pit Lane Flight, Pitwall Sweep and Pit Stack in one card grid (two columns on phones). Every card launches its existing staff test route; the jumping game no longer enables the optional flight cheat automatically. Competition publishing and the isolated wheel demo are separate, initially collapsed sections. Only the two released games can be published. An expired event remains visible, and pausing does not require selecting a new event.
+`/arcade/control/` puts Cowboy GP, Pit Lane Flight, Pitwall Sweep and Pit Stack in one card grid (two columns on phones). Every card launches its existing staff test route; the jumping game no longer enables the optional flight cheat automatically. The stage competition editor is expanded; the isolated wheel demo is collapsed. Only the two released games can be published. An expired event remains visible, and pausing does not require selecting a new event.
+
+Each `ArcadeCompetition` with a null `opened_at` is a draft assignment for its own event. Saving a future assignment never pauses or changes the global live game. Select the event, save its game, then explicitly open it. Publishing stamps `opened_at` once and makes the assignment immutable; pause/resume retains that timestamp and its attempts. `ArcadeSettings` only points at the currently/last launched competition (or the initial draft for legacy compatibility). New event publication waits until the previous race starts to preserve the previous winner's wheel. Drafts cannot become public contests, freeze, or enter historical standings. The stage editor and saved assignment list show this state explicitly, including past events.
 
 Minesweeper test runs are local-only: no start/finish POSTs or leaderboard polling. Its server endpoints also refuse to persist staff test attempts, even if called directly. Ordinary players cannot enable this mode. Django admin registrations for Doodle records, Minesweeper attempts, duel artwork and Flappy records are removed; their models, data and migrations are unchanged.
 

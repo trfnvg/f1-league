@@ -45,7 +45,7 @@ class ArcadeControlTests(TestCase):
         self.assertNotContains(response, "flight=1")
         self.assertNotContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')
-        self.assertContains(response, '<details class="lab-disclosure" id="lab-competition">')
+        self.assertContains(response, '<details class="lab-disclosure" id="lab-competition" open>')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-wheel">')
         self.assertTrue(response.context["contest_open"])
 
@@ -101,7 +101,8 @@ class ArcadeControlTests(TestCase):
         response = self.client.get(self.url)
         self.assertFalse(response.context["contest_open"])
         self.assertContains(response, "Дедлайн прошёл")
-        self.assertContains(response, f'value="{self.event.pk}" selected disabled')
+        self.assertEqual(response.context["selected_event"], self.event)
+        self.assertTrue(response.context["selected_event_expired"])
         self.assertContains(response, 'value="close" formnovalidate')
         response = self.client.post(self.url, {"action": "close"})
         self.assertEqual(response.status_code, 302)
@@ -119,3 +120,101 @@ class ArcadeControlTests(TestCase):
         self.assertNotContains(response, '/admin/league/doodlerecord/')
         self.assertTrue(DoodleRecord.objects.filter(pk=record.pk, best_score=700).exists())
         self.assertTrue(admin.site.is_registered(DoodleAttempt))
+
+    def test_future_stage_can_be_assigned_without_switching_or_pausing_live_game(self):
+        future = Event.objects.create(name="Future GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now()+timedelta(days=8), race_datetime=timezone.now()+timedelta(days=10))
+        payload = {"action": "select", "active_game": "flappy", "competition_event": future.pk}
+        self.assertEqual(self.client.post(self.url, payload).status_code, 302)
+        draft = ArcadeCompetition.objects.get(event=future)
+        self.assertEqual(draft.game_key, "flappy")
+        self.assertIsNone(draft.opened_at)
+        self.settings.refresh_from_db()
+        self.assertTrue(self.settings.public_enabled)
+        self.assertEqual(self.settings.competition_event_id, self.event.pk)
+        self.assertEqual(self.settings.active_game, "doodle_jump")
+        self.client.post(self.url, {**payload, "active_game": "doodle_jump"})
+        draft.refresh_from_db()
+        self.assertEqual(draft.game_key, "doodle_jump")
+        self.assertIsNone(draft.opened_at)
+        page = self.client.get(self.url, {"event": future.pk})
+        self.assertEqual(page.context["selected_game_key"], "doodle_jump")
+        self.assertEqual(page.context["selected_assignment_state"], "Назначена")
+        self.assertTrue(page.context["blocked_by_previous"])
+        self.client.force_login(self.player)
+        self.assertFalse(self.client.get(reverse("league:arcade_game", args=["flappy"])).context["competitive_now"])
+
+    def test_opening_next_stage_waits_for_previous_race_and_then_keeps_history(self):
+        future = Event.objects.create(name="Next GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now()+timedelta(days=8))
+        draft = ArcadeCompetition.objects.create(event=future, game_key="flappy")
+        payload = {"action": "publish", "active_game": "flappy", "competition_event": future.pk}
+        self.client.post(self.url, payload)
+        draft.refresh_from_db()
+        self.assertIsNone(draft.opened_at)
+        self.settings.refresh_from_db()
+        self.assertEqual(self.settings.competition_event_id, self.event.pk)
+        self.event.race_datetime = timezone.now()-timedelta(hours=1)
+        self.event.deadline = timezone.now()-timedelta(hours=4)
+        self.event.save()
+        self.client.post(self.url, payload)
+        draft.refresh_from_db()
+        self.settings.refresh_from_db()
+        self.contest.refresh_from_db()
+        self.assertIsNotNone(draft.opened_at)
+        self.assertEqual(self.settings.competition_event_id, future.pk)
+        self.assertEqual(self.settings.active_game, "flappy")
+        self.assertTrue(self.settings.public_enabled)
+        self.assertIsNotNone(self.contest.frozen_at)
+
+    def test_published_game_is_immutable_and_pause_resume_preserves_attempts(self):
+        attempt = DoodleAttempt.objects.create(user=self.player, competition=self.contest, score=123)
+        opened_at = self.contest.opened_at
+        for action in ("select", "publish"):
+            self.client.post(self.url, {"action": action, "active_game": "flappy", "competition_event": self.event.pk})
+            self.contest.refresh_from_db()
+            self.assertEqual(self.contest.game_key, "doodle_jump")
+        self.client.post(self.url, {"action": "close", "competition_event": self.event.pk})
+        self.settings.refresh_from_db()
+        self.assertFalse(self.settings.public_enabled)
+        self.client.post(self.url, {"action": "publish", "active_game": "doodle_jump", "competition_event": self.event.pk})
+        self.settings.refresh_from_db()
+        self.contest.refresh_from_db()
+        self.assertTrue(self.settings.public_enabled)
+        self.assertEqual(self.contest.opened_at, opened_at)
+        self.assertTrue(DoodleAttempt.objects.filter(pk=attempt.pk, score=123).exists())
+
+    def test_pausing_a_future_draft_does_not_pause_another_stage(self):
+        future = Event.objects.create(name="Draft GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now()+timedelta(days=8))
+        ArcadeCompetition.objects.create(event=future, game_key="flappy")
+        self.client.post(self.url, {"action": "close", "competition_event": future.pk})
+        self.settings.refresh_from_db()
+        self.assertTrue(self.settings.public_enabled)
+
+    def test_drafts_never_freeze_or_appear_as_competition_on_public_pages(self):
+        from .arcade_library import contest_rows, freeze, history
+        future = Event.objects.create(name="Draft GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now()-timedelta(days=1))
+        draft = ArcadeCompetition.objects.create(event=future, game_key="flappy")
+        self.assertEqual(contest_rows(draft), ([], 0))
+        self.assertIsNone(freeze(draft).frozen_at)
+        self.assertEqual(history("flappy", self.player), [])
+        self.client.force_login(self.player)
+        self.assertNotContains(self.client.get(reverse("league:arcade")), "Draft GP")
+
+    def test_stale_global_settings_cannot_publish_a_draft_implicitly(self):
+        future = Event.objects.create(name="Planned GP", round_number=2, season_year=self.event.season_year,
+            deadline=timezone.now()+timedelta(days=8))
+        draft = ArcadeCompetition.objects.create(event=future, game_key="flappy")
+        self.settings.competition_event = future
+        self.settings.active_game = "flappy"
+        # Simulate stale legacy settings pointing at an unopened assignment.
+        self.settings.save()
+        self.client.force_login(self.player)
+        page = self.client.get(reverse("league:arcade"))
+        self.assertFalse(page.context["contest_open"])
+        result = self.client.post(reverse("league:arcade_run_start")).json()
+        self.assertIsNone(ArcadeAttempt.objects.get(pk=result["attempt_id"]).competition_id)
+        draft.refresh_from_db()
+        self.assertIsNone(draft.opened_at)

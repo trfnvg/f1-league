@@ -893,8 +893,10 @@ class CompetitiveFeaturesTests(TestCase):
         leaderboard_response = self.client.get(reverse("league:leaderboard"))
         event_response = self.client.get(reverse("league:event_detail", args=[scored_event.id]))
 
-        self.assertContains(home_response, "Прогноз сохранён")
-        self.assertContains(home_response, 'class="gp-state is-scored"')
+        self.assertContains(home_response, "Изменить прогноз")
+        self.assertEqual(home_response.context["featured_prediction"].event_id, open_event.pk)
+        self.assertNotContains(home_response, 'class="gp-state is-scored"')
+        self.assertEqual(event_response.context["state"], "scored")
         self.assertContains(leaderboard_response, "Победитель последнего этапа")
         self.assertNotContains(leaderboard_response, "round-winner-badge")
         self.assertTrue(next(row for row in leaderboard_response.context["rows"] if row["user"] == winner)["is_round_winner"])

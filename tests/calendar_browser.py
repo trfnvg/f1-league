@@ -25,6 +25,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 from playwright.sync_api import sync_playwright
 from league.models import Event
+from league.calendar_event_sync import sync_calendar_events_v1
 
 
 def run(browser_name, output):
@@ -33,11 +34,13 @@ def run(browser_name, output):
     event = Event.objects.create(name="Мехико, Мексика", circuit="mexico", round_number=19,
         deadline=now + timedelta(days=2), race_datetime=now + timedelta(days=4), season_year=2026,
         cover_image="event_covers/my-mexico.jpg")
+    sync_calendar_events_v1(2026)
     with override_settings(ALLOWED_HOSTS=["testserver"], MEDIA_URL="/media/", STORAGES={
         "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
         "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
     }), patch("league.race_calendar.timezone.now", return_value=now):
         page_html = Client().get(reverse("league:calendar")).content
+        home_html = Client().get(reverse("league:home")).content
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -47,6 +50,8 @@ def run(browser_name, output):
             path = unquote(urlsplit(self.path).path)
             if path == "/calendar/":
                 body, content_type = page_html, "text/html; charset=utf-8"
+            elif path == "/":
+                body, content_type = home_html, "text/html; charset=utf-8"
             elif path == "/media/event_covers/my-mexico.jpg":
                 body = (ROOT / "league/static/league/images/calendar/mexico.jpg").read_bytes()
                 content_type = "image/jpeg"
@@ -84,6 +89,7 @@ def run(browser_name, output):
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.goto(base + "/calendar/", wait_until="networkidle")
                 assert page.locator(".rc-card").count() == 23
+                assert page.locator('.rc-card-footer .rc-button').evaluate_all("nodes=>nodes.every(node=>node.getAttribute('href').startsWith('/events/'))")
                 assert page.locator('[data-calendar-filters] button').all_text_contents() == ['Предстоящие', 'Все']
                 assert page.locator('[data-filter="sprint"]').count() == 0
                 assert page.locator('[data-filter="upcoming"]').get_attribute('aria-pressed') == 'true'
@@ -227,6 +233,11 @@ def run(browser_name, output):
                 page.locator('[data-globe-schedule]').click()
                 assert page.locator('#grand-prix-melbourne').is_visible()
                 assert page.locator('[data-filter="all"]').get_attribute('aria-pressed') == 'true'
+                page.goto(base + '/', wait_until='networkidle')
+                assert page.locator('#calendar').count() == 0
+                assert page.locator('.event-editorial-card').count() == 0
+                assert page.locator('#featured-gp-title').is_visible()
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                 context.close()
             # Real touch input, orientation changes, automatic rotation suspended off-screen.
             context = browser.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)

@@ -41,10 +41,15 @@ def selected_contest():
         event=settings.competition_event,
         defaults={"game_key": settings.active_game, "opened_at": settings.competition_opened_at},
     )
+    if not contest.opened_at or contest.game_key != settings.active_game:
+        # Legacy settings must not turn a saved plan into a live competition.
+        return settings, None
     return settings, contest
 
 
 def contest_rows(contest):
+    if not contest.opened_at:
+        return [], 0
     Attempt, _ = models_for(contest.game_key)
     attempts = Attempt.objects.filter(competition=contest, user__is_staff=False,
         started_at__gte=contest.opened_at, started_at__lt=contest.event.deadline)
@@ -63,7 +68,7 @@ def contest_rows(contest):
 
 @transaction.atomic
 def freeze(contest):
-    if contest.frozen_at:
+    if contest.frozen_at or not contest.opened_at:
         return contest
     contest = ArcadeCompetition.objects.select_for_update().select_related("event").get(pk=contest.pk)
     if not contest.frozen_at and timezone.now() >= contest.event.deadline and contest.game_key in GAMES:
@@ -110,7 +115,7 @@ def board(user, game):
 
 def history(game, user):
     result = []
-    for item in ArcadeCompetition.objects.filter(game_key=game).select_related("event"):
+    for item in ArcadeCompetition.objects.filter(game_key=game, opened_at__isnull=False).select_related("event"):
         item = freeze(item)
         rows, total = (item.standings, item.total_attempts) if item.frozen_at else contest_rows(item)
         result.append({"event": item.event, "frozen": bool(item.frozen_at), "total": total,
@@ -254,45 +259,84 @@ def control(request):
     if previous:
         freeze(previous)
     now = timezone.now()
-    events = Event.objects.filter(season_year=get_selected_season(request).year, deadline__gt=now).exclude(status=Event.Status.SCORED).order_by("round_number")
+    season = get_selected_season(request)
+    events = Event.objects.filter(season_year=season.year).order_by("round_number")
     if request.method == "POST":
         with transaction.atomic():
             settings = ArcadeSettings.objects.select_for_update().get(pk=1)
+            previous = (ArcadeCompetition.objects.select_for_update().select_related("event")
+                        .filter(event_id=settings.competition_event_id, opened_at__isnull=False).first()
+                        if settings.competition_opened_at else None)
             key = request.POST.get("active_game")
+            action = request.POST.get("action")
             try:
                 event_id = int(request.POST.get("competition_event", ""))
             except (TypeError, ValueError):
-                event_id = None
+                event_id = settings.competition_event_id if action == "close" else None
             event = events.filter(pk=event_id).first()
             locked = previous and (not previous.event.race_datetime or now < previous.event.race_datetime)
-            if request.POST.get("action") == "close":
+            assignment = (ArcadeCompetition.objects.select_for_update().filter(event=event).first() if event else None)
+            if action == "close" and previous and event and previous.event_id == event.pk:
                 settings.public_enabled = False
                 settings.save(update_fields=("public_enabled", "updated_at"))
                 messages.success(request, "Соревновательный зачёт приостановлен. Глобальные рекорды продолжают сохраняться.")
-            elif request.POST.get("action") not in {"select", "publish"}:
-                messages.error(request, "Неизвестное действие.")
-            elif key not in GAMES or not event:
+            elif action not in {"select", "publish"}:
+                messages.error(request, "Для выбранного этапа нет открытого зачёта, который можно приостановить.")
+            elif key not in GAMES or not event or event.deadline <= now or event.status == Event.Status.SCORED:
                 messages.error(request, "Выбери игру и этап с будущим дедлайном.")
-            elif locked and (previous.game_key != key or previous.event_id != event.pk):
-                messages.error(request, "Сменить текущий зачёт можно после старта его гонки: победителю нужен доступ к колесу.")
-            elif ArcadeCompetition.objects.filter(event=event).exclude(game_key=key).exists():
-                messages.error(request, "К этому этапу уже привязана другая игра.")
-            elif request.POST.get("action") == "select":
-                changed = settings.active_game != key or settings.competition_event_id != event.pk
-                settings.active_game, settings.competition_event = key, event
-                if changed or not previous:
-                    settings.competition_opened_at = None
-                    settings.public_enabled = False
-                settings.save()
-                messages.success(request, "Выбор сохранён. Нажми «Открыть участникам», когда будешь готов.")
+            elif assignment and assignment.opened_at and assignment.game_key != key:
+                messages.error(request, "Игра этого этапа уже опубликована. Менять её нельзя: результаты должны сохраниться.")
+            elif assignment and assignment.frozen_at:
+                messages.error(request, "Зачёт этого этапа уже зафиксирован.")
+            elif action == "publish" and locked and previous.event_id != event.pk:
+                messages.error(request, f"Сначала дождись старта гонки «{previous.event.name}»: победителю нужен доступ к колесу. Привязку следующего этапа можно сохранить заранее.")
             else:
-                contest, _ = ArcadeCompetition.objects.get_or_create(event=event, defaults={"game_key": key, "opened_at": now})
-                settings.active_game, settings.competition_event = key, event
-                settings.competition_opened_at = contest.opened_at
-                settings.public_enabled = True
-                settings.save()
-                messages.success(request, "Соревнование открыто до дедлайна выбранного этапа.")
-        return redirect("league:arcade_control")
+                assignment = assignment or ArcadeCompetition.objects.create(event=event, game_key=key)
+                if not assignment.opened_at:
+                    assignment.game_key = key
+                    if action == "publish":
+                        assignment.opened_at = now
+                    assignment.save(update_fields=("game_key", "opened_at"))
+                if action == "publish":
+                    settings.active_game, settings.competition_event = key, event
+                    settings.competition_opened_at = assignment.opened_at
+                    settings.public_enabled = True
+                    settings.save()
+                    messages.success(request, f"{GAMES[key]['title']} открыт для этапа «{event.name}» до его дедлайна прогнозов.")
+                else:
+                    # Drafts belong to individual events, not the global current
+                    # competition. Planning another GP must never pause live play.
+                    if not previous:
+                        settings.active_game, settings.competition_event = key, event
+                        settings.competition_opened_at = None
+                        settings.public_enabled = False
+                        settings.save()
+                    messages.success(request, f"{GAMES[key]['title']} назначен этапу «{event.name}». Зачёт ещё не запускался; текущая аркада не изменена." if not assignment.opened_at else "Привязка опубликованного зачёта сохранена без изменений.")
+        target = reverse("league:arcade_control") + f"?season={season.year}"
+        if event:
+            target += f"&event={event.pk}"
+        return redirect(target + "#lab-competition")
+    event_list = list(events)
+    selected_event = next((event for event in event_list if str(event.pk) == request.GET.get("event")), None)
+    selected_event = selected_event or next((event for event in event_list if event.pk == settings.competition_event_id), None)
+    selected_event = selected_event or next((event for event in event_list if event.deadline > now), None) or (event_list[-1] if event_list else None)
+    assignments = list(ArcadeCompetition.objects.filter(event__season_year=season.year).select_related("event").order_by("event__round_number"))
+    selected_assignment = next((item for item in assignments if selected_event and item.event_id == selected_event.pk), None)
+    def plan_state(item):
+        if not item.opened_at:
+            return "Назначена" if item.event.deadline > now else "Не запускалась"
+        if item.frozen_at or item.event.deadline <= now:
+            return "Зачёт завершён"
+        if settings.competition_event_id == item.event_id and settings.public_enabled:
+            return "Зачёт открыт"
+        return "Приостановлен"
+    plans = [{"event": item.event, "game_title": GAMES.get(item.game_key, {}).get("title", item.get_game_key_display()),
+              "state": plan_state(item)} for item in assignments]
+    selected_expired = bool(selected_event and (selected_event.deadline <= now or selected_event.status == Event.Status.SCORED))
+    blocked_by_previous = bool(previous and selected_event and previous.event_id != selected_event.pk
+        and (not previous.event.race_datetime or previous.event.race_datetime > now))
+    selected_key = (selected_assignment.game_key if selected_assignment else
+                    settings.active_game if selected_event and settings.competition_event_id == selected_event.pk and not settings.competition_opened_at else "")
     test_games = [
         {**GAMES["doodle_jump"], "key": "doodle_jump", "genre": "Doodle Jump", "status": "В библиотеке",
          "url": reverse("league:arcade_game", args=["doodle_jump"]) + "?admin_test=1"},
@@ -306,10 +350,15 @@ def control(request):
          "url": reverse("league:arcade_game", args=["tetris"])},
     ]
     contest_open = bool(previous and settings.public_enabled and previous.opened_at <= now < previous.event.deadline)
-    return render(request, "arcade_library_control.html", {"settings": settings, "events": events, "games": GAMES.items(),
+    return render(request, "arcade_library_control.html", {"settings": settings, "events": event_list, "games": GAMES.items(),
+        "season": season, "plans": plans, "selected_event": selected_event,
+        "selected_assignment": selected_assignment, "selected_game_key": selected_key,
+        "selected_assignment_state": plan_state(selected_assignment) if selected_assignment else "Аркада не назначена",
+        "selected_event_expired": selected_expired, "blocked_by_previous": blocked_by_previous,
+        "can_pause_selected": bool(selected_event and selected_event.pk == settings.competition_event_id and settings.public_enabled),
+        "current_contest": previous,
         "test_games": test_games, "contest_open": contest_open,
-        "selected_event_expired": bool(settings.competition_event_id and settings.competition_event.deadline <= now),
-        "selected_game_public": settings.active_game in GAMES,
+        "selected_game_public": selected_key in GAMES,
         "active_game_title": GAMES.get(settings.active_game, {}).get("title", settings.get_active_game_display()),
         "arcade_wheel_sectors": list(rewards.WHEEL_SECTORS), "driver_choices": DRIVER_CHOICES})
 

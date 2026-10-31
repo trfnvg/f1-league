@@ -50,6 +50,24 @@
 .arcade-control .lab-fields>div { min-width:0; }
 .arcade-control .lab-fields label { display:block; color:#e5e9ef; font-size:12px; font-weight:600; margin-bottom:8px; }
 .arcade-control .lab-fields select { width:100%; min-width:0; min-height:46px; padding:10px 12px; color:#e8ecf2; background:#181d24; border:1px solid #414a57; border-radius:8px; font:400 13px/1.5 Inter,sans-serif; text-overflow:ellipsis; }
+.arcade-control .lab-fields select:disabled { opacity:.7; }
+.arcade-control .lab-stage-picker .lab-fields { grid-template-columns:minmax(0,1fr) auto; align-items:end; }
+.arcade-control .lab-current-contest { color:var(--lab-muted); display:flex; flex-wrap:wrap; gap:9px; align-items:center; font-size:12px; margin:0 0 24px; }
+.arcade-control .lab-current-contest .lab-state { margin:0; }
+.arcade-control .lab-current-contest strong { color:#e5e9ef; }
+.arcade-control .lab-selected-stage { display:flex; justify-content:space-between; align-items:center; gap:16px; border-block:1px solid var(--lab-border); padding:18px 0; margin:22px 0; }
+.arcade-control .lab-selected-stage>div { display:flex; flex-direction:column; gap:7px; min-width:0; }
+.arcade-control .lab-selected-stage strong { font-size:14px; }
+.arcade-control .lab-selected-stage span { color:var(--lab-muted); font-size:12px; line-height:1.6; }
+.arcade-control .lab-selected-stage a { font-size:12px; color:#f17b6e; text-decoration:none; font-weight:600; flex:none; }
+.arcade-control .lab-season-plans { margin-top:24px; border-top:1px solid var(--lab-border); padding-top:16px; }
+.arcade-control .lab-season-plans>summary { cursor:pointer; color:#e5e9ef; font-size:12px; font-weight:600; }
+.arcade-control .lab-plan-list { display:grid; margin-top:14px; }
+.arcade-control .lab-plan-row { display:flex; align-items:center; gap:12px; padding:13px 0; border-top:1px solid var(--lab-border); color:#e5e9ef; text-decoration:none; }
+.arcade-control .lab-plan-row>span:nth-child(2) { min-width:0; display:flex; flex-direction:column; gap:4px; }
+.arcade-control .lab-plan-row strong { font-size:12px; overflow-wrap:anywhere; }
+.arcade-control .lab-plan-row small,.arcade-control .lab-plan-round { font-size:11px; color:var(--lab-muted); }
+.arcade-control .lab-plan-round { flex:none; font-family:ui-monospace,monospace; }
 .arcade-control .lab-form-actions { display:flex; flex-wrap:wrap; gap:10px; margin:22px 0 18px; }
 .arcade-control .lab-form-note { margin-bottom:0; }
 .arcade-control .lab-message { padding:15px 18px; border:1px solid #495561; background:#252d35; border-radius:10px; font-size:13px; }
@@ -72,6 +90,9 @@
   .arcade-control .lab-game-copy { padding:16px; }
   .arcade-control .lab-game-copy h3 { font-size:20px; }
   .arcade-control .lab-fields { grid-template-columns:1fr; }
+  .arcade-control .lab-stage-picker .lab-fields { grid-template-columns:1fr; }
+  .arcade-control .lab-selected-stage { flex-direction:column; align-items:flex-start; }
+  .arcade-control .lab-plan-row { flex-wrap:wrap; }
   .arcade-control .lab-disclosure>summary { padding:16px; gap:10px; flex-wrap:wrap; }
   .arcade-control .lab-disclosure-copy { flex:1; }
   .arcade-control .lab-disclosure>summary>svg { width:17px; height:17px; }

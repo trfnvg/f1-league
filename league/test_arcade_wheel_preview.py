@@ -45,6 +45,8 @@ class ArcadeWheelPreviewTests(TestCase):
     def test_admin_control_contains_game_selector_and_isolated_wheel_demo(self):
         admin = User.objects.create_user("arcade-control-admin", is_staff=True)
         self.client.force_login(admin)
+        Event.objects.create(name="Selectable GP", round_number=1, season_year=Season.get_active().year,
+            deadline=timezone.now() + timedelta(days=2))
 
         response = self.client.get(reverse("league:arcade_control"))
 

@@ -1654,7 +1654,8 @@ class ArcadeSettings(models.Model):
 class ArcadeCompetition(models.Model):
     game_key = models.CharField(max_length=24, choices=ArcadeSettings.Game.choices)
     event = models.OneToOneField(Event, on_delete=models.PROTECT, related_name="arcade_competition")
-    opened_at = models.DateTimeField()
+    opened_at = models.DateTimeField(null=True, blank=True,
+        help_text="Пусто — игра назначена этапу, но зачёт ещё не открыт.")
     frozen_at = models.DateTimeField(null=True, blank=True)
     standings = models.JSONField(default=list, blank=True)
     total_attempts = models.PositiveIntegerField(default=0)

@@ -81,7 +81,7 @@ class PredictionNavigationTests(TestCase):
         response = self.client.get(reverse("league:home"))
         for href in self.forecast_links(response):
             self.assertEqual(urlsplit(href).path, reverse("login"))
-            self.assertEqual(parse_qs(urlsplit(href).query), {"next": [reverse("league:home") + "#calendar"]})
+            self.assertEqual(parse_qs(urlsplit(href).query), {"next": [reverse("league:calendar")]})
 
     def test_calendar_and_direct_event_preview_remain_public(self):
         self.assertEqual(self.client.get(reverse("league:calendar")).status_code, 200)

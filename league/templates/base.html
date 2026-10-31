@@ -1085,7 +1085,7 @@
     {% if user.is_staff %}
       <a class="menu-item {% if request.resolver_match.url_name == 'paddock_jury_admin' %}is-active{% endif %}" href="{% url 'league:paddock_jury_admin' %}">Paddock Jury · голоса</a>
       {% url 'league:arcade_control' as arcade_control_url %}
-      {% if arcade_control_url %}<a class="menu-item d-none d-md-block {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ arcade_control_url }}">Аркада · управление</a>{% endif %}
+      {% if arcade_control_url %}<a class="menu-item {% if request.resolver_match.url_name == 'arcade_control' %}is-active{% endif %}" href="{{ arcade_control_url }}">Управление аркадами</a>{% endif %}
     {% endif %}
     <a class="menu-item {% if '/leagues/' in request.path %}is-active{% endif %}" href="{% url 'league:friend_leagues' %}">Лиги</a>
     <a class="menu-item {% if request.resolver_match.url_name == 'leaderboard' or request.resolver_match.url_name == 'global_leaderboard' %}is-active{% endif %}" href="{% url 'league:global_leaderboard' %}">Общий рейтинг</a>

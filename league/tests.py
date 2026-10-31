@@ -109,7 +109,7 @@ class PartialSeasonScoringTests(TestCase):
 
 @override_settings(STORAGES=TEST_STORAGES)
 class HomeEventOrderingTests(TestCase):
-    def test_home_lists_each_event_section_from_newest_round_to_oldest(self):
+    def test_home_keeps_featured_event_without_duplicating_calendar(self):
         now = timezone.now()
         upcoming_old = Event.objects.create(
             name="Ближайший ранний этап",
@@ -137,10 +137,10 @@ class HomeEventOrderingTests(TestCase):
         response = self.client.get(reverse("league:home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context["upcoming_events"], [upcoming_new, upcoming_old])
-        self.assertEqual(response.context["past_events"], [past_new, past_old])
-        self.assertContains(response, 'class="event-editorial-card gp-card"')
-        self.assertContains(response, 'class="event-media-placeholder"')
+        self.assertNotContains(response, 'id="calendar"')
+        self.assertNotContains(response, 'class="event-editorial-card gp-card"')
+        self.assertContains(response, 'href="/calendar/"')
+        self.assertEqual(response.context["featured_event"], upcoming_old)
 
 
 @override_settings(STORAGES=TEST_STORAGES)

@@ -396,13 +396,35 @@ class RaceCalendarRoundAdmin(admin.ModelAdmin):
     search_fields = ("title", "location", "circuit_name")
     ordering = ("-season_year", "round_number")
     autocomplete_fields = ("prediction_event",)
+    actions = ("create_prediction_cards",)
     fieldsets = (
         ("Этап", {"fields": ("season_year", "round_number", "circuit", "title", "location", "country", "circuit_name", "cover_image", "has_sprint")}),
         ("Расписание", {"fields": ("starts_on", "ends_on", "venue_timezone", "practice1_at", "practice2_at", "practice3_at", "sprint_qualifying_at", "sprint_at", "qualifying_at", "race_at"),
             "description": "Даты уик-энда — местные. Время сессий вводится в часовом поясе админки (МСК). Необъявленное время оставьте пустым."}),
         ("Прогнозы и источники", {"fields": ("prediction_event", "source_url", "checked_on"),
-            "description": "Календарь не создаёт карточки прогнозов и не меняет их дедлайны."}),
+            "description": "Недостающая карточка прогнозов создаётся при сохранении. Новые дедлайны — четверг, 23:59 МСК. Существующие карточки и дедлайны не меняются."}),
     )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        from .calendar_event_sync import sync_calendar_events_v1
+        report = sync_calendar_events_v1(obj.season_year, round_ids=[obj.pk])
+        if report["created"]:
+            self.message_user(request, "Карточка прогнозов создана. Дедлайн — четверг перед уик-эндом, 23:59 МСК.")
+        for conflict in report["conflicts"]:
+            self.message_user(request, conflict, level="warning")
+
+    @admin.action(description="Создать недостающие карточки прогнозов")
+    def create_prediction_cards(self, request, queryset):
+        from .calendar_event_sync import sync_calendar_events_v1
+        created = linked = 0
+        for year in queryset.order_by().values_list("season_year", flat=True).distinct():
+            report = sync_calendar_events_v1(year, round_ids=list(queryset.filter(season_year=year).values_list("pk", flat=True)))
+            created += report["created"]
+            linked += report["linked"]
+            for conflict in report["conflicts"]:
+                self.message_user(request, conflict, level="warning")
+        self.message_user(request, f"Создано карточек: {created}. Привязано к календарю: {linked}. Существующие данные сохранены.")
 
 
 @admin.register(Event)

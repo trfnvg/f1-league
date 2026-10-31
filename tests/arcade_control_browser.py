@@ -22,7 +22,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from playwright.sync_api import expect, sync_playwright
-from league.models import ArcadeSettings, Event, Season
+from league.models import ArcadeCompetition, ArcadeSettings, Event, Season
 
 
 def fixtures():
@@ -40,9 +40,14 @@ def fixtures():
     # Django's test environment exposes the lab's URLs without duplicating routing logic.
     from django.test.utils import setup_test_environment
     setup_test_environment()
+    future = Event.objects.create(name='Сан-Паулу, Бразилия', round_number=20, season_year=season.year,
+        deadline=now+timedelta(days=8), race_datetime=now+timedelta(days=10))
+    client.post(reverse('league:arcade_control'), {'action': 'select', 'competition_event': future.pk, 'active_game': 'flappy'})
     response = client.get(reverse('league:arcade_control'))
     cards = response.context['test_games']
     pages = {reverse('league:arcade_control'): response.content}
+    future_url = reverse('league:arcade_control') + f'?season={season.year}&event={future.pk}'
+    pages[future_url] = client.get(future_url).content
     for card in cards:
         pages[card['url']] = client.get(card['url']).content
     event.deadline = now - timedelta(hours=1)
@@ -52,8 +57,9 @@ def fixtures():
     settings.competition_event = None
     settings.competition_opened_at = None
     settings.save()
+    ArcadeCompetition.objects.filter(event=future).delete()
     pages['/lab-empty/'] = client.get(reverse('league:arcade_control')).content
-    return pages, cards
+    return pages, cards, future.pk
 
 
 def run(engine, output):
@@ -61,7 +67,7 @@ def run(engine, output):
         'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
         'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage'},
     }):
-        pages, cards = fixtures()
+        pages, cards, future_id = fixtures()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -102,8 +108,9 @@ def run(engine, output):
                     page.goto(base + path, wait_until='networkidle')
                     expect(page.locator('.lab-game-card')).to_have_count(4)
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (width, path)
-                    assert not page.locator('#lab-competition').get_attribute('open')
-                    assert page.locator('#arcade-game-select').is_hidden()
+                    assert page.locator('#lab-competition').evaluate('node=>node.open')
+                    expect(page.locator('#arcade-game-select')).to_be_visible()
+                    expect(page.locator('#arcade-event-select')).to_be_enabled()
                     assert page.locator('#test-wheel-spin').is_hidden()
                     for card in cards:
                         cover = page.locator(f'[data-test-game="{card["key"]}"] img')
@@ -117,9 +124,8 @@ def run(engine, output):
                     if path == '/arcade/control/' and width in (390, 1440):
                         page.evaluate('window.scrollTo(0, 0)')
                         page.screenshot(path=str(output / f'{width}-lab.png'), full_page=True)
-                    page.locator('#lab-competition>summary').click()
                     expect(page.locator('#arcade-game-select')).to_be_visible()
-                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value)') == ['flappy', 'doodle_jump']
+                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value).filter(Boolean)') == ['flappy', 'doodle_jump']
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                     page.locator('#lab-wheel>summary').click()
                     expect(page.locator('#test-wheel-spin')).to_be_visible()
@@ -131,6 +137,15 @@ def run(engine, output):
                     expect(page.locator('#test-wheel-apply')).to_be_visible()
                     page.locator('#test-wheel-apply').click()
                     expect(page.locator('#test-wheel-outcome-summary')).to_contain_text('+2')
+                    page.goto(base + '/arcade/control/', wait_until='networkidle')
+                    page.select_option('#arcade-event-select', str(future_id))
+                    page.locator('.lab-stage-picker button').click()
+                    expect(page.locator('#arcade-game-select')).to_have_value('flappy')
+                    expect(page.locator('.lab-competition-form [name=competition_event]')).to_have_value(str(future_id))
+                    expect(page.locator('.lab-competition-form [value=publish]')).to_be_disabled()
+                    expect(page.locator('.lab-competition-form [value=select]')).to_be_enabled()
+                    expect(page.locator('.lab-selected-stage strong')).to_have_text('Сан-Паулу, Бразилия')
+                    page.screenshot(path=str(output / f'{width}-future-stage.png'), full_page=True)
                     for card in cards:
                         page.goto(base + '/arcade/control/', wait_until='networkidle')
                         page.locator(f'[data-test-game="{card["key"]}"] a').click()

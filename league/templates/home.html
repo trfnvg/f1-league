@@ -155,41 +155,6 @@
   </section>
 {% endif %}
 
-<section class="editorial-section ns-calendar" id="calendar">
-  <div class="section-heading-row calendar-heading-row">
-    <div class="calendar-heading-copy">
-      <div class="calendar-heading-meta">
-        <span class="eyebrow">Календарь {{ season.year }}</span>
-        <span class="section-count">{{ total_events }} этапов</span>
-      </div>
-      <h2>Все этапы</h2>
-    </div>
-  </div>
-
-  <div class="event-editorial-grid">
-    {% for e in events %}
-      <article class="event-editorial-card gp-card">
-        <div class="gp-card-meta"><span class="gp-round">R{{ e.round_number|stringformat:'02d' }}</span><span class="gp-state is-{{ e.ui_state }}">{% if e.ui_state == "saved" %}Прогноз сохранён{% elif e.ui_state == "open" %}Приём прогнозов{% elif e.ui_state == "scored" %}Результаты{% else %}Прогнозы закрыты{% endif %}</span></div>
-        <a class="event-media{% if e.cover_image %} has-cover{% endif %}" href="{% url 'league:event_detail' event_id=e.id %}" aria-label="Открыть {{ e.name }}">
-          {% if e.cover_image %}<img src="{{ e.cover_image.url }}" alt="{{ e.name }}" loading="lazy" decoding="async">{% elif e.circuit_visual %}<div class="ns-calendar-track">{% include 'circuit_track.html' with circuit=e.circuit_visual track_id=e.pk animated=False %}</div>{% else %}<div class="event-media-placeholder"><span>R{{ e.round_number }}</span></div>{% endif %}
-        </a>
-        <div class="event-card-copy">
-          <div class="gp-card-date">{% if e.race_datetime %}{{ e.race_datetime|date:"d M Y · H:i" }} МСК{% else %}{{ e.deadline|date:"d M Y" }}{% endif %}</div>
-          <h3><a href="{% url 'league:event_detail' event_id=e.id %}">{{ e.name }}</a></h3>
-          <div class="event-card-foot">
-            <span>Прогноз до<br><strong>{{ e.deadline|date:"d.m · H:i" }} МСК</strong></span>
-            <a class="event-card-action is-{{ e.ui_state }}" href="{% url 'league:event_detail' event_id=e.id %}" aria-label="Открыть {{ e.name }}">
-              {% if e.ui_state == "saved" %}Изменить{% elif e.ui_state == "open" %}Прогноз{% elif e.ui_state == "scored" %}Итоги{% else %}Открыть{% endif %}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
-            </a>
-          </div>
-        </div>
-      </article>
-    {% empty %}
-      <div class="empty-editorial">Календарь сезона пока не опубликован.</div>
-    {% endfor %}
-  </div>
-</section>
-
 </div>
 {% endblock %}
 

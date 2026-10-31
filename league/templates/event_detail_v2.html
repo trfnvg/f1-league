@@ -9,7 +9,7 @@
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
 
 <div class="stage-backlink">
-  <a href="{% url 'league:home' %}" class="text-decoration-none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg> Календарь сезона</a>
+  <a href="{% url 'league:calendar' %}?season={{ event.season_year }}" class="text-decoration-none"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg> Календарь сезона</a>
 </div>
 
 <div class="card event-hero-card event-stage-hero mb-4">

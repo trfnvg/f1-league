@@ -984,16 +984,6 @@ def home(request):
     _award_legacy_flappy_trophy(season.year, now=now)
     events = list(Event.objects.filter(season_year=season.year).order_by("-round_number"))
     request._navigation_events = events
-    upcoming_events = []
-    past_events = []
-
-    for event in events:
-        event_time = event.race_datetime or event.deadline
-        is_past = event.status == Event.Status.SCORED or (event_time and event_time < now)
-        if is_past:
-            past_events.append(event)
-        else:
-            upcoming_events.append(event)
 
     result_images = list(
         HomeResultImage.objects.filter(is_active=True, season_year=season.year)
@@ -1108,9 +1098,6 @@ def home(request):
         "home.html",
         {
             "events": events,
-            "upcoming_events": upcoming_events,
-            "past_events": past_events,
-            "total_events": len(events),
             "result_images": result_images,
             "season": season,
             "personal_dashboard": personal_dashboard,

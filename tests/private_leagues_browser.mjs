@@ -79,7 +79,7 @@ try{
       assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,`${width} ${url}: horizontal page overflow`);
       if(!['/avatars/','/overview/'].includes(url))assert.equal(await page.locator('.leagues-page').count(),1);
       if(url==='/overview/'){
-        assert.equal(await page.locator('#calendar').count(),1);
+        assert.equal(await page.locator('#calendar').count(),0);
         assert.ok(await page.locator('.nightshift-nav-item').count()>=5);
         assert.equal(await page.locator('.nightshift-sidebar').isVisible(),width>780);
         assert.equal(await page.locator('.nightshift-mobile-nav').isVisible(),width<=780);
