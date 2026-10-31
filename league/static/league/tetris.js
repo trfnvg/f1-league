@@ -20,7 +20,7 @@
   let messageTimer = 0, startTimer = 0, countdown = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
-  const mascot = new window.PitStackMascot(byId('mascot'));
+  const mascot = new window.PitStackMascot(byId('mascot'),reduceMotion);
   const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
   let showGhost=true;
   try {showGhost=localStorage.getItem(ghostKey)!=='false';} catch {}

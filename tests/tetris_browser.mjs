@@ -107,6 +107,21 @@ async function checkFeedback(page,name) {
   if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-feedback-${name}.png`)});
   await page.evaluate(()=>{window.__game.score=1200000;window.__game.revision++;});await nextFrame();
   assert.ok(await page.locator('#tetris-score').evaluate(node=>node.scrollWidth<=node.clientWidth),'Large scores also fit the mobile panel');
+  if(process.env.TETRIS_PREVIEW_DIR) {
+    for(const [pose,clock] of [['fists',240],['thumbs',1500]]) {
+      await page.evaluate(clock=>{
+        window.__freezeMascot=true;
+        window.__mascot.setState('celebrate',true);
+        window.__mascot.clock=clock;window.__mascot.updateFrame();
+        document.getElementById('tetris-mascot').getAnimations({subtree:true}).forEach(animation=>animation.pause());
+      },clock);
+      await page.locator('#tetris-mascot').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-alonso-${pose}-${name}.png`)});
+    }
+    await page.evaluate(()=>{
+      window.__freezeMascot=false;
+      document.getElementById('tetris-mascot').getAnimations({subtree:true}).forEach(animation=>animation.play());
+    });
+  }
   await page.evaluate(()=>{
     const g=window.__game;window.__freezeFeedback=false;window.__feedback.reset();
     g.board.forEach(row=>row.fill(null));g.lines=0;g.level=1;g.score=0;
@@ -246,11 +261,15 @@ try {
       const observe=window.PitStackFeedback.prototype.observe,step=window.PitStackFeedback.prototype.step;
       window.PitStackFeedback.prototype.observe=function(game){window.__feedback=this;return observe.call(this,game);};
       window.PitStackFeedback.prototype.step=function(...args){if(!window.__freezeFeedback)return step.apply(this,args);};
+      const mascotObserve=window.PitStackMascot.prototype.observe,mascotStep=window.PitStackMascot.prototype.step;
+      window.PitStackMascot.prototype.observe=function(game){window.__mascot=this;return mascotObserve.call(this,game);};
+      window.PitStackMascot.prototype.step=function(...args){if(!window.__freezeMascot)return mascotStep.apply(this,args);};
     });
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
     await page.locator('#tetris-mascot img').evaluate(image=>image.decode());
-    assert.deepEqual(await page.locator('#tetris-mascot img').evaluate(image=>[image.naturalWidth,image.naturalHeight]),[2172,724]);
+    assert.deepEqual(await page.locator('#tetris-mascot img').evaluate(image=>[image.naturalWidth,image.naturalHeight]),[1536,1024]);
+    assert.equal(await page.locator('#tetris-mascot img').evaluate(image=>getComputedStyle(image).imageRendering),'pixelated','Crisp pixel-art sampling');
     assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle');
     assert.equal(await page.locator('#tetris-mascot figcaption').count(),0,'No captions under Alonso');
     assert.ok(await page.locator('#tetris-overlay').evaluate(node=>{
