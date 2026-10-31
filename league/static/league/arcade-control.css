@@ -118,3 +118,14 @@
   .arcade-control .lab-game-card { transition:border-color .18s ease,box-shadow .18s ease; }
   .arcade-control .lab-game-card:hover { border-color:#626c79; box-shadow:0 8px 20px #0002; }
 }
+.lab-library { padding:24px; margin-bottom:20px; border:1px solid #36424d; border-radius:16px; background:linear-gradient(120deg,#202b34,#171e26); }
+.lab-library h3 { margin:4px 0 10px; font-size:22px; color:#edf2f6; }
+.lab-library-options { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:20px 0; }
+.lab-library-option { display:flex; align-items:center; gap:12px; padding:16px; border:1px solid #3c4955; border-radius:10px; background:#151d25; cursor:pointer; min-width:0; }
+.lab-library-option:has(input:checked) { border-color:#9b5356; background:#2a242b; }
+.lab-library-option input { flex:0 0 auto; width:19px; height:19px; accent-color:#ed5358; }
+.lab-library-option input:focus-visible { outline:2px solid #f0a7a9; outline-offset:3px; }
+.lab-library-option strong,.lab-library-option small { display:block; }
+.lab-library-option strong { color:#f0f3f7; font-size:14px; }
+.lab-library-option small { color:#a7b5c1; font-size:11px; margin-top:6px; }
+@media(max-width:700px) { .lab-library { padding:18px; } .lab-library-options { grid-template-columns:1fr; } }

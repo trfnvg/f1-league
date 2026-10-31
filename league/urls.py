@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import arcade_library
+from . import tetris_views
 from . import jury_admin
 from . import league_views
 from . import driver_profiles
@@ -43,6 +44,9 @@ urlpatterns = [
     path("paddock-jury/<int:event_id>/close/", views.close_crazy_vote, name="close_crazy_vote"),
     path("arcade/", arcade_library.library, name="arcade"),
     path("arcade/control/", arcade_library.control, name="arcade_control"),
+    path("arcade/tetris/attempt/start/", tetris_views.start, name="tetris_attempt_start"),
+    path("arcade/tetris/attempt/finish/", tetris_views.finish, name="tetris_attempt_finish"),
+    path("arcade/tetris/leaderboard/", arcade_library.leaderboard, {"game_key": "tetris"}, name="tetris_leaderboard"),
     path("arcade/lab/minesweeper/", arcade_library.minesweeper_preview, name="arcade_minesweeper_preview"),
     path("arcade/play/<str:game_key>/", arcade_library.game, name="arcade_game"),
     path("arcade/doodle-jump/", arcade_library.doodle_page, name="arcade_doodle_jump"),

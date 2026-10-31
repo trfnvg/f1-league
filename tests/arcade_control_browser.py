@@ -129,7 +129,9 @@ def run(engine, output):
                         page.evaluate('window.scrollTo(0, 0)')
                         page.screenshot(path=str(output / f'{width}-lab.png'), full_page=True)
                     expect(page.locator('#arcade-game-select')).to_be_visible()
-                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value).filter(Boolean)') == ['flappy', 'doodle_jump']
+                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value).filter(Boolean)') == ['tetris', 'flappy', 'doodle_jump']
+                    expect(page.locator('.lab-library-option input')).to_have_count(3)
+                    expect(page.locator('.lab-library-option input[value="tetris"]')).to_be_checked()
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                     page.locator('#lab-wheel>summary').click()
                     expect(page.locator('#test-wheel-spin')).to_be_visible()

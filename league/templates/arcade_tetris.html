@@ -2,18 +2,20 @@
 {% block title %}Pit Stack · F1-тетрис · Fastlap{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
+{% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=pit-stack-clean-v16">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=public-release-v18">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
-  <nav class="arcade-game-nav"><a href="{% url 'league:arcade' %}">← Все аркады</a><span>Лаборатория · закрытый тест</span></nav>
+  <nav class="arcade-game-nav"><a href="{% url 'league:arcade' %}">← Все аркады</a><span>{% if arcade_test_mode %}Тестирование · без записи результата{% elif competitive_now %}Идёт зачёт Гран-при{% else %}Свободная игра · глобальные рекорды{% endif %}</span></nav>
   <header class="pit-stack-heading">
     <div><p class="pit-stack-eyebrow">FALLING BLOCKS · WORLD TOUR</p><h1>PIT <em>STACK</em></h1><p class="pit-stack-lede">Собирай линии. Меняй трассы. Удержи темп.</p></div>
-    <a class="pit-stack-admin" href="{% url 'league:arcade_control' %}">Управление аркадами ↗</a>
+    {% if user.is_staff %}<a class="pit-stack-admin" href="{% url 'league:arcade_control' %}">Управление аркадами ↗</a>{% endif %}
   </header>
 
-  <section class="tetris-machine" id="tetris-machine" aria-label="Pit Stack — тестовая игра">
+  {% if arcade_scoring_open or not arcade_library_mode %}
+  <section class="tetris-machine" id="tetris-machine" aria-label="Pit Stack — тетрис" data-save-results="{{ tetris_save_results|yesno:'true,false' }}" data-start-url="{{ tetris_start_url }}" data-finish-url="{{ tetris_finish_url }}">
     <div class="tetris-scenery" id="tetris-scenery" aria-hidden="true"
       data-art-monaco="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}"
       data-art-las-vegas="{% static 'league/images/tetris-gp/las-vegas-retro-v1.webp' %}"
@@ -64,14 +66,27 @@
       </aside>
     </div>
   </section>
+  {% else %}<p class="pit-stack-lede">Свободный доступ к игре закрыт администратором. Результаты этапа сохранены.</p>{% endif %}
+  <div class="tetris-save-line"><p id="tetris-save-status" role="status"></p><button id="tetris-retry-save" type="button" hidden>Повторить сохранение</button></div>
+  {% if not user.is_authenticated %}<p class="pit-stack-lede"><a href="{% url 'login' %}?next={% url 'league:arcade_game' 'tetris' %}">Войди в аккаунт</a>, чтобы сохранять рекорды и участвовать в зачёте.</p>{% endif %}
+  <form id="tetris-csrf-form" hidden>{% csrf_token %}</form>
+  <section class="tetris-leaderboard arcade-results" id="tetris-results" data-board-url="{{ tetris_board_url }}" aria-labelledby="tetris-leaderboard-title">
+    {% include "arcade_results_heading.html" with game_label="PIT STACK" board_title=leaderboard_title title_id="tetris-leaderboard-title" total_id="tetris-total-attempts" total=arcade_total_attempts %}
+    {% include "arcade_results_labels.html" %}
+    <ol class="tetris-leaderboard-list arcade-results-list" id="tetris-leaderboard-list">{% for record in arcade_records %}<li{% if record.is_current_user %} class="is-you"{% endif %}><span class="arcade-rank">{{ record.rank|stringformat:'02d' }}</span><span class="arcade-driver-name">{{ record.username }}</span><span class="arcade-record-score"><strong>{{ record.score }}</strong></span><span class="arcade-attempt-count"><strong>{{ record.attempts }}</strong></span></li>{% empty %}<li class="arcade-board-empty">Пока нет рекордов — начни первый заезд.</li>{% endfor %}</ol>
+    <p class="arcade-own-rank" id="tetris-own-rank"{% if not arcade_own_rank %} hidden{% endif %}>Твоё место: {{ arcade_own_rank }} · рекорд {{ board_own_score }} · попыток {{ board_own_attempts }}</p>
+  </section>
+  {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
   <noscript><p>Для запуска Pit Stack включи JavaScript в браузере.</p></noscript>
 </main>
 {% endblock %}
 {% block extra_scripts %}
-<script src="{% static 'league/tetris-engine.js' %}?v=classic-line-speed-v17" defer></script>
+<script src="{% static 'league/tetris-engine.js' %}?v=public-release-v18" defer></script>
+<script src="{% static 'league/tetris-session.js' %}?v=1" defer></script>
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=pit-stack-calm-audio-v10" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=classic-line-speed-v17" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=public-release-v18" defer></script>
+{% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

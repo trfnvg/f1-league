@@ -18,6 +18,7 @@ from .models import (
     MinesweeperAttempt,
     PlayerWildcard,
     Prediction,
+    TetrisAttempt,
 )
 from .crazy_jury import crazy_vote_is_open
 
@@ -116,6 +117,9 @@ def best_event_arcade_attempt(
             .order_by("-score", "finished_at", "user__username")
             .first()
         )
+    if game_key == ArcadeSettings.Game.TETRIS:
+        return (TetrisAttempt.objects.filter(**eligible, score__isnull=False)
+                .select_related("user").order_by("-score", "finished_at", "user__username").first())
     if game_key == ArcadeSettings.Game.MINESWEEPER:
         return (
             MinesweeperAttempt.objects.filter(

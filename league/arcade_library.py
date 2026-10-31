@@ -13,24 +13,45 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import (DRIVER_CHOICES, ArcadeAttempt, ArcadeCompetition, ArcadeRecord, ArcadeSettings,
-                     ArcadeWheelSpin, DoodleAttempt, DoodleRecord, Event, Prediction)
+                     ArcadeWheelSpin, DoodleAttempt, DoodleRecord, Event, Prediction,
+                     TetrisAttempt, TetrisRecord, default_arcade_library_games)
 from .services import get_selected_season
 from . import arcade_rewards as rewards
 
 GAMES = {
+    "tetris": {"title": "Pit Stack", "subtitle": "F1-тетрис · World Tour", "cover": "league/images/tetris-pit-garage-v1.png", "description": "Собирай линии на трассах Гран-при. Классический темп, мгновенный сброс и гоночный саундтрек."},
     "flappy": {"title": "Pit Lane Flight", "subtitle": "Банан Леклер · Flappy Bird", "cover": "league/images/arcade-flappy-cover-v1.png", "description": "Пролетай между воротами солнечного паддока и держи ритм."},
     "doodle_jump": {"title": "Cowboy GP", "subtitle": "Рассел на Диком Западе · Doodle Jump", "cover": "league/images/arcade-doodle-cover-v1.png", "description": "Прыгай через каньоны, облака и космос. Каждый забег — новая высота."},
 }
 
-# Unreleased games are deliberately outside GAMES: they cannot be published,
-# acquire attempts via models_for(), or affect an existing competition/wheel.
-PREVIEW_GAMES = {
-    "tetris": {"title": "Pit Stack", "subtitle": "F1-тетрис · закрытый тест", "cover": "league/images/tetris-pit-garage-v1.png"},
-}
+# Reserved for future prototypes; minesweeper has its own staff-only lab route.
+PREVIEW_GAMES = {}
 
 
 def models_for(game):
+    if game == "tetris":
+        return TetrisAttempt, TetrisRecord
     return (DoodleAttempt, DoodleRecord) if game == "doodle_jump" else (ArcadeAttempt, ArcadeRecord)
+
+
+def permanent_games(settings):
+    keys = settings.library_games if settings else default_arcade_library_games()
+    return {key for key in keys if isinstance(key, str) and key in GAMES} if isinstance(keys, list) else set()
+
+
+def play_is_open(game_key, settings, contest):
+    now = timezone.now()
+    return game_key in permanent_games(settings) or bool(contest and contest.game_key == game_key
+        and settings.public_enabled and not contest.frozen_at and contest.opened_at <= now < contest.event.deadline)
+
+
+def require_game_access(request, game_key, settings, contest, *, allow_wheel=False):
+    if game_key not in GAMES:
+        raise Http404
+    wheel = bool(allow_wheel and contest and contest.game_key == game_key
+        and rewards.wheel_window_is_open(contest.event))
+    if not request.user.is_staff and not play_is_open(game_key, settings, contest) and not wheel:
+        raise Http404
 
 
 def selected_contest():
@@ -129,12 +150,13 @@ def library(request):
     if contest:
         contest = freeze(contest)
     # New releases lead the library; the selected competition has its own hero card.
-    newest_first = ("doodle_jump", "flappy")
-    cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])} for key in newest_first]
+    newest_first = ("tetris", "doodle_jump", "flappy")
+    all_cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])} for key in newest_first]
+    cards = [card for card in all_cards if card["key"] in permanent_games(settings)]
     now = timezone.now()
     contest_open = bool(contest and settings.public_enabled and not contest.frozen_at
                         and contest.opened_at <= now < contest.event.deadline)
-    current = next((card for card in cards if contest_open and card["key"] == contest.game_key), None)
+    current = next((card for card in all_cards if contest_open and card["key"] == contest.game_key), None)
     return render(request, "arcade_library.html", {"games": cards, "current_game": current,
         "contest": contest, "contest_open": contest_open, "library_server_time": now,
         "arcade_settings_admin_url": reverse("league:arcade_control")})
@@ -142,19 +164,17 @@ def library(request):
 
 @require_GET
 def game(request, game_key):
-    if game_key in PREVIEW_GAMES:
-        if not request.user.is_authenticated or not request.user.is_active or not request.user.is_staff:
-            raise Http404
-        return render(request, "arcade_tetris.html", {"game": PREVIEW_GAMES[game_key]})
     if game_key not in GAMES:
         raise Http404
     settings, contest = selected_contest()
+    require_game_access(request, game_key, settings, contest, allow_wheel=True)
     is_current = bool(contest and contest.game_key == game_key)
     if contest:
         contest = freeze(contest)
     data = board(request.user, game_key)
     admin_test = request.user.is_staff and request.GET.get("admin_test") == "1"
-    context = {"game": GAMES[game_key], "arcade_game_key": game_key, "arcade_scoring_open": True,
+    context = {"game": GAMES[game_key], "arcade_game_key": game_key,
+        "arcade_scoring_open": request.user.is_staff or play_is_open(game_key, settings, contest),
         "arcade_admin_preview": admin_test, "arcade_test_mode": admin_test, "arcade_library_mode": True,
         "arcade_settings_admin_url": reverse("league:arcade_control"), "leaderboard_title": data["board_title"],
         "competitive_now": bool(is_current and settings.public_enabled and timezone.now() < contest.event.deadline),
@@ -170,6 +190,12 @@ def game(request, game_key):
     if is_current and not admin_test and wheel_period:
         # Keep the current winner's wheel accessible through the race start.
         context.update(wheel_context(request, contest))
+    if game_key == "tetris":
+        context.update(tetris_save_results=bool(request.user.is_authenticated and not admin_test),
+            tetris_start_url=reverse("league:tetris_attempt_start"),
+            tetris_finish_url=reverse("league:tetris_attempt_finish"),
+            tetris_board_url=reverse("league:tetris_leaderboard"))
+        return render(request, "arcade_tetris.html", context)
     return render(request, "arcade_doodle_jump.html" if game_key == "doodle_jump" else "arcade_flappy.html", context)
 
 
@@ -191,6 +217,8 @@ def minesweeper_preview(request):
 
 @require_GET
 def leaderboard(request, game_key="flappy"):
+    settings, contest = selected_contest()
+    require_game_access(request, game_key, settings, contest, allow_wheel=True)
     return JsonResponse(board(request.user, game_key))
 
 
@@ -198,11 +226,12 @@ def leaderboard(request, game_key="flappy"):
 @require_POST
 @transaction.atomic
 def attempt_start(request, game_key="flappy"):
-    if game_key not in GAMES:
+    if game_key not in {"flappy", "doodle_jump"}:
         raise Http404
     if request.user.is_staff and request.GET.get("admin_test") == "1":
         return JsonResponse({"attempt_id": None, **board(request.user, game_key)})
     settings, contest = selected_contest()
+    require_game_access(request, game_key, settings, contest)
     now = timezone.now()
     if contest:
         contest = freeze(contest)  # Same lock order as finish; deadline freezes before free play.
@@ -219,6 +248,8 @@ def attempt_start(request, game_key="flappy"):
 @require_POST
 @transaction.atomic
 def attempt_finish(request, game_key="flappy"):
+    if game_key not in {"flappy", "doodle_jump"}:
+        raise Http404
     try:
         payload = json.loads(request.body or b"{}")
         attempt_id, score = payload.get("attempt_id"), payload.get("score")
@@ -269,6 +300,19 @@ def control(request):
                         if settings.competition_opened_at else None)
             key = request.POST.get("active_game")
             action = request.POST.get("action")
+            if action == "library":
+                keys = request.POST.getlist("library_games")
+                if any(key not in GAMES for key in keys):
+                    messages.error(request, "В библиотеку можно добавить только выпущенные игры.")
+                else:
+                    settings.library_games = list(dict.fromkeys(keys))
+                    settings.save(update_fields=("library_games", "updated_at"))
+                    messages.success(request, "Библиотека обновлена для всех игроков. Зачёт этапа не изменён.")
+                target = reverse("league:arcade_control") + f"?season={season.year}"
+                selected = request.POST.get("library_event", "")
+                if selected.isascii() and selected.isdecimal() and len(selected) < 12 and events.filter(pk=int(selected)).exists():
+                    target += f"&event={int(selected)}"
+                return redirect(target + "#lab-library")
             try:
                 event_id = int(request.POST.get("competition_event", ""))
             except (TypeError, ValueError):
@@ -279,7 +323,7 @@ def control(request):
             if action == "close" and previous and event and previous.event_id == event.pk:
                 settings.public_enabled = False
                 settings.save(update_fields=("public_enabled", "updated_at"))
-                messages.success(request, "Соревновательный зачёт приостановлен. Глобальные рекорды продолжают сохраняться.")
+                messages.success(request, "Соревновательный зачёт приостановлен. Свободный доступ определяется постоянной библиотекой.")
             elif action not in {"select", "publish"}:
                 messages.error(request, "Для выбранного этапа нет открытого зачёта, который можно приостановить.")
             elif key not in GAMES or not event or event.deadline <= now or event.status == Event.Status.SCORED:
@@ -345,9 +389,9 @@ def control(request):
         {"key": "minesweeper", "title": "Pitwall Sweep", "genre": "Сапёр", "status": "Закрытый тест",
          "description": "Расчисти пит-лейн: находи безопасные клетки и отмечай скрытые опасности.",
          "cover": "league/images/arcade-minesweeper-pitlane.png", "url": reverse("league:arcade_minesweeper_preview")},
-        {**PREVIEW_GAMES["tetris"], "key": "tetris", "genre": "Тетрис", "status": "Закрытый тест",
+        {**GAMES["tetris"], "key": "tetris", "genre": "Тетрис", "status": "Выпущена",
          "description": "Собирай ряды под гоночный саундтрек и проверяй темп на трассах Гран-при.",
-         "url": reverse("league:arcade_game", args=["tetris"])},
+         "url": reverse("league:arcade_game", args=["tetris"]) + "?admin_test=1"},
     ]
     contest_open = bool(previous and settings.public_enabled and previous.opened_at <= now < previous.event.deadline)
     return render(request, "arcade_library_control.html", {"settings": settings, "events": event_list, "games": GAMES.items(),
@@ -358,6 +402,7 @@ def control(request):
         "can_pause_selected": bool(selected_event and selected_event.pk == settings.competition_event_id and settings.public_enabled),
         "current_contest": previous,
         "test_games": test_games, "contest_open": contest_open,
+        "library_choices": [{**value, "key": key, "checked": key in permanent_games(settings)} for key,value in GAMES.items()],
         "selected_game_public": selected_key in GAMES,
         "active_game_title": GAMES.get(settings.active_game, {}).get("title", settings.get_active_game_display()),
         "arcade_wheel_sectors": list(rewards.WHEEL_SECTORS), "driver_choices": DRIVER_CHOICES})

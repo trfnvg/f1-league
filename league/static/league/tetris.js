@@ -9,6 +9,8 @@
   const board = byId('board'), deck = byId('deck'), overlay = byId('overlay');
   const pauseButton = byId('pause'), startButton = byId('start'), fullscreenButton = byId('fullscreen');
   const game = new Game();
+  const session = new window.PitStackSession(machine);
+  window.PitStackActiveSession=session;
   const scenery = new window.PitStackScenery(byId('scenery'),byId('venue'));
   const soundtrack = new window.PitStackAudio(byId('soundtrack'),byId('sound'),byId('volume'));
   let shownPace=-1;
@@ -17,7 +19,7 @@
   const held = new Map(), keys = new Map(), touchPointers = new Set();
   const gestures = new window.PitStackGestures(act);
   let request = 0, lastTime = 0, renderedRevision = -1, clearSerial = 0;
-  let messageTimer = 0, startTimer = 0, countdown = false, fittedDpr = 0, shownOverlay = '';
+  let messageTimer = 0, startTimer = 0, countdown = false, preparing = false, fittedDpr = 0, shownOverlay = '';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const feedback = new window.PitStackFeedback(byId('feedback'),byId('track-lights'),palette,reduceMotion);
   const ghostButton=byId('ghost'),ghostKey='fastlap.pitStack.ghost.v1';
@@ -142,6 +144,7 @@
         if (shownOverlay !== mode) {
           shownOverlay = mode;
           if(mode === 'over') {
+            session.finish();
             soundtrack.setPlaying(false);
             byId('overlay-caption').textContent = 'ЗАЕЗД ЗАВЕРШЁН';
             byId('overlay-title').textContent = 'Финиш!';
@@ -171,6 +174,7 @@
   }
   function act(action) {
     if (!game.active || countdown) return;
+    if(!session.record(action,game)){schedule();return;}
     if(action==='left') game.move(-1);
     if(action==='right') game.move(1);
     if(action==='rotate') game.turn();
@@ -210,7 +214,7 @@
     request = 0;
     const dt = lastTime ? Math.max(0,Math.min(50,time-lastTime)) : 0; lastTime = time;
     if(fittedDpr !== Math.min(3,window.devicePixelRatio||1)) resize();
-    if(!countdown && !game.paused) { updateHeld(dt); game.update(dt); }
+    if(!countdown && !game.paused) { updateHeld(dt); session.advance(game,dt); }
     feedback.observe(game);
     feedback.step(dt,game.paused || countdown);
     updatePace();
@@ -228,13 +232,21 @@
       lastTime=0; canvas.focus({preventScroll:true}); schedule();
     }
   }
-  function start() {
-    if(countdown) return;
+  async function start() {
+    if(countdown || preparing) return;
     if(game.paused) { togglePause(); return; }
     // Disabling a focused start button emits focusout with no relatedTarget.
     // Move focus inside the board first, so countdown does not pause its music.
     canvas.focus({preventScroll:true});
     soundtrack.setPlaying(true,true);
+    preparing=true;startButton.disabled=true;
+    try {game.random=await session.begin();}
+    catch(error){
+      soundtrack.setPlaying(false);clearHeld();
+      byId('overlay-text').textContent=error.message;overlay.hidden=false;
+      preparing=false;startButton.disabled=false;return;
+    }
+    preparing=false;
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
     feedback.reset();
     scenery.reset();

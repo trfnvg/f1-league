@@ -30,7 +30,7 @@ class ArcadeLibraryTests(TestCase):
             self.assertContains(response, "Аркады")
         self.assertContains(self.client.get(reverse("league:arcade")), "Library GP")
         response=self.client.get(reverse("league:arcade"))
-        self.assertEqual([card["key"] for card in response.context["games"]],["doodle_jump","flappy"])
+        self.assertEqual([card["key"] for card in response.context["games"]],["tetris","doodle_jump","flappy"])
         flappy=self.client.get(reverse("league:arcade_game",args=["flappy"]))
         self.assertContains(flappy,'id="arcade-enter-fullscreen"')
         self.assertNotContains(flappy,"Играть на весь экран")
@@ -78,7 +78,7 @@ class ArcadeLibraryTests(TestCase):
         for guest in (False, True):
             if guest:
                 self.client.logout()
-            for key, prefix in (("flappy", "arcade"), ("doodle_jump", "doodle")):
+            for key, prefix in (("flappy", "arcade"), ("doodle_jump", "doodle"), ("tetris", "tetris")):
                 page = self.client.get(reverse("league:arcade_game", args=[key]))
                 self.assertContains(page, "league/arcade-results.css")
                 self.assertContains(page, f'class="{prefix}-leaderboard arcade-results"')

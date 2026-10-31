@@ -19,6 +19,10 @@
   };
   const TYPES = Object.keys(SHAPES);
   const clone = matrix => matrix.map(row => row.slice());
+  function createRandom(seed) {
+    let state=seed>>>0;
+    return () => { state=(Math.imul(1664525,state)+1013904223)>>>0; return state/4294967296; };
+  }
   const rotate = matrix => matrix[0].map((_, x) => matrix.map(row => row[x]).reverse());
   function cells(piece) {
     const result = [];
@@ -168,5 +172,5 @@
     }
     finish() { this.phase = 'over'; this.piece = null; this.revision++; }
   }
-  root.PitStack = Object.freeze({Game, SHAPES, TYPES, COLS, ROWS, cells});
+  root.PitStack = Object.freeze({Game, SHAPES, TYPES, COLS, ROWS, cells, createRandom});
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -155,3 +155,6 @@ body.tetris-fullscreen { overflow: hidden; }
 @media (prefers-reduced-motion:reduce) { .tetris-scenery > div, .tetris-route i { transition: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating i { animation: none; background: #db7773; box-shadow: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating::before { animation: none; opacity: .35; box-shadow: none; } }
+.tetris-save-line { display:flex; align-items:center; flex-wrap:wrap; gap:12px; color:#b2c0ce; font-size:12px; }
+.tetris-save-line:has(p:empty):has(button[hidden]) { display:none; }
+.tetris-save-line button { border:1px solid #475463; border-radius:6px; padding:8px 12px; color:#edf2f7; background:#1a252f; }

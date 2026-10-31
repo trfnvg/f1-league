@@ -3,7 +3,7 @@
 {% block title %}Тестирование аркад · Fastlap{% endblock %}
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'league/arcade.css' %}">
-<link rel="stylesheet" href="{% static 'league/arcade-control.css' %}?v=3-auto-stage">
+<link rel="stylesheet" href="{% static 'league/arcade-control.css' %}?v=4-library">
 {% endblock %}
 {% block content %}
 <main class="arcade-control" aria-labelledby="arcade-control-title">
@@ -28,6 +28,16 @@
 
   <section class="lab-management" aria-labelledby="lab-management-title">
     <div class="lab-section-heading"><h2 id="lab-management-title">Управление аркадами</h2><span>НАСТРОЙКИ ДЛЯ УЧАСТНИКОВ</span></div>
+    <section class="lab-library" id="lab-library" aria-labelledby="lab-library-title">
+      <div><p class="lab-eyebrow">СВОБОДНАЯ ИГРА</p><h3 id="lab-library-title">Постоянная библиотека</h3><p class="lab-description">Отметь игры, доступные всем игрокам независимо от этапа. Соревновательная игра остаётся доступна до дедлайна даже без галочки.</p></div>
+      <form method="post" action="{% url 'league:arcade_control' %}?season={{ season.year }}">
+        {% csrf_token %}<input type="hidden" name="action" value="library">
+        {% if selected_event %}<input type="hidden" name="library_event" value="{{ selected_event.pk }}">{% endif %}
+        <div class="lab-library-options">{% for game in library_choices %}<label class="lab-library-option"><input type="checkbox" name="library_games" value="{{ game.key }}"{% if game.checked %} checked{% endif %}><span><strong>{{ game.title }}</strong><small>{{ game.subtitle }}</small></span></label>{% endfor %}</div>
+        <button type="submit" class="lab-button lab-button-play">Сохранить библиотеку</button>
+        <p class="lab-form-note">Снятие галочки скрывает игру и закрывает новые свободные попытки. Рекорды и история не удаляются. Сапёр пока остаётся в тестировании.</p>
+      </form>
+    </section>
     <details class="lab-disclosure" id="lab-competition" open>
       <summary><span class="lab-disclosure-copy"><strong>Аркада для этапа · {{ season.year }}</strong><span>{% if selected_event %}R{{ selected_event.round_number }} · {{ selected_event.name }}{% else %}В этом сезоне пока нет карточек этапов{% endif %}</span></span><span class="lab-state">{{ selected_assignment_state }}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></summary>
       <div class="lab-disclosure-body">
@@ -45,7 +55,7 @@
           {% if selected_assignment.opened_at %}<input type="hidden" name="active_game" value="{{ selected_game_key }}">{% endif %}
           <div class="lab-fields"><div><label for="arcade-game-select">2. Назначь игру</label><select name="active_game" id="arcade-game-select" required{% if selected_assignment.opened_at or selected_event_expired %} disabled{% endif %}>{% if not selected_game_public %}<option value="" selected disabled>Выбери выпущенную игру</option>{% endif %}{% for key, game in games %}<option value="{{ key }}"{% if selected_game_key == key %} selected{% endif %}>{{ game.title }}</option>{% endfor %}</select></div></div>
           <div class="lab-form-actions"><button class="lab-button lab-button-secondary" name="action" value="select"{% if selected_event_expired or selected_assignment.opened_at %} disabled{% endif %}>Сохранить привязку</button><button class="lab-button lab-button-play" name="action" value="publish"{% if selected_event_expired or blocked_by_previous or can_pause_selected or not selected_game_public and selected_assignment.opened_at %} disabled{% endif %}>3. {% if can_pause_selected %}Зачёт уже открыт{% else %}Открыть участникам{% endif %}</button><button class="lab-button lab-button-quiet" name="action" value="close" formnovalidate{% if not can_pause_selected %} disabled{% endif %}>Приостановить зачёт</button></div>
-          <p class="lab-form-note">Привязка хранится отдельно для каждого этапа. Сохранение не запускает игру и не прерывает текущий зачёт. После публикации заменить игру нельзя; пауза и повторное открытие сохраняют все результаты. Сапёр и тетрис пока доступны только в тестах выше.</p>
+          <p class="lab-form-note">Привязка хранится отдельно для каждого этапа. Сохранение не запускает игру и не прерывает текущий зачёт. После публикации заменить игру нельзя; пауза и повторное открытие сохраняют все результаты. Сапёр пока доступен только в тестах выше.</p>
         </form>
         {% endif %}
         {% if plans %}<details class="lab-season-plans"><summary>Привязки сезона · {{ plans|length }}</summary><div class="lab-plan-list">{% for plan in plans %}<a class="lab-plan-row" href="{% url 'league:arcade_control' %}?season={{ season.year }}&amp;event={{ plan.event.pk }}#lab-competition"><span class="lab-plan-round">R{{ plan.event.round_number }}</span><span><strong>{{ plan.event.name }}</strong><small>{{ plan.game_title }}</small></span><span class="lab-state">{{ plan.state }}</span></a>{% endfor %}</div></details>{% endif %}

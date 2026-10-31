@@ -44,7 +44,7 @@ class ArcadeControlTests(TestCase):
         for card in cards:
             self.assertContains(response, f'href="{card["url"]}"')
         self.assertNotContains(response, "flight=1")
-        self.assertNotContains(response, '<option value="tetris"')
+        self.assertContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-competition" open>')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-wheel">')

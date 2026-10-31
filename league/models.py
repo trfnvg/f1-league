@@ -1603,11 +1603,16 @@ class ArcadeGameClosure(models.Model):
         return f"{self.game_key} · {self.season_year} · {winner}"
 
 
+def default_arcade_library_games():
+    return ["flappy", "doodle_jump", "tetris"]
+
+
 class ArcadeSettings(models.Model):
     class Game(models.TextChoices):
         FLAPPY = "flappy", "Pit Lane Flight · Flappy Bird"
         DOODLE_JUMP = "doodle_jump", "Doodle GP · бесконечный забег"
         MINESWEEPER = "minesweeper", "Сапёр · Pitwall Sweep"
+        TETRIS = "tetris", "Pit Stack · Тетрис"
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     active_game = models.CharField(
@@ -1622,6 +1627,8 @@ class ArcadeSettings(models.Model):
         default=False,
         help_text="Если выключено, страницу и игру видят только администраторы. Можно включить позже без удаления результатов.",
     )
+    library_games = models.JSONField("Постоянная библиотека", default=default_arcade_library_games,
+        blank=True, help_text="Коды выпущенных игр для свободной игры вне соревнований.")
     competition_event = models.ForeignKey(
         Event,
         verbose_name="Этап зачёта",
@@ -1662,6 +1669,33 @@ class ArcadeCompetition(models.Model):
 
     class Meta:
         ordering = ("-event__deadline",)
+
+
+class TetrisAttempt(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="tetris_attempts")
+    competition = models.ForeignKey(ArcadeCompetition, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="tetris_attempts")
+    seed = models.PositiveBigIntegerField(editable=False)
+    rules_version = models.PositiveSmallIntegerField(default=1, editable=False)
+    started_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    score = models.PositiveIntegerField(null=True, blank=True)
+    ticks = models.PositiveIntegerField(default=0)
+    replay = models.JSONField(default=list, blank=True, editable=False)
+
+    class Meta:
+        ordering = ("-started_at",)
+        indexes = [models.Index(fields=("user", "started_at"), name="tetris_attempt_user_idx")]
+
+
+class TetrisRecord(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="tetris_record")
+    best_score = models.PositiveIntegerField(default=0)
+    total_attempts = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-best_score", "updated_at", "user__username")
 
 
 class MinesweeperAttempt(models.Model):

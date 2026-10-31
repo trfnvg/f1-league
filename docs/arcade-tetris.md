@@ -1,28 +1,50 @@
-# Pit Stack · admin-only F1 falling-block prototype
+# Pit Stack · released F1 falling-block game
 
 ## Access and scope
 
-Open **Аркады → Управление аркадами → Лаборатория · новые игры → Pit Stack**,
-or `/arcade/play/tetris/` as an active staff user. Anonymous/ordinary users receive
-404, including with `?admin_test=1`. The GET-only view checks staff before reading
-contests or building leaderboards. No schema changes.
+Open **Аркады → Pit Stack**, or `/arcade/play/tetris/`. Guests can practice;
+authenticated players save verified results. Staff can use `?admin_test=1`
+from the lab without creating attempts or changing standings.
 
-This is a playable **test**, not a third published competition. `PREVIEW_GAMES`
-is separate from `GAMES`: the public library, publication dropdown, attempts,
-records, current contest and winner's wheel are unchanged. Forging a publication
-POST with `active_game=tetris` is rejected. No score, attempt or local high-score
-is saved; reloading starts a fresh session. Future publication will need its own
-server-side attempt/scoring validation and ranking integration, not just moving
-the entry into GAMES (existing models_for defaults to Flappy).
+Staff choose permanently available games at **Управление аркадами → Постоянная
+библиотека**. Defaults preserve Flappy/Cowboy and include newly released Tetris.
+An active competition is independently visible even without its permanent checkbox.
+Unchecked games disallow new free runs/direct access; completed records remain.
+The winner can still access the wheel after the deadline until the race starts.
+Minesweeper remains staff-only. No running contest is automatically replaced.
+
+Migration 0063 adds the library preference and separate TetrisAttempt/TetrisRecord
+tables. Admin can assign and publish Tetris for a future event. Its event standings,
+deadline freeze, all-time records and winner's wheel use only Tetris attempts.
+
+## Authoritative results
+
+POST start issues a random 32-bit seed and rules version 1, binds the current
+competition and increments that user's attempt counter (maximum 30 starts/minute).
+The client uses that seed, a shared LCG and fixed 60 Hz simulation ticks. It submits
+ordered input ticks, never a score, board or chosen pieces. `tetris_rules.py`
+replays physics independently and computes the saved score. Results are owned by
+the logged-in user; CSRF remains enabled. Version, wall-clock duration, command
+ordering/types, game-over and resource bounds are validated. Invalid replays consume
+the attempt; a retry of an already saved attempt is idempotent. In-flight legitimate
+runs may finish after a visibility change, but cannot enter a closed event's standings.
+
+The verifier bounds a run to four active hours / 30,000 inputs / eight commands per
+tick / 800 KB request; reaching the time/input bound ends the client run and saves
+its verified score. Pause/hidden-tab time is not replay time. The raw replay is kept
+with the attempt for audit. Network failures retain the proof in memory for retry;
+no localStorage high score is authoritative. This validates scores and physics, not
+human identity: automation/bots and deliberate slow play remain separate problems.
 
 ## Rules and controls
 
 The user's “original tennis rules” was interpreted as “original Tetris rules”.
-This prototype uses familiar classic falling-block rules, not an exact emulator
+This game uses familiar classic falling-block rules, not an exact emulator
 of any one historical release: 10 columns × 20 visible rows, all seven four-cell
 shapes, uniform independent random pieces, one-piece preview, bidirectional rotation
 with small horizontal wall adjustments only, 350–220 ms lock grace capped at ten
-movement/rotation resets. No hold, enemies or wheel bonuses.
+movement/rotation resets. No hold or enemies. The selected event's winner can use
+the site's existing wheel; wheel prizes never modify Tetris physics or score.
 
 Full rows clear together after a 180 ms visual effect. 1/2/3/4 rows award
 40/100/300/1200 × the current one-based level; soft drop awards 1 per cell, hard
@@ -187,7 +209,7 @@ stale completions cannot resume music after pause/mute. No audio animation timer
 
 - `node tests/tetris_engine.mjs`: rules, all seven pieces, rotation/walls,
   all four line clear counts, score/levels, pause, soft/hard drop, lock delay,
-  restart and 150,000 seeded random mutation steps across 1,644 games.
+  restart and 150,000 seeded random mutation steps.
 - `node tests/tetris_gestures.mjs`: taps in both directions, jitter, relative
   drag/reversal, fast/slow downward input, exactly-once hard-drop, axis lock,
   multitouch, cancel/pause/new-piece protection and bounded input work.
@@ -199,9 +221,16 @@ stale completions cannot resume music after pause/mute. No audio animation timer
   particle cap/expiry, finite lights, pause, reduced motion and idle cleanup.
   Engine checks also cover projection for seven pieces/rotations on uneven stacks
   and exact agreement between guide and hard-drop footprints.
-- `python manage.py test league.test_arcade_tetris league.test_arcade_library`:
-  21 tests including access control, no mutations, no public links, rejected
-  publication, removed UI and existing arcade regression tests.
+- `python manage.py test league.test_arcade_tetris league.test_arcade_library league.test_arcade_control`:
+  library visibility, public release, staff-only publishing, isolated practice,
+  server replay, saved/frozen records, winner wheel and existing arcade regressions.
+- `node tests/tetris_session.mjs`: seeded run, fixed ticks, input-only proof, pause,
+  CSRF header, retry, exactly-once finish, guest/admin isolation.
+- `PYTHON_BIN=/path/to/python node tests/tetris_replay.mjs`: independent JS/Python
+  agreement for 120 full seeded runs and twelve low/high-speed line-clear fixtures.
+- `PYTHON_BIN=/path/to/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs node tests/tetris_release_browser.mjs`:
+  actual public page, seeded start, real keyboard game-over, Python verified score
+  and refreshed leaderboard at desktop/mobile widths.
 - `PYTHON_BIN=/path/to/venv/python PLAYWRIGHT_MODULE=/path/to/playwright/index.mjs
   node tests/tetris_browser.mjs`: real Django template rendered without a DB,
   real headless Chromium, 1440×1000, 390×844 and 320×568 screens, 2×/3× backing
