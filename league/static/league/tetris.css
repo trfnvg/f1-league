@@ -80,6 +80,29 @@
 .tetris-next { padding-bottom: 2px; }
 #tetris-next { display: block; width: 100%; height: auto; }
 .tetris-session-label { color: #9ca9b9; font-size: 9px; line-height: 1.6; letter-spacing: .18em; margin: 0; text-align: center; }
+.tetris-mascot { margin: 0; flex: 0 0 auto; pointer-events: none; user-select: none; }
+.tetris-mascot-art { position: relative; width: 100%; aspect-ratio: 1; margin: 0 auto; overflow: hidden; }
+.tetris-mascot-motion { position: absolute; inset: 0; transform-origin: 50% 96%; animation: tetris-builder-idle 3.6s ease-in-out infinite; }
+.tetris-mascot img { display: block; width: 300%; max-width: none; height: 100%; object-fit: fill; image-rendering: auto; }
+.tetris-mascot figcaption { margin-top: 5px; color: #abc6be; font: 7px/1.4 "Manrope",sans-serif; font-weight: 800; letter-spacing: .08em; text-align: center; }
+.tetris-mascot-art > i { position: absolute; top: 36%; right: 10%; width: 9px; height: 9px; background: #f5d887; clip-path: polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); opacity: 0; }
+.tetris-mascot[data-state="placing"] .tetris-mascot-motion { animation: tetris-builder-place 650ms ease-in-out both; }
+.tetris-mascot[data-state="celebrate"] img { transform: translateX(-33.333333%); }
+.tetris-mascot[data-state="celebrate"] .tetris-mascot-motion { animation: tetris-builder-celebrate 1s ease-out 2 both; }
+.tetris-mascot[data-state="celebrate"] .tetris-mascot-art > i { animation: tetris-builder-sparkle 900ms ease-out 2; }
+.tetris-mascot[data-state="celebrate"] figcaption { color: #f5d887; }
+.tetris-mascot[data-state="over"] img { transform: translateX(-66.666667%); }
+.tetris-mascot[data-state="over"] .tetris-mascot-motion { animation: tetris-builder-shrug 750ms ease-out both; }
+.tetris-mascot[data-paused="true"] .tetris-mascot-motion, .tetris-mascot[data-paused="true"] .tetris-mascot-art > i { animation-play-state: paused; }
+@keyframes tetris-builder-idle { 0%,100% { transform: translateY(0) rotate(-.3deg); } 50% { transform: translateY(-1px) rotate(.3deg); } }
+@keyframes tetris-builder-place { 0%,100% { transform: rotate(0); } 45% { transform: translateY(1px) rotate(1.2deg); } }
+@keyframes tetris-builder-celebrate { 0%,100% { transform: translateY(0); } 25% { transform: translateY(-3px) rotate(-1deg); } 60% { transform: translateY(-1px) rotate(.7deg); } }
+@keyframes tetris-builder-shrug { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-1.5deg); } 65% { transform: rotate(1deg); } }
+@keyframes tetris-builder-sparkle { 0%,100% { opacity: 0; transform: scale(.5) rotate(0); } 45% { opacity: .9; transform: scale(1) rotate(45deg); } }
+@media (min-width:1000px) and (min-height:701px) {
+  .tetris-mascot { position: absolute; left: 18px; bottom: 26px; width: min(235px,calc((100% - var(--tetris-board-width,320px) - 164px)/2 - 28px)); }
+  .tetris-mascot figcaption { font-size: 9px; letter-spacing: .14em; }
+}
 .tetris-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; text-align: center; background: #080c14f5; }
 .tetris-overlay[hidden] { display: none; }
 .tetris-start-lights { display: flex; gap: 6px; padding: 8px; border: 1px solid #394650; background: #101923; }
@@ -130,6 +153,17 @@ body.tetris-fullscreen { overflow: hidden; }
   .tetris-wordmark::before { display: none; }
   .tetris-toolbar-actions { gap: 4px; }
   .tetris-toolbar button { font-size: 9px; padding: 7px 6px; }
+  .tetris-overlay h2 { font-size: 20px; margin: 8px 0; }
+  .tetris-overlay p:not(.pit-stack-eyebrow) { font-size: 9px; line-height: 1.5; margin-bottom: 10px; }
+  .tetris-overlay .pit-stack-eyebrow { font-size: 6px; letter-spacing: .08em; margin-top: 8px; }
+  .tetris-start-lights { gap: 4px; padding: 6px; }
+  .tetris-start-lights i { width: 9px; height: 9px; }
+  #tetris-start { font-size: 10px; padding: 10px 12px; }
+}
+@media (max-height:700px) {
+  .tetris-telemetry { gap: 5px; }
+  .tetris-mascot-art { width: min(100%,56px); }
+  .tetris-mascot figcaption { font-size: 6px; margin-top: 2px; }
 }
 @media (max-height:520px) and (orientation:landscape) {
   .tetris-machine.is-fullscreen { grid-template-rows: 38px minmax(0,1fr); }
@@ -138,6 +172,7 @@ body.tetris-fullscreen { overflow: hidden; }
   .is-fullscreen .tetris-stat { padding: 3px 8px; }
   .is-fullscreen .tetris-stat strong { font-size: 18px; }
   .is-fullscreen .tetris-next { display: none; }
+  .is-fullscreen .tetris-mascot { display: none; }
   .is-fullscreen .tetris-circuit, .is-fullscreen .tetris-pace { display: none; }
   .is-fullscreen .tetris-overlay h2 { font-size: 16px; margin: 4px 0; }
   .is-fullscreen .tetris-overlay p:not(.pit-stack-eyebrow) { display: none; }
@@ -149,3 +184,6 @@ body.tetris-fullscreen { overflow: hidden; }
 @media (prefers-reduced-motion:reduce) { .tetris-scenery > div, .tetris-route i { transition: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating i { animation: none; background: #db7773; box-shadow: none; } }
 @media (prefers-reduced-motion:reduce) { .tetris-track-lights.is-celebrating::before { animation: none; opacity: .35; box-shadow: none; } }
+@media (prefers-reduced-motion:reduce) {
+  .tetris-mascot[data-state] .tetris-mascot-motion, .tetris-mascot[data-state] .tetris-mascot-art > i { animation: none; }
+}

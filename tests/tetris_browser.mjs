@@ -82,6 +82,7 @@ async function checkFeedback(page,name) {
   });
   assert.equal(await page.evaluate(()=>window.__game.score),1200);
   assert.equal(await page.locator('#tetris-track-lights').evaluate(node=>node.classList.contains('is-celebrating')),true);
+  assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'celebrate','Alonso celebrates a four-line clear');
   assert.equal(await page.locator('#tetris-track-lights i').count(),10);
   assert.equal(await page.locator('#tetris-feedback').evaluate(node=>getComputedStyle(node).pointerEvents),'none');
   assert.match(await page.locator('#tetris-track-lights').evaluate(node=>getComputedStyle(node,'::before').animationName),/tetris-pole-frame/);
@@ -245,6 +246,16 @@ try {
     });
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'No title-screen autoplay');
     const titleArtwork=await page.locator('#tetris-scenery .is-visible img').getAttribute('src');
+    await page.locator('#tetris-mascot img').evaluate(image=>image.decode());
+    assert.deepEqual(await page.locator('#tetris-mascot img').evaluate(image=>[image.naturalWidth,image.naturalHeight]),[2172,724]);
+    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle');
+    assert.ok(await page.locator('#tetris-overlay').evaluate(node=>{
+      const area=node.getBoundingClientRect();
+      return [...node.children].every(child=>{
+        const rect=child.getBoundingClientRect();return rect.top>=area.top && rect.bottom<=area.bottom;
+      });
+    }),`${name}: start instructions and button fit inside the board`);
+    if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-alonso-title-${name}.png`)});
     await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game?.phase==='running');
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
@@ -286,6 +297,8 @@ try {
     await page.keyboard.up('KeyP');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(media=>media.paused),true,'Music pauses with the game');
     assert.equal(await page.evaluate(()=>window.__game.paused),true);
+    await page.waitForFunction(()=>document.getElementById('tetris-mascot').dataset.paused==='true');
+    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-paused'),'true');
     assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause,'P pauses without dropping');
     const snapshot=await page.evaluate(()=>JSON.stringify(window.__game.piece));
     await page.waitForTimeout(900);
@@ -329,9 +342,12 @@ try {
       const machine=document.getElementById('tetris-machine').getBoundingClientRect();
       const canvas=document.getElementById('tetris-canvas'),board=canvas.getBoundingClientRect();
       const telemetry=document.querySelector('.tetris-telemetry').getBoundingClientRect();
+      const mascot=document.getElementById('tetris-mascot').getBoundingClientRect();
       return {aspect:board.height/board.width,canvasAspect:canvas.height/canvas.width,top:board.top-machine.top,
         bottom:machine.bottom-board.bottom,
         gap:telemetry.left-board.right,overflow:document.documentElement.scrollWidth-window.innerWidth,
+        mascotFits:mascot.left>=machine.left && mascot.right<=machine.right && mascot.top>=machine.top && mascot.bottom<=machine.bottom,
+        mascotClear:mascot.right<=board.left || mascot.left>=board.right,
         fullscreen:document.body.classList.contains('tetris-fullscreen'), machineWidth:machine.width,
         toolbarButtons:Array.from(document.querySelectorAll('.tetris-toolbar button')).map(button=>{
           const rect=button.getBoundingClientRect();return [rect.left-machine.left,rect.right-machine.right];
@@ -345,9 +361,11 @@ try {
     assert.equal(metrics.canvasAspect,2);assert.ok(metrics.gap>0);assert.ok(metrics.top>=0);assert.ok(metrics.bottom>0);
     assert.ok(metrics.overflow<=1,`${name}: no page overflow`);
     assert.ok(metrics.toolbarFits,`${name}: toolbar buttons stay inside cabinet ${JSON.stringify(metrics)}`);
+    assert.ok(metrics.mascotFits && metrics.mascotClear,`${name}: Alonso fits without covering field ${JSON.stringify(metrics)}`);
     await page.locator('#tetris-fullscreen').click();
     await page.waitForFunction(()=>document.getElementById('tetris-machine').classList.contains('is-fullscreen'));
     metrics=await measure();assert.ok(metrics.fullscreen);assert.ok(metrics.top>=0);
+    assert.ok(metrics.mascotFits && metrics.mascotClear,`${name}: fullscreen Alonso stays outside field ${JSON.stringify(metrics)}`);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     await page.waitForFunction(()=>{
       const canvas=document.getElementById('tetris-canvas');
@@ -372,9 +390,11 @@ try {
       window.__game.paused=false;window.__game.finish();window.dispatchEvent(new Event('resize'));
     });
     await page.waitForFunction(()=>document.getElementById('tetris-overlay-title').textContent==='Финиш!');
+    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'over');
     await page.locator('#tetris-canvas').focus();await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game.phase==='running');
     assert.equal(await page.evaluate(()=>window.__game.score),0,'Space restarts after game over');
+    assert.equal(await page.locator('#tetris-mascot').getAttribute('data-state'),'idle','New run resets Alonso');
     await page.locator('#tetris-sound').click();
     await page.locator('#tetris-ghost').click();
     await page.reload();await page.waitForFunction(()=>!!window.PitStackAudio);
@@ -382,6 +402,17 @@ try {
     assert.equal(await page.locator('#tetris-volume').inputValue(),'23','Volume survives reload');
     assert.equal(await page.locator('#tetris-ghost').getAttribute('aria-pressed'),'false','Ghost preference survives reload');
     assert.equal(await page.locator('#tetris-soundtrack').evaluate(m=>m.paused),true);
+    await page.emulateMedia({reducedMotion:'reduce'});
+    await page.locator('#tetris-mascot').evaluate(node=>{node.dataset.state='celebrate';});
+    assert.equal(await page.locator('.tetris-mascot-motion').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables mascot movement');
+    assert.equal(await page.locator('.tetris-mascot-art > i').evaluate(node=>getComputedStyle(node).animationName),'none','Reduced motion disables sparkle');
+    const alpha=await page.locator('#tetris-mascot img').evaluate(async image=>{
+      await image.decode();
+      const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+      const ctx=canvas.getContext('2d');ctx.drawImage(image,0,0);
+      return ctx.getImageData(0,0,1,1).data[3];
+    });
+    assert.equal(alpha,0,'Original atlas retains genuine transparency');
     await context.close();
   }
   assert.deepEqual(errors,[],'No browser script errors');
