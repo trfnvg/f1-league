@@ -107,6 +107,8 @@ def run(engine, output, portraits):
                     expect(page.locator('.sr-row')).to_have_count(10)
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (width,route)
                     expect(page.locator('.sr-total strong')).to_have_text('31')
+                    expect(page.locator('#score-review-title')).to_have_text('Сан-Паулу, Бразилия')
+                    expect(page.locator('.sr-hero .sr-eyebrow')).to_contain_text('R20 · 2026')
                     expect(page.locator('a[href*="/recap/"]')).to_have_count(0)
                     expect(page.locator('[data-recap-canvas],[data-recap-download]')).to_have_count(0)
                     expect(page.locator('[data-reactions],[data-reaction-form]')).to_have_count(0)

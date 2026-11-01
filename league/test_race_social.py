@@ -60,6 +60,9 @@ class RaceSocialTests(TestCase):
             self.assertNotContains(page, "Очки взяты из сохранённого зачёта")
             self.assertNotContains(page, "Сезонные бонусы в сумму этого этапа не входят")
             self.assertNotContains(page, "<script>alert(1)</script>")
+            if page.resolver_match.url_name in ("score_detail", "friend_league_score"):
+                self.assertContains(page, f'<h1 id="score-review-title">{self.event.name}</h1>', html=True)
+                self.assertContains(page, f'R{self.event.round_number:02d} · {self.event.season_year}')
         self.assertEqual(Score.objects.get().points, 17)
         self.assertEqual(LeagueEventScore.objects.get(entry=entry).points, 24)
 

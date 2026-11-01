@@ -1,12 +1,13 @@
 {% extends 'base.html' %}{% load static %}
-{% block title %}Разбор очков · {{ player|player_name }}{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/score-review.css' %}?v=3-clean">{% if league %}<meta name="robots" content="noindex,nofollow">{% endif %}{% endblock %}
+{% block title %}{{ event.name }} · {{ event.season_year }} · Разбор очков · {{ player|player_name }}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/score-review.css' %}?v=4-grand-prix">{% if league %}<meta name="robots" content="noindex,nofollow">{% endif %}{% endblock %}
 {% block content %}
 <section class="score-explanation score-review" aria-labelledby="score-review-title">
   <a class="score-back" href="{% if league %}{% url 'league:friend_league' league.id %}?year={{ event.season_year }}{% else %}{% url 'league:event_detail' event.id %}{% endif %}">← {% if league %}{{ league.name }}{% else %}К этапу{% endif %}</a>
   <header class="sr-hero">
     <div class="sr-hero-copy"><p class="sr-eyebrow">РАЗБОР ПРОГНОЗА <span>R{{ event.round_number|stringformat:'02d' }} · {{ event.season_year }}</span></p>
-      <div class="sr-player"><span class="sr-avatar" aria-hidden="true">{% if player.league_profile.avatar %}<img src="{{ player.league_profile.avatar.url }}" alt="" width="56" height="56">{% else %}{{ player|player_name|slice:':1'|upper }}{% endif %}</span><div><h1 id="score-review-title">{{ player|player_name }}</h1><p>{{ event.name }}{% if league %}<span>{{ league.name }}</span>{% else %}<span>Общий зачёт</span>{% endif %}</p></div></div>
+      <h1 id="score-review-title">{{ event.name }}</h1>
+      <div class="sr-player"><span class="sr-avatar" aria-hidden="true">{% if player.league_profile.avatar %}<img src="{{ player.league_profile.avatar.url }}" alt="" width="56" height="56">{% else %}{{ player|player_name|slice:':1'|upper }}{% endif %}</span><div><strong class="sr-player-name">{{ player|player_name }}</strong><p>{% if league %}<span>{{ league.name }}</span>{% else %}<span>Общий зачёт</span>{% endif %}</p></div></div>
     </div>
     <div class="sr-total"><span>Итог этапа</span><strong>{{ score.points }}</strong><small>очков</small></div>
   </header>
