@@ -1,0 +1,9 @@
+<div class="forecast-answer" data-forecast-answer="{{ answer.field }}">
+  <dt><span class="forecast-marker">{{ answer.marker }}</span>{{ answer.title }}</dt>
+  <dd>{% if answer.driver %}{% with driver=answer.driver %}
+    <span class="forecast-driver">
+      <span class="forecast-photo" aria-hidden="true"><span>{{ driver.surname|slice:':2'|upper }}</span>{% if driver.photo %}<img src="{{ driver.photo }}" alt="" width="48" height="48" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-driver-photo>{% endif %}</span>
+      <span class="forecast-driver-copy"><strong>{{ driver.surname }}</strong><small style="color:{{ driver.team_color }}">{% if driver.number != None %}<b>#{{ driver.number }}</b> {% endif %}{{ driver.team }}</small></span>
+    </span>
+  {% endwith %}{% else %}<span class="forecast-empty">Не выбран</span>{% endif %}</dd>
+</div>

@@ -96,9 +96,31 @@ body.apex-night-theme.editorial-theme .event-page .community-table :is(th,td) { 
 .event-page .stage-form-group { min-width:0; margin:0; padding:0; border:0; }
 .event-page .stage-form-group+.stage-form-group { margin-top:28px; padding-top:24px; border-top:1px solid #ffffff10; }
 .event-page .stage-form-group legend { float:none; width:auto; margin-bottom:17px; color:#91a0b2; font:600 11px/1.5 Inter,sans-serif; letter-spacing:.05em; text-transform:uppercase; }
-.stage-answer-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:22px; margin:24px 0 0; }
-.stage-answer-grid dt { color:#8f9eb0; font:450 11px/1.5 Inter,sans-serif; margin-bottom:6px; }.stage-answer-grid dd { color:#e0e6ef; font:550 14px/1.5 Inter,sans-serif; margin:0; overflow-wrap:anywhere; }
-.stage-answer-wide { grid-column:1/-1; }
+.stage-forecast { display:grid; gap:16px; }
+.stage-forecast dl { margin:0; }
+.forecast-podium,.forecast-weekend { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.forecast-answer { min-width:0; padding:18px; border:1px solid #ffffff13; border-radius:12px; background:#232a34; }
+.forecast-podium .forecast-answer { background:linear-gradient(145deg,#2b333e,#232a34); }
+.stage-forecast dt { display:flex; align-items:center; gap:10px; margin:0 0 16px; color:#a9b5c5; font:500 11px/1.5 Inter,sans-serif; }
+.forecast-marker { flex:none; color:#c3a6a2; font:600 10px/1.4 ui-monospace,SFMono-Regular,monospace; }
+.forecast-podium .forecast-marker { display:grid; place-items:center; width:28px; height:25px; border-radius:5px; background:#ffffff07; color:#efb4ac; }
+.stage-forecast dd { margin:0; min-width:0; }
+.forecast-driver { display:flex; align-items:center; gap:12px; min-width:0; }
+.forecast-photo { position:relative; display:grid; place-items:center; width:48px; height:48px; flex:0 0 48px; overflow:hidden; border-radius:9px; background:#34404e; color:#9eacbd; font:600 14px/1 ui-monospace,monospace; }
+.forecast-photo img { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.forecast-photo img[hidden] { display:none; }
+.forecast-driver-copy { display:block; min-width:0; }
+.forecast-driver-copy>strong { display:block; color:#e6ecf4; font:650 15px/1.4 Inter,sans-serif; overflow-wrap:anywhere; }
+.forecast-driver-copy>small { display:block; margin-top:5px; color:#a8b5c5; font:450 10px/1.5 Inter,sans-serif; overflow-wrap:anywhere; }
+.forecast-driver-copy b { color:#a7b4c5; font-weight:500; margin-right:3px; }
+.forecast-empty { display:block; color:#8d9bac; font:450 13px/1.5 Inter,sans-serif; }
+.forecast-counts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.forecast-count { display:flex; align-items:center; justify-content:space-between; gap:12px; min-width:0; padding:16px 18px; border:1px solid #ffffff10; border-radius:10px; background:#1b222b; }
+.stage-forecast .forecast-count dt { margin:0; flex-wrap:wrap; gap:5px 10px; }
+.forecast-count dd { color:#e2e9f2; font:650 27px/1.2 Inter,sans-serif; font-variant-numeric:tabular-nums; }
+.forecast-crazy { padding:20px; border:1px solid #ffffff10; border-radius:12px; background:#1b222b; }
+.stage-forecast .forecast-crazy dt { margin-bottom:10px; color:#a7b4c6; }
+.forecast-crazy dd { color:#dde5ef; font:450 14px/1.8 Inter,sans-serif; overflow-wrap:anywhere; }
 .stage-result-pending { padding:32px; border:1px solid #343d49; border-radius:14px; background:#1d232b; }.stage-result-pending p { max-width:530px; margin:12px 0 0; color:#99a6b7; font-size:13px; line-height:1.7; }
 body.apex-night-theme.editorial-theme .event-page .wildcard-heading { padding:0; }
 body.apex-night-theme.editorial-theme .event-page .wildcard-card :is(.wildcard-card-back,.wildcard-card-front) { border:1px solid #526173; border-radius:12px; box-shadow:none; }
@@ -112,7 +134,7 @@ body.apex-night-theme.editorial-theme .event-page .wildcard-question-mark { colo
 body.apex-night-theme.editorial-theme .event-page .stage-duel-heading h2 { font-size:23px; letter-spacing:-.04em; }
 @media(max-width:780px) {
   .event-page .stage-timing { gap:13px; }
-  .event-page .stage-sections a { font-size:12px; }.stage-answer-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+  .event-page .stage-sections a { font-size:12px; }
   .stage-result-pending { padding:24px 18px; }
   body.apex-night-theme.editorial-theme .event-page .wildcard-reward { display:none; }
   body.apex-night-theme.editorial-theme .event-page .wildcard-draw-prompt { color:#9ba9bb; font:400 12px/1.6 Inter,sans-serif; text-transform:none; letter-spacing:0; }
@@ -154,13 +176,28 @@ body.apex-night-theme.editorial-theme .event-page .prediction-workbench.is-build
 .prediction-more summary strong { display:block; margin-top:9px; color:#e4e9ef; font-size:17px; font-weight:600; }.prediction-more-arrow { color:#e47c70; font-size:24px; }.prediction-more[open] summary { border-bottom:1px solid #ffffff12; }.prediction-more[open] .prediction-more-arrow { transform:rotate(45deg); }
 .prediction-live-summary { position:sticky; top:100px; }.prediction-progress { display:block; appearance:none; width:100%; height:6px; margin-top:20px; border:0; border-radius:8px; overflow:hidden; background:#424c58; accent-color:#ee6459; }.prediction-progress::-webkit-progress-bar { background:#424c58; }.prediction-progress::-webkit-progress-value { background:#ee6459; }.prediction-progress::-moz-progress-bar { background:#ee6459; }
 .prediction-summary-lines { margin:0; padding:8px 24px; }.prediction-summary-lines>div { display:flex; align-items:baseline; justify-content:space-between; gap:15px; padding:14px 0; border-bottom:1px solid #ffffff10; }.prediction-summary-lines>div:last-child { border:0; }
-.prediction-summary-lines dt { flex:1; color:#a5b0be; font:400 11px/1.5 Inter,sans-serif; }.prediction-summary-lines dd { flex:1; margin:0; text-align:right; overflow-wrap:anywhere; color:#e2e8ef; font:600 12px/1.5 Inter,sans-serif; }.prediction-summary-lines dd.is-empty { color:#8492a4; }
+.prediction-summary-lines dt { flex:1; color:#a5b0be; font:400 11px/1.5 Inter,sans-serif; }.prediction-summary-lines dd { flex:1; min-width:0; margin:0; text-align:right; overflow-wrap:anywhere; color:#e2e8ef; font:600 12px/1.5 Inter,sans-serif; }.prediction-summary-lines dd.is-empty { color:#8492a4; font-weight:400; }
+.prediction-summary-lines .prediction-summary-driver,.prediction-summary-lines .prediction-summary-crazy { display:block; }
+.prediction-summary-driver dt,.prediction-summary-crazy dt { margin-bottom:9px; }
+.prediction-summary-driver dd,.prediction-summary-crazy dd { text-align:left; }
+.prediction-summary-lines .forecast-photo { width:36px; height:36px; flex-basis:36px; border-radius:7px; font-size:12px; }
+.prediction-summary-lines .forecast-driver { gap:10px; }
+.prediction-summary-lines .forecast-driver-copy>strong { font-size:12px; }
+.prediction-summary-lines .forecast-driver-copy>small { margin-top:3px; font-size:9px; }
+.prediction-summary-crazy dd { font-weight:400; line-height:1.7; white-space:pre-wrap; }
 .prediction-summary-action { padding:18px 24px 24px; }.prediction-summary-action button { width:100%; }.prediction-summary-action small { display:block; margin-top:12px; color:#91a0b2; font-size:10px; line-height:1.6; }
 .prediction-builder-error { color:#ffaca4; font-size:12px; margin-top:16px; }
 .prediction-fallback-submit { margin-top:20px; }
 .race-prediction-layout button:focus-visible,.prediction-more summary:focus-visible { outline:2px solid #aebccc; outline-offset:3px; }
 @media(max-width:1100px) { .race-prediction-layout { grid-template-columns:1fr; }.prediction-live-summary { position:static; }.prediction-summary-lines { display:grid; grid-template-columns:1fr 1fr; gap:0 24px; } }
 @media(max-width:600px) {
+  .forecast-podium,.forecast-weekend { grid-template-columns:minmax(0,1fr); gap:10px; }
+  .forecast-answer { padding:15px; }
+  .stage-forecast dt { margin-bottom:12px; }
+  .forecast-count { padding:14px; flex-direction:column; align-items:flex-start; gap:10px; }
+  .stage-forecast .forecast-count dt { display:block; font-size:10px; }
+  .forecast-count .forecast-marker { display:block; margin-bottom:5px; }
+  .forecast-crazy { padding:16px; }
   .prediction-panel-head,.prediction-panel-body { padding:20px 16px; }.prediction-podium { gap:6px; }.prediction-podium-slot { padding:12px 8px; min-height:119px; }.prediction-podium-slot small { font-size:8px; }.prediction-podium-slot strong { font-size:12px; }
   .prediction-driver-option { gap:7px; padding:11px 8px; }.prediction-driver-monogram { display:none; }.prediction-driver-meta strong { font-size:12px; }.prediction-more summary { padding:20px 16px; }.prediction-summary-lines { display:block; padding-inline:16px; }.prediction-summary-action { padding:18px 16px 22px; }
 }

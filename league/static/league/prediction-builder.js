@@ -124,7 +124,9 @@
   });
   const summary = form.querySelector('[data-summary-lines]');
   const summaryValues = fields.map(field => {
-    const line = element('div');
+    const line = element('div', driverFields.includes(field) ? 'prediction-summary-driver' : 'prediction-summary-text');
+    line.dataset.summaryField = field.name;
+    if (field.name === 'crazy_prediction') line.classList.add('prediction-summary-crazy');
     const value = element('dd');
     line.append(element('dt', '', summaryLabels[field.name]), value);
     summary.append(line);
@@ -148,9 +150,7 @@
         if (field.value && button.hasAttribute('aria-invalid')) button.removeAttribute('aria-invalid');
       }
       const hasValue = field.value.trim() !== '';
-      const text = valueText(field);
-      if (summaryValues[i].textContent !== text) summaryValues[i].textContent = text;
-      summaryValues[i].classList.toggle('is-empty', !hasValue);
+      renderSummaryValue(summaryValues[i], field, hasValue);
     });
     const filled = fields.filter(field => field.value.trim() !== '').length;
     const progressText = `${filled} из ${fields.length} ответов заполнено`;
@@ -159,6 +159,29 @@
     const podiumEmpty = podium.every(field => !field.value);
     if (clearPodium.disabled !== podiumEmpty) clearPodium.disabled = podiumEmpty;
     if (!error.hidden && podium.every(field => field.value) && new Set(podium.map(field => field.value)).size === 3) error.hidden = true;
+  }
+  function renderSummaryValue(value, field, hasValue) {
+    // Cache by answer, not by text: typing in Crazy Prediction must never
+    // recreate photos in the summary or trigger unrelated image requests.
+    if (renderedDrivers.get(value) === field.value) return;
+    if (driverFields.includes(field) && hasValue) {
+      const profile = profiles.get(field.value);
+      const name = profile?.surname || valueText(field).replace(/\s*\([^)]*\)$/, '');
+      const photo = portrait(profile, name);
+      photo.className = 'forecast-photo';
+      const copy = element('span', 'forecast-driver-copy');
+      copy.append(element('strong', '', name));
+      const team = teamLabel(profile, '');
+      if (profile?.number != null) team.prepend(element('b', '', '#' + profile.number + ' '));
+      copy.append(team);
+      const driver = element('span', 'forecast-driver');
+      driver.append(photo, copy);
+      value.replaceChildren(driver);
+    } else {
+      value.textContent = hasValue ? valueText(field) : 'Не выбрано';
+    }
+    value.classList.toggle('is-empty', !hasValue);
+    renderedDrivers.set(value, field.value);
   }
   function renderDriverButton(button, field) {
     if (renderedDrivers.get(button) === field.value) return false;

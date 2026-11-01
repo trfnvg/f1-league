@@ -30,6 +30,7 @@ from .duels import (
 )
 from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, RegisterForm, SeasonPredictionForm
 from .driver_profiles import picker_profiles
+from .prediction_summary import forecast_summary
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
@@ -1810,12 +1811,14 @@ def event_detail(request, event_id: int):
             .select_related("challenger", "opponent")[:3]
         )
 
+    profiles = picker_profiles(event.season_year)
     return render(
         request,
         "event_detail_v2.html",
         {
             "event": event,
-            "driver_picker_profiles": picker_profiles(event.season_year),
+            "driver_picker_profiles": profiles,
+            "prediction_summary": forecast_summary(prediction, event, profiles),
             "photos": photos,
             "form": form,
             "prediction": prediction,
