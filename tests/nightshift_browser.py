@@ -360,8 +360,6 @@ def render_pages():
     Prediction.objects.filter(user=player, event=past).update(p1="leclerc", p2="russell", p3="norris", pole="russell", created_at=past.deadline-timedelta(hours=1))
     Score.objects.filter(user=player, event=past).update(points=12, breakdown={"P1 (Top-3)":3,"P2 (Top-3)":3,"P3":4,"Pole Position":4,"Дуэль":-2})
     pages["/score-detail/"] = client.get(reverse("league:score_detail", args=[past.pk, player.pk])).content
-    pages["/race-recap/"] = client.get(reverse("league:race_recap", args=[past.pk, player.pk])).content
-    pages["/league-recap/"] = client.get(reverse("league:friend_league_recap", args=[league.league_id, past.pk, player.pk])).content
     friend = User.objects.get(username="Аня")
     Prediction.objects.filter(user=friend, event=past).update(crazy_prediction="Гонку выиграет тот, кто первым доедет до финиша.", created_at=past.deadline-timedelta(hours=1))
     pages["/social-event/"] = client.get(reverse("league:event_detail", args=[past.pk])).content
@@ -435,19 +433,6 @@ def run(output, widths, engine):
                 assert page.locator('[name="username"]').input_value() == 'putin63'
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 page.screenshot(path=str(output/f'{width}-registration-moderation.png'), full_page=True)
-                for route in ('/race-recap/', '/league-recap/'):
-                    page.goto(base+route, wait_until='networkidle')
-                    page.locator('canvas[data-ready="true"]').wait_for()
-                    assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
-                    with page.expect_download() as exported:
-                        page.locator('[data-recap-download]').click()
-                    image_path = output/f'{width}-{route.strip("/")}-export.png'
-                    exported.value.save_as(str(image_path))
-                    with Image.open(image_path) as saved_image:
-                        assert saved_image.size == (1080,1350)
-                        assert saved_image.format == 'PNG'
-                    assert image_path.stat().st_size > 20000
-                    page.screenshot(path=str(output/f'{width}-{route.strip("/")}.png'), full_page=True)
                 reaction_state = {'kind': None, 'failed': False}
                 def react(route):
                     if reaction_state['failed']:

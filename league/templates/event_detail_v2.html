@@ -267,7 +267,6 @@
 
       {% if score %}
         <p><a href="{% url 'league:score_detail' event.id user.id %}">Прогноз, факт и все начисления →</a></p>
-        {% if state == 'scored' %}<a class="recap-inline-link" href="{% url 'league:race_recap' event.id user.id %}">Мои итоги гонки — скачать карточку {% include 'ui_arrow.html' %}</a>{% endif %}
         {% if score.breakdown %}
           <div class="breakdown-box">
             <div class="d-flex align-items-center justify-content-between mb-2">

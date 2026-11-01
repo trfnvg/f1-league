@@ -71,11 +71,6 @@ body.apex-night-theme .score-review h1 { margin:0 0 8px; color:#f4f6f9; font:750
 .sr-wildcard>div { padding:12px 0; border-top:1px solid var(--sr-line); }
 .sr-wildcard dt { color:#8e9caf; font-size:10px; font-weight:400; }
 .sr-wildcard dd { color:#d8e1ee; font-size:12px; line-height:1.6; margin:6px 0 0; overflow-wrap:anywhere; }
-.sr-recap { display:block; padding:22px; border:1px solid #b0746b44; border-radius:16px; background:linear-gradient(135deg,#34282e,#222730); color:#e7eaf0!important; text-decoration:none!important; }
-.sr-recap .sr-eyebrow { display:block; margin-bottom:8px; }
-.sr-recap>strong { display:block; font-size:17px; }
-.sr-recap>span:last-child { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; color:#baacac; font-size:11px; }
-.sr-recap svg { width:20px; height:20px; flex:none; fill:none; stroke:currentColor; stroke-width:1.5; }
 .sr-notes { padding:16px 0; }
 .score-review .score-note { color:#8896a9; font-size:11px; line-height:1.8; margin:12px 0 0; }
 .score-review a:focus-visible { outline:2px solid #e8958a; outline-offset:4px; }
@@ -118,5 +113,5 @@ body.apex-night-theme .score-review h1 { margin:0 0 8px; color:#f4f6f9; font:750
   .sr-points-value { min-width:39px; min-height:34px; font-size:17px; }
   .sr-value { display:block; font-size:25px; padding-bottom:6px; }
   .sr-subtotal { border:1px solid #ffffff12; border-radius:12px; padding:16px; }
-  .score-review .score-extras,.sr-recap { padding:20px; }
+  .score-review .score-extras { padding:20px; }
 }

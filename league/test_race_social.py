@@ -7,8 +7,7 @@ from django.urls import reverse
 
 from . import test_private_league_ui as fixtures
 from .leagues import enroll_member
-from .models import CrazyReaction, DuelChallenge, Event, LeagueEventScore, Prediction, Score
-from .race_recap import summary
+from .models import CrazyReaction, Event, LeagueEventScore, Prediction, Score
 from .reactions import summaries
 
 
@@ -134,7 +133,7 @@ class RaceSocialTests(TestCase):
         self.clock.return_value = self.event.deadline+timedelta(hours=12)
         self.assertContains(self.client.get(url), "data-reaction-form", count=3)
 
-    def test_recap_requires_published_scores_and_private_membership(self):
+    def test_retired_card_urls_redirect_to_score_details_with_access_checks(self):
         entry, prediction = self.prepare()
         public = reverse("league:race_recap", args=[self.event.pk,self.player.pk])
         private = reverse("league:friend_league_recap", args=[self.a.league_id,self.event.pk,self.player.pk])
@@ -143,48 +142,17 @@ class RaceSocialTests(TestCase):
         self.event.save(update_fields=["status"])
         Score.objects.create(event=self.event, user=self.player, points=17, breakdown={"P1":10})
         response = self.client.get(public)
-        self.assertContains(response, 'width="1080" height="1350"')
-        self.assertEqual(response.context["recap_data"]["points"], 17)
+        self.assertRedirects(response, reverse("league:score_detail", args=[self.event.pk,self.player.pk]))
         self.assertIn("no-store", response["Cache-Control"])
+        detail = self.client.get(response.url)
+        self.assertNotContains(detail, "Карточка итогов")
+        self.assertNotContains(detail, "/recap/")
         self.assertEqual(self.client.get(private).status_code, 404)
         LeagueEventScore.objects.create(entry=entry, event=self.event, prediction=prediction, points=24, base_points=24)
         response = self.client.get(private)
-        self.assertEqual(response.context["recap_data"]["points"], 24)
+        self.assertRedirects(response, reverse("league:friend_league_score", args=[self.a.league_id,self.event.pk,self.player.pk]))
+        self.assertEqual(self.client.get(response.url).context["score"].points, 24)
         self.client.force_login(self.other)
         self.assertEqual(self.client.get(private).status_code, 404)
         self.client.logout()
         self.assertEqual(self.client.get(private).status_code, 302)
-
-    def test_recap_movement_ignores_later_scores_and_safely_encodes_names(self):
-        entry, prediction = self.prepare()
-        owner_entry = self.a.entries.get(membership__user=self.owner)
-        earlier = Event.objects.create(name="Shanghai", season_year=2027, round_number=5,
-            deadline=self.event.deadline-timedelta(days=7), status="scored")
-        self.a.start_event = earlier
-        self.a.save(update_fields=["start_event"])
-        self.a.entries.update(first_event=earlier)
-        self.event.status = "scored"
-        self.event.save(update_fields=["status"])
-        for member, race, points in ((entry,earlier,5),(owner_entry,earlier,10),(entry,self.event,20),(owner_entry,self.event,1),
-                                     (owner_entry,self.next_event,999)):
-            saved_prediction, _ = Prediction.objects.get_or_create(user_id=member.membership.user_id, event=race)
-            LeagueEventScore.objects.create(entry=member, event=race, prediction=saved_prediction, points=points, base_points=points)
-        score = LeagueEventScore.objects.get(entry=entry, event=self.event)
-        data = summary(event=self.event, player=self.player, score=score, score_rows=[], season=self.a)
-        self.assertEqual(data["rank"], 1)
-        self.assertEqual(data["movement"], 1)
-        self.assertEqual(data["overtook"], [self.owner.username])
-        self.player.first_name = '</script><script>alert(1)</script>'
-        self.player.save(update_fields=["first_name"])
-        response = self.client.get(reverse("league:friend_league_recap", args=[self.a.league_id,self.event.pk,self.player.pk]))
-        self.assertNotContains(response, '</script><script>alert(1)</script>')
-
-    def test_duel_summary_uses_actual_settled_outcome(self):
-        entry, prediction = self.prepare()
-        score = Score.objects.create(event=self.event, user=self.player, points=-3)
-        DuelChallenge.objects.create(event=self.event, challenger=self.player, opponent=self.owner,
-            stake=4, status="settled", winner=self.owner)
-        data = summary(event=self.event, player=self.player, score=score, score_rows=[])
-        self.assertEqual(data["points"], -3)
-        self.assertEqual(data["duel"]["points"], -4)
-        self.assertEqual(data["duel"]["label"], "ПОРАЖЕНИЕ")

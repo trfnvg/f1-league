@@ -1,7 +1,7 @@
 """Read-only explanation of stored scores; never recalculate on a GET."""
 from django.contrib.auth.models import User
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET
@@ -147,16 +147,18 @@ def detail(request, event_id, user_id, league_id=None, recap=False):
     else:
         score = get_object_or_404(Score.objects.select_related("user"), event=event, user_id=user_id)
         player = score.user
+    if recap:
+        # Old shared/bookmarked card URLs keep the same access checks, then
+        # lead to the score explanation. No card generation remains.
+        if league:
+            return redirect("league:friend_league_score", league.id, event.id, player.id)
+        return redirect("league:score_detail", event.id, player.id)
     prediction = Prediction.objects.filter(event=event, user_id=user_id, created_at__lt=event.deadline).first()
     result = Result.objects.filter(event=event).first()
     rows, extras = explain(score, prediction, result, event)
     wildcard = None
     if not season or season.is_legacy:
         wildcard = PlayerWildcard.objects.filter(event=event, user_id=user_id).select_related("question").first()
-    if recap:
-        from .race_recap import summary
-        return render(request, "race_recap.html", dict(event=event, player=player, league=league,
-            recap_data=summary(event=event, player=player, score=score, score_rows=rows, season=season)))
     reactions = None
     if prediction and (season is None or season.ruleset == "paddock"):
         from .crazy_jury import crazy_vote_is_open

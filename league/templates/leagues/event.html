@@ -8,7 +8,6 @@
 {% for row in rows %}
   <article class="leagues-panel leagues-result">
     <header><strong>{{ row.entry.membership.user|player_name }}</strong><span class="leagues-points">{% if row.score %}<a href="{% url 'league:friend_league_score' league.id event.id row.entry.membership.user_id %}">{{ row.score.points }} · разбор</a>{% else %}—{% endif %}</span></header>
-    {% if row.score and event.status == 'scored' and row.entry.membership.user_id == user.id %}<a class="recap-inline-link" href="{% url 'league:friend_league_recap' league.id event.id user.id %}">Мои итоги гонки {% include 'ui_arrow.html' %}</a>{% endif %}
     {% if row.prediction %}
       <p class="leagues-help">{% if row.score %}{% if league_season.is_legacy %}Итог с бонусами и решениями этой лиги.{% else %}База: {{ row.score.base_points }} · Крейзи: {{ row.score.crazy_points }} · Поправки: {{ row.score.podium_adjustment|add:row.score.other_adjustment }}{% endif %}{% else %}Очки появятся после публикации официального результата и пересчёта.{% endif %}</p>
       {% if league_season.ruleset == 'paddock' and row.prediction.crazy_prediction %}

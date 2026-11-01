@@ -107,6 +107,8 @@ def run(engine, output, portraits):
                     expect(page.locator('.sr-row')).to_have_count(10)
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (width,route)
                     expect(page.locator('.sr-total strong')).to_have_text('31')
+                    expect(page.locator('a[href*="/recap/"]')).to_have_count(0)
+                    expect(page.locator('[data-recap-canvas],[data-recap-download]')).to_have_count(0)
                     expect(page.locator('.sr-row.is-partial')).to_have_count(1)
                     expect(page.locator('.sr-value').first).to_have_text('0')
                     if width <= 700:
