@@ -100,23 +100,35 @@ try {
           }),
           atBottom:el.contains(document.elementFromPoint(innerWidth/2,innerHeight-5)),
           selectionBlocked:!el.dispatchEvent(new Event('selectstart',{bubbles:true,cancelable:true})),
-          contextBlocked:!el.dispatchEvent(new Event('contextmenu',{bubbles:true,cancelable:true}))};
+          contextBlocked:!el.dispatchEvent(new Event('contextmenu',{bubbles:true,cancelable:true})),
+          toolbarHeight:el.querySelector('.tetris-toolbar').getBoundingClientRect().height,
+          buttons:[...el.querySelectorAll('.tetris-toolbar button')].map(b=>({
+            top:b.getBoundingClientRect().top,width:b.getBoundingClientRect().width,height:b.getBoundingClientRect().height,label:b.getAttribute('aria-label'),
+          }))};
       });
       assert.equal(metrics.parent,'BODY');
       assert.ok(Math.abs(metrics.width-metrics.viewportWidth)<2 && Math.abs(metrics.height-metrics.viewportHeight)<2,JSON.stringify(metrics));
       assert.ok(Math.abs(metrics.x)<2 && Math.abs(metrics.y)<2,JSON.stringify(metrics));
       assert.ok(metrics.controlsFit && metrics.atBottom && metrics.selectionBlocked && metrics.contextBlocked,JSON.stringify(metrics));
       assert.equal(metrics.selection,'none');
+      assert.ok(metrics.toolbarHeight<=60,'Mobile toolbar is one compact row');
+      assert.ok(metrics.buttons.every(b=>b.width>=44 && b.height>=44 && b.label));
+      assert.ok(Math.max(...metrics.buttons.map(b=>b.top))-Math.min(...metrics.buttons.map(b=>b.top))<2,'Controls share one row');
     };
     if(width<500) {
       await checkMobileFullscreen();
       if(process.env.TETRIS_PREVIEW_DIR) await page.screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-mobile-fullscreen-${width}.png`)});
     }
-    await page.keyboard.press('KeyP');
+    if(width<500) await page.locator('#tetris-pause').click();
+    else await page.keyboard.press('KeyP');
     const ticks=await page.evaluate(()=>window.PitStackActiveSession.ticks);
     await page.waitForTimeout(180);
     assert.equal(await page.evaluate(()=>window.PitStackActiveSession.ticks),ticks,'Pause is excluded from replay');
-    await page.keyboard.press('Space');
+    if(width<500) {
+      assert.equal(await page.locator('#tetris-pause').getAttribute('aria-label'),'Продолжить игру');
+      assert.ok(await page.locator('.tetris-resume-icon').isVisible());
+      await page.locator('#tetris-pause').click();
+    } else await page.keyboard.press('Space');
     for(let i=0;i<60;i++) {
       if(await page.locator('#tetris-overlay-title').textContent()==='Финиш!')break;
       await page.keyboard.press('Space');await page.waitForTimeout(70);

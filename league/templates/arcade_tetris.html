@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=mobile-launch-v22">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=mobile-toolbar-v23">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -40,8 +40,8 @@
     <div class="tetris-toolbar">
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
       <div class="tetris-toolbar-actions">
-        <button type="button" id="tetris-pause" title="Пауза — P или Esc" disabled>Пауза</button>
-        <button type="button" id="tetris-fullscreen" aria-pressed="false">На весь экран</button>
+        <button type="button" id="tetris-pause" title="Пауза — P или Esc" aria-label="Пауза" aria-pressed="false" disabled><svg class="tetris-control-icon tetris-pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg><svg class="tetris-control-icon tetris-resume-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 10 7-10 7Z"/></svg><span class="tetris-control-label">Пауза</span></button>
+        <button type="button" id="tetris-fullscreen" aria-label="На весь экран" aria-pressed="false"><svg class="tetris-control-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg><span class="tetris-control-label">На весь экран</span></button>
         <div class="tetris-audio-control">
           <button type="button" id="tetris-sound" aria-label="Выключить музыку" aria-pressed="true" title="Музыка включена">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4z"/><path class="tetris-speaker-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="tetris-speaker-slash" d="m15 9 6 6m0-6-6 6"/></svg>
@@ -93,6 +93,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=continuous-audio-v11" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=mobile-launch-v22" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=mobile-toolbar-v23" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

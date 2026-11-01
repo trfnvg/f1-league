@@ -35,6 +35,7 @@
 .tetris-wordmark b { color: #f35e5e; font-weight: inherit; }
 .tetris-wordmark small { color: #9caab8; font: 9px "Manrope",sans-serif; margin-left: 12px; letter-spacing: .15em; }
 .tetris-toolbar-actions { display: flex; gap: 6px; }
+.tetris-control-icon { display: none; width: 20px; height: 20px; flex: none; }
 .tetris-audio-control { position: relative; display: flex; align-items: center; }
 .tetris-toolbar #tetris-sound { display: flex; align-items: center; justify-content: center; align-self: stretch; width: 32px; padding: 5px; color: #b7d5d1; }
 .tetris-speaker-slash, .is-muted .tetris-speaker-waves { display: none; }
@@ -174,6 +175,25 @@ body.tetris-fullscreen > :not(#tetris-machine) { visibility: hidden !important; 
   .is-fullscreen .tetris-start-lights { padding: 4px; }
   .is-fullscreen #tetris-start { padding: 7px; }
   .is-fullscreen .tetris-overlay .pit-stack-eyebrow { margin: 5px 0 0; }
+}
+/* One compact pit-wall header on phones, in portrait and landscape. */
+@media (max-width:600px), (pointer:coarse) and (max-width:1000px) {
+  .tetris-machine.is-fullscreen { grid-template-rows: 56px minmax(0,1fr); }
+  .is-fullscreen .tetris-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; padding: 0; background: transparent; border-bottom: 1px solid #ffffff18; }
+  .is-fullscreen .tetris-wordmark { justify-content: flex-start; gap: 4px; font-size: 13px; letter-spacing: .015em; }
+  .is-fullscreen .tetris-wordmark::before { display: block; width: 12px; height: 12px; margin-right: 4px; background-size: 6px 6px; opacity: .75; }
+  .is-fullscreen .tetris-wordmark small { display: none; }
+  .is-fullscreen .tetris-toolbar-actions { display: flex; flex: none; gap: 6px; }
+  .is-fullscreen .tetris-toolbar button, .is-fullscreen .tetris-toolbar #tetris-sound { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-height: 44px; padding: 0; border: 1px solid #ffffff16; border-radius: 10px; background: #101923b3; color: #dce5ee; box-shadow: none; }
+  .is-fullscreen .tetris-control-label { display: none; }
+  .is-fullscreen .tetris-control-icon { display: block; }
+  .is-fullscreen #tetris-pause .tetris-resume-icon { display: none; }
+  .is-fullscreen #tetris-pause[aria-pressed="true"] .tetris-resume-icon { display: block; }
+  .is-fullscreen #tetris-pause[aria-pressed="true"] .tetris-pause-icon { display: none; }
+  .is-fullscreen #tetris-pause[aria-pressed="true"] { color: #ffaca6; border-color: #ef696540; background: #6d303044; }
+  .is-fullscreen .tetris-audio-control { order: 2; }
+  .is-fullscreen #tetris-fullscreen { order: 3; }
+  .is-fullscreen .tetris-toolbar #tetris-sound svg { width: 19px; height: 19px; }
 }
 @media (prefers-reduced-motion:reduce) { .tetris-line-message.is-visible { animation: none; opacity: 1; } }
 @media (prefers-reduced-motion:reduce) { .tetris-scenery > div, .tetris-route i { transition: none; } }

@@ -140,7 +140,9 @@
       drawNext();
       const playable = ['running','clearing'].includes(game.phase);
       pauseButton.disabled = !playable || countdown;
-      pauseButton.textContent = game.paused ? 'Продолжить' : 'Пауза';
+      pauseButton.querySelector('.tetris-control-label').textContent = game.paused ? 'Продолжить' : 'Пауза';
+      pauseButton.setAttribute('aria-label',game.paused ? 'Продолжить игру' : 'Пауза');
+      pauseButton.setAttribute('aria-pressed',String(game.paused));
       if (launchButton) {
         launchButton.textContent = game.paused ? 'Продолжить →' : game.phase === 'over' ? 'Играть снова →' : 'Играть →';
         launchButton.disabled = preparing || countdown;
@@ -364,7 +366,8 @@
     }
     machine.classList.toggle('is-fullscreen',on);
     document.body.classList.toggle('tetris-fullscreen',on);
-    fullscreenButton.textContent=on?'Выйти':'На весь экран';
+    fullscreenButton.querySelector('.tetris-control-label').textContent=on?'Выйти':'На весь экран';
+    fullscreenButton.setAttribute('aria-label',on?'Выйти из полноэкранного режима':'На весь экран');
     fullscreenButton.setAttribute('aria-pressed',String(on));
     if (!on) {
       fullscreenHome.replaceWith(machine);
