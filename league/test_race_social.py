@@ -1,14 +1,11 @@
 from datetime import timedelta
 
-from django.contrib.auth.models import AnonymousUser
-from django.db import IntegrityError, transaction
-from django.test import Client, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from . import test_private_league_ui as fixtures
 from .leagues import enroll_member
 from .models import CrazyReaction, Event, LeagueEventScore, Prediction, Score
-from .reactions import summaries
 
 
 @override_settings(STORAGES=fixtures.STORAGES)
@@ -18,120 +15,54 @@ class RaceSocialTests(TestCase):
     def prepare(self):
         entry = enroll_member(actor=self.owner, league_season=self.a, user=self.player)
         prediction = Prediction.objects.create(user=self.player, event=self.event, **self.values)
-        self.clock.return_value = self.event.deadline+timedelta(hours=13)
+        self.clock.return_value = self.event.deadline + timedelta(hours=13)
         return entry, prediction
 
-    def reaction_url(self, prediction, league=None):
-        return reverse("league:friend_league_reaction", args=[league.league_id, prediction.event_id, prediction.pk]) if league else reverse(
-            "league:crazy_reaction", args=[prediction.event_id, prediction.pk])
-
-    def test_reactions_toggle_replace_and_never_change_scores_or_votes(self):
+    def test_reaction_endpoints_are_removed_for_guests_and_members(self):
         entry, prediction = self.prepare()
-        Score.objects.create(event=self.event, user=self.player, points=17)
-        url = self.reaction_url(prediction)
-        response = self.client.post(url, {"kind":"heart"}, HTTP_ACCEPT="application/json")
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["options"][0]["count"], 1)
-        self.assertTrue(response.json()["options"][0]["selected"])
-        self.client.post(url, {"kind":"fire"})
-        self.assertEqual(CrazyReaction.objects.get().kind, "fire")
-        self.client.post(url, {"kind":"poop"})
-        self.assertEqual(CrazyReaction.objects.get().kind, "poop")
-        self.client.post(url, {"kind":"poop"})
-        self.assertFalse(CrazyReaction.objects.exists())
+        # Keep historical rows intact, but no old endpoint can modify them.
+        CrazyReaction.objects.create(prediction=prediction, user=self.owner, kind="heart")
+        urls = [
+            f"/events/{self.event.pk}/predictions/{prediction.pk}/reactions/",
+            f"/leagues/{self.a.league_id}/events/{self.event.pk}/predictions/{prediction.pk}/reactions/",
+        ]
+        for viewer in (self.owner, self.player, None):
+            if viewer:
+                self.client.force_login(viewer)
+            else:
+                self.client.logout()
+            for url in urls:
+                self.assertEqual(self.client.get(url).status_code, 404)
+                self.assertEqual(self.client.post(url, {"kind": "fire"}).status_code, 404)
+        self.assertEqual(CrazyReaction.objects.get().kind, "heart")
         prediction.refresh_from_db()
-        self.assertFalse(prediction.crazy_prediction_approved)
-        self.assertEqual(Score.objects.get().points, 17)
+        self.assertEqual(prediction.crazy_prediction, self.values["crazy_prediction"])
         self.assertFalse(self.event.crazy_prediction_votes.exists())
 
-    def test_global_and_private_reactions_are_isolated(self):
+    def test_forecasts_remain_without_reactions_or_explanatory_footer(self):
         entry, prediction = self.prepare()
-        self.client.post(self.reaction_url(prediction), {"kind":"heart"})
-        self.client.post(self.reaction_url(prediction, self.a), {"kind":"fire"})
-        public = summaries([prediction], self.owner)[prediction.pk]
-        private = summaries([prediction], self.owner, self.a.league)[prediction.pk]
-        self.assertEqual([option["count"] for option in public["options"]], [1,0,0])
-        self.assertEqual([option["count"] for option in private["options"]], [0,1,0])
-        self.assertEqual(self.client.post(self.reaction_url(prediction, self.b), {"kind":"poop"}).status_code, 404)
-        self.assertEqual(CrazyReaction.objects.count(), 2)
+        self.event.status = Event.Status.SCORED
+        self.event.save(update_fields=["status"])
+        Score.objects.create(event=self.event, user=self.player, points=17, breakdown={"P1":10})
+        LeagueEventScore.objects.create(entry=entry, event=self.event, prediction=prediction, points=24, base_points=24)
+        urls = [
+            reverse("league:event_detail", args=[self.event.pk]),
+            reverse("league:friend_league_event", args=[self.a.league_id,self.event.pk]),
+            reverse("league:score_detail", args=[self.event.pk,self.player.pk]),
+            reverse("league:friend_league_score", args=[self.a.league_id,self.event.pk,self.player.pk]),
+        ]
+        for url in urls:
+            page = self.client.get(url)
+            self.assertEqual(page.status_code, 200)
+            self.assertNotContains(page, "data-reaction")
+            self.assertNotContains(page, "crazy-reactions.js")
+            self.assertNotContains(page, "Поставить реакцию")
+            self.assertNotContains(page, "Очки взяты из сохранённого зачёта")
+            self.assertNotContains(page, "Сезонные бонусы в сумму этого этапа не входят")
+            self.assertNotContains(page, "<script>alert(1)</script>")
+        self.assertEqual(Score.objects.get().points, 17)
+        self.assertEqual(LeagueEventScore.objects.get(entry=entry).points, 24)
 
-    def test_private_reactions_require_paddock_and_target_entry_and_active_membership(self):
-        entry, prediction = self.prepare()
-        self.a.ruleset = "classic"
-        self.a.save(update_fields=["ruleset"])
-        url = self.reaction_url(prediction, self.a)
-        self.assertEqual(self.client.post(url, {"kind":"heart"}).status_code, 404)
-        self.a.ruleset = "paddock"
-        self.a.save(update_fields=["ruleset"])
-        entry.first_event = self.next_event
-        entry.save(update_fields=["first_event"])
-        self.assertEqual(self.client.post(url, {"kind":"heart"}).status_code, 404)
-        entry.first_event = self.event
-        entry.save(update_fields=["first_event"])
-        owner_membership = self.a.entries.get(membership__user=self.owner).membership
-        owner_membership.is_active = False
-        owner_membership.save(update_fields=["is_active"])
-        self.assertEqual(self.client.post(url, {"kind":"heart"}).status_code, 404)
-        self.assertFalse(CrazyReaction.objects.exists())
-
-    def test_counts_are_batched_not_one_query_per_prediction(self):
-        entry, prediction = self.prepare()
-        another = Prediction.objects.create(user=self.other, event=self.event, crazy_prediction="Another")
-        CrazyReaction.objects.create(prediction=prediction, user=self.owner, kind="fire")
-        with self.assertNumQueries(2):
-            result = summaries([prediction, another], self.owner)
-        self.assertEqual(result[prediction.pk]["options"][1]["count"], 1)
-        self.assertEqual(result[another.pk]["options"][1]["count"], 0)
-
-    def test_deadline_anonymous_jury_and_self_reactions_are_protected(self):
-        entry, prediction = self.prepare()
-        self.clock.return_value = self.event.deadline-timedelta(seconds=1)
-        for league in (None, self.a):
-            self.assertEqual(self.client.post(self.reaction_url(prediction, league), {"kind":"fire"}).status_code, 404)
-        self.clock.return_value = self.event.deadline+timedelta(hours=1)
-        self.assertEqual(self.client.post(self.reaction_url(prediction), {"kind":"fire"}).status_code, 404)
-        # Private paddock forecasts are already attributed, unlike public jury ballots.
-        self.assertEqual(self.client.post(self.reaction_url(prediction, self.a), {"kind":"fire"}).status_code, 302)
-        self.clock.return_value = self.event.deadline+timedelta(hours=12)
-        self.client.force_login(self.player)
-        self.assertEqual(self.client.post(self.reaction_url(prediction), {"kind":"heart"}).status_code, 403)
-
-    def test_empty_late_wrong_event_and_invalid_kinds_are_rejected(self):
-        entry, prediction = self.prepare()
-        url = self.reaction_url(prediction)
-        self.assertEqual(self.client.post(url, {"kind":"evil"}).status_code, 400)
-        wrong = reverse("league:crazy_reaction", args=[self.next_event.pk, prediction.pk])
-        self.assertEqual(self.client.post(wrong, {"kind":"heart"}).status_code, 404)
-        Prediction.objects.filter(pk=prediction.pk).update(crazy_prediction="  ")
-        self.assertEqual(self.client.post(url, {"kind":"heart"}).status_code, 404)
-        Prediction.objects.filter(pk=prediction.pk).update(crazy_prediction="A", created_at=self.event.deadline)
-        self.assertEqual(self.client.post(url, {"kind":"heart"}).status_code, 404)
-        self.assertFalse(CrazyReaction.objects.exists())
-
-    def test_post_only_login_csrf_and_unique_constraints(self):
-        entry, prediction = self.prepare()
-        url = self.reaction_url(prediction)
-        self.assertEqual(self.client.get(url).status_code, 405)
-        strict = Client(enforce_csrf_checks=True)
-        strict.force_login(self.owner)
-        self.assertEqual(strict.post(url, {"kind":"fire"}).status_code, 403)
-        self.client.logout()
-        self.assertEqual(self.client.post(url, {"kind":"fire"}).status_code, 302)
-        CrazyReaction.objects.create(prediction=prediction, user=self.owner, kind="heart")
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            CrazyReaction.objects.create(prediction=prediction, user=self.owner, kind="fire")
-        with self.assertRaises(IntegrityError), transaction.atomic():
-            CrazyReaction.objects.create(prediction=prediction, user=self.player, kind="unknown")
-        public = summaries([prediction], AnonymousUser())[prediction.pk]
-        self.assertFalse(public["can_react"])
-
-    def test_public_page_hides_reactions_during_jury_then_renders(self):
-        entry, prediction = self.prepare()
-        self.clock.return_value = self.event.deadline+timedelta(hours=1)
-        url = reverse("league:event_detail", args=[self.event.pk])
-        self.assertNotContains(self.client.get(url), "data-reaction-form")
-        self.clock.return_value = self.event.deadline+timedelta(hours=12)
-        self.assertContains(self.client.get(url), "data-reaction-form", count=3)
 
     def test_retired_card_urls_redirect_to_score_details_with_access_checks(self):
         entry, prediction = self.prepare()

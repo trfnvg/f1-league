@@ -38,7 +38,7 @@ body.apex-night-theme .score-review h1 { margin:0 0 8px; color:#f4f6f9; font:750
 .score-review .sr-category .sr-row-note { max-width:140px; color:#a69c8a; font-size:9px; }
 .sr-drivers { display:grid; gap:12px; min-width:0; }
 .sr-driver { display:flex; align-items:center; gap:10px; min-width:0; }
-.sr-driver-photo { position:relative; display:grid; place-items:center; width:50px; height:50px; flex:none; overflow:hidden; border-radius:10px; background:linear-gradient(145deg,#3a4555,#26303e); box-shadow:inset 0 -2px var(--driver-accent); }
+.sr-driver-photo { position:relative; display:grid; place-items:center; width:50px; height:50px; flex:none; overflow:hidden; border-radius:10px; background:linear-gradient(145deg,#3a4555,#26303e); }
 .sr-driver-photo>span { color:var(--driver-accent); font-size:20px; font-weight:600; }
 .sr-driver-photo img { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
 .score-review [hidden] { display:none!important; }
@@ -60,7 +60,7 @@ body.apex-night-theme .score-review h1 { margin:0 0 8px; color:#f4f6f9; font:750
 .score-review .score-extras { margin:0 0 16px; padding:22px; border:1px solid #ffffff17; border-radius:16px; background:var(--sr-panel); }
 .score-review .score-extras .sr-eyebrow { margin-bottom:8px; color:#a29491; }
 .score-review .score-extras h2 { font-size:17px; margin-bottom:18px; }
-.score-review .score-extras>div:not(.crazy-reactions) { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-top:1px solid var(--sr-line); font-size:11px; line-height:1.6; }
+.score-review .score-extras>div { display:flex; justify-content:space-between; gap:16px; padding:12px 0; border-top:1px solid var(--sr-line); font-size:11px; line-height:1.6; }
 .sr-bonuses>div>span { color:#aebacb; min-width:0; overflow-wrap:anywhere; }
 .sr-bonuses>div>strong { flex:none; font-size:14px; font-variant-numeric:tabular-nums; }
 .sr-bonuses .sr-extra-total { margin-top:8px; }

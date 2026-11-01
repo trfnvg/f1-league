@@ -433,37 +433,10 @@ def run(output, widths, engine):
                 assert page.locator('[name="username"]').input_value() == 'putin63'
                 assert page.evaluate('document.documentElement.scrollWidth<=innerWidth+1')
                 page.screenshot(path=str(output/f'{width}-registration-moderation.png'), full_page=True)
-                reaction_state = {'kind': None, 'failed': False}
-                def react(route):
-                    if reaction_state['failed']:
-                        route.fulfill(status=403, content_type='text/html', body='Forbidden')
-                        return
-                    # Browser FormData uses multipart, inspect its kind field.
-                    body = route.request.post_data or ''
-                    chosen = next(kind for kind in ('heart','fire','poop') if f'\r\n{kind}\r\n' in body)
-                    reaction_state['kind'] = None if reaction_state['kind']==chosen else chosen
-                    import json
-                    route.fulfill(content_type='application/json', body=json.dumps({'options':[
-                        {'kind':kind,'count':int(reaction_state['kind']==kind),'selected':reaction_state['kind']==kind}
-                        for kind in ('heart','fire','poop')]}))
-                page.route('**/events/*/predictions/*/reactions/', react)
                 page.goto(base+'/social-event/', wait_until='networkidle')
                 page.locator('.crazy-social-list summary').click()
-                group = page.locator('[data-reactions]').first
-                group.evaluate('item=>item.scrollIntoView({block:"center"})')
-                for kind, selected in (('heart', True),('fire',True),('fire',False),('poop',True)):
-                    button = group.locator(f'[data-reaction-kind="{kind}"]')
-                    button.click()
-                    page.wait_for_function('(item)=>item.getAttribute("aria-busy")!=="true"', arg=group.element_handle())
-                    assert button.get_attribute('aria-pressed') == str(selected).lower()
-                    assert button.locator('[data-reaction-count]').inner_text() == str(int(selected))
-                reaction_state['failed']=True
-                group.locator('[data-reaction-kind="heart"]').click()
-                page.wait_for_function('(item)=>item.getAttribute("aria-busy")!=="true"', arg=group.element_handle())
-                assert 'Не удалось сохранить' in group.locator('[data-reaction-status]').inner_text()
-                assert group.locator('[data-reaction-kind="poop"]').get_attribute('aria-pressed') == 'true'
-                group.screenshot(path=str(output/f'{width}-crazy-reactions.png'))
-                page.unroute('**/events/*/predictions/*/reactions/', react)
+                assert page.locator('[data-reactions],[data-reaction-form]').count() == 0
+                assert page.locator('.crazy-social-card').count() > 0
                 for name in ('403', '404', '500', 'csrf', 'member'):
                     route = '/invite-member/' if name == 'member' else f'/error-{name}/'
                     page.goto(base + route)

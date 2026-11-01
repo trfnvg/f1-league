@@ -11,13 +11,3 @@
 .crazy-social-card>p { color:#b4becb; font:400 12px/1.7 Inter,system-ui,sans-serif; overflow-wrap:anywhere; margin:12px 0; }
 .crazy-social-card>small { color:#d4978f; font-size:10px; }
 @media(max-width:650px){.crazy-social-list{margin-inline:12px}.crazy-social-list summary{align-items:flex-start;flex-direction:column}.crazy-social-grid{grid-template-columns:1fr}}
-.crazy-reactions { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:12px; }
-.crazy-reactions form { margin:0!important; padding:0!important; }
-body.apex-night-theme .crazy-reactions button { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:6px 10px; border:1px solid #ffffff16; border-radius:20px; background:#191e25; color:#c1c8d1; font:500 12px/1.2 Inter,system-ui,sans-serif; box-shadow:none; transform:none; cursor:pointer; }
-.crazy-reactions button span:first-child { font-size:17px; }
-body.apex-night-theme .crazy-reactions button[aria-pressed=true] { background:#ef62531c; border-color:#ed81745c; color:#fff; }
-body.apex-night-theme .crazy-reactions button:disabled { cursor:default; opacity:.65; }
-.crazy-reactions[aria-busy=true] button { opacity:.6; cursor:progress; }
-.crazy-reaction-status { font:400 10px/1.5 Inter,system-ui,sans-serif; color:#99a6b3; }
-.crazy-reaction-status:empty { display:none; }
-.crazy-reactions button:focus-visible { outline:2px solid #ef9489!important; outline-offset:4px; }

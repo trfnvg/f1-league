@@ -159,16 +159,9 @@ def detail(request, event_id, user_id, league_id=None, recap=False):
     wildcard = None
     if not season or season.is_legacy:
         wildcard = PlayerWildcard.objects.filter(event=event, user_id=user_id).select_related("question").first()
-    reactions = None
-    if prediction and (season is None or season.ruleset == "paddock"):
-        from .crazy_jury import crazy_vote_is_open
-        from .reactions import summaries
-        if league or not crazy_vote_is_open(event):
-            reactions = summaries([prediction], request.user, league).get(prediction.pk)
     decorate_rows(rows, event.season_year)
-    return render(request, "score_detail.html", dict(event=event, player=player, score=score, reactions=reactions,
+    return render(request, "score_detail.html", dict(event=event, player=player, score=score,
         league=league, league_season=season, score_rows=rows, extras=extras, notes=notes,
         prediction=prediction, wildcard=wildcard, show_crazy=not season or season.ruleset == "paddock",
         base_points=sum(row["points"] for row in rows), extra_points=sum(item["points"] for item in extras),
-        hit_count=sum(row["points"] > 0 for row in rows),
-        has_snapshot=bool(getattr(score, "input_data", {}))))
+        hit_count=sum(row["points"] > 0 for row in rows)))

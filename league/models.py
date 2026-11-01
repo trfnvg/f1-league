@@ -775,6 +775,7 @@ class Prediction(models.Model):
 
 
 class CrazyReaction(models.Model):
+    """Historical reaction rows; the public feature and its endpoints are retired."""
     class Kind(models.TextChoices):
         HEART = "heart", "Сердечко"
         FIRE = "fire", "Огонёк"

@@ -7,7 +7,6 @@ from . import league_views
 from . import driver_profiles
 from . import auth_views
 from . import score_details
-from . import reactions
 from . import race_calendar
 
 app_name = "league"
@@ -17,8 +16,6 @@ urlpatterns = [
     # Retired result-card URLs redirect to the explanation after its access checks.
     path("events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="race_recap"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="friend_league_recap"),
-    path("events/<int:event_id>/predictions/<int:prediction_id>/reactions/", reactions.react, name="crazy_reaction"),
-    path("leagues/<uuid:league_id>/events/<int:event_id>/predictions/<int:prediction_id>/reactions/", reactions.react, name="friend_league_reaction"),
     path("events/<int:event_id>/scores/<int:user_id>/", score_details.detail, name="score_detail"),
     path("leagues/<uuid:league_id>/events/<int:event_id>/scores/<int:user_id>/", score_details.detail, name="friend_league_score"),
     path("drivers/", driver_profiles.directory, name="drivers"),

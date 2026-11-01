@@ -109,6 +109,8 @@ def run(engine, output, portraits):
                     expect(page.locator('.sr-total strong')).to_have_text('31')
                     expect(page.locator('a[href*="/recap/"]')).to_have_count(0)
                     expect(page.locator('[data-recap-canvas],[data-recap-download]')).to_have_count(0)
+                    expect(page.locator('[data-reactions],[data-reaction-form]')).to_have_count(0)
+                    assert 'Очки взяты из сохранённого зачёта' not in page.locator('.score-review').inner_text()
                     expect(page.locator('.sr-row.is-partial')).to_have_count(1)
                     expect(page.locator('.sr-value').first).to_have_text('0')
                     if width <= 700:
@@ -119,6 +121,7 @@ def run(engine, output, portraits):
                     for driver in page.locator('.sr-driver-photo').all():
                         r = driver.bounding_box()
                         assert r['width'] == r['height'] and r['width'] >= 38
+                        assert driver.evaluate('el=>getComputedStyle(el).boxShadow') == 'none'
                     if route == '/review/' and width in (390,1440):
                         if portraits:
                             for image in page.locator('img[data-driver-photo][src^="/portraits/"]').all():

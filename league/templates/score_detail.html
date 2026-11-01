@@ -1,6 +1,6 @@
 {% extends 'base.html' %}{% load static %}
 {% block title %}Разбор очков · {{ player|player_name }}{% endblock %}
-{% block extra_head %}{% include 'social_assets.html' %}<link rel="stylesheet" href="{% static 'league/score-review.css' %}?v=2-no-recap">{% if league %}<meta name="robots" content="noindex,nofollow">{% endif %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/score-review.css' %}?v=3-clean">{% if league %}<meta name="robots" content="noindex,nofollow">{% endif %}{% endblock %}
 {% block content %}
 <section class="score-explanation score-review" aria-labelledby="score-review-title">
   <a class="score-back" href="{% if league %}{% url 'league:friend_league' league.id %}?year={{ event.season_year }}{% else %}{% url 'league:event_detail' event.id %}{% endif %}">← {% if league %}{{ league.name }}{% else %}К этапу{% endif %}</a>
@@ -23,10 +23,10 @@
     </section>
   </div><aside class="sr-side" aria-label="Дополнительные начисления">
     {% if extras %}<section class="score-extras sr-bonuses"><p class="sr-eyebrow">ДОПОЛНИТЕЛЬНО</p><h2>Бонусы и решения</h2>{% for item in extras %}<div><span>{{ item.title }}</span><strong class="{% if item.points > 0 %}is-positive{% elif item.points < 0 %}is-negative{% endif %}">{% if item.points > 0 %}+{% endif %}{{ item.points }}</strong></div>{% endfor %}<div class="sr-extra-total"><span>Всего дополнительно</span><strong>{% if extra_points > 0 %}+{% endif %}{{ extra_points }}</strong></div></section>{% endif %}
-    {% if show_crazy and prediction.crazy_prediction %}<section class="score-extras sr-crazy"><p class="sr-eyebrow">СМЕЛЫЙ СЦЕНАРИЙ</p><h2>Крейзи-предикт</h2><blockquote>{{ prediction.crazy_prediction }}</blockquote>{% include 'crazy_reactions.html' %}</section>{% endif %}
+    {% if show_crazy and prediction.crazy_prediction %}<section class="score-extras sr-crazy"><p class="sr-eyebrow">СМЕЛЫЙ СЦЕНАРИЙ</p><h2>Крейзи-предикт</h2><blockquote>{{ prediction.crazy_prediction }}</blockquote></section>{% endif %}
     {% if wildcard %}<section class="score-extras"><p class="sr-eyebrow">ДОПОЛНИТЕЛЬНЫЙ ШАНС</p><h2>Личная карта</h2><p>{{ wildcard.question.question }}</p><dl class="sr-wildcard"><div><dt>Ответ игрока</dt><dd>{{ wildcard.selected_answer|default:'—' }}</dd></div><div><dt>Верный ответ</dt><dd>{{ wildcard.correct_answer|default:'Ожидается' }}</dd></div></dl></section>{% endif %}
   </aside></div>
-  <div class="sr-notes">{% for note in notes %}<p class="score-note">{{ note }}</p>{% endfor %}<p class="score-note">{% if has_snapshot %}Показаны ответы и результат, использованные при расчёте.{% else %}Очки взяты из сохранённого зачёта. Ответы и фактический результат — из карточки этапа; у старых результатов отдельного снимка нет.{% endif %} Сезонные бонусы в сумму этого этапа не входят.</p></div>
+  {% if notes %}<div class="sr-notes">{% for note in notes %}<p class="score-note">{{ note }}</p>{% endfor %}</div>{% endif %}
 </section>
 {% endblock %}
 {% block extra_scripts %}<script src="{% static 'league/driver-portraits.js' %}?v=1" defer></script>{% endblock %}
