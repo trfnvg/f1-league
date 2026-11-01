@@ -46,8 +46,10 @@ def explain(score, prediction, result, event):
         fact = value(actual, result, field)
         if field == "driver_of_day":
             fact = value(actual, result, "driver_of_day_multiple") or fact
-        rows.append(dict(title=title, prediction=label(value(predicted, prediction, field)),
-            actual=label(fact), points=points, note="В тройке, но на другом месте" if top3 else ""))
+        raw_prediction = value(predicted, prediction, field)
+        rows.append(dict(title=title, field=field, prediction_raw=raw_prediction, actual_raw=fact,
+            prediction=label(raw_prediction), actual=label(fact), points=points,
+            note="В тройке, но на другом месте" if top3 else ""))
     extras = []
     for key, points in base.items():
         if isinstance(points, (int, float)):
@@ -64,6 +66,43 @@ def explain(score, prediction, result, event):
     if score.points != allocated:
         extras.append(dict(title="Прочие сохранённые начисления (детализация отсутствует)", points=score.points-allocated))
     return rows, extras
+
+
+def decorate_rows(rows, year):
+    """Presentation only: portraits belong to the event season, scores stay stored."""
+    from .driver_profiles import picker_profiles
+    profiles = {driver["key"]: driver for driver in picker_profiles(year)}
+    labels = dict(DRIVER_CHOICES)
+    markers = dict(zip((item[0] for item in CATEGORIES),
+        ("P1", "P2", "P3", "POLE", "FL", "DOT", "SC", "DNF", "SQ", "SPR")))
+    for row in rows:
+        field = row["field"]
+        row["marker"] = markers[field]
+        for side in ("prediction", "actual"):
+            raw = row[side + "_raw"]
+            cards = []
+            if not field.endswith("_count"):
+                for key in raw if isinstance(raw, list) else [raw]:
+                    if key is None or key == "":
+                        continue
+                    driver = profiles.get(key)
+                    if not driver:
+                        name, _, team = labels.get(key, str(key)).partition(" (")
+                        driver = dict(key=key, surname=name, team=team.rstrip(")"),
+                            photo="", number=None, url="", team_color="#a4b0c0")
+                    cards.append(driver)
+            row[side + "_drivers"] = cards
+        if row["actual"] == "—":
+            row["state"], row["status"] = "empty", "Нет данных"
+        elif row["prediction"] == "—":
+            row["state"], row["status"] = "empty", "Не заполнено"
+        elif row["note"]:
+            row["state"], row["status"] = "partial", "В тройке"
+        elif row["points"] > 0:
+            row["state"], row["status"] = "hit", "Засчитано"
+        else:
+            row["state"], row["status"] = "miss", "Без очков"
+    return rows
 
 
 @never_cache
@@ -124,7 +163,10 @@ def detail(request, event_id, user_id, league_id=None, recap=False):
         from .reactions import summaries
         if league or not crazy_vote_is_open(event):
             reactions = summaries([prediction], request.user, league).get(prediction.pk)
+    decorate_rows(rows, event.season_year)
     return render(request, "score_detail.html", dict(event=event, player=player, score=score, reactions=reactions,
         league=league, league_season=season, score_rows=rows, extras=extras, notes=notes,
         prediction=prediction, wildcard=wildcard, show_crazy=not season or season.ruleset == "paddock",
+        base_points=sum(row["points"] for row in rows), extra_points=sum(item["points"] for item in extras),
+        hit_count=sum(row["points"] > 0 for row in rows),
         has_snapshot=bool(getattr(score, "input_data", {}))))

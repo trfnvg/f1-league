@@ -4,10 +4,10 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from . import test_private_league_ui as fixtures
 from .leagues import create_invite, accept_invite
-from .models import Event, Prediction, Result, Score, LeagueMembership, LeagueDayDecision
+from .models import DriverProfile, Event, Prediction, Result, Score, LeagueMembership, LeagueDayDecision
 from .prediction_submission import save_shared_prediction
 from .scoring import publish_event_scores
-from .score_details import explain
+from .score_details import decorate_rows, explain
 
 
 @override_settings(STORAGES=fixtures.STORAGES)
@@ -95,6 +95,42 @@ class PredictionExperienceTests(TestCase):
         self.assertContains(response, "Дуэль")
         Event.objects.filter(pk=self.event.pk).update(deadline=self.clock.return_value+timedelta(days=1))
         self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_portrait_review_uses_the_scored_season_and_preserves_score(self):
+        DriverProfile.objects.create(season_year=self.event.season_year, key=self.values["p1"],
+            name="Джордж Рассел", surname="Рассел", team="Mercedes", number=63,
+            portrait_url="https://example.invalid/russell.webp")
+        self.publish()
+        saved = Score.objects.get(user=self.owner, event=self.event)
+        before = (saved.points, saved.breakdown)
+        page = self.client.get(reverse("league:score_detail", args=[self.event.pk, self.owner.pk]))
+        self.assertContains(page, "score-review.css")
+        self.assertContains(page, "Прогноз игрока")
+        self.assertContains(page, "Результат гонки")
+        self.assertContains(page, "data-driver-photo")
+        first = page.context["score_rows"][0]
+        self.assertEqual(first["prediction_drivers"][0]["key"], self.values["p1"])
+        self.assertTrue(first["prediction_drivers"][0]["photo"])
+        self.assertEqual(page.context["base_points"] + page.context["extra_points"], saved.points)
+        saved.refresh_from_db()
+        self.assertEqual((saved.points, saved.breakdown), before)
+
+    def test_portraits_support_multiple_day_winners_zero_counts_and_missing_profiles(self):
+        score = SimpleNamespace(points=0, breakdown={}, input_data={
+            "prediction": {"driver_of_day": "norris", "safety_car_count": 0},
+            "result": {"driver_of_day_multiple": ["norris", "piastri"], "safety_car_count": 0},
+        })
+        rows, _ = explain(score, None, None, self.event)
+        with self.assertNumQueries(1):
+            decorate_rows(rows, 2026)
+        day = next(row for row in rows if row["field"] == "driver_of_day")
+        self.assertEqual([d["key"] for d in day["actual_drivers"]], ["norris", "piastri"])
+        count = next(row for row in rows if row["field"] == "safety_car_count")
+        self.assertEqual(count["prediction"], "0")
+        self.assertFalse(count["prediction_drivers"])
+        decorate_rows(rows, 2025)
+        self.assertEqual(day["prediction_drivers"][0]["surname"], "Норрис")
+        self.assertFalse(day["prediction_drivers"][0]["photo"], "Never borrow a portrait from a different season")
 
     def test_legacy_local_decisions_match_standings(self):
         self.publish()
