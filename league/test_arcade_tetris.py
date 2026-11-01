@@ -67,6 +67,7 @@ class TetrisReleaseTests(TestCase):
             page = self.client.get(self.url)
             self.assertEqual(page.status_code, 200)
             self.assertContains(page, 'id="tetris-canvas"')
+            self.assertContains(page, 'id="tetris-launch-start"')
             self.assertContains(page, "league/arcade-results.css")
             self.assertContains(page, 'class="tetris-leaderboard arcade-results"')
             self.assertContains(page, "Всего попыток")

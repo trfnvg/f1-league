@@ -81,7 +81,14 @@ try {
       document.getElementById('tetris-machine').requestFullscreen=undefined;
       document.querySelector('.pit-stack-page').style.transform='translateZ(0)';
     });
-    await page.locator('#tetris-start').click();
+    if(width<500) {
+      await page.locator('#tetris-launch-start').waitFor({state:'visible'});
+      assert.equal(await page.locator('#tetris-canvas').isVisible(),false);
+      const card=await page.locator('#tetris-machine').boundingBox();
+      assert.ok(card.height<=380,'Inline mobile game is a compact launch card');
+      assert.equal(await page.locator('#tetris-machine').evaluate(el=>el.dispatchEvent(new Event('touchmove',{bubbles:true,cancelable:true}))),true,'Inline card does not cancel page scrolling');
+    }
+    await page.locator(width<500?'#tetris-launch-start':'#tetris-start').click();
     await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
     const checkMobileFullscreen=async()=>{
       const metrics=await page.locator('#tetris-machine').evaluate(el=>{
@@ -130,7 +137,12 @@ try {
       assert.equal(await page.locator('#tetris-machine').evaluate(el=>el.parentElement.className),'pit-stack-page');
       assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('tetris-fullscreen')),false);
       assert.equal(await page.locator('body').evaluate(el=>el.style.position),'');
+      await page.locator('#tetris-launch-start').waitFor({state:'visible'});
+      await page.locator('#tetris-launch-start').click();
+      await page.waitForFunction(()=>document.getElementById('tetris-overlay').hidden);
+      await checkMobileFullscreen();
       await page.locator('#tetris-fullscreen').click();
+      await page.locator('#tetris-launch-start').click();
       await checkMobileFullscreen();
     }
     await context.close();

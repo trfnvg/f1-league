@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="{% static 'league/arcade-player.css' %}">
 {% include "arcade_results_assets.html" %}
 <link rel="preload" as="image" href="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" fetchpriority="high">
-<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=toolbar-v20">
+<link rel="stylesheet" href="{% static 'league/tetris.css' %}?v=mobile-launch-v22">
 {% endblock %}
 {% block content %}
 <main class="pit-stack-page">
@@ -30,6 +30,12 @@
       data-art-spa="{% static 'league/images/tetris-gp/spa-retro-v1.webp' %}"
       data-art-abu-dhabi="{% static 'league/images/tetris-gp/abu-dhabi-retro-v1.webp' %}">
       <div class="is-visible"><img src="{% static 'league/images/tetris-gp/monaco-retro-v1.webp' %}" alt="" fetchpriority="high" decoding="async" draggable="false"></div><div></div>
+    </div>
+    <div class="tetris-launch">
+      <p class="pit-stack-eyebrow">FALLING BLOCKS · WORLD TOUR</p>
+      <h2>PIT <em>STACK</em></h2>
+      <p>Собирай линии. Меняй трассы.<br>Тап — поворот, свайпы — движение.</p>
+      <button type="button" id="tetris-launch-start">Играть <span aria-hidden="true">→</span></button>
     </div>
     <div class="tetris-toolbar">
       <span class="tetris-wordmark">PIT <b>STACK</b><small>PIT WALL · 03</small></span>
@@ -87,6 +93,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=continuous-audio-v11" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=continuous-audio-v21" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=mobile-launch-v22" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

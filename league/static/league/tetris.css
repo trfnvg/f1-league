@@ -44,7 +44,7 @@
 .tetris-volume input { display: block; width: 100%; margin: 10px 0 0; accent-color: #e96769; touch-action: pan-x; }
 .tetris-audio-control:focus-within .tetris-volume { opacity: 1; visibility: visible; pointer-events: auto; }
 @media (hover:hover) { .tetris-audio-control:hover .tetris-volume { opacity: 1; visibility: visible; pointer-events: auto; } }
-.tetris-machine button { font-family: inherit; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+.tetris-machine button { font-family: inherit; touch-action: manipulation; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer; }
 .tetris-toolbar button { background: #101923e8; border: 1px solid #64717b; border-radius: 5px; color: #dce5ec; padding: 7px 10px; font-size: 11px; }
 .tetris-toolbar button:disabled { opacity: .4; cursor: default; }
 .tetris-machine button:focus-visible { outline: 2px solid #5de2d3; outline-offset: 3px; }
@@ -96,7 +96,9 @@
 .tetris-line-message.is-visible { animation: tetris-callout 900ms ease-out both; }
 @keyframes tetris-callout { 0%{opacity:0;transform:translateY(4px)} 15%,65%{opacity:1} 100%{opacity:0;transform:translateY(-7px)} }
 .tetris-machine, .tetris-machine * { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
-.tetris-machine { touch-action: none; overscroll-behavior: none; }
+.tetris-machine { touch-action: pan-y pinch-zoom; }
+.tetris-machine.is-fullscreen { touch-action: none; overscroll-behavior: none; }
+.tetris-launch { display: none; }
 html:has(body.tetris-fullscreen), body.tetris-fullscreen { overflow: hidden !important; overscroll-behavior: none; }
 body.tetris-fullscreen > :not(#tetris-machine) { visibility: hidden !important; }
 .tetris-machine.is-fullscreen { position: fixed; inset: var(--tetris-viewport-top,0px) auto auto var(--tetris-viewport-left,0px); z-index: 1000000; width: var(--tetris-viewport-width,100%); height: var(--tetris-viewport-height,100dvh); max-width: none; max-height: none; min-width: 0; min-height: 0; margin: 0; box-sizing: border-box; border-radius: 0; border: 0; padding: env(safe-area-inset-top,0px) max(14px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px)); }
@@ -138,6 +140,17 @@ body.tetris-fullscreen > :not(#tetris-machine) { visibility: hidden !important; 
   .tetris-start-lights { gap: 4px; padding: 6px; }
   .tetris-start-lights i { width: 9px; height: 9px; }
   #tetris-start { font-size: 10px; padding: 10px 12px; }
+}
+@media (max-width:600px), (pointer:coarse) and (max-width:1000px) {
+  .tetris-machine:not(.is-fullscreen) { height: clamp(280px,75vw,380px); min-height: 0; max-height: none; padding: 0; grid-template-rows: minmax(0,1fr); }
+  .tetris-machine:not(.is-fullscreen) :is(.tetris-toolbar,.tetris-deck) { display: none; }
+  .tetris-machine:not(.is-fullscreen) .tetris-launch { display: flex; position: relative; flex-direction: column; align-items: center; justify-content: center; min-width: 0; padding: 24px 18px; text-align: center; background: linear-gradient(180deg,#0b111c8c,#0b111ce8); }
+  .tetris-launch .pit-stack-eyebrow { margin: 0 0 12px; font-size: 8px; }
+  .tetris-launch h2 { margin: 0; color: #f3f5f7; font: 30px/1.1 "Russo One",sans-serif; letter-spacing: -.03em; }
+  .tetris-launch h2 em { color: #ef5358; font-style: normal; }
+  .tetris-launch > p:not(.pit-stack-eyebrow) { margin: 14px 0 22px; color: #c1cad6; font-size: 12px; line-height: 1.7; }
+  #tetris-launch-start { display: inline-flex; align-items: center; justify-content: space-between; gap: 28px; min-width: 172px; min-height: 48px; padding: 12px 20px; border: 1px solid #f16761; border-radius: 8px; background: #dc423e; color: #fff; font-size: 13px; font-weight: 750; box-shadow: 0 6px 20px #0003; }
+  #tetris-launch-start:disabled { opacity: .6; }
 }
 @media (max-width:600px) {
   .tetris-machine { grid-template-rows: auto minmax(0,1fr); }

@@ -289,6 +289,26 @@ try {
         const rect=child.getBoundingClientRect();return rect.top>=area.top && rect.bottom<=area.bottom;
       });
     }),`${name}: start instructions and button fit inside the board`);
+    if(mobile) {
+      assert.ok(await page.locator('#tetris-launch-start').isVisible());
+      assert.equal(await page.locator('#tetris-canvas').isVisible(),false);
+      await page.locator('#tetris-machine').scrollIntoViewIfNeeded();
+      const r=await page.locator('#tetris-machine').boundingBox();
+      const before=await page.evaluate(()=>scrollY),direction=before>30?1:-1;
+      const cdp=await context.newCDPSession(page);
+      const x=r.x+r.width/2,y=Math.min(height-100,Math.max(150,r.y+90));
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,id:1}]});
+      for(let i=1;i<=5;i++) {
+        await page.waitForTimeout(25);
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+direction*i*20,id:1}]});
+      }
+      await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+      await page.waitForTimeout(200);
+      const after=await page.evaluate(()=>scrollY);
+      assert.ok(Math.abs(after-before)>10,`${name}: dragging over the launch card scrolls the page (${before} -> ${after})`);
+      assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('tetris-fullscreen')),false,'A swipe does not start the game');
+      await cdp.detach();
+    }
     if(process.env.TETRIS_PREVIEW_DIR)await page.locator('#tetris-machine').screenshot({path:path.join(process.env.TETRIS_PREVIEW_DIR,`tetris-title-${name}.png`)});
     await page.keyboard.press('Space');
     await page.waitForFunction(()=>window.__game?.phase==='running');
@@ -413,10 +433,11 @@ try {
     await windowSession.send('Browser.setWindowBounds',{windowId,bounds:{windowState:'normal'}});
     await windowSession.detach();
     await page.setViewportSize({width:844,height:390});
-    await page.locator('#tetris-fullscreen').click();
+    await page.locator(mobile?'#tetris-launch-start':'#tetris-fullscreen').click();
     metrics=await measure();assert.ok(metrics.top>=0);
     assert.ok(Math.abs(metrics.aspect-2)<.01);
     console.log(`${name}: keyboard, pause/resume, ${mobile?'trusted touch taps/drags/flick/cancel/multitouch/next-piece guards, ':''}ten full-resolution art venues, inline/fullscreen/landscape geometry, opaque field and all seven tile contrasts >= 4.5:1 passed`);
+    if(await page.evaluate(()=>window.__game.paused)) await page.locator('#tetris-start').click();
     await page.evaluate(()=>{
       window.__game.paused=false;window.__game.finish();window.dispatchEvent(new Event('resize'));
     });

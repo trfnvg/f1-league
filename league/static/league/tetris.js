@@ -8,6 +8,7 @@
   const nextCanvas = byId('next'), nextCtx = nextCanvas.getContext('2d');
   const board = byId('board'), deck = byId('deck'), overlay = byId('overlay');
   const pauseButton = byId('pause'), startButton = byId('start'), fullscreenButton = byId('fullscreen');
+  const launchButton = byId('launch-start');
   const game = new Game();
   const session = new window.PitStackSession(machine);
   window.PitStackActiveSession=session;
@@ -140,6 +141,10 @@
       const playable = ['running','clearing'].includes(game.phase);
       pauseButton.disabled = !playable || countdown;
       pauseButton.textContent = game.paused ? 'Продолжить' : 'Пауза';
+      if (launchButton) {
+        launchButton.textContent = game.paused ? 'Продолжить →' : game.phase === 'over' ? 'Играть снова →' : 'Играть →';
+        launchButton.disabled = preparing || countdown;
+      }
       if (!countdown) {
         const mode = game.paused ? 'paused' : game.phase;
         overlay.hidden = playable && !game.paused;
@@ -235,18 +240,21 @@
   }
   async function start() {
     if(countdown || preparing) return;
-    if (window.matchMedia('(pointer:coarse)').matches && !machine.classList.contains('is-fullscreen')) enterFullscreen();
+    if (window.matchMedia('(pointer:coarse), (max-width:600px)').matches && !machine.classList.contains('is-fullscreen')) enterFullscreen();
     if(game.paused) { togglePause(); return; }
     // Disabling a focused start button emits focusout with no relatedTarget.
     // Move focus inside the board first, so countdown does not pause its music.
     canvas.focus({preventScroll:true});
     soundtrack.setPlaying(true,true);
     preparing=true;startButton.disabled=true;
+    if (launchButton) launchButton.disabled = true;
     try {game.random=await session.begin();}
     catch(error){
       soundtrack.setPlaying(false);clearHeld();
       byId('overlay-text').textContent=error.message;overlay.hidden=false;
-      preparing=false;startButton.disabled=false;return;
+      preparing=false;startButton.disabled=false;
+      if (launchButton) launchButton.disabled=false;
+      return;
     }
     preparing=false;
     clearHeld(); game.reset(); clearSerial=0; shownOverlay=''; countdown=true;
@@ -259,19 +267,21 @@
     overlay.hidden = false; renderedRevision=-1; schedule();
     startTimer = setTimeout(() => {
       countdown=false; startButton.disabled=false; game.start();
+      if (launchButton) launchButton.disabled=false;
       overlay.hidden=true; lastTime=0;
       canvas.focus({preventScroll:true}); schedule();
-      if(document.hidden) { game.pause(); schedule(); }
+      if(document.hidden || (window.matchMedia('(pointer:coarse), (max-width:600px)').matches && !machine.classList.contains('is-fullscreen'))) { game.pause(); schedule(); }
     },reduceMotion?0:650);
   }
   startButton.addEventListener('click',start);
+  launchButton?.addEventListener('click',start);
   pauseButton.addEventListener('click',togglePause);
   const sample = e => ({id:e.pointerId,x:e.clientX,y:e.clientY,time:e.timeStamp});
   const gesturePiece = () => game.active && !countdown ? game.spawnSerial : -1;
   canvas.addEventListener('contextmenu',e=>e.preventDefault());
   for (const type of ['selectstart','dragstart','contextmenu']) machine.addEventListener(type,e=>e.preventDefault());
   machine.addEventListener('touchmove',e=>{
-    if (!e.target.closest('input[type="range"]')) e.preventDefault();
+    if (machine.classList.contains('is-fullscreen') && !e.target.closest('input[type="range"]')) e.preventDefault();
   },{passive:false});
   canvas.addEventListener('pointerdown',e=>{
     if(e.button!==0 || !game.active || countdown) return;
@@ -341,6 +351,7 @@
   });
   function setFullscreen(on) {
     if (on === machine.classList.contains('is-fullscreen')) return;
+    if (!on) autoPause();
     changingFullscreen = true;
     if (on) {
       savedScroll = {x:window.scrollX,y:window.scrollY};
@@ -395,6 +406,7 @@
     autoPause(); clearTimeout(startTimer);
     if(countdown) {
       countdown=false; startButton.disabled=false; game.reset(); shownOverlay='';
+      if (launchButton) launchButton.disabled=false;
       byId('overlay-title').textContent='Готов к старту?'; startButton.textContent='Начать заезд ↗';
     }
   });

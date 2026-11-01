@@ -204,7 +204,7 @@ def run(engine, output):
                         page.wait_for_load_state('networkidle')
                         assert not errors, errors
                         selector = {'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
-                                    'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-canvas'}[card['key']]
+                                    'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-launch-start' if width <= 600 else '#tetris-canvas'}[card['key']]
                         expect(page.locator(selector)).to_be_visible()
                         if card['key'] == 'minesweeper':
                             expect(page.locator(selector)).to_have_attribute('data-test-mode', 'true')
