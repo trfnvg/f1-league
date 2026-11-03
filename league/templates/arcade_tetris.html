@@ -60,7 +60,7 @@
           <div class="tetris-start-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="pit-stack-eyebrow" id="tetris-overlay-caption">ГОТОВНОСТЬ К СТАРТУ</p>
           <h2 id="tetris-overlay-title">Собери<br>свой темп.</h2>
-          <p id="tetris-overlay-text"><span class="tetris-help-keyboard">← → — движение · ↑ — поворот<br>↓ — ускорение · пробел — сброс<br>P / Esc — пауза</span><span class="tetris-help-touch">Тап — поворот · влево / вправо — движение<br>Быстро вниз — мгновенный сброс<br>Медленно вниз — ускорение</span></p>
+          <p id="tetris-overlay-text"><span class="tetris-help-keyboard">← → — движение · ↑ — поворот<br>↓ — ускорение · пробел — сброс<br>P / Esc — пауза · R / К — заново</span><span class="tetris-help-touch">Тап — поворот · влево / вправо — движение<br>Быстро вниз — мгновенный сброс<br>Медленно вниз — ускорение</span></p>
           <button type="button" id="tetris-start">Начать заезд <span>↗</span></button>
         </div>
       </div>
@@ -93,6 +93,6 @@
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=continuous-audio-v11" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=mobile-toolbar-v23" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=restart-key-v24" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

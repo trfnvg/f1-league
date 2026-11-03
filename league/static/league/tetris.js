@@ -240,10 +240,10 @@
       lastTime=0; canvas.focus({preventScroll:true}); schedule();
     }
   }
-  async function start() {
+  async function start(restart = false) {
     if(countdown || preparing) return;
     if (window.matchMedia('(pointer:coarse), (max-width:600px)').matches && !machine.classList.contains('is-fullscreen')) enterFullscreen();
-    if(game.paused) { togglePause(); return; }
+    if(game.paused && restart !== true) { togglePause(); return; }
     // Disabling a focused start button emits focusout with no relatedTarget.
     // Move focus inside the board first, so countdown does not pause its music.
     canvas.focus({preventScroll:true});
@@ -314,7 +314,7 @@
   document.addEventListener('keydown',e=>{
     const focused=document.activeElement;
     // Range arrows and focused toolbar buttons keep native keyboard controls.
-    if(focused?.matches('input,select,textarea,[contenteditable="true"]'))return;
+    if(focused?.matches('input,select,textarea') || focused?.isContentEditable || e.isComposing)return;
     if(['Space','Enter','NumpadEnter'].includes(e.code)) {
       if(focused?.closest('button,a,[role="button"]'))return;
       const pageFocus=!focused || focused===document.body || focused===document.documentElement;
@@ -328,6 +328,13 @@
       return;
     }
     if(!machine.contains(focused) && !machine.classList.contains('is-fullscreen')) return;
+    if(e.code==='KeyR' || ['r','к'].includes(e.key?.toLowerCase())) {
+      // Leave browser reload shortcuts alone; holding R starts only one run.
+      if(e.ctrlKey || e.metaKey || e.altKey)return;
+      e.preventDefault();
+      if(!e.repeat)start(true);
+      return;
+    }
     if(e.code==='Escape') {
       if(!game.paused && ['running','clearing'].includes(game.phase)) togglePause();
       if(machine.classList.contains('is-fullscreen') && !document.fullscreenElement) setFullscreen(false);

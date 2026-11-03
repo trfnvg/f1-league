@@ -365,6 +365,33 @@ try {
     assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause,'Enter resumes without also dropping');
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(()=>window.__game.spawnSerial),serialBeforePause+1,'Enter remains an alternative hard drop');
+    await page.evaluate(()=>{
+      const session=window.PitStackActiveSession,begin=session.begin.bind(session);
+      window.__restartStarts=0;
+      session.begin=async()=>{window.__restartStarts++;return begin();};
+    });
+    await page.keyboard.down('KeyR');await page.keyboard.down('KeyR');await page.keyboard.up('KeyR');
+    await page.waitForFunction(()=>window.__game.phase==='running' && document.getElementById('tetris-overlay').hidden);
+    assert.equal(await page.evaluate(()=>window.__restartStarts),1,'Holding R restarts only once');
+    assert.equal(await page.evaluate(()=>window.__game.score),0,'R clears the score');
+    await page.keyboard.press('KeyP');
+    await page.evaluate(()=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'к',code:'KeyR',bubbles:true,cancelable:true})));
+    await page.waitForFunction(()=>window.__restartStarts===2 && !window.__game.paused && document.getElementById('tetris-overlay').hidden);
+    assert.equal(await page.evaluate(()=>window.__game.score),0,'Cyrillic К restarts a paused game instead of resuming');
+    assert.equal(await page.evaluate(()=>{
+      const event=new KeyboardEvent('keydown',{code:'KeyR',key:'r',ctrlKey:true,bubbles:true,cancelable:true});
+      document.dispatchEvent(event);return event.defaultPrevented;
+    }),false,'Ctrl+R keeps native browser reload behavior');
+    await page.evaluate(()=>{
+      const input=document.createElement('textarea');input.id='restart-input';
+      document.getElementById('tetris-machine').append(input);input.focus();
+    });
+    await page.keyboard.press('r');
+    await page.evaluate(()=>document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'к',code:'KeyR',bubbles:true,cancelable:true})));
+    assert.equal(await page.evaluate(()=>window.__restartStarts),2,'Typing R or К does not restart');
+    await page.evaluate(()=>document.getElementById('restart-input').remove());
+    await page.locator('#tetris-canvas').focus();await page.keyboard.press('KeyR');
+    await page.waitForFunction(()=>window.__restartStarts===3 && !window.__game.paused && document.getElementById('tetris-overlay').hidden);
     await checkMusic(page);
     await checkContinuousClearAudio(page);
     await checkFeedback(page,name);
