@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 import json
 from django.db import transaction
+from django.db.models import DurationField, ExpressionWrapper, F
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -36,6 +37,9 @@ from .models import (
     WildcardCardTemplate,
     WildcardSettings,
     DoodleAttempt,
+    ArcadeAttempt,
+    TetrisAttempt,
+    MinesweeperAttempt,
 )
 from .scoring import (
     calculate_season_scores,
@@ -942,20 +946,132 @@ class TelegramBotStateAdmin(admin.ModelAdmin):
     readonly_fields = ("key", "updated_at")
 
 
-@admin.register(DoodleAttempt)
-class DoodleAttemptAdmin(admin.ModelAdmin):
-    list_display = ("user", "score", "started_at", "finished_at")
-    list_filter = ("started_at", "finished_at")
-    search_fields = ("user__username",)
-    list_select_related = ("user",)
-    readonly_fields = tuple(field.name for field in DoodleAttempt._meta.fields)
-    ordering = ("-started_at",)
+def attempt_duration(milliseconds):
+    if milliseconds is None or milliseconds < 0:
+        return "—"
+    seconds, ms = divmod(int(milliseconds), 1000)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{ms:03d}"
+
+
+class AttemptStatusFilter(admin.SimpleListFilter):
+    title = "Статус попытки"
+    parameter_name = "run_status"
+
+    def lookups(self, request, model_admin):
+        return (("saved", "Результат сохранён"), ("unfinished", "Не завершена"),
+                ("no_result", "Завершена без результата"))
+
+    def queryset(self, request, queryset):
+        if self.value() == "unfinished":
+            return queryset.filter(finished_at__isnull=True)
+        if self.value() in ("saved", "no_result"):
+            queryset = queryset.filter(finished_at__isnull=False)
+            if queryset.model is MinesweeperAttempt:
+                return queryset.filter(completed=self.value() == "saved")
+            return queryset.filter(score__isnull=self.value() == "no_result")
+        return queryset
+
+
+class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
+    """Read-only audit of the existing runs; never change standings here."""
+    change_list_template = "admin/league/arcade_attempt_log.html"
+    list_display = ("id", "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "competition_label")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "user__league_profile__handle")
+    search_help_text = "Имя игрока или логин с @ или без него."
+    ordering = ("-started_at", "-pk")
+    date_hierarchy = "started_at"
+    list_per_page = 50
+    show_full_result_count = False
+    actions = None
+
+    def get_queryset(self, request):
+        related = ["user", "user__league_profile"]
+        if self.model is not MinesweeperAttempt:
+            related.append("competition__event")
+        large_fields = [field.name for field in self.model._meta.fields if field.name in {"verification", "replay"}]
+        return super().get_queryset(request).select_related(*related).defer(*large_fields).annotate(
+            server_duration=ExpressionWrapper(F("finished_at") - F("started_at"), output_field=DurationField()))
+
+    def get_list_filter(self, request):
+        return (AttemptStatusFilter, "started_at", "week_start" if self.model is MinesweeperAttempt else "competition__event")
+
+    def get_readonly_fields(self, request, obj=None):
+        return tuple(field.name for field in self.model._meta.fields) + (
+            "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "active_duration", "competition_label")
+
+    def get_fieldsets(self, request, obj=None):
+        return (
+            ("Попытка", {"fields": ("id", "player", "run_result", "run_status", "competition_label")}),
+            ("Время", {"fields": ("start_time", "end_time", "wall_duration", "active_duration"),
+                "description": "Серверная длительность включает паузы и ожидание отправки результата. Игровое время доступно только там, где оно сохраняется отдельно."}),
+            ("Технические данные", {"classes": ("collapse",), "fields": tuple(
+                field.name for field in self.model._meta.fields if field.name != "id")}),
+        )
+
+    @admin.display(description="Игрок", ordering="user__username")
+    def player(self, obj):
+        profile = getattr(obj.user, "league_profile", None)
+        handle = profile.handle if profile and profile.handle else obj.user.username
+        return f"{display_name(obj.user)} · @{handle}"
+
+    @admin.display(description="Результат")
+    def run_result(self, obj):
+        if isinstance(obj, MinesweeperAttempt):
+            return attempt_duration(obj.elapsed_ms) if obj.completed else "—"
+        return f"{obj.score} очк." if obj.score is not None else "—"
+
+    @admin.display(description="Статус")
+    def run_status(self, obj):
+        if obj.finished_at is None:
+            return "Не завершена"
+        if isinstance(obj, MinesweeperAttempt):
+            return "Поле пройдено" if obj.completed else "Поле не пройдено"
+        return "Результат сохранён" if obj.score is not None else "Результат не принят"
+
+    @admin.display(description="Начало", ordering="started_at")
+    def start_time(self, obj):
+        return obj.started_at
+
+    @admin.display(description="Завершение", ordering="finished_at")
+    def end_time(self, obj):
+        return obj.finished_at
+
+    @admin.display(description="Длительность (сервер)", ordering="server_duration")
+    def wall_duration(self, obj):
+        if obj.finished_at is None:
+            return "—"
+        return attempt_duration((obj.finished_at - obj.started_at).total_seconds() * 1000)
+
+    @admin.display(description="Игровое время")
+    def active_duration(self, obj):
+        if isinstance(obj, TetrisAttempt) and obj.score is not None and obj.finished_at:
+            return attempt_duration(obj.ticks * 1000 / 60)
+        if isinstance(obj, MinesweeperAttempt) and obj.completed:
+            return attempt_duration(obj.elapsed_ms)
+        return "—"
+
+    @admin.display(description="Зачёт")
+    def competition_label(self, obj):
+        if isinstance(obj, MinesweeperAttempt):
+            return f"Неделя с {obj.week_start:%d.%m.%Y}"
+        if obj.competition_id:
+            event = obj.competition.event
+            return f"R{event.round_number:02d} · {event.name} · {event.season_year}"
+        return "Без привязки к этапу"
 
     def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+admin.site.register((ArcadeAttempt, DoodleAttempt, TetrisAttempt, MinesweeperAttempt), ArcadeAttemptLogAdmin)
 
 
 @admin.register(ArcadeTrophyAward)

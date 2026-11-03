@@ -1449,6 +1449,8 @@ class ArcadeAttempt(models.Model):
     class Meta:
         ordering = ("-started_at",)
         indexes = [models.Index(fields=("user", "started_at"), name="arcade_attempt_user_idx")]
+        verbose_name = "Попытка Pit Lane Flight"
+        verbose_name_plural = "Попытки аркады · Pit Lane Flight"
 
     def __str__(self):
         return f"{self.user} — arcade run {self.pk}"
@@ -1465,8 +1467,8 @@ class DoodleAttempt(models.Model):
     class Meta:
         ordering = ("-started_at",)
         indexes = [models.Index(fields=("user", "started_at"), name="doodle_attempt_user_idx")]
-        verbose_name = "Попытка Doodle GP"
-        verbose_name_plural = "Попытки Doodle GP"
+        verbose_name = "Попытка Cowboy GP"
+        verbose_name_plural = "Попытки аркады · Cowboy GP"
 
     def __str__(self):
         return f"{self.user} — Doodle GP run {self.pk}"
@@ -1687,6 +1689,8 @@ class TetrisAttempt(models.Model):
     class Meta:
         ordering = ("-started_at",)
         indexes = [models.Index(fields=("user", "started_at"), name="tetris_attempt_user_idx")]
+        verbose_name = "Попытка Pit Stack"
+        verbose_name_plural = "Попытки аркады · Pit Stack"
 
 
 class TetrisRecord(models.Model):
@@ -1714,7 +1718,7 @@ class MinesweeperAttempt(models.Model):
             models.Index(fields=("week_start", "completed", "elapsed_ms"), name="mine_week_result_idx"),
         ]
         verbose_name = "Попытка Сапёра"
-        verbose_name_plural = "Попытки Сапёра"
+        verbose_name_plural = "Попытки аркады · Сапёр"
 
     def __str__(self):
         result = f"{self.elapsed_ms} мс" if self.completed and self.elapsed_ms else "не пройдено"

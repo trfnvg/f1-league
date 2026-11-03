@@ -1,0 +1,10 @@
+{% extends 'admin/change_list.html' %}
+{% block content_title %}{{ block.super }}
+<p>Все сохранённые попытки игроков, включая незавершённые. Длительность — время между началом и завершением по часам сервера, с паузами. «—» означает, что завершение не получено.</p>
+<p>
+  <a href="{% url 'admin:league_arcadeattempt_changelist' %}">Pit Lane Flight</a> ·
+  <a href="{% url 'admin:league_doodleattempt_changelist' %}">Cowboy GP</a> ·
+  <a href="{% url 'admin:league_tetrisattempt_changelist' %}">Pit Stack</a> ·
+  <a href="{% url 'admin:league_minesweeperattempt_changelist' %}">Сапёр</a>
+</p>
+{% endblock %}

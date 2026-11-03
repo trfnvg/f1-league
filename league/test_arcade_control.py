@@ -146,9 +146,9 @@ class ArcadeControlTests(TestCase):
         self.settings.refresh_from_db()
         self.assertFalse(self.settings.public_enabled)
 
-    def test_requested_sections_removed_from_admin_not_from_database(self):
+    def test_records_stay_hidden_but_attempt_logs_are_available_in_admin(self):
         record = DoodleRecord.objects.create(user=self.player, best_score=700)
-        for model in (DoodleRecord, MinesweeperAttempt, DuelSettings, ArcadeRecord):
+        for model in (DoodleRecord, DuelSettings, ArcadeRecord):
             with self.subTest(model=model.__name__):
                 self.assertFalse(admin.site.is_registered(model))
                 self.assertEqual(self.client.get(f'/admin/league/{model._meta.model_name}/').status_code, 404)
@@ -157,6 +157,7 @@ class ArcadeControlTests(TestCase):
         self.assertNotContains(response, '/admin/league/doodlerecord/')
         self.assertTrue(DoodleRecord.objects.filter(pk=record.pk, best_score=700).exists())
         self.assertTrue(admin.site.is_registered(DoodleAttempt))
+        self.assertTrue(admin.site.is_registered(MinesweeperAttempt))
 
     def test_future_stage_can_be_assigned_without_switching_or_pausing_live_game(self):
         future = Event.objects.create(name="Future GP", round_number=2, season_year=self.event.season_year,
