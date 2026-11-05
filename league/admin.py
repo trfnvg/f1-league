@@ -5,6 +5,10 @@ from django.contrib.auth.models import User
 import json
 from django.db import transaction
 from django.db.models import DurationField, ExpressionWrapper, F
+from django.core.exceptions import PermissionDenied, ValidationError
+from django.http import Http404, HttpResponseNotAllowed
+from django.shortcuts import redirect
+from django.urls import path, reverse
 from django.template.response import TemplateResponse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -975,9 +979,10 @@ class AttemptStatusFilter(admin.SimpleListFilter):
 
 
 class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
-    """Read-only audit of the existing runs; never change standings here."""
+    """Immutable game proof, with separate audited correction actions."""
     change_list_template = "admin/league/arcade_attempt_log.html"
-    list_display = ("id", "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "competition_label")
+    change_form_template = "admin/league/arcade_attempt_detail.html"
+    list_display = ("id", "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "competition_label", "origin")
     search_fields = ("user__username", "user__first_name", "user__last_name", "user__league_profile__handle")
     search_help_text = "Имя игрока или логин с @ или без него."
     ordering = ("-started_at", "-pk")
@@ -985,6 +990,79 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
     list_per_page = 50
     show_full_result_count = False
     actions = None
+
+    def has_moderation_permission(self, request):
+        return request.user.is_active and request.user.is_staff and request.user.has_perm(f"league.change_{self.model._meta.model_name}")
+
+    def has_manual_permission(self, request):
+        return self.has_moderation_permission(request) and request.user.has_perm(f"league.add_{self.model._meta.model_name}")
+
+    def get_urls(self):
+        name = self.model._meta.model_name
+        return [path("manual/", self.admin_site.admin_view(self.manual_view), name=f"league_{name}_manual"),
+                path("<int:attempt_id>/moderate/", self.admin_site.admin_view(self.moderate_view), name=f"league_{name}_moderate")] + super().get_urls()
+
+    def changelist_view(self, request, extra_context=None):
+        context = dict(extra_context or {})
+        if self.has_manual_permission(request):
+            context["manual_url"] = reverse(f"admin:league_{self.model._meta.model_name}_manual")
+        return super().changelist_view(request, extra_context=context)
+
+    def changeform_view(self, request, object_id=None, form_url="", extra_context=None):
+        context = dict(extra_context or {})
+        if object_id and self.has_moderation_permission(request):
+            obj = self.get_object(request, object_id)
+            if obj:
+                context.update(moderation_url=reverse(f"admin:league_{self.model._meta.model_name}_moderate", args=[obj.pk]),
+                    moderation_label="Вернуть в зачёт" if obj.is_excluded else "Исключить из зачёта")
+        return super().changeform_view(request, object_id, form_url, context)
+
+    def manual_view(self, request):
+        from .arcade_admin_forms import ManualAttemptForm
+        from .arcade_moderation import create_manual
+        if not self.has_manual_permission(request):
+            raise PermissionDenied
+        if request.method not in ("GET", "POST"):
+            return HttpResponseNotAllowed(["GET", "POST"])
+        form = ManualAttemptForm(request.POST if request.method == "POST" else None, model=self.model)
+        if request.method == "POST" and form.is_valid():
+            try:
+                obj = create_manual(actor=request.user, model=self.model, **form.cleaned_data)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                self.message_user(request, "Ручная попытка добавлена. Рейтинги обновлены.")
+                return redirect(f"admin:league_{self.model._meta.model_name}_change", obj.pk)
+        return self.management_page(request, form, "Добавить попытку вручную", "Добавить в зачёт")
+
+    def moderate_view(self, request, attempt_id):
+        from .arcade_admin_forms import ModerateAttemptForm
+        from .arcade_moderation import set_excluded
+        if not self.has_moderation_permission(request):
+            raise PermissionDenied
+        if request.method not in ("GET", "POST"):
+            return HttpResponseNotAllowed(["GET", "POST"])
+        obj = self.get_object(request, str(attempt_id))
+        if obj is None:
+            raise Http404
+        form = ModerateAttemptForm(request.POST if request.method == "POST" else None,
+            initial={"excluded":"0" if obj.is_excluded else "1"})
+        title = "Вернуть попытку в зачёт" if obj.is_excluded else "Исключить попытку из зачёта"
+        if request.method == "POST" and form.is_valid():
+            try:
+                set_excluded(actor=request.user, model=self.model, attempt_id=obj.pk, **form.cleaned_data)
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                self.message_user(request, "Статус попытки изменён. Рейтинги обновлены.")
+                return redirect(f"admin:league_{self.model._meta.model_name}_change", obj.pk)
+        return self.management_page(request, form, title, "Подтвердить", obj)
+
+    def management_page(self, request, form, title, submit_label, obj=None):
+        return TemplateResponse(request, "admin/league/arcade_attempt_manage.html", {
+            **self.admin_site.each_context(request), "opts":self.model._meta, "form":form,
+            "title":title, "submit_label":submit_label, "attempt":obj,
+            "back_url":reverse(f"admin:league_{self.model._meta.model_name}_changelist")})
 
     def get_queryset(self, request):
         related = ["user", "user__league_profile"]
@@ -995,7 +1073,7 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
             server_duration=ExpressionWrapper(F("finished_at") - F("started_at"), output_field=DurationField()))
 
     def get_list_filter(self, request):
-        return (AttemptStatusFilter, "started_at", "week_start" if self.model is MinesweeperAttempt else "competition__event")
+        return (AttemptStatusFilter, "is_excluded", "is_manual", "started_at", "week_start" if self.model is MinesweeperAttempt else "competition__event")
 
     def get_readonly_fields(self, request, obj=None):
         return tuple(field.name for field in self.model._meta.fields) + (
@@ -1006,6 +1084,7 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
             ("Попытка", {"fields": ("id", "player", "run_result", "run_status", "competition_label")}),
             ("Время", {"fields": ("start_time", "end_time", "wall_duration", "active_duration"),
                 "description": "Серверная длительность включает паузы и ожидание отправки результата. Игровое время доступно только там, где оно сохраняется отдельно."}),
+            ("Корректировки", {"fields": ("is_manual", "is_excluded", "moderation_note", "moderated_by", "moderated_at")}),
             ("Технические данные", {"classes": ("collapse",), "fields": tuple(
                 field.name for field in self.model._meta.fields if field.name != "id")}),
         )
@@ -1024,6 +1103,8 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
 
     @admin.display(description="Статус")
     def run_status(self, obj):
+        if obj.is_excluded:
+            return "Исключена из зачёта"
         if obj.finished_at is None:
             return "Не завершена"
         if isinstance(obj, MinesweeperAttempt):
@@ -1046,11 +1127,15 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
 
     @admin.display(description="Игровое время")
     def active_duration(self, obj):
-        if isinstance(obj, TetrisAttempt) and obj.score is not None and obj.finished_at:
+        if isinstance(obj, TetrisAttempt) and not obj.is_manual and obj.score is not None and obj.finished_at:
             return attempt_duration(obj.ticks * 1000 / 60)
         if isinstance(obj, MinesweeperAttempt) and obj.completed:
             return attempt_duration(obj.elapsed_ms)
         return "—"
+
+    @admin.display(description="Источник", ordering="is_manual")
+    def origin(self, obj):
+        return "Добавлена администратором" if obj.is_manual else "Игра игрока"
 
     @admin.display(description="Зачёт")
     def competition_label(self, obj):

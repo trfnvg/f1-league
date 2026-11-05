@@ -1,0 +1,8 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<p><a href="{{ back_url }}">← Журнал попыток · {{ opts.verbose_name_plural }}</a></p>
+{% if attempt %}<p><strong>Попытка №{{ attempt.pk }}</strong> · {{ attempt.user|player_name }} · начало {{ attempt.started_at|date:'d.m.Y H:i:s' }}</p>{% endif %}
+<p>Изменение обновит глобальный рейтинг и зачёт этапа, в том числе зафиксированную таблицу. Исходные попытки не удаляются. Причина и администратор сохраняются в истории.</p>
+<p>Смена победителя этапа с уже выданным колесом или трофеем заблокирована: для неё нужна отдельная корректировка наград. Время указывается в часовом поясе сайта (МСК).</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}<div class="submit-row"><input type="submit" value="{{ submit_label }}"></div></form>
+{% endblock %}

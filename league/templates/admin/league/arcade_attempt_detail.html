@@ -1,0 +1,2 @@
+{% extends 'admin/change_form.html' %}
+{% block object-tools-items %}{{ block.super }}{% if moderation_url %}<li><a href="{{ moderation_url }}">{{ moderation_label }}</a></li>{% endif %}{% endblock %}

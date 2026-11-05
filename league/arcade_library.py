@@ -72,7 +72,7 @@ def contest_rows(contest):
     if not contest.opened_at:
         return [], 0
     Attempt, _ = models_for(contest.game_key)
-    attempts = Attempt.objects.filter(competition=contest, user__is_staff=False,
+    attempts = Attempt.objects.filter(competition=contest, user__is_staff=False, is_excluded=False,
         started_at__gte=contest.opened_at, started_at__lt=contest.event.deadline)
     counts = dict(attempts.values("user_id").annotate(count=Count("pk")).values_list("user_id", "count"))
     rows, seen = [], set()
@@ -275,7 +275,7 @@ def attempt_finish(request, game_key="flappy"):
     attempt.finished_at, attempt.score = now, score
     attempt.save(update_fields=("finished_at", "score"))
     record, _ = Record.objects.select_for_update().get_or_create(user=request.user)
-    if score > record.best_score:
+    if not attempt.is_excluded and score > record.best_score:
         record.best_score = score
         record.save(update_fields=("best_score", "updated_at"))
     return JsonResponse(board(request.user, game_key))

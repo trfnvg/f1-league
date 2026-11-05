@@ -77,7 +77,7 @@ def finish(request):
     attempt.finished_at = timezone.now()
     attempt.save(update_fields=("score", "ticks", "replay", "finished_at"))
     record = TetrisRecord.objects.select_for_update().get(user=request.user)
-    if score > record.best_score:
+    if not attempt.is_excluded and score > record.best_score:
         record.best_score = score
         record.save(update_fields=("best_score", "updated_at"))
     return JsonResponse(library.board(request.user, "tetris"))

@@ -1438,7 +1438,19 @@ class TelegramBotState(models.Model):
         return f"Telegram bot state: {self.key}"
 
 
-class ArcadeAttempt(models.Model):
+class ArcadeAttemptAudit(models.Model):
+    is_excluded = models.BooleanField("Исключена из зачёта", default=False, db_default=False, editable=False)
+    is_manual = models.BooleanField("Добавлена администратором", default=False, db_default=False, editable=False)
+    moderation_note = models.TextField("Причина изменения", blank=True, default="", db_default="", editable=False)
+    moderated_by = models.ForeignKey(User, verbose_name="Администратор", null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="+", editable=False)
+    moderated_at = models.DateTimeField("Время изменения", null=True, blank=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class ArcadeAttempt(ArcadeAttemptAudit):
     competition = models.ForeignKey("ArcadeCompetition", null=True, blank=True, on_delete=models.SET_NULL, related_name="flappy_attempts")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="arcade_attempts")
     started_at = models.DateTimeField(auto_now_add=True)
@@ -1456,7 +1468,7 @@ class ArcadeAttempt(models.Model):
         return f"{self.user} — arcade run {self.pk}"
 
 
-class DoodleAttempt(models.Model):
+class DoodleAttempt(ArcadeAttemptAudit):
     competition = models.ForeignKey("ArcadeCompetition", null=True, blank=True, on_delete=models.SET_NULL, related_name="doodle_attempts")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="doodle_attempts")
     started_at = models.DateTimeField(auto_now_add=True)
@@ -1474,7 +1486,16 @@ class DoodleAttempt(models.Model):
         return f"{self.user} — Doodle GP run {self.pk}"
 
 
-class DoodleRecord(models.Model):
+class ArcadeRecordAudit(models.Model):
+    moderation_baseline_score = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderation_baseline_attempts = models.PositiveIntegerField(null=True, blank=True, editable=False)
+    moderation_baseline_at = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class DoodleRecord(ArcadeRecordAudit):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="doodle_record")
     best_score = models.PositiveIntegerField(default=0)
     total_attempts = models.PositiveIntegerField(default=0)
@@ -1489,7 +1510,7 @@ class DoodleRecord(models.Model):
         return f"{self.user}: {self.best_score}"
 
 
-class ArcadeRecord(models.Model):
+class ArcadeRecord(ArcadeRecordAudit):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="arcade_record")
     best_score = models.PositiveIntegerField(default=0)
     total_attempts = models.PositiveIntegerField(default=0)
@@ -1674,7 +1695,7 @@ class ArcadeCompetition(models.Model):
         ordering = ("-event__deadline",)
 
 
-class TetrisAttempt(models.Model):
+class TetrisAttempt(ArcadeAttemptAudit):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="tetris_attempts")
     competition = models.ForeignKey(ArcadeCompetition, null=True, blank=True,
         on_delete=models.SET_NULL, related_name="tetris_attempts")
@@ -1693,7 +1714,7 @@ class TetrisAttempt(models.Model):
         verbose_name_plural = "Попытки аркады · Pit Stack"
 
 
-class TetrisRecord(models.Model):
+class TetrisRecord(ArcadeRecordAudit):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="tetris_record")
     best_score = models.PositiveIntegerField(default=0)
     total_attempts = models.PositiveIntegerField(default=0)
@@ -1703,7 +1724,7 @@ class TetrisRecord(models.Model):
         ordering = ("-best_score", "updated_at", "user__username")
 
 
-class MinesweeperAttempt(models.Model):
+class MinesweeperAttempt(ArcadeAttemptAudit):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="minesweeper_attempts")
     week_start = models.DateField("Начало игровой недели", db_index=True)
     started_at = models.DateTimeField("Начало попытки", auto_now_add=True)

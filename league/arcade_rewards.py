@@ -100,6 +100,7 @@ def best_event_arcade_attempt(
     window_start = opened_at or event.deadline - WHEEL_WINDOW
     eligible_users = Prediction.objects.filter(event=event).values("user_id")
     eligible = {
+        "is_excluded": False,
         "user_id__in": eligible_users,
         "user__is_active": True,
         "user__is_staff": False,
@@ -145,6 +146,7 @@ def event_arcade_attempts(event, *, through=None, opened_at=None):
     eligible_users = Prediction.objects.filter(event=event).values("user_id")
     return (
         ArcadeAttempt.objects.filter(
+            is_excluded=False,
             user_id__in=eligible_users,
             user__is_active=True,
             user__is_staff=False,
@@ -227,7 +229,7 @@ def closed_event_arcade_leaderboard(event, user=None, *, opened_at=None):
     )
     missing_record_user_ids = set(best_by_user) - set(record_counts)
     fallback_counts = {
-        user_id: ArcadeAttempt.objects.filter(user_id=user_id).count()
+        user_id: ArcadeAttempt.objects.filter(user_id=user_id, is_excluded=False).count()
         for user_id in missing_record_user_ids
     }
     rows = [
@@ -282,6 +284,7 @@ def award_event_arcade_trophy(event, now=None, *, opened_at=None):
         ).first()
         if attempts_at_deadline is None:
             attempts_at_deadline = ArcadeAttempt.objects.filter(
+                is_excluded=False,
                 user_id=attempt.user_id,
                 started_at__lte=locked_event.deadline,
             ).count()

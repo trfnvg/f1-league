@@ -290,7 +290,7 @@ def _current_arcade_week_start():
 
 def _minesweeper_leaderboard_data(user, week_start=None):
     week_start = week_start or _current_arcade_week_start()
-    attempts = MinesweeperAttempt.objects.filter(week_start=week_start)
+    attempts = MinesweeperAttempt.objects.filter(week_start=week_start, is_excluded=False)
     records = list(
         attempts.filter(user__is_staff=False).values("user_id", "user__username")
         .annotate(
@@ -695,7 +695,7 @@ def doodle_attempt_finish(request):
         attempt.score = score
         attempt.save(update_fields=("finished_at", "score"))
         record, _ = DoodleRecord.objects.select_for_update().get_or_create(user=request.user)
-        if score > record.best_score:
+        if not attempt.is_excluded and score > record.best_score:
             record.best_score = score
             record.save(update_fields=("best_score", "updated_at"))
     return JsonResponse(_doodle_leaderboard_data(request.user))
@@ -865,7 +865,7 @@ def arcade_run_finish(request):
             .first()
         )
         record, _ = ArcadeRecord.objects.select_for_update().get_or_create(user=request.user)
-        is_record = score > record.best_score
+        is_record = not attempt.is_excluded and score > record.best_score
         if is_record:
             record.best_score = score
             record.save(update_fields=("best_score", "updated_at"))
