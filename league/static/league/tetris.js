@@ -268,7 +268,7 @@
     byId('overlay-text').textContent = 'Следи за следующей фигурой.';
     overlay.hidden = false; renderedRevision=-1; schedule();
     startTimer = setTimeout(() => {
-      countdown=false; startButton.disabled=false; game.start();
+      countdown=false; startButton.disabled=false; game.start();session.startVideo?.();
       if (launchButton) launchButton.disabled=false;
       overlay.hidden=true; lastTime=0;
       canvas.focus({preventScroll:true}); schedule();

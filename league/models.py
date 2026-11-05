@@ -1746,6 +1746,40 @@ class MinesweeperAttempt(ArcadeAttemptAudit):
         return f"{self.user} · {self.week_start} · {result}"
 
 
+class ArcadeBestVideo(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="arcade_best_videos")
+    game_key = models.CharField("Игра", max_length=24, choices=ArcadeSettings.Game.choices)
+    attempt_id = models.PositiveBigIntegerField("Номер попытки")
+    score = models.PositiveIntegerField("Очки")
+    video = models.FileField("Видеозапись", upload_to="arcade-videos/")
+    duration_ms = models.PositiveIntegerField("Длительность, мс")
+    size = models.PositiveBigIntegerField("Размер, байт")
+    updated_at = models.DateTimeField("Обновлено", auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("user", "game_key"), name="unique_best_arcade_video")]
+        verbose_name = "Видео рекорда аркады"
+        verbose_name_plural = "Видео рекордов аркад"
+
+
+class ArcadeVideoUpload(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    game_key = models.CharField(max_length=24)
+    attempt_id = models.PositiveBigIntegerField()
+    file_name = models.CharField(max_length=255)
+    upload_id = models.TextField()
+    mime = models.CharField(max_length=40)
+    size = models.PositiveBigIntegerField()
+    duration_ms = models.PositiveIntegerField()
+    received = models.PositiveBigIntegerField(default=0)
+    parts = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    completed_at = models.DateTimeField(null=True)
+    aborted_at = models.DateTimeField(null=True)
+    delete_pending = models.CharField(max_length=255, blank=True)
+
+
 class AuthRateBucket(models.Model):
     """Shared, expiring counters; keys contain no raw login, email or IP."""
 

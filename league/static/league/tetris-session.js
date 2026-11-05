@@ -40,6 +40,7 @@
       this.inputs=[];this.ticks=0;this.accumulator=0;this.pending=null;this.saving=null;this.ended=false;
       this.maxTicks=864000;this.maxInputs=30000;
       this.lastInputTick=-1;this.commandsAtTick=0;
+      this.videoRecorder=this.enabled?window.ArcadeVideo?.create(byId('canvas'),'Pit Stack',byId('score')):null;
     }
     async begin() {
       if(this.saving)await this.saving;
@@ -54,6 +55,7 @@
       this.lastInputTick=-1;this.commandsAtTick=0;
       status('');return window.PitStack.createRandom(data.seed);
     }
+    startVideo() {this.video=this.videoRecorder?.begin();}
     record(action,game) {
       if(!this.enabled)return true;
       if(this.inputs.length>=this.maxInputs){game.finish();return false;}
@@ -74,6 +76,7 @@
     finish() {
       if(this.ended)return;this.ended=true;
       if(!this.enabled)return;
+      this.pendingVideo=this.video;this.pendingVideo?.stop();
       this.pending={attempt_id:this.attemptId,rules_version:this.version,ticks:this.ticks,inputs:this.inputs};
       this.save();
     }
@@ -82,8 +85,8 @@
       if(!this.pending)return;
       status('Проверяем и сохраняем результат…');
       this.saving=(async()=>{
-        try {const data=await post(this.element.dataset.finishUrl,this.pending);this.pending=null;paintBoard(data);status('Результат сохранён.');}
-        catch(error){if([400,409].includes(error.status))this.pending=null;status(error.message);}
+        try {const id=this.pending.attempt_id;const data=await post(this.element.dataset.finishUrl,this.pending);this.pending=null;paintBoard(data);status('Результат сохранён.');void this.pendingVideo?.upload(id);this.pendingVideo=null;}
+        catch(error){if([400,409].includes(error.status)){this.pending=null;void this.pendingVideo?.discard();this.pendingVideo=null;}status(error.message);}
         finally {this.saving=null;const retry=byId('retry-save');if(retry)retry.hidden=!this.pending;}
       })();
       return this.saving;

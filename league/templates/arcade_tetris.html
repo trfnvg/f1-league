@@ -87,12 +87,13 @@
 </main>
 {% endblock %}
 {% block extra_scripts %}
+{% include 'arcade_video_assets.html' %}
 <script src="{% static 'league/tetris-engine.js' %}?v=public-release-v18" defer></script>
-<script src="{% static 'league/tetris-session.js' %}?v=2-table-only" defer></script>
+<script src="{% static 'league/tetris-session.js' %}?v=3-video" defer></script>
 <script src="{% static 'league/tetris-gestures.js' %}?v=pit-stack-gp-art-v5" defer></script>
 <script src="{% static 'league/tetris-scenery.js' %}?v=pit-stack-stable-start-v6" defer></script>
 <script src="{% static 'league/tetris-audio.js' %}?v=continuous-audio-v11" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
-<script src="{% static 'league/tetris.js' %}?v=restart-key-v24" defer></script>
+<script src="{% static 'league/tetris.js' %}?v=video-v25" defer></script>
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 const source=await fs.readFile(new URL('../league/static/league/tetris-session.js',import.meta.url),'utf8');
 const engine=await fs.readFile(new URL('../league/static/league/tetris-engine.js',import.meta.url),'utf8');
-function fixture(enabled=true) {
+function fixture(enabled=true,videoRecorder=null) {
   const calls=[];let offline=false,start=0;
   const scope={window:{},document:{getElementById:()=>null,querySelector:()=>({value:'csrf-test'})},
     setTimeout,clearTimeout,AbortController,fetch:async(url,options)=>{
@@ -11,9 +11,21 @@ function fixture(enabled=true) {
       if(offline)throw Error('offline');
       return {ok:true,json:async()=>url==='start'?{attempt_id:++start,seed:19,rules_version:1,max_ticks:864000,max_inputs:30000}:{records:[]}};
     }};
+  if(videoRecorder)scope.window.ArcadeVideo={create:()=>videoRecorder};
   vm.runInNewContext(engine,scope);vm.runInNewContext(source,scope);
   const run=new scope.window.PitStackSession({dataset:{saveResults:String(enabled),startUrl:'start',finishUrl:'finish'}});
   return {run,Game:scope.window.PitStack.Game,calls,set offline(value){offline=value;}};
+}
+{
+  const events=[];
+  const clip={stop:()=>events.push('stop'),upload:id=>events.push(['upload',id]),discard:()=>events.push('discard')};
+  const f=fixture(true,{begin:()=>{events.push('begin');return clip;}});
+  const game=new f.Game(await f.run.begin());
+  assert.equal(events.length,0,'Video does not include the seed request or an old board');
+  game.start();f.run.startVideo();f.run.finish();await f.run.saving;
+  assert.deepEqual(events,['begin','stop',['upload',1]],'Video is stopped at game end and uploaded only after the result response');
+  const preview=fixture(false,{begin:()=>{throw Error('Practice must not record');}});
+  await preview.run.begin();preview.run.startVideo();preview.run.finish();
 }
 {
   const f=fixture();const game=new f.Game(await f.run.begin());game.start();

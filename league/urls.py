@@ -8,10 +8,14 @@ from . import driver_profiles
 from . import auth_views
 from . import score_details
 from . import race_calendar
+from . import arcade_video
 
 app_name = "league"
 
 urlpatterns = [
+    path("arcade/video/init/", arcade_video.initialize, name="arcade_video_init"),
+    path("arcade/video/<uuid:upload_id>/part/", arcade_video.part, name="arcade_video_part"),
+    path("arcade/video/<uuid:upload_id>/complete/", arcade_video.complete, name="arcade_video_complete"),
     path("calendar/", race_calendar.calendar, name="calendar"),
     # Retired result-card URLs redirect to the explanation after its access checks.
     path("events/<int:event_id>/scores/<int:user_id>/recap/", score_details.detail, {"recap": True}, name="race_recap"),

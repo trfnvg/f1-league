@@ -44,6 +44,7 @@ from .models import (
     ArcadeAttempt,
     TetrisAttempt,
     MinesweeperAttempt,
+    ArcadeBestVideo,
 )
 from .scoring import (
     calculate_season_scores,
@@ -1077,7 +1078,7 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return tuple(field.name for field in self.model._meta.fields) + (
-            "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "active_duration", "competition_label")
+            "player", "run_result", "run_status", "start_time", "end_time", "wall_duration", "active_duration", "competition_label", "attempt_video")
 
     def get_fieldsets(self, request, obj=None):
         return (
@@ -1085,6 +1086,7 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
             ("Время", {"fields": ("start_time", "end_time", "wall_duration", "active_duration"),
                 "description": "Серверная длительность включает паузы и ожидание отправки результата. Игровое время доступно только там, где оно сохраняется отдельно."}),
             ("Корректировки", {"fields": ("is_manual", "is_excluded", "moderation_note", "moderated_by", "moderated_at")}),
+            ("Видео попытки", {"fields": ("attempt_video",)}),
             ("Технические данные", {"classes": ("collapse",), "fields": tuple(
                 field.name for field in self.model._meta.fields if field.name != "id")}),
         )
@@ -1137,6 +1139,12 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
     def origin(self, obj):
         return "Добавлена администратором" if obj.is_manual else "Игра игрока"
 
+    @admin.display(description="Видеозапись")
+    def attempt_video(self, obj):
+        from .arcade_moderation import GAME_MODELS
+        return video_player(ArcadeBestVideo.objects.filter(user_id=obj.user_id,
+            game_key=GAME_MODELS[self.model], attempt_id=obj.pk).first())
+
     @admin.display(description="Зачёт")
     def competition_label(self, obj):
         if isinstance(obj, MinesweeperAttempt):
@@ -1157,6 +1165,40 @@ class ArcadeAttemptLogAdmin(HandleSearchMixin, admin.ModelAdmin):
 
 
 admin.site.register((ArcadeAttempt, DoodleAttempt, TetrisAttempt, MinesweeperAttempt), ArcadeAttemptLogAdmin)
+
+
+@admin.register(ArcadeBestVideo)
+class ArcadeBestVideoAdmin(HandleSearchMixin, admin.ModelAdmin):
+    list_display = ("user", "game_key", "score", "attempt_id", "duration", "updated_at")
+    list_filter = ("game_key", "updated_at")
+    search_fields = ("user__username", "user__first_name", "user__last_name", "user__league_profile__handle")
+    list_select_related = ("user",)
+    readonly_fields = ("user", "game_key", "score", "attempt_id", "duration", "size", "updated_at", "player")
+    fields = readonly_fields
+    ordering = ("-updated_at",)
+
+    @admin.display(description="Видео")
+    def player(self, obj):
+        return video_player(obj)
+
+    @admin.display(description="Длительность")
+    def duration(self, obj):
+        return attempt_duration(obj.duration_ms)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+def video_player(video):
+    if not video or not video.video:
+        return "Видео не сохранено: старая попытка, ручной результат или браузер не завершил запись/загрузку."
+    return format_html('<video controls preload="metadata" playsinline style="max-width:100%;width:560px;max-height:75vh" src="{}"></video><p><a href="{}" target="_blank" rel="noopener">Открыть видео по прямой ссылке</a></p>', video.video.url, video.video.url)
 
 
 @admin.register(ArcadeTrophyAward)

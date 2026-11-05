@@ -26,6 +26,8 @@
     return image;
   });
   const isAuthenticated = canvas.dataset.authenticated === "true";
+  const videoRecorder=isAuthenticated?window.ArcadeVideo?.create(canvas,'Pit Lane Flight',scoreOutput):null;
+  let videoRun=null;
   const closeAt = Date.parse(canvas.dataset.closeAt || "");
   const closeEventName = canvas.dataset.closeEvent || "этапа";
   const board = document.getElementById("arcade-leaderboard-list");
@@ -74,6 +76,8 @@
     if (deadlineClosed) return;
     deadlineClosed = true;
     state = "closed";
+    void videoRun?.discard();videoRun=null;
+    for(const pending of pendingRunScores.values())void pending.video?.discard();
     attemptId = null;
     runSequence += 1;
     pendingRunScores.clear();
@@ -88,7 +92,7 @@
     window.clearTimeout(deadlineCloseTimer);
     window.clearInterval(leaderboardTimer);
     if (animationFrame) window.cancelAnimationFrame(animationFrame);
-    draw(performance.now());
+    if(videoRecorder)draw(performance.now());
     void refreshLeaderboard(true);
   }
 
@@ -193,6 +197,8 @@
     carVelocity = FLAP_VELOCITY;
     obstacles = [];
     syncScores();
+    draw(performance.now());
+    const thisVideo=videoRecorder?.begin();videoRun=thisVideo;
     canvas.focus({ preventScroll: true });
     overlayTimer = window.setTimeout(() => {
       overlay.hidden = true;
@@ -215,17 +221,19 @@
           const completedScore = pendingRunScores.get(thisRun);
           if (completedScore !== undefined) {
             pendingRunScores.delete(thisRun);
-            if (completedScore > 0) submitResult(startedAttemptId, completedScore);
+            if (completedScore.score > 0) submitResult(startedAttemptId, completedScore.score, completedScore.video);
           } else if (thisRun === runSequence && state === "playing") {
             attemptId = startedAttemptId;
           }
         } else if (response.status === 410) {
           closeGameAtDeadline();
         } else if (boardStatus && (thisRun === runSequence || pendingRunScores.has(thisRun))) {
+          void thisVideo?.discard();
           pendingRunScores.delete(thisRun);
           boardStatus.textContent = "Заезд можно пройти, но сейчас он не сохранится в таблице.";
         }
       } catch (_) {
+        void thisVideo?.discard();
         // Let players continue even if the leaderboard service is temporarily unavailable.
         const hadPendingScore = pendingRunScores.has(thisRun);
         pendingRunScores.delete(thisRun);
@@ -239,6 +247,7 @@
   function endGame() {
     if (state !== "playing") return;
     state = "gameover";
+    const finishedVideo=videoRun;finishedVideo?.stop();videoRun=null;
     overlay.classList.add("is-gameover");
     if (bananaSpeech) {
       bananaSpeech.hidden = false;
@@ -257,8 +266,10 @@
       overlayCopy.textContent = `Пройдено ворот: ${score}.`;
     }
     if (score > 0) {
-      if (attemptId) submitResult(attemptId, score);
-      else if (isAuthenticated) pendingRunScores.set(runSequence, score);
+      if (attemptId) submitResult(attemptId, score, finishedVideo);
+      else if (isAuthenticated) pendingRunScores.set(runSequence, {score,video:finishedVideo});
+    } else {
+      void finishedVideo?.discard();
     }
     attemptId = null;
     startButton.innerHTML = 'Ещё круг <span aria-hidden="true">↻</span>';
@@ -338,7 +349,7 @@
     }
   }
 
-  async function submitResult(runId, runScore) {
+  async function submitResult(runId, runScore, video=null) {
     if (boardStatus) boardStatus.textContent = "Проверяем результат заезда…";
     try {
       const response = await fetch(canvas.dataset.finishUrl, {
@@ -354,6 +365,7 @@
       const result = await response.json();
       if (response.status === 410) closeGameAtDeadline();
       if (!response.ok) throw new Error(result.error || "Не удалось сохранить рекорд.");
+      void video?.upload(runId);
       best = result.record;
       saveRecord(best);
       canvas.dataset.record = String(best);
@@ -364,6 +376,7 @@
         ? `Новый рекорд сохранён · место ${result.rank}`
         : `Твоё место в таблице: ${result.rank}`;
     } catch (error) {
+      void video?.discard();
       if (isAuthenticated) {
         best = Number(canvas.dataset.record || 0);
         syncScores();

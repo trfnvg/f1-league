@@ -168,6 +168,10 @@
   let attemptId = null;
   let scoreSubmitted = false;
   let pendingFinish = false;
+  const videoRecorder=window.ArcadeVideo?.create(canvas,'Cowboy GP',scoreNode);
+  let videoRun=null, finishedVideo=null;
+  let attemptSequence=0;
+  let videoSession=null;
 
   bestNode.textContent = String(best);
   startButton.disabled = true;
@@ -2411,6 +2415,8 @@
   }
 
   function buildGame() {
+    void videoRun?.discard();videoRun=null;
+    attemptSequence++;videoSession=null;
     endless=null;endlessFadeCanvas=null;
     bathBoss = null; bathBossCleared = false;
     summitCommentator = null; summitCommentatorNextY = 0;
@@ -2684,11 +2690,22 @@
   function registerAttempt() {
     if (adminSandbox || adminBossTestMode) return;
     if (!canvas.dataset.startUrl || !csrfToken) return;
+    const sequence=++attemptSequence;
+    videoRun=videoRecorder?.begin();finishedVideo=null;
+    const session={video:videoRun,score:null};videoSession=session;
     postJSON(canvas.dataset.startUrl).then((data) => {
+      if(sequence!==attemptSequence) {
+        if(session.score!==null && data.attempt_id) {
+          return postJSON(canvas.dataset.finishUrl,{attempt_id:data.attempt_id,score:session.score})
+            .then(result=>{applyLeaderboard(result);void session.video?.upload(data.attempt_id);});
+        }
+        return;
+      }
       attemptId = data.attempt_id || null;
       applyLeaderboard(data);
       if (pendingFinish) submitScore();
     }).catch(() => {
+      void session.video?.discard();
       // Guests can still play locally; only authenticated runs are ranked.
     });
   }
@@ -2702,9 +2719,10 @@
     }
     pendingFinish = false;
     scoreSubmitted = true;
-    postJSON(canvas.dataset.finishUrl, { attempt_id: attemptId, score: finalScore })
-      .then(applyLeaderboard)
-      .catch(() => { scoreSubmitted = false; });
+    const savedVideo=finishedVideo, savedAttempt=attemptId, sequence=attemptSequence;
+    postJSON(canvas.dataset.finishUrl, { attempt_id: savedAttempt, score: finalScore })
+      .then(data=>{applyLeaderboard(data);void savedVideo?.upload(savedAttempt);})
+      .catch(() => { if(sequence===attemptSequence)scoreSubmitted = false;void savedVideo?.discard(); });
   }
 
   function finishIntro() {
@@ -2961,9 +2979,11 @@
   function endGame() {
     if (mode !== "running") return;
     mode = "over";
+    finishedVideo=videoRun;finishedVideo?.stop();videoRun=null;
     somersault = null;
     const heightPoints = Math.max(0, Math.floor((peakY - startY) / 11));
     finalScore = heightPoints + frags * 30 + marshalBonus + bossBonus;
+    if(videoSession)videoSession.score=finalScore;
     lastWasRecord = !adminBossTestMode && finalScore > best;
     if (!adminSandbox && !adminBossTestMode && finalScore > best) {
       best = finalScore;

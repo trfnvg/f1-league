@@ -1,0 +1,8 @@
+{% load static %}{% if arcade_video_config %}
+<div id="arcade-video-notice">
+<p style="color:#9eacbd;font-size:12px;line-height:1.6" role="status" id="arcade-video-status">Игровое поле записывается автоматически. Видео личного рекорда сохраняется и доступно по прямой ссылке. Камера и микрофон не используются.</p>
+<button type="button" id="arcade-video-retry" hidden>Повторить загрузку видео</button>
+</div>
+{{ arcade_video_config|json_script:'arcade-video-config' }}
+<script src="{% static 'league/arcade-video.js' %}?v=1" defer></script>
+{% endif %}

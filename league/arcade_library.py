@@ -173,7 +173,8 @@ def game(request, game_key):
         contest = freeze(contest)
     data = board(request.user, game_key)
     admin_test = request.user.is_staff and request.GET.get("admin_test") == "1"
-    context = {"game": GAMES[game_key], "arcade_game_key": game_key,
+    from .arcade_video import config as video_config
+    context = {"arcade_video_config":video_config(request, game_key, admin_test), "game": GAMES[game_key], "arcade_game_key": game_key,
         "arcade_scoring_open": request.user.is_staff or play_is_open(game_key, settings, contest),
         "arcade_admin_preview": admin_test, "arcade_test_mode": admin_test, "arcade_library_mode": True,
         "arcade_settings_admin_url": reverse("league:arcade_control"), "leaderboard_title": data["board_title"],
