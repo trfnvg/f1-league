@@ -17,6 +17,21 @@ and starts Gunicorn on Render's `PORT`. It logs each startup phase and sends
 Gunicorn access/error logs to the service log stream. An error stops startup
 before serving a partially initialized release.
 
+Gunicorn configuration is in `config/gunicorn.conf.py`. On a one-core instance,
+the defaults are one `gthread` worker and four request threads: Django is loaded
+once, and two slow I/O requests do not occupy every request slot. Threads do not
+make CPU-bound Python code faster and cannot guarantee health checks under full
+saturation. `GUNICORN_WORKERS` (1–8) and `GUNICORN_THREADS` (1–16) can override these
+defaults after measuring CPU, RAM and database connection capacity. No new
+environment variables are required for deployment.
+
+Worker heartbeat files use `/dev/shm` when available to avoid overlay filesystem
+stalls. Logs include worker initialization/ready messages with elapsed time. If
+initialization takes over 45 seconds, a stack dump identifies code locations
+without printing frame locals or environment variables. A worker timeout also
+prints thread locations. These diagnostics distinguish import/startup stalls
+from slow requests; a SIGKILL message alone does not prove an out-of-memory kill.
+
 If a deploy fails, inspect the **failed deployment's** build and runtime logs,
 not the logs of the older still-running release. A Git push confirms repository
 publication only; it does not confirm that Render promoted the new release.
