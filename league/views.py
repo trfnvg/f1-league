@@ -31,6 +31,7 @@ from .duels import (
 from .forms import AvatarUploadForm, DuelChallengeForm, PredictionForm, RegisterForm, SeasonPredictionForm
 from .driver_profiles import picker_profiles
 from .prediction_summary import forecast_summary
+from .scoring import SEASON_SCORING_WEIGHTS
 from .models import (
     DRIVER_CHOICES,
     ArcadeAttempt,
@@ -2051,11 +2052,25 @@ def player_profile(request, user_id: int):
 
     season_cards = []
     for prediction in season_predictions:
+        result = season_result_map.get(prediction.season_year)
+        answers = []
+        for field, (label, points) in SEASON_SCORING_WEIGHTS.items():
+            display = getattr(prediction, f"get_{field}_display", None)
+            actual = getattr(result, field, None)
+            actual_display = getattr(result, f"get_{field}_display", None)
+            answers.append({
+                "label": label,
+                "points": points,
+                "value": display() if display else getattr(prediction, field),
+                "fact": (actual_display() if actual_display else actual)
+                    if actual is not None and actual != "" else None,
+            })
         season_cards.append(
             {
                 "prediction": prediction,
                 "score": season_score_map.get(prediction.season_year),
                 "result": season_result_map.get(prediction.season_year),
+                "answers": answers,
             }
         )
 

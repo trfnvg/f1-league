@@ -8,8 +8,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .leagues import create_league
-from .models import Event, Prediction, Season, SeasonPrediction, UserProfile
+from .models import Event, Prediction, Season, SeasonPrediction, SeasonResult, UserProfile
 from .prediction_submission import save_shared_prediction
+from .scoring import SEASON_SCORING_WEIGHTS
 
 
 @override_settings(STORAGES={
@@ -100,7 +101,27 @@ class RaceNavigationTests(TestCase):
         own = self.client.get(url)
         self.assertContains(own, 'id="season-predictions"')
         self.assertEqual(len(own.context["season_cards"]), 1)
+        answers = own.context["season_cards"][0]["answers"]
+        self.assertEqual(len(answers), len(SEASON_SCORING_WEIGHTS))
+        for answer, (label, points) in zip(answers, SEASON_SCORING_WEIGHTS.values()):
+            self.assertEqual((answer["label"], answer["points"]), (label, points))
+            self.assertContains(own, f"{points} баллов за верный прогноз")
+        self.assertEqual(answers[3]["value"], own.context["season_cards"][0]["prediction"].get_world_drivers_champion_display())
+        self.assertIsNone(answers[3]["fact"])
         self.client.force_login(User.objects.create_user("visitor"))
         other = self.client.get(url)
         self.assertTrue(other.context["season_prediction_hidden"])
         self.assertEqual(other.context["season_cards"], [])
+
+    def test_profile_season_rewards_preserve_answers_and_partial_facts(self):
+        prediction = SeasonPrediction.objects.create(user=self.player, season_year=2026,
+            world_drivers_champion="russell", hadjar_best_finish=4)
+        result = SeasonResult.objects.create(season_year=2026,
+            hungary_driver_championship_leader="norris", hadjar_best_finish=3)
+        response = self.client.get(reverse("league:player_profile", args=[self.player.pk]))
+        answers = response.context["season_cards"][0]["answers"]
+        self.assertEqual(answers[0]["fact"], result.get_hungary_driver_championship_leader_display())
+        self.assertEqual((answers[2]["value"], answers[2]["fact"], answers[2]["points"]), (4, 3, 8))
+        self.assertEqual(answers[3]["value"], prediction.get_world_drivers_champion_display())
+        self.assertIsNone(answers[3]["fact"])
+        self.assertContains(response, "Факт: 3")
