@@ -110,7 +110,7 @@ def run(engine, output):
                 page.on('request', lambda request: writes.append(request.url) if request.method == 'POST' else None)
                 for path in ('/arcade/control/', '/lab-expired/', '/lab-empty/'):
                     page.goto(base + path, wait_until='networkidle')
-                    expect(page.locator('.lab-game-card')).to_have_count(4)
+                    expect(page.locator('.lab-game-card')).to_have_count(5)
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (width, path)
                     assert page.locator('#lab-competition').evaluate('node=>node.open')
                     expect(page.locator('#arcade-game-select')).to_be_visible()
@@ -203,7 +203,7 @@ def run(engine, output):
                         page.locator(f'[data-test-game="{card["key"]}"] a').click()
                         page.wait_for_load_state('networkidle')
                         assert not errors, errors
-                        selector = {'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
+                        selector = {'vegas': '#vegas-machine', 'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
                                     'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-launch-start' if width <= 600 else '#tetris-canvas'}[card['key']]
                         expect(page.locator(selector)).to_be_visible()
                         if card['key'] == 'minesweeper':

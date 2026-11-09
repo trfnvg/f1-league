@@ -15,7 +15,7 @@
   <div class="lab-notice"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4v5c0 5-8 9-8 9s-8-4-8-9V7Z"/><path d="m8 12 3 3 5-6"/></svg><p><strong>Только для администратора.</strong> Тестовые попытки не попадают в рейтинги и не меняют зачёт игроков.</p></div>
 
   <section aria-labelledby="lab-games-title">
-    <div class="lab-section-heading"><h2 id="lab-games-title">Все игры</h2><span>04 / ТЕСТОВЫЙ ЗАПУСК</span></div>
+    <div class="lab-section-heading"><h2 id="lab-games-title">Все игры</h2><span>{{ test_games|length|stringformat:'02d' }} / ТЕСТОВЫЙ ЗАПУСК</span></div>
     <div class="lab-game-grid">
       {% for game in test_games %}
       <article class="lab-game-card" data-test-game="{{ game.key }}">

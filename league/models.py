@@ -1780,6 +1780,18 @@ class ArcadeVideoUpload(models.Model):
     delete_pending = models.CharField(max_length=255, blank=True)
 
 
+class VegasLabWallet(models.Model):
+    """Staff-only sandbox, deliberately unrelated to scores and competitions."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="vegas_lab_wallet")
+    balance = models.PositiveBigIntegerField(default=500000)
+    revision = models.PositiveBigIntegerField(default=0)
+    free_spins = models.PositiveSmallIntegerField(default=0)
+    bonus_bet = models.PositiveIntegerField(default=5000)
+    last_request = models.UUIDField(null=True)
+    last_payload = models.JSONField(default=dict)
+    last_spun_at = models.DateTimeField(null=True)
+
+
 class AuthRateBucket(models.Model):
     """Shared, expiring counters; keys contain no raw login, email or IP."""
 

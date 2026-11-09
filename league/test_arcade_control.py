@@ -33,19 +33,20 @@ class ArcadeControlTests(TestCase):
         self.contest = ArcadeCompetition.objects.create(event=self.event, game_key="doodle_jump",
             opened_at=self.settings.competition_opened_at)
 
-    def test_four_games_share_one_lab_with_separate_publishing_settings(self):
+    def test_five_games_share_one_lab_with_separate_publishing_settings(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "arcade-control.css")
         self.assertContains(response, 'league/arcade-control.js?v=2')
-        self.assertContains(response, 'class="lab-game-card"', count=4)
+        self.assertContains(response, 'class="lab-game-card"', count=5)
         cards = response.context["test_games"]
-        self.assertEqual([card["key"] for card in cards], ["doodle_jump", "flappy", "minesweeper", "tetris"])
+        self.assertEqual([card["key"] for card in cards], ["vegas", "doodle_jump", "flappy", "minesweeper", "tetris"])
         for card in cards:
             self.assertContains(response, f'href="{card["url"]}"')
         self.assertNotContains(response, "flight=1")
         self.assertContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')
+        self.assertNotContains(response, '<option value="vegas"')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-competition" open>')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-wheel">')
         self.assertTrue(response.context["contest_open"])

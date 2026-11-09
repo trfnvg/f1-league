@@ -389,6 +389,9 @@ def control(request):
     selected_key = (selected_assignment.game_key if selected_assignment else
                     settings.active_game if selected_event and settings.competition_event_id == selected_event.pk and not settings.competition_opened_at else "")
     test_games = [
+        {"key": "vegas", "title": "Vegas Pit", "genre": "F1 · мемный слот", "status": "Закрытый прототип",
+         "description": "40 линий, Wild, каскады и бесплатные вращения. Только игровые деньги, без влияния на зачёт.",
+         "cover": "league/images/tetris-gp/las-vegas-retro-v1.webp", "url": reverse("league:vegas_lab")},
         {**GAMES["doodle_jump"], "key": "doodle_jump", "genre": "Doodle Jump", "status": "В библиотеке",
          "url": reverse("league:arcade_game", args=["doodle_jump"]) + "?admin_test=1"},
         {**GAMES["flappy"], "key": "flappy", "genre": "Flappy Bird", "status": "В библиотеке",
