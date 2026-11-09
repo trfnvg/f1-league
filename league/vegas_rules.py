@@ -8,15 +8,15 @@ BETS = (2_500, 5_000, 10_000)
 MAX_TUMBLES = 6
 MAX_FREE_SPINS = 30
 SYMBOLS = (
-    {"key": "tyre", "name": "Прокол", "weight": 18, "pays": (6, 18, 60)},
-    {"key": "duck", "name": "Гоночная утка", "weight": 16, "pays": (6, 20, 70)},
-    {"key": "banana", "name": "Банана-Леклер", "weight": 18, "pays": (8, 25, 90)},
-    {"key": "berry", "name": "Клубничный Макс", "weight": 16, "pays": (8, 25, 90)},
-    {"key": "russell", "name": "Расселл-космонавт", "weight": 12, "pays": (12, 40, 140)},
-    {"key": "toto", "name": "Тото: no, no, no!", "weight": 9, "pays": (18, 60, 200)},
-    {"key": "bath", "name": "БАН БАН БАН", "weight": 6, "pays": (25, 100, 400)},
-    {"key": "wild", "name": "Сейфти-кар · Wild", "weight": 3, "pays": (30, 150, 600)},
-    {"key": "scatter", "name": "Vegas · Scatter", "weight": 2, "pays": ()},
+    {"key": "tyre", "name": "Bono, my tyres!", "weight": 18, "pays": (6, 18, 60)},
+    {"key": "duck", "name": "GP2 Engine", "weight": 16, "pays": (6, 20, 70)},
+    {"key": "banana", "name": "Sbinalla", "weight": 18, "pays": (8, 25, 90)},
+    {"key": "berry", "name": "Smooth Operator", "weight": 16, "pays": (8, 25, 90)},
+    {"key": "russell", "name": "T-Pose Russell", "weight": 12, "pays": (12, 40, 140)},
+    {"key": "toto", "name": "No, Michael, no!", "weight": 9, "pays": (18, 60, 200)},
+    {"key": "bath", "name": "El Plan", "weight": 6, "pays": (25, 100, 400)},
+    {"key": "wild", "name": "Safety Duck · Wild", "weight": 3, "pays": (30, 150, 600)},
+    {"key": "scatter", "name": "Vegas Crown · Scatter", "weight": 2, "pays": ()},
 )
 BY_KEY = {item["key"]: item for item in SYMBOLS}
 STRIP = tuple(item["key"] for item in SYMBOLS for _ in range(item["weight"]))

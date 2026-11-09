@@ -101,7 +101,7 @@ def run(engine, output):
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.on("dialog", lambda dialog: dialog.accept())
                 base = f"http://127.0.0.1:{server.server_port}/arcade/lab/vegas/"
-                for width, height in ((320, 740), (390, 844), (844, 390), (1440, 1050)):
+                for width, height in ((320, 568), (320, 740), (390, 844), (844, 390), (1280, 720), (1440, 1050)):
                     page.set_viewport_size({"width": width, "height": height})
                     page.goto(base)
                     expect(page.locator(".vegas-cell")).to_have_count(20)
@@ -109,12 +109,29 @@ def run(engine, output):
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "overflow")
                     expect(page.locator("#vegas-spin")).to_be_enabled()
                     page.locator("#vegas-fullscreen").click()
+                    page.wait_for_timeout(150)
                     box = page.locator("#vegas-page").bounding_box()
                     assert abs(box["width"]-width) <= 1 and abs(box["height"]-height) <= 1, box
+                    spin = page.locator("#vegas-spin").bounding_box()
+                    assert spin["y"] >= 0 and spin["y"]+spin["height"] <= height, (engine, width, height, spin)
+                    board = page.locator("#vegas-board").bounding_box()
+                    assert abs(board["width"]/board["height"]-1.25) < .01, board
+                    expect(page.locator("#vegas-minus")).to_have_css("min-height", "44px")
+                    if width in (390, 844, 1280):
+                        page.screenshot(path=str(output/f"{engine}-{width}-fullscreen.png"))
+                    if width in (390, 844):
+                        # Synthetic safe-area padding also exercises the viewport fitter.
+                        page.locator("#vegas-page").evaluate("el=>{el.style.padding='20px 16px 24px';dispatchEvent(new Event('resize'))}")
+                        page.wait_for_timeout(150)
+                        safe_spin = page.locator("#vegas-spin").bounding_box()
+                        assert safe_spin["y"] >= 20 and safe_spin["y"]+safe_spin["height"] <= height-24, safe_spin
+                        page.locator("#vegas-page").evaluate("el=>{el.style.removeProperty('padding');dispatchEvent(new Event('resize'))}")
+                        page.wait_for_timeout(100)
                     page.keyboard.press("Escape")
                     expect(page.locator("#vegas-page")).not_to_have_class("vegas-page is-fullscreen")
                     if width in (390, 1440):
                         page.screenshot(path=str(output/f"{engine}-{width}-idle.png"), full_page=True)
+                page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-reset").click()
                 expect(page.locator("#vegas-message")).to_contain_text("сброшен")
                 page.locator("#vegas-scenario").select_option("bonus")
@@ -129,19 +146,35 @@ def run(engine, output):
                 free_before = page.locator("#vegas-free").inner_text()
                 page.reload()
                 expect(page.locator("#vegas-free")).to_have_text(free_before)
+                page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-scenario").select_option("bigwin")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
                 expect(page.locator("#vegas-result-log")).to_contain_text("ПРИНУДИТЕЛЬНЫЙ ТЕСТ")
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false")
                 page.emulate_media(reduced_motion="no-preference")
                 page.set_viewport_size({"width": 390, "height": 844})
                 page.locator("#vegas-scenario").select_option("wild")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-lines polyline")).to_be_visible(timeout=10000)
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "true")
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "electric")
+                page.wait_for_function("(()=>{const c=document.querySelector('#vegas-fx');return c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0)})()")
                 page.screenshot(path=str(output/f"{engine}-390-winning-line.png"), full_page=True)
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
+                page.locator("#vegas-effects").click()
+                expect(page.locator("#vegas-effects")).to_have_attribute("aria-pressed", "false")
+                page.locator("#vegas-effects").click()
+                page.locator("#vegas-scenario").select_option("bigwin")
+                page.locator("#vegas-spin").click()
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "fire", timeout=10000)
+                expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
+                page.locator("#vegas-celebration-close").click()
+                expect(page.locator("#vegas-spin")).to_be_enabled()
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 page.emulate_media(reduced_motion="reduce")
                 # A lost response AFTER the real server commits must retry the same request.
                 request_ids = []
