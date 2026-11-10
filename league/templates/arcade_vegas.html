@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=4-controls">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=5-bonus-buy">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
@@ -10,8 +10,15 @@
     <div class="vegas-toolbar"><span><i></i> ЗАКРЫТЫЙ ТЕСТ · ИГРОВЫЕ ДЕНЬГИ</span><div><button type="button" id="vegas-effects" aria-pressed="true">Эффекты вкл.</button><button type="button" id="vegas-sound" aria-pressed="false" aria-label="Включить звук">Звук выкл.</button><button type="button" id="vegas-fullscreen" aria-pressed="false">На весь экран</button></div></div>
     <div class="vegas-cabinet">
       <header class="vegas-marquee"><div class="vegas-line-plaque"><strong>40</strong><span>ЛИНИЙ</span></div><div><span class="vegas-brand">fastlap</span><h2>VEGAS <em>PIT</em></h2><p>LAS VEGAS · MEME GRAND PRIX</p></div><div class="vegas-bonus-counter"><strong id="vegas-free">0</strong><span>FREE SPINS</span></div></header>
-      <div class="vegas-board-frame">
+      <div class="vegas-stage">
+        <button type="button" class="vegas-buy" id="vegas-buy" aria-haspopup="dialog" aria-controls="vegas-purchase">
+          <span class="vegas-buy-kicker" id="vegas-buy-label">КУПИТЬ БОНУС</span>
+          <b class="vegas-buy-count" id="vegas-buy-count">10</b><span class="vegas-buy-caption" id="vegas-buy-caption">FREE SPINS</span>
+          <strong id="vegas-buy-price">—</strong><small id="vegas-buy-note">20× ставка</small>
+        </button>
+        <div class="vegas-board-frame">
         <div class="vegas-board" id="vegas-board" aria-label="Пять барабанов, четыре ряда"><div class="vegas-reels" id="vegas-reels"></div><svg id="vegas-lines" viewBox="0 0 500 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="vegas-particles" id="vegas-particles" aria-hidden="true"></div><canvas class="vegas-fx" id="vegas-fx" aria-hidden="true"></canvas></div>
+        </div>
       </div>
       <div class="vegas-announcer" role="status" aria-live="polite"><span id="vegas-message">40 линий входят в одну ставку</span><strong id="vegas-multiplier">×1</strong></div>
       <div class="vegas-console">
@@ -22,10 +29,22 @@
       </div>
     </div>
     <dialog class="vegas-celebration" id="vegas-celebration" hidden><div><span id="vegas-celebration-kicker">НОЧНОЙ СТИНТ</span><h3 id="vegas-celebration-title">БОНУС!</h3><strong id="vegas-celebration-value">8 FREE SPINS</strong><p id="vegas-celebration-copy">Бесплатные вращения с удвоенными множителями.</p><button type="button" id="vegas-celebration-close">Продолжить</button></div></dialog>
+    <dialog class="vegas-purchase" id="vegas-purchase" aria-labelledby="vegas-purchase-title" aria-describedby="vegas-purchase-info" hidden>
+      <div class="vegas-purchase-card">
+        <span class="vegas-purchase-eyebrow">VEGAS PIT · BONUS BUY</span>
+        <div class="vegas-purchase-art" aria-hidden="true"><span class="vegas-symbol-art vegas-art-scatter"></span></div>
+        <h3 id="vegas-purchase-title">БОНУСНЫЙ СТИНТ</h3>
+        <p class="vegas-purchase-offer"><b id="vegas-purchase-spins">10</b> FREE SPINS</p>
+        <p id="vegas-purchase-info">Множители ×2 → ×12. Ставка фиксируется на всю серию. Выигрыш не гарантирован.</p>
+        <dl class="vegas-purchase-quote"><div><dt>Ставка</dt><dd id="vegas-purchase-bet">—</dd></div><div><dt>Стоимость</dt><dd id="vegas-purchase-cost">—</dd></div><div><dt>Баланс после покупки</dt><dd id="vegas-purchase-balance">—</dd></div></dl>
+        <div class="vegas-purchase-actions"><button type="button" id="vegas-purchase-cancel" autofocus>Назад</button><button type="button" id="vegas-purchase-confirm">Купить бонус</button></div>
+        <p class="vegas-purchase-footnote">Оплата игровым балансом</p>
+      </div>
+    </dialog>
   </section>
   <details class="vegas-lab-tools"><summary>Пульт тестирования <span>Только администратору</span></summary><div><label for="vegas-scenario">Следующий спин<select id="vegas-scenario"><option value="random">Обычный · случайный результат</option><option value="bonus">Проверить бонус: три Scatter</option><option value="bigwin">Проверить выигрыш: пять El Plan</option><option value="wild">Проверить замену Wild</option></select></label><button type="button" id="vegas-reset">Сбросить тест до $5 000</button></div><p>Принудительные сценарии помечаются как тестовые. Нет соревнования, магазина, колеса и начислений в лиге.</p></details>
   {% csrf_token %}
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=4-controls" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=5-bonus-buy" defer></script>{% endblock %}

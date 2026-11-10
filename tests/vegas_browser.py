@@ -105,6 +105,10 @@ def run(engine, output, cdn_dir=None):
                         url = f"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/{folder}/{name}"
                         body = (cdn_dir/name).read_bytes()
                         context.route(url, lambda route, request, body=body, kind=kind: route.fulfill(body=body, content_type=kind))
+                    # Keep local geometry/gameplay tests independent of Google Fonts;
+                    # the production font stacks provide matching system fallbacks.
+                    context.route("https://fonts.googleapis.com/**", lambda route: route.abort())
+                    context.route("https://fonts.gstatic.com/**", lambda route: route.abort())
                 page = context.new_page()
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.on("dialog", lambda dialog: dialog.accept())
@@ -131,7 +135,7 @@ def run(engine, output, cdn_dir=None):
                     page.keyboard.up("Space")
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(spin_requests) == 2 and spin_requests[-1]["bet"] == 5000
-                for width, height in ((320, 568), (320, 740), (390, 844), (844, 390), (1280, 720), (1440, 1050)):
+                for width, height in ((320, 568), (320, 740), (390, 844), (667, 375), (844, 390), (1280, 720), (1440, 1050)):
                     page.set_viewport_size({"width": width, "height": height})
                     try:
                         page.goto(base)
@@ -158,6 +162,9 @@ def run(engine, output, cdn_dir=None):
                     expected_background = "strip-mobile-v3.png" if width <= 700 else "strip-v3.png"
                     assert expected_background in page.locator(".vegas-night").evaluate("el=>getComputedStyle(el).backgroundImage")
                     expect(page.locator("#vegas-minus")).to_have_css("min-height", "44px")
+                    buy = page.locator("#vegas-buy").bounding_box()
+                    assert 0 <= buy["x"] and buy["x"]+buy["width"] <= width, buy
+                    assert 0 <= buy["y"] and buy["y"]+buy["height"] <= height, buy
                     if width in (390, 844, 1280):
                         page.screenshot(path=str(output/f"{engine}-{width}-fullscreen.png"))
                     if width in (390, 844):
@@ -168,6 +175,18 @@ def run(engine, output, cdn_dir=None):
                         assert safe_spin["y"] >= 20 and safe_spin["y"]+safe_spin["height"] <= height-24, safe_spin
                         page.locator("#vegas-page").evaluate("el=>{el.style.removeProperty('padding');dispatchEvent(new Event('resize'))}")
                         page.wait_for_timeout(100)
+                    before = len(spin_requests)
+                    page.locator("#vegas-buy").click()
+                    expect(page.locator("#vegas-purchase")).to_be_visible()
+                    expect(page.locator("#vegas-purchase-cancel")).to_be_focused()
+                    modal = page.locator("#vegas-purchase").bounding_box()
+                    assert modal["height"] <= height-28 and modal["width"] <= width, modal
+                    if width in (390, 1280):
+                        page.screenshot(path=str(output/f"{engine}-{width}-purchase.png"))
+                    page.keyboard.press("Space" if width == 320 else "Escape")
+                    expect(page.locator("#vegas-purchase")).not_to_be_visible()
+                    expect(page.locator("#vegas-page")).to_have_class("vegas-page is-fullscreen")
+                    assert len(spin_requests) == before, "Cancel must not submit or spin"
                     page.keyboard.press("Escape")
                     expect(page.locator("#vegas-page")).not_to_have_class("vegas-page is-fullscreen")
                     if width in (390, 1440):
@@ -192,6 +211,49 @@ def run(engine, output, cdn_dir=None):
                 page.keyboard.press("Escape")
                 page.wait_for_timeout(100)
                 assert len(spin_requests) == before
+                # High stake purchase needs the full price, not just the spin stake.
+                for _ in range(len(stakes)-1-stakes.index(5000)):
+                    page.locator("#vegas-plus").click()
+                expect(page.locator("#vegas-buy")).to_be_disabled()
+                expect(page.locator("#vegas-buy-note")).to_contain_text("НЕДОСТАТОЧНО")
+                for _ in range(len(stakes)-1-stakes.index(5000)):
+                    page.locator("#vegas-minus").click()
+                # Purchase accepted on server, response lost: same UUID must recover it.
+                purchase_ids = []
+                def lost_purchase(route):
+                    purchase_ids.append(route.request.post_data_json["request_id"])
+                    route.fetch()
+                    route.abort()
+                page.route("**/arcade/lab/vegas/spin/", lost_purchase, times=1)
+                page.locator("#vegas-buy").click()
+                page.locator("#vegas-purchase-confirm").click()
+                expect(page.locator("#vegas-spin span")).to_have_text("ПОВТОРИТЬ", timeout=15000)
+                expect(page.locator("#vegas-buy-label")).to_contain_text("ПОВТОРИТЬ")
+                def retry_purchase(route):
+                    purchase_ids.append(route.request.post_data_json["request_id"])
+                    assert route.request.post_data_json["action"] == "buy_bonus"
+                    route.continue_()
+                page.route("**/arcade/lab/vegas/spin/", retry_purchase, times=1)
+                page.locator("#vegas-buy").click()
+                expect(page.locator("#vegas-celebration")).to_be_visible(timeout=15000)
+                expect(page.locator("#vegas-celebration-value")).to_have_text("10 FREE SPINS")
+                assert len(purchase_ids) == 2 and purchase_ids[0] == purchase_ids[1]
+                page.keyboard.press("Space")
+                expect(page.locator("#vegas-spin")).to_be_enabled()
+                page.reload()
+                expect(page.locator("#vegas-free")).to_have_text("10")
+                expect(page.locator("#vegas-buy")).to_be_disabled()
+                expect(page.locator("#vegas-plus")).to_be_disabled()
+                restored = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent)")
+                assert restored["state"]["balance"] == 400000
+                assert restored["last_purchase"]["cost"] == 100000
+                with page.expect_request("**/arcade/lab/vegas/spin/"):
+                    page.keyboard.press("Space")
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=15000)
+                expect(page.locator("#vegas-free")).to_have_text("9")
+                page.locator(".vegas-lab-tools > summary").click()
+                page.locator("#vegas-reset").click()
+                expect(page.locator("#vegas-message")).to_contain_text("сброшен")
                 page.locator("#vegas-scenario").select_option("bonus")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
@@ -251,7 +313,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(request_ids) == 2 and request_ids[0] == request_ids[1], request_ids
                 assert not errors, errors
-                print(f"{engine}: initial/repeated Space, stake range, mobile/desktop geometry, fullscreen, bonus, Wild, reload and idempotent retry OK")
+                print(f"{engine}: Space, stakes, responsive UI, purchase confirmation/cancel, buy retry/reload, bonus and spin retry OK")
                 browser.close()
         finally:
             server.shutdown()

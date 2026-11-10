@@ -6,6 +6,8 @@ VERSION = 1
 START_BALANCE = 500_000
 BETS = (500, 1_000, 2_000, 2_500, 5_000, 7_500, 10_000, 15_000, 20_000, 30_000, 50_000)
 DEFAULT_BET = 5_000
+BONUS_BUY_MULTIPLIER = 20
+BONUS_BUY_SPINS = 10
 MAX_TUMBLES = 6
 MAX_FREE_SPINS = 30
 SYMBOLS = (
@@ -43,6 +45,19 @@ PAYLINES = _paylines()
 
 def random_grid(choice=secrets.choice):
     return [[choice(STRIP) for _ in range(4)] for _ in range(5)]
+
+
+def bonus_buy_grid(choice=secrets.choice):
+    """Entry animation only; no line payments or random extra awards on purchase."""
+    regular = tuple(key for key in STRIP if key not in ("scatter", "wild"))
+    grid = [[choice(regular) for _ in range(4)] for _ in range(5)]
+    for col, row in ((0, 1), (2, 2), (4, 1)):
+        grid[col][row] = "scatter"
+    # This is a purchase entry, not a paid outcome. Avoid displaying unpaid
+    # matching lines behind the three Scatter symbols.
+    second_reel = tuple(key for key in regular if key not in grid[0])
+    grid[1] = [choice(second_reel) for _ in range(4)]
+    return grid
 
 
 def evaluate(grid, bet, multiplier=1):

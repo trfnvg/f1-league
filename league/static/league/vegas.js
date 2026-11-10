@@ -9,7 +9,7 @@
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
   let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=false;
-  let current=cfg.last?.rounds?.at(-1)?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
+  let current=cfg.last?.rounds?.at(-1)?.grid||cfg.last_purchase?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
   const columns=Array.from({length:5},()=>{const column=document.createElement("div"),track=document.createElement("div");column.className="vegas-reel is-stopped";track.className="vegas-reel-track";column.append(track);reels.append(column);return{column,track};});
   function cell(key){
     const el=document.createElement("div"),art=document.createElement("span"),label=document.createElement("small");
@@ -33,6 +33,14 @@
     $("minus").disabled=busy||!!pending||state.free_spins>0||betIndex===0;
     $("plus").disabled=busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
     $("reset").disabled=busy||!!pending;$("scenario").disabled=busy||!!pending;
+    const retry=pending?.action==="buy_bonus",stake=retry?pending.bet:cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;
+    $("buy").disabled=busy||state.free_spins>0||(!retry&&(!!pending||state.balance<cost));
+    $("buy-label").textContent=state.free_spins?"БОНУС АКТИВЕН":retry?"ПОВТОРИТЬ ПОКУПКУ":"КУПИТЬ БОНУС";
+    $("buy-count").textContent=state.free_spins||cfg.bonus_buy.spins;
+    $("buy-caption").textContent=state.free_spins?"ОСТАЛОСЬ":"FREE SPINS";
+    $("buy-price").textContent=state.free_spins?money(state.bonus_bet):money(cost);
+    $("buy-note").textContent=state.free_spins?"СТАВКА СЕРИИ":state.balance<cost&&!retry?"НЕДОСТАТОЧНО СРЕДСТВ":`${cfg.bonus_buy.multiplier}× ставка`;
+    $("buy").setAttribute("aria-label",state.free_spins?`Бонус активен, осталось ${state.free_spins} вращений`:`${retry?"Повторить покупку":"Купить"} ${cfg.bonus_buy.spins} бесплатных вращений за ${money(cost)}`);
     machine.classList.toggle("is-bonus",state.free_spins>0);machine.setAttribute("aria-busy",String(busy));
   }
   // Responsive stage: size the field against BOTH viewport axes. No scale()
@@ -44,12 +52,13 @@
     machine.classList.toggle("is-wide",wide);
     const h=selector=>machine.querySelector(selector)?.getBoundingClientRect().height||0;
     const outside=full?0:(document.querySelector(".site-header")?.offsetHeight||60)+page.querySelector(".vegas-page-heading").offsetHeight+32+(innerWidth<=700?68:0);
-    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-announcer")+h(".vegas-console")+24;
-    const maxWidth=Math.max(180,machine.clientWidth-24);
+    const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
+    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
+    const maxWidth=Math.max(180,machine.clientWidth-24-side);
     const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?120:180,height-outside-overhead)*1.25));
     machine.style.setProperty("--board-size",`${board}px`);
     // The bottom control bar stays comfortably wide even in a short viewport.
-    machine.style.setProperty("--cabinet-width",`${Math.min(maxWidth,Math.max(board,wide?580:0))}px`);
+    machine.style.setProperty("--cabinet-width",`${Math.min(machine.clientWidth-24,Math.max(board+side,wide?580:0))}px`);
   }
   let fitFrame=0;
   function scheduleFit(){cancelAnimationFrame(fitFrame);fitFrame=requestAnimationFrame(fitStage);}
@@ -153,10 +162,21 @@
       button.addEventListener("click",finish);overlay.addEventListener("keydown",keys);overlay.addEventListener("cancel",cancel);
     });
   }
+  async function stopReels(field){
+    await pause(700);
+    for(let c=0;c<5;c++){columns[c].column.classList.add("is-stopped");column(c,field[c]);tone(240+c*70,0,.055);await pause(130);}
+    machine.classList.remove("is-spinning");current=field;
+  }
+  async function presentPurchase(data){
+    const purchase=data.bonus_purchase;await stopReels(purchase.grid);
+    state=data.state;controls();$("multiplier").textContent="×2";
+    const cells=[];purchase.grid.forEach((col,c)=>col.forEach((key,r)=>{if(key==="scatter"){columns[c].track.children[r].classList.add("is-scatter");cells.push([c,r]);}}));
+    burstFX("electric",cells);[392,494,587,784].forEach((f,i)=>tone(f,i*.1,.35));
+    await celebration("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,`Стоимость ${money(purchase.cost)} · ставка ${money(purchase.bet)} зафиксирована. Множители ×2 → ×12.`,"VEGAS PIT · BONUS BUY");
+    message(`Бесплатных вращений: ${state.free_spins} · ставка не списывается`);
+  }
   async function present(data){
-    const result=data.result,first=result.rounds[0];await pause(700);
-    for(let c=0;c<5;c++){columns[c].column.classList.add("is-stopped");column(c,first.grid[c]);tone(240+c*70,0,.055);await pause(130);}
-    machine.classList.remove("is-spinning");current=first.grid;let total=0;
+    const result=data.result,first=result.rounds[0];await stopReels(first.grid);let total=0;
     for(const[i,round]of result.rounds.entries()){
       if(i)await cascade(result.rounds[i-1].grid,round.grid,result.rounds[i-1].wins);
       $("multiplier").textContent=`×${round.multiplier}`;if(!round.wins.length)break;
@@ -171,11 +191,11 @@
     message(result.free&&!state.free_spins?"Бонусный стинт завершён":state.free_spins?`Бесплатных вращений: ${state.free_spins} · ставка не списывается`:result.payout?`На баланс зачислено ${money(result.payout)}`:"Нет выигрышных комбинаций");
   }
   async function request(action="spin"){
-    if(busy||!$("celebration").hidden)return;
+    if(busy||!$("celebration").hidden||$("purchase").open)return;
     if(action==="reset"&&!confirm("Сбросить только свой тестовый баланс и бесплатные вращения?"))return;
-    if(!pending)pending={request_id:crypto.randomUUID(),revision:state.revision,bet:cfg.bets[betIndex],scenario:$("scenario").value,action};
-    busy=true;clear();controls();$("win").textContent=money(0);message(pending.action==="reset"?"Сбрасываем тестовый баланс…":"Барабаны вращаются…");
-    if(pending.action==="spin"){columns.forEach(({column:el},c)=>{column(c,current[c],true);el.classList.remove("is-stopped");});machine.classList.add("is-spinning");}
+    if(!pending)pending={request_id:crypto.randomUUID(),revision:state.revision,bet:cfg.bets[betIndex],scenario:action==="buy_bonus"?"random":$("scenario").value,action};
+    busy=true;clear();controls();$("win").textContent=money(0);message(pending.action==="reset"?"Сбрасываем тестовый баланс…":pending.action==="buy_bonus"?"Открываем бонусный стинт…":"Барабаны вращаются…");
+    if(pending.action!=="reset"){columns.forEach(({column:el},c)=>{column(c,current[c],true);el.classList.remove("is-stopped");});machine.classList.add("is-spinning");}
     try{
       if(audio?.state==="suspended")await audio.resume();
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
@@ -183,26 +203,39 @@
       let data;try{data=await response.json();}catch{throw new Error("Сервер не подтвердил результат. Повтори запрос — новая ставка не спишется.");}
       if(!response.ok){if(data.state){state=data.state;pending=null;}if(response.status===400||response.status===403)pending=null;throw new Error(data.error||"Не удалось выполнить прокрутку.");}
       pending=null;
-      if(data.result){state=data.state;await present(data);}
+      if(data.bonus_purchase){await presentPurchase(data);}
+      else if(data.result){state=data.state;await present(data);}
       else{state=data.state;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
       $("scenario").value="random";
     }catch(error){message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
     finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();$("spin").focus({preventScroll:true});}
   }
   $("spin").addEventListener("click",()=>request());$("reset").addEventListener("click",()=>request("reset"));
+  function closePurchase(){const dialog=$("purchase");dialog.close();dialog.hidden=true;}
+  $("buy").addEventListener("click",()=>{
+    if(pending?.action==="buy_bonus"){request();return;}
+    if(busy||pending||state.free_spins||!$("celebration").hidden)return;
+    const stake=cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;if(state.balance<cost)return;
+    $("purchase-bet").textContent=money(stake);$("purchase-cost").textContent=money(cost);$("purchase-balance").textContent=money(state.balance-cost);$("purchase-spins").textContent=cfg.bonus_buy.spins;
+    $("purchase-confirm").textContent=`Купить за ${money(cost)}`;
+    $("purchase").hidden=false;$("purchase").showModal();$("purchase-cancel").focus();
+  });
+  $("purchase-cancel").addEventListener("click",closePurchase);
+  $("purchase").addEventListener("cancel",e=>{e.preventDefault();closePurchase();});
+  $("purchase-confirm").addEventListener("click",()=>{closePurchase();request("buy_bonus");});
   $("minus").addEventListener("click",()=>{betIndex=Math.max(0,betIndex-1);controls();});$("plus").addEventListener("click",()=>{betIndex=Math.min(cfg.bets.length-1,betIndex+1);controls();});
   $("sound").addEventListener("click",async()=>{try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw new Error();audio=audio||new Audio();await audio.resume();sound=!sound;$("sound").setAttribute("aria-pressed",String(sound));$("sound").textContent=sound?"Звук вкл.":"Звук выкл.";tone(660);}catch{message("Звук недоступен в этом браузере.");}});
   let oldOverflow="";
   function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").textContent=on?"Выйти из экрана":"На весь экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
   $("fullscreen").addEventListener("click",()=>fullscreen(!page.classList.contains("is-fullscreen")));
   document.addEventListener("keydown",e=>{
-    if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden)fullscreen(false);
+    if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden&&!$("purchase").open)fullscreen(false);
     if(e.code!=="Space"&&e.key!==" ")return;
     if(e.isComposing||e.ctrlKey||e.altKey||e.metaKey||e.defaultPrevented)return;
-    if(!$("celebration").hidden||e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
+    if(!$("celebration").hidden||$("purchase").open||e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
     // Works from the initial body focus and every game button. Suppress native
     // button activation/scrolling, including held-key repeats, to send one spin.
     e.preventDefault();if(!e.repeat)request();
   });
-  grid(current);controls();fitStage();if(cfg.last)$("win").textContent=money(cfg.last.payout);
+  grid(current);controls();fitStage();if(cfg.last)$("win").textContent=money(cfg.last.payout);else if(state.free_spins)$("multiplier").textContent="×2";
 })();

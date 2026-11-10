@@ -72,6 +72,13 @@ class VegasRulesTests(SimpleTestCase):
         self.assertGreaterEqual(result["scatters"], 3)
         self.assertGreaterEqual(result["awarded"], 8)
 
+    def test_purchase_entry_has_exactly_three_scatters(self):
+        grid = rules.bonus_buy_grid(choice=lambda values: values[-1])
+        self.assertEqual(len(grid), 5)
+        self.assertTrue(all(len(col) == 4 for col in grid))
+        self.assertEqual(sum(col.count("scatter") for col in grid), 3)
+        self.assertEqual(rules.evaluate(grid, 5000), [])
+
 
 @override_settings(VEGAS_LAB_MIN_INTERVAL=0, STORAGES={
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
@@ -174,6 +181,53 @@ class VegasLabTests(TestCase):
         result = self.post(self.payload(scenario="bonus")).json()
         self.assertGreaterEqual(result["state"]["free_spins"], 8)
         self.assertEqual(result["result"]["scenario"], "bonus")
+
+    def test_buy_bonus_debits_cost_and_locks_ten_free_spins(self):
+        with patch("league.vegas_rules.outcome") as outcome:
+            response = self.post(self.payload(action="buy_bonus", bet=7500))
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["state"], {"balance": rules.START_BALANCE-150000,
+                         "revision": 1, "free_spins": 10, "bonus_bet": 7500})
+        self.assertIsNone(data["result"])
+        self.assertEqual(data["bonus_purchase"]["cost"], 150000)
+        self.assertEqual(data["bonus_purchase"]["spins"], 10)
+        outcome.assert_not_called()  # Purchase is not an additional paid spin.
+
+    def test_purchase_retry_is_idempotent_and_survives_reload(self):
+        payload = self.payload(action="buy_bonus")
+        first = self.post(payload).json()
+        self.assertEqual(self.post(payload).json(), first)
+        wallet = VegasLabWallet.objects.get(user=self.staff)
+        self.assertEqual(wallet.revision, 1)
+        self.assertEqual(wallet.balance, rules.START_BALANCE-100000)
+        config = self.client.get(self.page).context["vegas_config"]
+        self.assertEqual(config["state"]["free_spins"], 10)
+        self.assertEqual(config["last_purchase"], first["bonus_purchase"])
+        payload["request_id"] = str(uuid.uuid4())
+        self.assertEqual(self.post(payload).status_code, 409)
+
+    def test_purchase_requires_funds_and_no_existing_bonus(self):
+        for balance, spins in ((99999, 0), (rules.START_BALANCE, 3)):
+            with self.subTest(balance=balance, spins=spins):
+                VegasLabWallet.objects.filter(user=self.staff).update(balance=balance, free_spins=spins)
+                self.assertEqual(self.post(self.payload(action="buy_bonus")).status_code, 400)
+                wallet = VegasLabWallet.objects.get(user=self.staff)
+                self.assertEqual((wallet.balance, wallet.free_spins, wallet.revision), (balance, spins, 0))
+
+    def test_purchase_rejects_client_price_and_forced_scenario(self):
+        for fields in ({"cost": 0}, {"spins": 100}, {"scenario": "bonus"}, {"bet": 501}):
+            with self.subTest(fields=fields):
+                self.assertEqual(self.post(self.payload(action="buy_bonus", **fields)).status_code, 400)
+        self.assertEqual(VegasLabWallet.objects.get(user=self.staff).balance, rules.START_BALANCE)
+
+    def test_purchase_can_spend_exact_balance_then_free_spins_cost_nothing(self):
+        VegasLabWallet.objects.filter(user=self.staff).update(balance=100000)
+        self.assertEqual(self.post(self.payload(action="buy_bonus")).json()["state"]["balance"], 0)
+        with patch("league.vegas_rules.outcome", return_value={"payout": 0, "awarded": 0}) as outcome:
+            data = self.post(self.payload(bet=50000)).json()
+        outcome.assert_called_once_with(5000, free=True, scenario="random")
+        self.assertEqual((data["state"]["balance"], data["state"]["free_spins"]), (0, 9))
 
     @override_settings(VEGAS_LAB_MIN_INTERVAL=60)
     def test_rate_limit_and_duplicate_retry(self):
