@@ -5,6 +5,7 @@
 .vegas-eyebrow { color:#bc9c79; font:700 9px/1.5 monospace; letter-spacing:.17em; }
 .vegas-page h1 { margin:3px 0; font-size:clamp(24px,2.7vw,36px); letter-spacing:-.05em; }
 .vegas-page-heading p { margin:0; color:#9298a6; font-size:12px; }
+.vegas-play-money-note { max-width:760px; margin:12px auto 0; padding:0 8px; color:#aaa5b3; font:11px/1.65 "Inter",Arial,sans-serif; text-align:center; }
 .vegas-page a { color:#dcc29d; text-decoration:none; font-weight:650; font-size:11px; }
 .vegas-page button,.vegas-page select { font:inherit; touch-action:manipulation; }
 .vegas-page button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
@@ -145,7 +146,7 @@
 .vegas-lab-tools button { min-height:44px; padding:8px 14px; border:1px solid #ab8a6355; border-radius:8px; background:linear-gradient(#3a3236,#252532); color:#eac6a0; font-size:12px; }
 .vegas-lab-tools p { margin:12px 18px 18px; font-size:12px; line-height:1.8; color:#a7acb8; }
 .vegas-page.is-fullscreen { position:fixed; inset:0; z-index:2000; overflow-y:auto; overscroll-behavior:contain; max-width:none; padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px); background:#200e2b; }
-.is-fullscreen .vegas-page-heading,.is-fullscreen .vegas-lab-tools { display:none; }
+.is-fullscreen .vegas-page-heading,.is-fullscreen .vegas-lab-tools,.is-fullscreen .vegas-play-money-note { display:none; }
 .is-fullscreen .vegas-machine { display:flex; flex-direction:column; height:100%; min-height:100%; border:0; border-radius:0; }
 .is-fullscreen .vegas-toolbar { position:sticky; top:0; z-index:6; }
 .is-fullscreen .vegas-toolbar { flex-shrink:0; }

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=6-bonus-auto">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=7-play-money">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
@@ -43,6 +43,7 @@
       </div>
     </dialog>
   </section>
+  <p class="vegas-play-money-note">Все деньги и выигрыши вымышленные и не имеют денежной стоимости. Игра предназначена для развлечения: пополнения и вывода реальных денег нет.</p>
   <details class="vegas-lab-tools"><summary>Пульт тестирования <span>Только администратору</span></summary><div><label for="vegas-scenario">Следующий спин<select id="vegas-scenario"><option value="random">Обычный · случайный результат</option><option value="bonus">Проверить бонус: три Scatter</option><option value="bigwin">Проверить выигрыш: пять El Plan</option><option value="wild">Проверить замену Wild</option></select></label><button type="button" id="vegas-reset">Сбросить тест до $5 000</button></div><p>Принудительные сценарии помечаются как тестовые. Нет соревнования, магазина, колеса и начислений в лиге.</p></details>
   {% csrf_token %}
   {{ vegas_config|json_script:'vegas-config' }}
