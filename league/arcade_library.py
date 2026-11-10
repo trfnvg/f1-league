@@ -391,7 +391,7 @@ def control(request):
     test_games = [
         {"key": "vegas", "title": "Vegas Pit", "genre": "F1 · мемный слот", "status": "Закрытый прототип",
          "description": "40 линий, Wild, каскады и бесплатные вращения. Только игровые деньги, без влияния на зачёт.",
-         "cover": "league/images/vegas/strip-v2.svg", "url": reverse("league:vegas_lab")},
+         "cover": "league/images/vegas/strip-v3.png", "url": reverse("league:vegas_lab")},
         {**GAMES["doodle_jump"], "key": "doodle_jump", "genre": "Doodle Jump", "status": "В библиотеке",
          "url": reverse("league:arcade_game", args=["doodle_jump"]) + "?admin_test=1"},
         {**GAMES["flappy"], "key": "flappy", "genre": "Flappy Bird", "status": "В библиотеке",

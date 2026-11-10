@@ -41,16 +41,15 @@
     const full=page.classList.contains("is-fullscreen"),safe=full?getComputedStyle(page):null;
     const height=(window.visualViewport?.height||innerHeight)-(safe?(parseFloat(safe.paddingTop)||0)+(parseFloat(safe.paddingBottom)||0):0);
     const wide=machine.clientWidth>=700||(innerWidth>=650&&height<500);
-    const short=wide&&height<500;
     machine.classList.toggle("is-wide",wide);
     const h=selector=>machine.querySelector(selector)?.getBoundingClientRect().height||0;
     const outside=full?0:(document.querySelector(".site-header")?.offsetHeight||60)+page.querySelector(".vegas-page-heading").offsetHeight+32+(innerWidth<=700?68:0);
-    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-start-lights")+h(".vegas-announcer")+h(".vegas-session-note")+(wide?0:h(".vegas-console"))+(innerWidth<=700?38:54);
-    const side=wide?(short?166:184):0, padding=innerWidth<=700?18:26;
-    const maxWidth=Math.max(180,machine.clientWidth-padding-14-side);
-    const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?160:200,height-outside-overhead)*1.25));
+    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-announcer")+h(".vegas-console")+24;
+    const maxWidth=Math.max(180,machine.clientWidth-24);
+    const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?120:180,height-outside-overhead)*1.25));
     machine.style.setProperty("--board-size",`${board}px`);
-    machine.style.setProperty("--cabinet-width",`${board+side+padding}px`);
+    // The bottom control bar stays comfortably wide even in a short viewport.
+    machine.style.setProperty("--cabinet-width",`${Math.min(maxWidth,Math.max(board,wide?580:0))}px`);
   }
   let fitFrame=0;
   function scheduleFit(){cancelAnimationFrame(fitFrame);fitFrame=requestAnimationFrame(fitStage);}

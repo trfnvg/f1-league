@@ -26,7 +26,7 @@ from playwright.sync_api import sync_playwright, expect
 from league import vegas_rules
 
 
-def run(engine, output):
+def run(engine, output, cdn_dir=None):
     ready = threading.Event()
     server = ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
     database = ThreadPoolExecutor(max_workers=1)
@@ -97,13 +97,29 @@ def run(engine, output):
             with sync_playwright() as p:
                 browser = getattr(p, engine).launch()
                 context = browser.new_context(reduced_motion="reduce")
+                if cdn_dir:
+                    # Optional exact upstream Bootstrap files for environments where
+                    # WebKit cannot reach jsDelivr. Do not replace them with stubs.
+                    for name, kind in (("bootstrap.min.css", "text/css"), ("bootstrap.bundle.min.js", "application/javascript")):
+                        folder = "css" if name.endswith(".css") else "js"
+                        url = f"https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/{folder}/{name}"
+                        body = (cdn_dir/name).read_bytes()
+                        context.route(url, lambda route, request, body=body, kind=kind: route.fulfill(body=body, content_type=kind))
                 page = context.new_page()
                 page.on("pageerror", lambda error: errors.append(str(error)))
                 page.on("dialog", lambda dialog: dialog.accept())
+                outstanding = set()
+                page.on("request", lambda request: outstanding.add(request.url))
+                page.on("requestfinished", lambda request: outstanding.discard(request.url))
+                page.on("requestfailed", lambda request: outstanding.discard(request.url))
                 base = f"http://127.0.0.1:{server.server_port}/arcade/lab/vegas/"
                 for width, height in ((320, 568), (320, 740), (390, 844), (844, 390), (1280, 720), (1440, 1050)):
                     page.set_viewport_size({"width": width, "height": height})
-                    page.goto(base)
+                    try:
+                        page.goto(base)
+                    except Exception:
+                        print(f"{engine} {width}×{height}: unfinished page requests: {sorted(outstanding)}", flush=True)
+                        raise
                     expect(page.locator(".vegas-cell")).to_have_count(20)
                     expect(page.locator("#vegas-line-picker button")).to_have_count(40)
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "overflow")
@@ -116,6 +132,11 @@ def run(engine, output):
                     assert spin["y"] >= 0 and spin["y"]+spin["height"] <= height, (engine, width, height, spin)
                     board = page.locator("#vegas-board").bounding_box()
                     assert abs(board["width"]/board["height"]-1.25) < .01, board
+                    deck = page.locator(".vegas-console").bounding_box()
+                    assert deck["y"] >= board["y"]+board["height"], (engine, width, "controls must stay below reels")
+                    assert page.locator('.vegas-cell:not([data-symbol="wild"]):not([data-symbol="scatter"]) small:visible').count() == 0
+                    expected_background = "strip-mobile-v3.png" if width <= 700 else "strip-v3.png"
+                    assert expected_background in page.locator(".vegas-night").evaluate("el=>getComputedStyle(el).backgroundImage")
                     expect(page.locator("#vegas-minus")).to_have_css("min-height", "44px")
                     if width in (390, 844, 1280):
                         page.screenshot(path=str(output/f"{engine}-{width}-fullscreen.png"))
@@ -206,6 +227,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--engine", choices=("chromium", "webkit"), default="chromium")
     parser.add_argument("--output", type=Path, default=Path("/tmp/fastlap-vegas-browser"))
+    parser.add_argument("--cdn-dir", type=Path, help="Optional directory with the exact Bootstrap 5.3.3 CSS and bundle from jsDelivr")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
-    run(args.engine, args.output)
+    run(args.engine, args.output, args.cdn_dir)
