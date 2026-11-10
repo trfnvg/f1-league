@@ -11,7 +11,8 @@ headset and chess blueprint retain the original meme identities.
 
 The UI now has one continuous plum reel field, vertical reel separators,
 gold rails and a bottom control deck. Only Wild and Scatter have on-field
-labels; every symbol retains its accessible name and payout-table entry.
+labels; every symbol retains its accessible name. The later controls update
+removes the payout-table and last-spin blocks from the interface.
 The supplied Gates of Olympus screenshot is the layout reference, not a
 source of extracted artwork or game mathematics. Original 5×4, 40-line
 server rules are unchanged.

@@ -8,7 +8,7 @@
   const labels={banana:"SBINALLA",berry:"SMOOTH OPERATOR",russell:"T-POSE",toto:"NO, MICHAEL!",bath:"EL PLAN",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"SCATTER"};
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
-  let state=cfg.state, betIndex=1, busy=false, pending=null, audio=null, sound=false;
+  let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=false;
   let current=cfg.last?.rounds?.at(-1)?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
   const columns=Array.from({length:5},()=>{const column=document.createElement("div"),track=document.createElement("div");column.className="vegas-reel is-stopped";track.className="vegas-reel-track";column.append(track);reels.append(column);return{column,track};});
   function cell(key){
@@ -153,14 +153,6 @@
       button.addEventListener("click",finish);overlay.addEventListener("keydown",keys);overlay.addEventListener("cancel",cancel);
     });
   }
-  function log(result){
-    let details=$("result-log");if(!details){details=document.createElement("details");details.id="vegas-result-log";details.className="vegas-rules";machine.after(details);}details.replaceChildren();
-    const summary=document.createElement("summary"),content=document.createElement("div"),note=document.createElement("p");
-    summary.textContent=`Последний спин · ${result.free?"бесплатный":money(result.bet)} · выигрыш ${money(result.payout)}`;
-    note.textContent=`${result.scenario!=="random"?"ПРИНУДИТЕЛЬНЫЙ ТЕСТ · ":""}Каскадов: ${result.rounds.length}. Scatter: ${result.scatters}. Новых free spins: ${result.awarded}.`;content.append(note);
-    result.rounds.forEach((round,i)=>{if(!round.wins.length)return;const p=document.createElement("p");p.textContent=`Каскад ${i+1} · ×${round.multiplier}: `+round.wins.map(w=>`линия ${w.line}, ${symbols.get(w.symbol).name} ×${w.count}: ${money(w.amount)}`).join("; ");content.append(p);});
-    if(result.cascade_limit){const p=document.createElement("p");p.textContent="Достигнут лимит шести каскадов. Все показанные выигрыши оплачены.";content.append(p);}details.append(summary,content);
-  }
   async function present(data){
     const result=data.result,first=result.rounds[0];await pause(700);
     for(let c=0;c<5;c++){columns[c].column.classList.add("is-stopped");column(c,first.grid[c]);tone(240+c*70,0,.055);await pause(130);}
@@ -173,7 +165,7 @@
       for(const win of round.wins.slice(0,5)){clear();line(win);message(`Линия ${win.line} · ${symbols.get(win.symbol).name} ×${win.count} · +${money(win.amount)}`);tone(440,0,.15);tone(660,.08,.15);await pause(300);}
       clear();round.wins.flatMap(w=>w.cells).forEach(([c,r])=>columns[c].track.children[r]?.classList.add("is-winning"));message(`${round.wins.length} выигрышных линий · каскад +${money(round.amount)}`);await pause(400);
     }
-    state=data.state;controls();$("win").textContent=money(result.payout);log(result);
+    state=data.state;controls();$("win").textContent=money(result.payout);
     if(result.awarded){reels.querySelectorAll('[data-symbol="scatter"]').forEach(el=>el.classList.add("is-scatter"));[392,494,587,784].forEach((f,i)=>tone(f,i*.1,.35));await celebration(result.free?"ЕЩЁ КРУГИ!":"БОНУСНЫЙ СТИНТ",`+${result.awarded} FREE SPINS`,`Осталось ${state.free_spins}. Ставка ${money(state.bonus_bet)} зафиксирована. Множители ×2 → ×12.`,"SCATTER · VEGAS");}
     else if(result.payout>=result.bet*8){[440,554,659,880].forEach((f,i)=>tone(f,i*.08,.3));await celebration(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"Все выигрышные линии зачислены на тестовый баланс.");}
     message(result.free&&!state.free_spins?"Бонусный стинт завершён":state.free_spins?`Бесплатных вращений: ${state.free_spins} · ставка не списывается`:result.payout?`На баланс зачислено ${money(result.payout)}`:"Нет выигрышных комбинаций");
@@ -192,7 +184,7 @@
       if(!response.ok){if(data.state){state=data.state;pending=null;}if(response.status===400||response.status===403)pending=null;throw new Error(data.error||"Не удалось выполнить прокрутку.");}
       pending=null;
       if(data.result){state=data.state;await present(data);}
-      else{state=data.state;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";$("result-log")?.remove();}
+      else{state=data.state;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
       $("scenario").value="random";
     }catch(error){message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
     finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();$("spin").focus({preventScroll:true});}
@@ -203,8 +195,14 @@
   let oldOverflow="";
   function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").textContent=on?"Выйти из экрана":"На весь экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
   $("fullscreen").addEventListener("click",()=>fullscreen(!page.classList.contains("is-fullscreen")));
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden)fullscreen(false);if(e.code==="Space"&&!e.repeat&&page.contains(e.target)&&!e.target.closest("input,textarea,select,button,summary,a")&&$("celebration").hidden){e.preventDefault();request();}});
-  cfg.symbols.filter(s=>s.pays.length).forEach(s=>{const card=document.createElement("div"),title=document.createElement("b"),values=document.createElement("span");title.textContent=s.name;values.textContent=s.pays.map((v,i)=>`${i+3}: ×${v}`).join(" · ")+" от ставки на линию";card.append(title,values);$("paytable").append(card);});
-  cfg.lines.forEach((rows,i)=>{const b=document.createElement("button");b.type="button";b.textContent=i+1;b.setAttribute("aria-label",`Показать линию ${i+1}`);b.addEventListener("click",()=>{if(busy)return;clear();line({rows,cells:rows.map((r,c)=>[c,r])});message(`Маршрут линии ${i+1}`);machine.scrollIntoView({behavior:reduced.matches?"instant":"smooth",block:"center"});});$("line-picker").append(b);});
-  grid(current);controls();fitStage();if(cfg.last){$("win").textContent=money(cfg.last.payout);log(cfg.last);}
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden)fullscreen(false);
+    if(e.code!=="Space"&&e.key!==" ")return;
+    if(e.isComposing||e.ctrlKey||e.altKey||e.metaKey||e.defaultPrevented)return;
+    if(!$("celebration").hidden||e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
+    // Works from the initial body focus and every game button. Suppress native
+    // button activation/scrolling, including held-key repeats, to send one spin.
+    e.preventDefault();if(!e.repeat)request();
+  });
+  grid(current);controls();fitStage();if(cfg.last)$("win").textContent=money(cfg.last.payout);
 })();

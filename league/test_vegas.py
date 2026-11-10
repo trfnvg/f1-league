@@ -110,6 +110,20 @@ class VegasLabTests(TestCase):
         wallet.save()
         self.assertEqual(self.client.get(self.page).context["vegas_config"]["state"]["balance"], 12345)
 
+    def test_expanded_stakes_charge_the_selected_amount(self):
+        config = self.client.get(self.page).context["vegas_config"]
+        self.assertEqual(config["default_bet"], 5000)
+        self.assertEqual((min(config["bets"]), max(config["bets"])), (500, 50000))
+        self.assertGreater(len(config["bets"]), 3)
+        with patch("league.vegas_rules.outcome", return_value={"payout": 0, "awarded": 0}) as outcome:
+            for bet in config["bets"]:
+                with self.subTest(bet=bet):
+                    VegasLabWallet.objects.filter(user=self.staff).update(balance=rules.START_BALANCE)
+                    response = self.post(self.payload(bet=bet))
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json()["state"]["balance"], rules.START_BALANCE-bet)
+                    outcome.assert_called_with(bet, free=False, scenario="random")
+
     def test_real_outcome_matches_balance_and_idempotent_retry(self):
         data = self.payload()
         response = self.post(data)
@@ -127,7 +141,7 @@ class VegasLabTests(TestCase):
         self.assertEqual(VegasLabWallet.objects.get(user=self.staff).revision, 1)
 
     def test_invalid_client_money_and_bets_rejected(self):
-        for changes in ({"balance": 999999}, {"bet": -5000}, {"bet": True}, {"bet": 1},
+        for changes in ({"balance": 999999}, {"bet": -5000}, {"bet": True}, {"bet": 1}, {"bet": 501},
                         {"revision": True}, {"request_id": "bad"}, {"scenario": "cheat"}):
             with self.subTest(changes=changes):
                 self.assertEqual(self.post(self.payload(**changes)).status_code, 400)
@@ -138,7 +152,9 @@ class VegasLabTests(TestCase):
         wallet.balance = 0
         wallet.save()
         self.assertEqual(self.post(self.payload()).status_code, 400)
-        self.assertEqual(self.post(self.payload(action="reset")).json()["state"]["balance"], rules.START_BALANCE)
+        reset = self.post(self.payload(action="reset")).json()["state"]
+        self.assertEqual(reset["balance"], rules.START_BALANCE)
+        self.assertEqual(reset["bonus_bet"], 5000)
         self.assertFalse(Score.objects.exists())
         self.assertFalse(ArcadeWheelSpin.objects.exists())
         self.assertFalse(TetrisRecord.objects.exists())

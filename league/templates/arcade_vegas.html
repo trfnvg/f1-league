@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=3-strip">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=4-controls">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
@@ -17,16 +17,15 @@
       <div class="vegas-console">
         <div class="vegas-meter"><span>БАЛАНС</span><strong id="vegas-balance">$5 000</strong></div>
         <div class="vegas-stake"><span>СТАВКА / ВСЕ ЛИНИИ</span><div><button type="button" id="vegas-minus" aria-label="Уменьшить ставку">−</button><strong id="vegas-bet">$50</strong><button type="button" id="vegas-plus" aria-label="Увеличить ставку">+</button></div></div>
-        <button type="button" id="vegas-spin" class="vegas-spin"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M26 12A11 11 0 1 0 26 21M26 4v8h-8"/></svg><span>КРУТИТЬ</span></button>
+        <button type="button" id="vegas-spin" class="vegas-spin" aria-keyshortcuts="Space"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M26 12A11 11 0 1 0 26 21M26 4v8h-8"/></svg><span>КРУТИТЬ</span></button>
         <div class="vegas-meter vegas-win-meter"><span>ВЫИГРЫШ</span><strong id="vegas-win">$0</strong></div>
       </div>
     </div>
     <dialog class="vegas-celebration" id="vegas-celebration" hidden><div><span id="vegas-celebration-kicker">НОЧНОЙ СТИНТ</span><h3 id="vegas-celebration-title">БОНУС!</h3><strong id="vegas-celebration-value">8 FREE SPINS</strong><p id="vegas-celebration-copy">Бесплатные вращения с удвоенными множителями.</p><button type="button" id="vegas-celebration-close">Продолжить</button></div></dialog>
   </section>
   <details class="vegas-lab-tools"><summary>Пульт тестирования <span>Только администратору</span></summary><div><label for="vegas-scenario">Следующий спин<select id="vegas-scenario"><option value="random">Обычный · случайный результат</option><option value="bonus">Проверить бонус: три Scatter</option><option value="bigwin">Проверить выигрыш: пять El Plan</option><option value="wild">Проверить замену Wild</option></select></label><button type="button" id="vegas-reset">Сбросить тест до $5 000</button></div><p>Принудительные сценарии помечаются как тестовые. Нет соревнования, магазина, колеса и начислений в лиге.</p></details>
-  <details class="vegas-rules"><summary>Линии, выплаты и бонусы</summary><div><p>Все 40 линий активны. Совпадения идут слева направо с первого барабана: от трёх одинаковых символов подряд. Одна линия оплачивается один раз по наилучшей комбинации. Ставка делится на 40 линий; выплаты округляются до цента.</p><p>Wild заменяет любой обычный символ, но не Vegas. Три Vegas в любых клетках дают 8 бесплатных вращений, четыре — 10, пять и больше — 12. В бесплатной серии повторные три Vegas добавляют 4 вращения, остаток ограничен 30. Ставка фиксируется при входе в бонус.</p><p>Выигравшие символы исчезают, оставшиеся падают, новые заполняют поле. Каждый следующий каскад повышает множитель: ×1 → ×2 → … → ×6. В бесплатной серии: ×2 → ×4 → … → ×12. До шести оплачиваемых каскадов за спин. Scatter проверяется один раз за спин по максимальному числу на поле.</p><p>Ни бонус, ни выигрыш не гарантированы. Это тест собственной математики, а не копия или сертифицированная модель конкретного казино.</p><div id="vegas-paytable" class="vegas-paytable"></div><p class="vegas-line-help">Выбери номер линии, чтобы увидеть её маршрут.</p><div id="vegas-line-picker" class="vegas-line-picker"></div></div></details>
   {% csrf_token %}
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=3-strip" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=4-controls" defer></script>{% endblock %}

@@ -26,7 +26,7 @@
 .vegas-marquee h2 em { color:#ffdb69; }
 .vegas-marquee p { margin:5px 0 0; font:700 7px/1.2 sans-serif; color:#ffe0af; letter-spacing:.2em; text-shadow:0 1px 3px #21071f; }
 .vegas-line-plaque,.vegas-bonus-counter { padding:7px 3px; border:1px solid #d3a64f; border-radius:3px; background:linear-gradient(#6a273da8,#270b2fc7); box-shadow:inset 0 0 0 2px #270f2c,0 2px 5px #0005; }
-.vegas-line-plaque strong,.vegas-bonus-counter strong { display:block; font:900 22px/1 Georgia,serif; color:#ffda76; text-shadow:0 2px #482022; }
+.vegas-line-plaque strong,.vegas-bonus-counter strong { display:block; font:750 24px/1.1 "Inter",Arial,sans-serif; font-variant-numeric:tabular-nums lining-nums; letter-spacing:-.045em; color:#ffe3a0; text-shadow:0 1px 2px #482022; }
 .vegas-line-plaque span,.vegas-bonus-counter span { display:block; margin-top:4px; color:#fff0c6; font:700 7px/1 sans-serif; letter-spacing:.05em; }
 .vegas-bonus-counter strong { color:#fff1a8; }
 .vegas-board-frame { position:relative; width:var(--board-size,100%); max-width:100%; justify-self:center; padding:7px; border:1px solid #ffdf84; border-radius:3px; background:linear-gradient(90deg,#ffea94,#9b5c22 3%,#ffe3a0 5%,#ce933c 49%,#ffeb9b 95%,#8c4c20 98%,#ffe2a0); box-shadow:0 0 0 2px #5e3029,inset 0 0 0 2px #7f451d,0 8px 24px #16041d99; }
@@ -67,11 +67,11 @@
 .vegas-stake strong { color:#f3e4c9; font:750 16px/1.3 sans-serif; white-space:nowrap; }
 .vegas-stake button { min-width:44px; min-height:44px; border:1px solid #c3a16888; border-radius:50%; background:linear-gradient(#6a4436,#302032); box-shadow:inset 0 1px #f1d6a52a,0 2px 4px #0003; color:#ffe6aa; font-size:22px; transition:transform .15s; }
 .vegas-stake button:active { transform:translateY(2px); }
-.vegas-spin { position:relative; isolation:isolate; grid-column:4; grid-row:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; width:72px; height:72px; padding:6px; border:3px solid #ffe6a2; border-radius:50%; color:#fff9da; background:radial-gradient(ellipse at 40% 15%,#7ac15a,#387b38 55%,#194d2e); box-shadow:0 0 0 2px #795032,inset 0 2px 3px #fff7,0 4px 7px #0008; transition:transform .15s,filter .2s; }
+.vegas-spin { position:relative; isolation:isolate; grid-column:4; grid-row:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; width:72px; height:72px; padding:12px; border:3px solid #ffe6a2; border-radius:50%; color:#fff9da; background:radial-gradient(ellipse at 40% 15%,#7ac15a,#387b38 55%,#194d2e); box-shadow:0 0 0 2px #795032,inset 0 2px 3px #fff7,0 4px 7px #0008; transition:transform .15s,filter .2s; }
 .vegas-spin::before { content:''; position:absolute; inset:-8px; border:1px solid #d8ac5d60; border-top-color:#ffe0a0; border-bottom-color:#ffe0a0; border-radius:50%; pointer-events:none; }
 .vegas-spin:active { transform:scale(.96); }.vegas-spin:disabled { opacity:.72; }
-.vegas-spin svg { width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:3; filter:drop-shadow(0 2px 1px #194d2e); }
-.vegas-spin span { font-size:9px; font-weight:850; letter-spacing:.035em; }
+.vegas-spin svg { width:26px; height:26px; flex-shrink:0; fill:none; stroke:currentColor; stroke-width:3; filter:drop-shadow(0 2px 1px #194d2e); }
+.vegas-spin span { display:block; flex-shrink:0; font:750 8px/1.15 "Inter",Arial,sans-serif; letter-spacing:0; white-space:nowrap; text-align:center; }
 .is-spinning .vegas-spin::before { animation:vegas-ring 1.8s linear infinite; }
 .is-bonus .vegas-board-frame { background:linear-gradient(130deg,#c4fff1,#518e8d 30%,#d6b375 70%,#d7fff5); }
 .is-bonus .vegas-announcer { color:#a1e4d2; }
@@ -87,22 +87,16 @@
 .vegas-celebration strong { display:block; font:800 clamp(26px,4vw,42px)/1.3 monospace; color:#ffe2a2; }
 .vegas-celebration p { color:#c4b5b2; font-size:12px; line-height:1.7; }
 .vegas-celebration button { min-height:48px; padding:10px 30px; border:1px solid #ffe4ad; border-radius:10px; color:#fff5db; background:linear-gradient(#ef9364,#b94c39); box-shadow:inset 0 1px #ffffff42,0 4px 12px #0004; font-weight:750; }
-.vegas-lab-tools,.vegas-rules { margin-top:14px; border:1px solid #bfa17325; border-radius:12px; background:#1b202b; overflow:hidden; }
+.vegas-lab-tools { margin-top:14px; border:1px solid #bfa17325; border-radius:12px; background:#1b202b; overflow:hidden; }
 .vegas-page summary { padding:16px 18px; cursor:pointer; font-size:13px; font-weight:700; }
 .vegas-lab-tools summary span { margin-left:10px; font-size:10px; color:#b8a17f; }
 .vegas-lab-tools>div { display:flex; align-items:end; gap:16px; padding:0 18px; }
 .vegas-lab-tools label { flex:1; font-size:11px; color:#aba8ae; }
 .vegas-lab-tools select { display:block; width:100%; margin-top:6px; padding:8px 10px; min-height:44px; border:1px solid #b9a17d40; border-radius:8px; color:#e9dcc8; background:#101726; }
 .vegas-lab-tools button { min-height:44px; padding:8px 14px; border:1px solid #ab8a6355; border-radius:8px; background:linear-gradient(#3a3236,#252532); color:#eac6a0; font-size:12px; }
-.vegas-lab-tools p,.vegas-rules p { margin:12px 18px 18px; font-size:12px; line-height:1.8; color:#a7acb8; }
-.vegas-rules>div { padding-bottom:8px; }
-.vegas-paytable { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; padding:0 18px; }
-.vegas-paytable>div { padding:12px; border:1px solid #ffffff10; border-radius:8px; background:#121a29; }
-.vegas-paytable b { display:block; color:#e3c79e; font-size:11px; }.vegas-paytable span { display:block; margin-top:6px; color:#a7b4c4; font:10px/1.7 monospace; }
-.vegas-line-picker { display:grid; grid-template-columns:repeat(10,minmax(0,1fr)); gap:5px; padding:0 18px 10px; }
-.vegas-line-picker button { min-height:44px; border:1px solid #bda37630; border-radius:6px; color:#dbc49e; font:11px monospace; background:linear-gradient(#303446,#202738); }
+.vegas-lab-tools p { margin:12px 18px 18px; font-size:12px; line-height:1.8; color:#a7acb8; }
 .vegas-page.is-fullscreen { position:fixed; inset:0; z-index:2000; overflow-y:auto; overscroll-behavior:contain; max-width:none; padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px); background:#200e2b; }
-.is-fullscreen .vegas-page-heading,.is-fullscreen .vegas-lab-tools,.is-fullscreen .vegas-rules { display:none; }
+.is-fullscreen .vegas-page-heading,.is-fullscreen .vegas-lab-tools { display:none; }
 .is-fullscreen .vegas-machine { display:flex; flex-direction:column; height:100%; min-height:100%; border:0; border-radius:0; }
 .is-fullscreen .vegas-toolbar { position:sticky; top:0; z-index:6; }
 .is-fullscreen .vegas-toolbar { flex-shrink:0; }
@@ -128,7 +122,7 @@
   .vegas-cabinet { max-width:calc(100% - 24px); margin:8px auto 12px; }
   .vegas-marquee { grid-template-columns:46px 1fr 46px; gap:5px; min-height:60px; padding:2px 2px 8px; }
   .vegas-line-plaque,.vegas-bonus-counter { padding:6px 2px; border-radius:2px; }
-  .vegas-line-plaque strong,.vegas-bonus-counter strong { font-size:19px; }
+  .vegas-line-plaque strong,.vegas-bonus-counter strong { font-size:21px; }
   .vegas-line-plaque span,.vegas-bonus-counter span { font-size:6px; }
   .vegas-marquee h2 { font-size:29px; }.vegas-marquee p { font-size:5px; letter-spacing:.12em; }
   .vegas-board-frame { padding:4px; }
@@ -139,10 +133,10 @@
   .vegas-meter>span,.vegas-stake>span { font-size:7px; }.vegas-meter>strong { font-size:clamp(12px,17cqw,21px); }
   .vegas-win-meter { text-align:right; }
   .vegas-stake { grid-column:1/3;grid-row:2;text-align:left; }
-  .vegas-spin { grid-column:3;grid-row:1/3;width:65px;height:65px; }.vegas-spin svg { width:28px;height:28px; }.vegas-spin span { font-size:8px; }
+  .vegas-spin { grid-column:3;grid-row:1/3; }
   .vegas-stake>div { max-width:200px; }.vegas-stake button { min-width:44px;min-height:44px; }
   .vegas-lab-tools>div { flex-direction:column;align-items:stretch;gap:10px; }
-  .vegas-lab-tools summary span { display:block;margin:5px 0 0; }.vegas-paytable { grid-template-columns:repeat(2,minmax(0,1fr)); }.vegas-line-picker { grid-template-columns:repeat(8,minmax(0,1fr)); }
+  .vegas-lab-tools summary span { display:block;margin:5px 0 0; }
 }
 @media(max-height:500px) and (min-width:650px) {
   .vegas-marquee { min-height:42px;padding-bottom:4px; }.vegas-marquee h2 { font-size:26px; }.vegas-marquee p { display:none; }
@@ -151,8 +145,8 @@
   .vegas-console { grid-template-columns:1fr 1fr 160px 60px;gap:12px;padding:5px 12px; }
   .vegas-meter>strong { font-size:17px; }.vegas-meter>span,.vegas-stake>span { font-size:7px; }
   .vegas-stake { grid-column:3;grid-row:1;text-align:center; }
-  .vegas-spin { grid-column:4;grid-row:1;width:54px;height:54px;margin:0; }
-  .vegas-spin svg { width:26px;height:26px; }.vegas-spin span { font-size:7px; }
+  .vegas-spin { grid-column:4;grid-row:1;width:58px;height:58px;padding:8px;margin:0; }
+  .vegas-spin svg { width:22px;height:22px; }.vegas-spin span { font-size:6.5px; }
 }
 @media(prefers-reduced-motion:reduce) { .vegas-page * { animation:none!important;scroll-behavior:auto!important; } }
 .vegas-page.effects-off .vegas-fx { display:none; }

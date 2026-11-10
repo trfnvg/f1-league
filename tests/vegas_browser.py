@@ -113,6 +113,24 @@ def run(engine, output, cdn_dir=None):
                 page.on("requestfinished", lambda request: outstanding.discard(request.url))
                 page.on("requestfailed", lambda request: outstanding.discard(request.url))
                 base = f"http://127.0.0.1:{server.server_port}/arcade/lab/vegas/"
+                spin_requests = []
+                page.on("request", lambda request: spin_requests.append(request.post_data_json)
+                        if urlsplit(request.url).path == "/arcade/lab/vegas/spin/" else None)
+                page.goto(base)
+                expect(page.locator("#vegas-spin")).to_be_enabled()
+                assert page.evaluate("document.activeElement === document.body"), "Fresh page must not require a click"
+                with page.expect_request("**/arcade/lab/vegas/spin/"):
+                    page.keyboard.press("Space")
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                assert len(spin_requests) == 1 and spin_requests[-1]["bet"] == 5000
+                # Space on another focused control spins once without its native click.
+                page.locator("#vegas-plus").focus()
+                with page.expect_request("**/arcade/lab/vegas/spin/"):
+                    page.keyboard.down("Space")
+                    page.keyboard.down("Space")
+                    page.keyboard.up("Space")
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                assert len(spin_requests) == 2 and spin_requests[-1]["bet"] == 5000
                 for width, height in ((320, 568), (320, 740), (390, 844), (844, 390), (1280, 720), (1440, 1050)):
                     page.set_viewport_size({"width": width, "height": height})
                     try:
@@ -121,7 +139,7 @@ def run(engine, output, cdn_dir=None):
                         print(f"{engine} {width}×{height}: unfinished page requests: {sorted(outstanding)}", flush=True)
                         raise
                     expect(page.locator(".vegas-cell")).to_have_count(20)
-                    expect(page.locator("#vegas-line-picker button")).to_have_count(40)
+                    expect(page.locator(".vegas-rules,#vegas-result-log,#vegas-line-picker")).to_have_count(0)
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "overflow")
                     expect(page.locator("#vegas-spin")).to_be_enabled()
                     page.locator("#vegas-fullscreen").click()
@@ -130,6 +148,8 @@ def run(engine, output, cdn_dir=None):
                     assert abs(box["width"]-width) <= 1 and abs(box["height"]-height) <= 1, box
                     spin = page.locator("#vegas-spin").bounding_box()
                     assert spin["y"] >= 0 and spin["y"]+spin["height"] <= height, (engine, width, height, spin)
+                    label = page.locator("#vegas-spin span").bounding_box()
+                    assert label["x"]-spin["x"] >= 8 and spin["x"]+spin["width"]-label["x"]-label["width"] >= 8, (engine, width, "spin label inset", label)
                     board = page.locator("#vegas-board").bounding_box()
                     assert abs(board["width"]/board["height"]-1.25) < .01, board
                     deck = page.locator(".vegas-console").bounding_box()
@@ -155,12 +175,29 @@ def run(engine, output, cdn_dir=None):
                 page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-reset").click()
                 expect(page.locator("#vegas-message")).to_contain_text("сброшен")
+                # Walk the complete expanded stake range, then return to $50.
+                stakes = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent).bets")
+                for _ in range(stakes.index(5000)):
+                    page.locator("#vegas-minus").click()
+                expect(page.locator("#vegas-minus")).to_be_disabled()
+                for i in range(len(stakes)-1):
+                    page.locator("#vegas-plus").click()
+                expect(page.locator("#vegas-plus")).to_be_disabled()
+                for _ in range(len(stakes)-1-stakes.index(5000)):
+                    page.locator("#vegas-minus").click()
+                # Native Space in a select must not spend a stake.
+                page.locator("#vegas-scenario").focus()
+                before = len(spin_requests)
+                page.keyboard.press("Space")
+                page.keyboard.press("Escape")
+                page.wait_for_timeout(100)
+                assert len(spin_requests) == before
                 page.locator("#vegas-scenario").select_option("bonus")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 expect(page.locator("#vegas-celebration-value")).to_contain_text("FREE SPINS")
                 page.screenshot(path=str(output/f"{engine}-bonus.png"), full_page=True)
-                page.locator("#vegas-celebration-close").click()
+                page.keyboard.press("Space")
                 expect(page.locator("#vegas-spin")).to_be_enabled()
                 expect(page.locator("#vegas-plus")).to_be_disabled()
                 expect(page.locator("#vegas-spin span")).to_have_text("FREE SPIN")
@@ -173,7 +210,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
-                expect(page.locator("#vegas-result-log")).to_contain_text("ПРИНУДИТЕЛЬНЫЙ ТЕСТ")
+                expect(page.locator("#vegas-result-log")).to_have_count(0)
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false")
                 page.emulate_media(reduced_motion="no-preference")
                 page.set_viewport_size({"width": 390, "height": 844})
@@ -214,7 +251,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(request_ids) == 2 and request_ids[0] == request_ids[1], request_ids
                 assert not errors, errors
-                print(f"{engine}: mobile/desktop geometry, fullscreen, bonus, Wild, reload and idempotent network retry OK")
+                print(f"{engine}: initial/repeated Space, stake range, mobile/desktop geometry, fullscreen, bonus, Wild, reload and idempotent retry OK")
                 browser.close()
         finally:
             server.shutdown()

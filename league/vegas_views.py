@@ -29,7 +29,7 @@ def page(request):
         return HttpResponseForbidden()
     wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
     config = {"state": state(wallet), "last": wallet.last_payload.get("result"),
-              "symbols": rules.SYMBOLS, "lines": rules.PAYLINES, "bets": rules.BETS,
+              "symbols": rules.SYMBOLS, "bets": rules.BETS, "default_bet": rules.DEFAULT_BET,
               "spin_url": reverse("league:vegas_lab_spin")}
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
 
@@ -71,7 +71,7 @@ def spin(request):
         return JsonResponse({"error": "Дождись завершения прокрутки."}, status=429)
     result = None
     if action == "reset":
-        wallet.balance, wallet.free_spins, wallet.bonus_bet = rules.START_BALANCE, 0, rules.BETS[1]
+        wallet.balance, wallet.free_spins, wallet.bonus_bet = rules.START_BALANCE, 0, rules.DEFAULT_BET
     else:
         free = wallet.free_spins > 0
         bet = wallet.bonus_bet if free else data["bet"]
