@@ -188,7 +188,8 @@ class VegasLabTests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["state"], {"balance": rules.START_BALANCE-150000,
-                         "revision": 1, "free_spins": 10, "bonus_bet": 7500})
+                         "revision": 1, "free_spins": 10, "bonus_bet": 7500,
+                         "bonus": {"win": 0, "played": 0, "granted": 10}})
         self.assertIsNone(data["result"])
         self.assertEqual(data["bonus_purchase"]["cost"], 150000)
         self.assertEqual(data["bonus_purchase"]["spins"], 10)
@@ -228,6 +229,48 @@ class VegasLabTests(TestCase):
             data = self.post(self.payload(bet=50000)).json()
         outcome.assert_called_once_with(5000, free=True, scenario="random")
         self.assertEqual((data["state"]["balance"], data["state"]["free_spins"]), (0, 9))
+
+    def test_bonus_total_tracks_all_ten_spins_without_recounting_retries(self):
+        self.post(self.payload(action="buy_bonus"))
+        total = 0
+        for n in range(1, 11):
+            payout = n*123
+            payload = self.payload()
+            with patch("league.vegas_rules.outcome", return_value={"payout": payout, "awarded": 0}):
+                response = self.post(payload).json()
+            total += payout
+            self.assertEqual(response["state"]["bonus"], {"win": total, "played": n, "granted": 10})
+            self.assertEqual(response["state"]["free_spins"], 10-n)
+            self.assertEqual(self.post(payload).json(), response)
+            self.assertEqual(self.client.get(self.page).context["vegas_config"]["state"]["bonus"]["win"], total)
+        self.assertEqual(response["state"]["balance"], rules.START_BALANCE-100000+total)
+
+    def test_paid_trigger_payout_is_not_included_in_bonus_total(self):
+        with patch("league.vegas_rules.outcome", return_value={"payout": 9000, "awarded": 8}):
+            data = self.post(self.payload()).json()
+        self.assertEqual(data["state"]["bonus"], {"win": 0, "played": 0, "granted": 8})
+        with patch("league.vegas_rules.outcome", return_value={"payout": 1500, "awarded": 4}):
+            data = self.post(self.payload()).json()
+        self.assertEqual(data["state"]["bonus"], {"win": 1500, "played": 1, "granted": 12})
+        self.assertEqual(data["state"]["free_spins"], 11)
+
+    def test_retrigger_counts_only_spins_kept_by_cap(self):
+        wallet = VegasLabWallet.objects.get(user=self.staff)
+        wallet.free_spins = 30
+        wallet.save()
+        with patch("league.vegas_rules.outcome", return_value={"payout": 100, "awarded": 4}):
+            data = self.post(self.payload()).json()
+        self.assertEqual(data["state"]["bonus"], {"win": 100, "played": 1, "granted": 31})
+        self.assertEqual(data["state"]["free_spins"], 30)
+
+    def test_reset_and_next_series_clear_old_bonus_totals(self):
+        self.post(self.payload(action="buy_bonus"))
+        with patch("league.vegas_rules.outcome", return_value={"payout": 1200, "awarded": 0}):
+            self.post(self.payload())
+        reset = self.post(self.payload(action="reset")).json()
+        self.assertEqual(reset["state"]["bonus"], {"win": 0, "played": 0, "granted": 0})
+        bought = self.post(self.payload(action="buy_bonus")).json()
+        self.assertEqual(bought["state"]["bonus"], {"win": 0, "played": 0, "granted": 10})
 
     @override_settings(VEGAS_LAB_MIN_INTERVAL=60)
     def test_rate_limit_and_duplicate_retry(self):

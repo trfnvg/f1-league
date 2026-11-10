@@ -8,7 +8,9 @@
   const labels={banana:"SBINALLA",berry:"SMOOTH OPERATOR",russell:"T-POSE",toto:"NO, MICHAEL!",bath:"EL PLAN",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"SCATTER"};
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
-  let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=false;
+  let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=true;
+  let autoTimer=0, bonusPaused=false, autoBlocked=false, pageSuspended=false, lastRequestAt=0;
+  let master=null;const voices=new Set(),counters=new Map();
   let current=cfg.last?.rounds?.at(-1)?.grid||cfg.last_purchase?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
   const columns=Array.from({length:5},()=>{const column=document.createElement("div"),track=document.createElement("div");column.className="vegas-reel is-stopped";track.className="vegas-reel-track";column.append(track);reels.append(column);return{column,track};});
   function cell(key){
@@ -20,12 +22,51 @@
   function column(c,values,duplicate=false){columns[c].track.replaceChildren(...(duplicate?values.concat(values):values).map(cell));}
   function grid(values){values.forEach((v,c)=>column(c,v));current=values;}
   function message(text){$("message").textContent=text;}
-  function tone(f,delay=0,length=.1){
-    if(!sound||!audio||document.hidden)return;
-    const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime+delay;o.frequency.value=f;
-    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.035,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+length);
-    o.connect(g);g.connect(audio.destination);o.start(t);o.stop(t+length);
+  function unlockAudio(gesture=false){
+    if(!sound||document.hidden)return;
+    try{
+      if(!audio){
+        if(!gesture&&!navigator.userActivation?.isActive)return;
+        const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;
+        audio=new Audio();master=audio.createGain();master.gain.value=.18;
+        const limiter=audio.createDynamicsCompressor();limiter.threshold.value=-18;limiter.ratio.value=5;
+        master.connect(limiter);limiter.connect(audio.destination);
+      }
+      if(audio.state!=="running")audio.resume().catch(()=>{});
+    }catch{/* Sound cannot block a server request. */}
   }
+  function stopAudio(){for(const voice of voices){try{voice.stop();}catch{}}voices.clear();}
+  function tone(f,delay=0,length=.1,type="sine",volume=.2){
+    if(!sound||!audio||audio.state!=="running"||document.hidden||voices.size>=24)return;
+    const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime+delay;
+    o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(volume,t+.008);g.gain.exponentialRampToValueAtTime(.0001,t+length);
+    o.connect(g);g.connect(master);voices.add(o);machine.dataset.soundVoices=String(voices.size);
+    o.onended=()=>{voices.delete(o);o.disconnect();g.disconnect();machine.dataset.soundVoices=String(voices.size);};
+    o.start(t);o.stop(t+length);
+  }
+  function cue(kind,step=0){
+    const melodies={line:[659.25,783.99,987.77],cascade:[523.25,659.25,783.99,1046.5],bonus:[392,493.88,587.33,783.99,987.77,1174.66],summary:[523.25,659.25,783.99,1046.5,1318.51]};
+    const notes=melodies[kind]||melodies.line;machine.dataset.soundCue=kind;
+    notes.forEach((f,i)=>{const pitch=f*(kind==="line"?2**(Math.min(step,3)/12):1);tone(pitch,i*.065,kind==="line"?.2:.36,"sine",.22);tone(pitch/2,i*.065,.2,"triangle",.09);});
+  }
+  function setAmount(el,value){cancelAnimationFrame(counters.get(el));counters.delete(el);el.dataset.value=String(value);el.textContent=money(value);}
+  function countAmount(el,target){
+    cancelAnimationFrame(counters.get(el));const from=Number(el.dataset.value)||0,born=performance.now();
+    if(reduced.matches||!fxEnabled||document.hidden){setAmount(el,target);return;}
+    function tick(now){const t=Math.min(1,(now-born)/440),v=Math.round(from+(target-from)*(1-(1-t)**3));el.dataset.value=String(v);el.textContent=money(v);if(t<1)counters.set(el,requestAnimationFrame(tick));else counters.delete(el);}
+    counters.set(el,requestAnimationFrame(tick));
+  }
+  function queueBonus(){
+    clearTimeout(autoTimer);autoTimer=0;
+    if(!state.free_spins||busy||pending||bonusPaused||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open)return;
+    const delay=Math.max(reduced.matches?160:550,(cfg.min_spin_interval_ms||0)+80-(performance.now()-lastRequestAt));
+    autoTimer=setTimeout(()=>{autoTimer=0;request("spin",true);},delay);
+  }
+  $("bonus-pause").addEventListener("click",()=>{unlockAudio(true);if(autoBlocked){request();return;}bonusPaused=!bonusPaused;controls();queueBonus();});
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(autoTimer);stopAudio();}else{unlockAudio();queueBonus();}});
+  window.addEventListener("pagehide",()=>{pageSuspended=true;clearTimeout(autoTimer);stopAudio();});
+  window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
   function controls(){
     $("balance").textContent=money(state.balance);$("free").textContent=state.free_spins;
     $("bet").textContent=money(state.free_spins?state.bonus_bet:cfg.bets[betIndex]);$("spin").disabled=busy;
@@ -33,6 +74,13 @@
     $("minus").disabled=busy||!!pending||state.free_spins>0||betIndex===0;
     $("plus").disabled=busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
     $("reset").disabled=busy||!!pending;$("scenario").disabled=busy||!!pending;
+    const hud=$("bonus-hud"),visible=state.bonus.granted>0,changed=hud.hidden===visible;
+    hud.hidden=!visible;hud.classList.toggle("is-complete",visible&&!state.free_spins);machine.classList.toggle("has-bonus-hud",visible);
+    setAmount($("bonus-total"),state.bonus.win);
+    $("bonus-progress").textContent=`${state.bonus.played} / ${state.bonus.granted} вращений${autoBlocked?" · ошибка сети":bonusPaused?" · пауза":""}`;
+    $("bonus-pause").hidden=!state.free_spins;$("bonus-pause").textContent=autoBlocked?"Повторить":bonusPaused?"Продолжить":"Пауза";$("bonus-pause").setAttribute("aria-pressed",String(bonusPaused));
+    $("win-label").textContent=visible?"ЗА СПИН":"ВЫИГРЫШ";
+    if(changed)scheduleFit();
     const retry=pending?.action==="buy_bonus",stake=retry?pending.bet:cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;
     $("buy").disabled=busy||state.free_spins>0||(!retry&&(!!pending||state.balance<cost));
     $("buy-label").textContent=state.free_spins?"БОНУС АКТИВЕН":retry?"ПОВТОРИТЬ ПОКУПКУ":"КУПИТЬ БОНУС";
@@ -50,15 +98,18 @@
     const height=(window.visualViewport?.height||innerHeight)-(safe?(parseFloat(safe.paddingTop)||0)+(parseFloat(safe.paddingBottom)||0):0);
     const wide=machine.clientWidth>=700||(innerWidth>=650&&height<500);
     machine.classList.toggle("is-wide",wide);
+    // Measure the control rows at usable width, not at the previous small
+    // board width (which otherwise feeds text wrapping back into the fitter).
+    machine.style.setProperty("--cabinet-width",`${machine.clientWidth-24}px`);
     const h=selector=>machine.querySelector(selector)?.getBoundingClientRect().height||0;
     const outside=full?0:(document.querySelector(".site-header")?.offsetHeight||60)+page.querySelector(".vegas-page-heading").offsetHeight+32+(innerWidth<=700?68:0);
     const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
-    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
+    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
     const maxWidth=Math.max(180,machine.clientWidth-24-side);
-    const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?120:180,height-outside-overhead)*1.25));
+    const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?80:100,height-outside-overhead)*1.25));
     machine.style.setProperty("--board-size",`${board}px`);
     // The bottom control bar stays comfortably wide even in a short viewport.
-    machine.style.setProperty("--cabinet-width",`${Math.min(machine.clientWidth-24,Math.max(board+side,wide?580:0))}px`);
+    machine.style.setProperty("--cabinet-width",`${wide?Math.min(machine.clientWidth-24,Math.max(board+side,580)):machine.clientWidth-24}px`);
   }
   let fitFrame=0;
   function scheduleFit(){cancelAnimationFrame(fitFrame);fitFrame=requestAnimationFrame(fitStage);}
@@ -151,15 +202,25 @@
     }
     current=next;await Promise.all(animations);
   }
-  function celebration(title,value,copy,kicker="VEGAS PIT"){
+  function callout(label,value,kind="line"){
+    if(!fxEnabled||document.hidden)return;
+    const el=$("win-callout");$("callout-label").textContent=label;$("callout-value").textContent=value;el.dataset.kind=kind;
+    for(const a of el.getAnimations())a.cancel();
+    el.animate(reduced.matches?[{opacity:1},{opacity:0}]:[{opacity:0,transform:"translateY(8px) scale(.85)"},{opacity:1,transform:"translateY(0) scale(1.06)",offset:.2},{opacity:1,transform:"translateY(0) scale(1)",offset:.7},{opacity:0,transform:"translateY(-10px) scale(1)"}],{duration:reduced.matches?240:950,easing:"ease-out"});
+  }
+  function celebration(title,value,copy,kicker="VEGAS PIT",{autoMs=0,kind="win"}={}){
     $("celebration-kicker").textContent=kicker;$("celebration-title").textContent=title;$("celebration-value").textContent=value;$("celebration-copy").textContent=copy;
-    const overlay=$("celebration"),button=$("celebration-close");overlay.hidden=false;overlay.setAttribute("aria-labelledby","vegas-celebration-title");overlay.showModal();
+    const overlay=$("celebration"),button=$("celebration-close");overlay.dataset.kind=kind;button.textContent=autoMs?"Начать бонус":"Продолжить";
+    $("celebration-art").className=`vegas-symbol-art vegas-art-${kind==="entry"?"scatter":"wild"}`;
+    overlay.hidden=false;overlay.setAttribute("aria-labelledby","vegas-celebration-title");overlay.showModal();
     const inert=[...page.children].filter(el=>el!==machine).concat([...machine.children].filter(el=>el!==overlay));inert.forEach(el=>el.inert=true);button.focus();
     return new Promise(resolve=>{
-      function finish(){overlay.close();overlay.hidden=true;inert.forEach(el=>el.inert=false);button.removeEventListener("click",finish);overlay.removeEventListener("keydown",keys);overlay.removeEventListener("cancel",cancel);resolve();}
+      let done=false,timer=0;
+      function finish(){if(done)return;done=true;clearTimeout(timer);overlay.close();overlay.hidden=true;inert.forEach(el=>el.inert=false);button.removeEventListener("click",finish);overlay.removeEventListener("keydown",keys);overlay.removeEventListener("cancel",cancel);resolve();}
       function cancel(e){e.preventDefault();finish();}
       function keys(e){if(e.key==="Escape"){e.preventDefault();e.stopPropagation();finish();}if(e.key==="Tab"){e.preventDefault();button.focus();}}
       button.addEventListener("click",finish);overlay.addEventListener("keydown",keys);overlay.addEventListener("cancel",cancel);
+      if(autoMs)timer=setTimeout(finish,reduced.matches?300:autoMs);
     });
   }
   async function stopReels(field){
@@ -171,44 +232,55 @@
     const purchase=data.bonus_purchase;await stopReels(purchase.grid);
     state=data.state;controls();$("multiplier").textContent="×2";
     const cells=[];purchase.grid.forEach((col,c)=>col.forEach((key,r)=>{if(key==="scatter"){columns[c].track.children[r].classList.add("is-scatter");cells.push([c,r]);}}));
-    burstFX("electric",cells);[392,494,587,784].forEach((f,i)=>tone(f,i*.1,.35));
-    await celebration("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,`Стоимость ${money(purchase.cost)} · ставка ${money(purchase.bet)} зафиксирована. Множители ×2 → ×12.`,"VEGAS PIT · BONUS BUY");
+    burstFX("fire",cells);cue("bonus");callout("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,"bonus");
+    await celebration("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,`Стоимость ${money(purchase.cost)} · ставка ${money(purchase.bet)}. Вращения начнутся автоматически.`,"VEGAS PIT · BONUS BUY",{autoMs:2000,kind:"entry"});
     message(`Бесплатных вращений: ${state.free_spins} · ставка не списывается`);
   }
   async function present(data){
-    const result=data.result,first=result.rounds[0];await stopReels(first.grid);let total=0;
+    const result=data.result,first=result.rounds[0],bonusBefore=state.bonus.win;await stopReels(first.grid);let total=0;
     for(const[i,round]of result.rounds.entries()){
       if(i)await cascade(result.rounds[i-1].grid,round.grid,result.rounds[i-1].wins);
       $("multiplier").textContent=`×${round.multiplier}`;if(!round.wins.length)break;
-      total+=round.amount;$("win").textContent=money(total);
+      total+=round.amount;countAmount($("win"),total);if(result.free)countAmount($("bonus-total"),bonusBefore+total);
       burstFX(round.multiplier>=3||round.amount>=result.bet*8?"fire":"electric",round.wins.flatMap(w=>w.cells));
-      for(const win of round.wins.slice(0,5)){clear();line(win);message(`Линия ${win.line} · ${symbols.get(win.symbol).name} ×${win.count} · +${money(win.amount)}`);tone(440,0,.15);tone(660,.08,.15);await pause(300);}
+      for(const win of round.wins.slice(0,5)){clear();line(win);message(`Линия ${win.line} · ${symbols.get(win.symbol).name} ×${win.count} · +${money(win.amount)}`);cue("line",i);await pause(300);}
+      callout(round.multiplier>1?`КАСКАД ×${round.multiplier}`:"ВЫИГРЫШ",`+${money(round.amount)}`);if(i)cue("cascade");
       clear();round.wins.flatMap(w=>w.cells).forEach(([c,r])=>columns[c].track.children[r]?.classList.add("is-winning"));message(`${round.wins.length} выигрышных линий · каскад +${money(round.amount)}`);await pause(400);
     }
-    state=data.state;controls();$("win").textContent=money(result.payout);
-    if(result.awarded){reels.querySelectorAll('[data-symbol="scatter"]').forEach(el=>el.classList.add("is-scatter"));[392,494,587,784].forEach((f,i)=>tone(f,i*.1,.35));await celebration(result.free?"ЕЩЁ КРУГИ!":"БОНУСНЫЙ СТИНТ",`+${result.awarded} FREE SPINS`,`Осталось ${state.free_spins}. Ставка ${money(state.bonus_bet)} зафиксирована. Множители ×2 → ×12.`,"SCATTER · VEGAS");}
-    else if(result.payout>=result.bet*8){[440,554,659,880].forEach((f,i)=>tone(f,i*.08,.3));await celebration(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"Все выигрышные линии зачислены на тестовый баланс.");}
+    state=data.state;controls();setAmount($("win"),result.payout);
+    if(result.awarded){
+      reels.querySelectorAll('[data-symbol="scatter"]').forEach(el=>el.classList.add("is-scatter"));cue("bonus");
+      if(result.free){callout("ЕЩЁ КРУГИ!",`+${result.awarded} FREE SPINS`,"bonus");await pause(800);}
+      else await celebration("БОНУСНЫЙ СТИНТ",`+${result.awarded} FREE SPINS`,`Ставка ${money(state.bonus_bet)} зафиксирована. Вращения начнутся автоматически.`,"SCATTER · VEGAS",{autoMs:2000,kind:"entry"});
+    }else if(result.payout>=result.bet*8){
+      if(result.free){callout(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"bonus");cue("cascade");await pause(700);}
+      else{cue("summary");await celebration(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"Все выигрышные линии зачислены на тестовый баланс.");}
+    }
+    if(result.free&&!state.free_spins){cue("summary");await celebration("БОНУС ЗАВЕРШЁН",money(state.bonus.win),`Общий выигрыш за ${state.bonus.played} вращений. Вся сумма уже на игровом балансе.`,"ИТОГ БОНУСНОГО СТИНТА",{kind:"summary"});}
     message(result.free&&!state.free_spins?"Бонусный стинт завершён":state.free_spins?`Бесплатных вращений: ${state.free_spins} · ставка не списывается`:result.payout?`На баланс зачислено ${money(result.payout)}`:"Нет выигрышных комбинаций");
   }
-  async function request(action="spin"){
+  async function request(action="spin",automatic=false){
     if(busy||!$("celebration").hidden||$("purchase").open)return;
-    if(action==="reset"&&!confirm("Сбросить только свой тестовый баланс и бесплатные вращения?"))return;
+    if(automatic&&(!state.free_spins||bonusPaused||autoBlocked||document.hidden||pageSuspended))return;
+    clearTimeout(autoTimer);autoTimer=0;
+    if(!automatic&&action==="spin"&&state.free_spins)bonusPaused=false;
+    if(action==="reset"&&!confirm("Сбросить только свой тестовый баланс и бесплатные вращения?")){queueBonus();return;}
     if(!pending)pending={request_id:crypto.randomUUID(),revision:state.revision,bet:cfg.bets[betIndex],scenario:action==="buy_bonus"?"random":$("scenario").value,action};
-    busy=true;clear();controls();$("win").textContent=money(0);message(pending.action==="reset"?"Сбрасываем тестовый баланс…":pending.action==="buy_bonus"?"Открываем бонусный стинт…":"Барабаны вращаются…");
+    busy=true;clear();controls();setAmount($("win"),0);message(pending.action==="reset"?"Сбрасываем тестовый баланс…":pending.action==="buy_bonus"?"Открываем бонусный стинт…":"Барабаны вращаются…");
     if(pending.action!=="reset"){columns.forEach(({column:el},c)=>{column(c,current[c],true);el.classList.remove("is-stopped");});machine.classList.add("is-spinning");}
     try{
-      if(audio?.state==="suspended")await audio.resume();
+      unlockAudio(!automatic);
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
-      try{response=await fetch(cfg.spin_url,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":page.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify(pending),signal:controller.signal});}finally{clearTimeout(timer);}
+      try{lastRequestAt=performance.now();response=await fetch(cfg.spin_url,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":page.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify(pending),signal:controller.signal});}finally{clearTimeout(timer);}
       let data;try{data=await response.json();}catch{throw new Error("Сервер не подтвердил результат. Повтори запрос — новая ставка не спишется.");}
       if(!response.ok){if(data.state){state=data.state;pending=null;}if(response.status===400||response.status===403)pending=null;throw new Error(data.error||"Не удалось выполнить прокрутку.");}
-      pending=null;
+      pending=null;autoBlocked=false;
       if(data.bonus_purchase){await presentPurchase(data);}
-      else if(data.result){state=data.state;await present(data);}
-      else{state=data.state;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
+      else if(data.result){await present(data);}
+      else{state=data.state;bonusPaused=false;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
       $("scenario").value="random";
-    }catch(error){message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
-    finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();$("spin").focus({preventScroll:true});}
+    }catch(error){autoBlocked=true;message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
+    finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();if(!automatic)$("spin").focus({preventScroll:true});queueBonus();}
   }
   $("spin").addEventListener("click",()=>request());$("reset").addEventListener("click",()=>request("reset"));
   function closePurchase(){const dialog=$("purchase");dialog.close();dialog.hidden=true;}
@@ -224,7 +296,7 @@
   $("purchase").addEventListener("cancel",e=>{e.preventDefault();closePurchase();});
   $("purchase-confirm").addEventListener("click",()=>{closePurchase();request("buy_bonus");});
   $("minus").addEventListener("click",()=>{betIndex=Math.max(0,betIndex-1);controls();});$("plus").addEventListener("click",()=>{betIndex=Math.min(cfg.bets.length-1,betIndex+1);controls();});
-  $("sound").addEventListener("click",async()=>{try{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw new Error();audio=audio||new Audio();await audio.resume();sound=!sound;$("sound").setAttribute("aria-pressed",String(sound));$("sound").textContent=sound?"Звук вкл.":"Звук выкл.";tone(660);}catch{message("Звук недоступен в этом браузере.");}});
+  $("sound").addEventListener("click",()=>{sound=!sound;$("sound").setAttribute("aria-pressed",String(sound));$("sound").setAttribute("aria-label",sound?"Выключить звук":"Включить звук");$("sound").textContent=sound?"Звук вкл.":"Звук выкл.";if(sound){unlockAudio(true);tone(660);}else stopAudio();});
   let oldOverflow="";
   function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").textContent=on?"Выйти из экрана":"На весь экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
   $("fullscreen").addEventListener("click",()=>fullscreen(!page.classList.contains("is-fullscreen")));
@@ -237,5 +309,5 @@
     // button activation/scrolling, including held-key repeats, to send one spin.
     e.preventDefault();if(!e.repeat)request();
   });
-  grid(current);controls();fitStage();if(cfg.last)$("win").textContent=money(cfg.last.payout);else if(state.free_spins)$("multiplier").textContent="×2";
+  grid(current);controls();fitStage();if(cfg.last)setAmount($("win"),cfg.last.payout);else if(state.free_spins)$("multiplier").textContent="×2";queueBonus();
 })();

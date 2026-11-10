@@ -1,15 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=5-bonus-buy">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=6-bonus-auto">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
   <section class="vegas-machine" id="vegas-machine" aria-label="Vegas Pit: тестовый игровой автомат">
     <div class="vegas-night" aria-hidden="true"></div>
-    <div class="vegas-toolbar"><span><i></i> ЗАКРЫТЫЙ ТЕСТ · ИГРОВЫЕ ДЕНЬГИ</span><div><button type="button" id="vegas-effects" aria-pressed="true">Эффекты вкл.</button><button type="button" id="vegas-sound" aria-pressed="false" aria-label="Включить звук">Звук выкл.</button><button type="button" id="vegas-fullscreen" aria-pressed="false">На весь экран</button></div></div>
+    <div class="vegas-toolbar"><span><i></i> ЗАКРЫТЫЙ ТЕСТ · ИГРОВЫЕ ДЕНЬГИ</span><div><button type="button" id="vegas-effects" aria-pressed="true">Эффекты вкл.</button><button type="button" id="vegas-sound" aria-pressed="true" aria-label="Выключить звук">Звук вкл.</button><button type="button" id="vegas-fullscreen" aria-pressed="false">На весь экран</button></div></div>
     <div class="vegas-cabinet">
       <header class="vegas-marquee"><div class="vegas-line-plaque"><strong>40</strong><span>ЛИНИЙ</span></div><div><span class="vegas-brand">fastlap</span><h2>VEGAS <em>PIT</em></h2><p>LAS VEGAS · MEME GRAND PRIX</p></div><div class="vegas-bonus-counter"><strong id="vegas-free">0</strong><span>FREE SPINS</span></div></header>
+      <div class="vegas-bonus-hud" id="vegas-bonus-hud" hidden><div><span>ВЫИГРЫШ БОНУСА</span><strong id="vegas-bonus-total">$0</strong></div><div class="vegas-bonus-running"><span id="vegas-bonus-progress">0 / 10 вращений</span><button type="button" id="vegas-bonus-pause" aria-pressed="false">Пауза</button></div></div>
       <div class="vegas-stage">
         <button type="button" class="vegas-buy" id="vegas-buy" aria-haspopup="dialog" aria-controls="vegas-purchase">
           <span class="vegas-buy-kicker" id="vegas-buy-label">КУПИТЬ БОНУС</span>
@@ -17,7 +18,7 @@
           <strong id="vegas-buy-price">—</strong><small id="vegas-buy-note">20× ставка</small>
         </button>
         <div class="vegas-board-frame">
-        <div class="vegas-board" id="vegas-board" aria-label="Пять барабанов, четыре ряда"><div class="vegas-reels" id="vegas-reels"></div><svg id="vegas-lines" viewBox="0 0 500 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="vegas-particles" id="vegas-particles" aria-hidden="true"></div><canvas class="vegas-fx" id="vegas-fx" aria-hidden="true"></canvas></div>
+        <div class="vegas-board" id="vegas-board" aria-label="Пять барабанов, четыре ряда"><div class="vegas-reels" id="vegas-reels"></div><svg id="vegas-lines" viewBox="0 0 500 400" preserveAspectRatio="none" aria-hidden="true"></svg><div class="vegas-particles" id="vegas-particles" aria-hidden="true"></div><canvas class="vegas-fx" id="vegas-fx" aria-hidden="true"></canvas><div class="vegas-win-callout" id="vegas-win-callout" aria-hidden="true"><span id="vegas-callout-label"></span><strong id="vegas-callout-value"></strong></div></div>
         </div>
       </div>
       <div class="vegas-announcer" role="status" aria-live="polite"><span id="vegas-message">40 линий входят в одну ставку</span><strong id="vegas-multiplier">×1</strong></div>
@@ -25,10 +26,10 @@
         <div class="vegas-meter"><span>БАЛАНС</span><strong id="vegas-balance">$5 000</strong></div>
         <div class="vegas-stake"><span>СТАВКА / ВСЕ ЛИНИИ</span><div><button type="button" id="vegas-minus" aria-label="Уменьшить ставку">−</button><strong id="vegas-bet">$50</strong><button type="button" id="vegas-plus" aria-label="Увеличить ставку">+</button></div></div>
         <button type="button" id="vegas-spin" class="vegas-spin" aria-keyshortcuts="Space"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M26 12A11 11 0 1 0 26 21M26 4v8h-8"/></svg><span>КРУТИТЬ</span></button>
-        <div class="vegas-meter vegas-win-meter"><span>ВЫИГРЫШ</span><strong id="vegas-win">$0</strong></div>
+        <div class="vegas-meter vegas-win-meter"><span id="vegas-win-label">ВЫИГРЫШ</span><strong id="vegas-win">$0</strong></div>
       </div>
     </div>
-    <dialog class="vegas-celebration" id="vegas-celebration" hidden><div><span id="vegas-celebration-kicker">НОЧНОЙ СТИНТ</span><h3 id="vegas-celebration-title">БОНУС!</h3><strong id="vegas-celebration-value">8 FREE SPINS</strong><p id="vegas-celebration-copy">Бесплатные вращения с удвоенными множителями.</p><button type="button" id="vegas-celebration-close">Продолжить</button></div></dialog>
+    <dialog class="vegas-celebration" id="vegas-celebration" hidden><div><span id="vegas-celebration-kicker">НОЧНОЙ СТИНТ</span><div class="vegas-celebration-art" aria-hidden="true"><span id="vegas-celebration-art" class="vegas-symbol-art vegas-art-scatter"></span></div><h3 id="vegas-celebration-title">БОНУС!</h3><strong id="vegas-celebration-value">8 FREE SPINS</strong><p id="vegas-celebration-copy">Бесплатные вращения с удвоенными множителями.</p><button type="button" id="vegas-celebration-close">Продолжить</button></div></dialog>
     <dialog class="vegas-purchase" id="vegas-purchase" aria-labelledby="vegas-purchase-title" aria-describedby="vegas-purchase-info" hidden>
       <div class="vegas-purchase-card">
         <span class="vegas-purchase-eyebrow">VEGAS PIT · BONUS BUY</span>
@@ -47,4 +48,4 @@
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=5-bonus-buy" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=6-bonus-auto" defer></script>{% endblock %}

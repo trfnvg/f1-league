@@ -16,9 +16,17 @@ from .models import VegasLabWallet
 from . import vegas_rules as rules
 
 
-def state(wallet):
+def bonus_state(wallet):
+    # Persist the running series in the already atomic/idempotent response.
+    # Older active bonuses start tracking their remaining spins on upgrade.
+    saved = wallet.last_payload.get("state", {}).get("bonus")
+    return dict(saved) if saved else {"win": 0, "played": 0, "granted": wallet.free_spins}
+
+
+def state(wallet, bonus=None):
     return {"balance": wallet.balance, "revision": wallet.revision,
-            "free_spins": wallet.free_spins, "bonus_bet": wallet.bonus_bet}
+            "free_spins": wallet.free_spins, "bonus_bet": wallet.bonus_bet,
+            "bonus": bonus if bonus is not None else bonus_state(wallet)}
 
 
 @login_required
@@ -31,6 +39,7 @@ def page(request):
     config = {"state": state(wallet), "last": wallet.last_payload.get("result"),
               "last_purchase": wallet.last_payload.get("bonus_purchase"),
               "bonus_buy": {"multiplier": rules.BONUS_BUY_MULTIPLIER, "spins": rules.BONUS_BUY_SPINS},
+              "min_spin_interval_ms": int(getattr(settings, "VEGAS_LAB_MIN_INTERVAL", 0.8)*1000),
               "symbols": rules.SYMBOLS, "bets": rules.BETS, "default_bet": rules.DEFAULT_BET,
               "spin_url": reverse("league:vegas_lab_spin")}
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
@@ -74,8 +83,10 @@ def spin(request):
     if wallet.last_spun_at and (now-wallet.last_spun_at).total_seconds() < interval:
         return JsonResponse({"error": "Дождись завершения прокрутки."}, status=429)
     result, purchase = None, None
+    bonus = bonus_state(wallet)
     if action == "reset":
         wallet.balance, wallet.free_spins, wallet.bonus_bet = rules.START_BALANCE, 0, rules.DEFAULT_BET
+        bonus = {"win": 0, "played": 0, "granted": 0}
     elif action == "buy_bonus":
         if wallet.free_spins:
             return JsonResponse({"error": "Сначала заверши текущий бонусный стинт."}, status=400)
@@ -84,6 +95,7 @@ def spin(request):
             return JsonResponse({"error": "Недостаточно игровых денег для покупки бонуса."}, status=400)
         wallet.balance -= cost
         wallet.bonus_bet, wallet.free_spins = data["bet"], rules.BONUS_BUY_SPINS
+        bonus = {"win": 0, "played": 0, "granted": rules.BONUS_BUY_SPINS}
         purchase = {"bet": data["bet"], "cost": cost, "spins": rules.BONUS_BUY_SPINS,
                     "grid": rules.bonus_buy_grid()}
     else:
@@ -93,12 +105,20 @@ def spin(request):
             return JsonResponse({"error": "Недостаточно игровых денег. В тесте можно сбросить баланс."}, status=400)
         result = rules.outcome(bet, free=free, scenario=scenario)
         wallet.balance += result["payout"] - (0 if free else bet)
+        old_remaining = wallet.free_spins
         wallet.free_spins = min(rules.MAX_FREE_SPINS, wallet.free_spins - int(free) + result["awarded"])
+        if free:
+            bonus["win"] += result["payout"]
+            bonus["played"] += 1
+            bonus["granted"] += wallet.free_spins - (old_remaining-1)
+        else:
+            # The paid triggering spin has its own payout, outside the bonus.
+            bonus = {"win": 0, "played": 0, "granted": wallet.free_spins}
         if result["awarded"] and not free:
             wallet.bonus_bet = bet
     wallet.revision += 1
     wallet.last_request, wallet.last_spun_at = request_id, now
-    wallet.last_payload = {"state": state(wallet), "result": result, "request_id": str(request_id)}
+    wallet.last_payload = {"state": state(wallet, bonus), "result": result, "request_id": str(request_id)}
     if purchase:
         wallet.last_payload["bonus_purchase"] = purchase
     wallet.save()

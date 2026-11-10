@@ -79,7 +79,7 @@ def run(engine, output, cdn_dir=None):
                     self.wfile.write(response.content)
 
             server.RequestHandlerClass = Handler
-            with patch("league.vegas_rules.outcome", side_effect=lambda bet, **kw: original(bet, choice=random.Random(42).choice, **kw)):
+            with patch("league.vegas_rules.outcome", side_effect=lambda bet, **kw: original(bet, choice=random.Random(1 if kw.get("free") else 42).choice, **kw)):
                 ready.set()
                 server.serve_forever(poll_interval=.1)
         except Exception as error:
@@ -97,6 +97,7 @@ def run(engine, output, cdn_dir=None):
             with sync_playwright() as p:
                 browser = getattr(p, engine).launch()
                 context = browser.new_context(reduced_motion="reduce")
+                context.add_init_script("""(()=>{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const create=Audio.prototype.createOscillator;Audio.prototype.createOscillator=function(...args){const o=create.apply(this,args),start=o.start;o.start=function(...args){window.vegasNotesStarted=(window.vegasNotesStarted||0)+1;return start.apply(this,args)};return o}})()""")
                 if cdn_dir:
                     # Optional exact upstream Bootstrap files for environments where
                     # WebKit cannot reach jsDelivr. Do not replace them with stubs.
@@ -151,6 +152,10 @@ def run(engine, output, cdn_dir=None):
                     box = page.locator("#vegas-page").bounding_box()
                     assert abs(box["width"]-width) <= 1 and abs(box["height"]-height) <= 1, box
                     spin = page.locator("#vegas-spin").bounding_box()
+                    if spin["y"]+spin["height"] > height:
+                        page.screenshot(path=str(output/f"{engine}-layout-failure.png"), full_page=True)
+                        print(page.locator("#vegas-machine").evaluate("el=>({style:el.getAttribute('style'),classes:el.className,parts:[...el.querySelectorAll('.vegas-marquee,.vegas-bonus-hud,.vegas-stage,.vegas-console,.vegas-board-frame,.vegas-buy')].map(n=>({cls:n.className,hidden:n.hidden,display:getComputedStyle(n).display,rect:n.getBoundingClientRect().toJSON()}))})"), flush=True)
+                        print(errors, flush=True)
                     assert spin["y"] >= 0 and spin["y"]+spin["height"] <= height, (engine, width, height, spin)
                     label = page.locator("#vegas-spin span").bounding_box()
                     assert label["x"]-spin["x"] >= 8 and spin["x"]+spin["width"]-label["x"]-label["width"] >= 8, (engine, width, "spin label inset", label)
@@ -238,19 +243,71 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=15000)
                 expect(page.locator("#vegas-celebration-value")).to_have_text("10 FREE SPINS")
                 assert len(purchase_ids) == 2 and purchase_ids[0] == purchase_ids[1]
-                page.keyboard.press("Space")
-                expect(page.locator("#vegas-spin")).to_be_enabled()
+                # Dismiss entry, then pause while the first automatic free spin runs.
+                with page.expect_request("**/arcade/lab/vegas/spin/"):
+                    page.keyboard.press("Space")
+                page.locator("#vegas-bonus-pause").click()
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=15000)
+                expect(page.locator("#vegas-bonus-pause")).to_have_attribute("aria-pressed", "true")
+                expect(page.locator("#vegas-free")).to_have_text("9")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "4000")
+                count_paused = len(spin_requests)
+                page.wait_for_timeout(400)
+                assert len(spin_requests) == count_paused, "Pause must stop the next spin"
+                for width, height in ((320, 568), (390, 844), (667, 375), (844, 390), (1280, 720)):
+                    page.set_viewport_size({"width": width, "height": height})
+                    page.locator("#vegas-fullscreen").click()
+                    page.wait_for_timeout(100)
+                    spin_box = page.locator("#vegas-spin").bounding_box()
+                    assert spin_box["y"]+spin_box["height"] <= height, (engine, "bonus viewport", width, spin_box)
+                    expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "4000")
+                    if width in (390, 1280):
+                        page.screenshot(path=str(output/f"{engine}-{width}-bonus-running.png"))
+                    page.keyboard.press("Escape")
+                page.set_viewport_size({"width": 1440, "height": 1050})
+                # Simulate a background document: resuming must not send a request.
+                page.evaluate("Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'))")
+                page.locator("#vegas-bonus-pause").click()
+                page.wait_for_timeout(400)
+                assert len(spin_requests) == count_paused, "Hidden tab must not spin"
+                page.locator("#vegas-bonus-pause").click()
+                page.evaluate("delete document.hidden;document.dispatchEvent(new Event('visibilitychange'))")
+                # Reload resumes automatically. Lose the first response AFTER commit.
+                auto_retry_ids = []
+                def lose_free(route):
+                    auto_retry_ids.append(route.request.post_data_json["request_id"])
+                    route.fetch()
+                    route.abort()
+                page.route("**/arcade/lab/vegas/spin/", lose_free, times=1)
                 page.reload()
-                expect(page.locator("#vegas-free")).to_have_text("10")
                 expect(page.locator("#vegas-buy")).to_be_disabled()
                 expect(page.locator("#vegas-plus")).to_be_disabled()
                 restored = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent)")
-                assert restored["state"]["balance"] == 400000
-                assert restored["last_purchase"]["cost"] == 100000
-                with page.expect_request("**/arcade/lab/vegas/spin/"):
-                    page.keyboard.press("Space")
-                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=15000)
-                expect(page.locator("#vegas-free")).to_have_text("9")
+                assert restored["state"]["balance"] == 404000
+                assert restored["state"]["bonus"] == {"win": 4000, "played": 1, "granted": 10}
+                expect(page.locator("#vegas-spin span")).to_have_text("ПОВТОРИТЬ", timeout=15000)
+                failed_count = len(spin_requests)
+                page.wait_for_timeout(400)
+                assert len(spin_requests) == failed_count, "Network error must not loop requests"
+                def retry_free(route):
+                    auto_retry_ids.append(route.request.post_data_json["request_id"])
+                    route.continue_()
+                page.route("**/arcade/lab/vegas/spin/", retry_free, times=1)
+                page.keyboard.press("Space")
+                expect(page.locator('#vegas-celebration[data-kind="summary"]')).to_be_visible(timeout=30000)
+                assert auto_retry_ids[0] == auto_retry_ids[1]
+                expect(page.locator("#vegas-free")).to_have_text("0")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "40000")
+                expect(page.locator("#vegas-bonus-progress")).to_contain_text("10 / 10")
+                assert page.evaluate("window.vegasNotesStarted > 0"), "Real audio nodes must play after user interaction"
+                page.screenshot(path=str(output/f"{engine}-bonus-summary.png"), full_page=True)
+                finished_count = len(spin_requests)
+                page.keyboard.press("Space")
+                page.wait_for_timeout(450)
+                assert len(spin_requests) == finished_count, "Auto must never spend on a paid spin"
+                page.reload()
+                ended = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent).state")
+                assert ended["balance"] == 440000 and ended["bonus"]["win"] == 40000
                 page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-reset").click()
                 expect(page.locator("#vegas-message")).to_contain_text("сброшен")
@@ -259,14 +316,11 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 expect(page.locator("#vegas-celebration-value")).to_contain_text("FREE SPINS")
                 page.screenshot(path=str(output/f"{engine}-bonus.png"), full_page=True)
+                # Natural bonus entry and all free spins close/run without a click.
+                expect(page.locator('#vegas-celebration[data-kind="summary"]')).to_be_visible(timeout=30000)
+                expect(page.locator("#vegas-bonus-progress")).to_contain_text("8 / 8")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "32000")
                 page.keyboard.press("Space")
-                expect(page.locator("#vegas-spin")).to_be_enabled()
-                expect(page.locator("#vegas-plus")).to_be_disabled()
-                expect(page.locator("#vegas-spin span")).to_have_text("FREE SPIN")
-                free_before = page.locator("#vegas-free").inner_text()
-                page.reload()
-                expect(page.locator("#vegas-free")).to_have_text(free_before)
-                page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-scenario").select_option("bigwin")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
@@ -288,12 +342,18 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-effects").click()
                 expect(page.locator("#vegas-effects")).to_have_attribute("aria-pressed", "false")
                 page.locator("#vegas-effects").click()
+                page.locator("#vegas-sound").click()
+                expect(page.locator("#vegas-sound")).to_have_attribute("aria-pressed", "false")
+                notes_before = page.evaluate("window.vegasNotesStarted || 0")
                 page.locator("#vegas-scenario").select_option("bigwin")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "fire", timeout=10000)
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
+                assert page.evaluate("window.vegasNotesStarted || 0") == notes_before, "Mute must suppress all new sound nodes"
+                page.locator("#vegas-sound").click()
+                expect(page.locator("#vegas-sound")).to_have_attribute("aria-pressed", "true")
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 page.emulate_media(reduced_motion="reduce")
                 # A lost response AFTER the real server commits must retry the same request.
@@ -313,7 +373,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(request_ids) == 2 and request_ids[0] == request_ids[1], request_ids
                 assert not errors, errors
-                print(f"{engine}: Space, stakes, responsive UI, purchase confirmation/cancel, buy retry/reload, bonus and spin retry OK")
+                print(f"{engine}: responsive UI, automatic bonus totals, pause/background/reload, bonus and spin retries, audio/mute and FX OK")
                 browser.close()
         finally:
             server.shutdown()
