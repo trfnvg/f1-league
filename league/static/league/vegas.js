@@ -9,6 +9,7 @@
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
   let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=true;
+  let autoPlay=false;
   let autoTimer=0, bonusPaused=false, autoBlocked=false, pageSuspended=false, lastRequestAt=0;
   let master=null;const voices=new Set(),counters=new Map();
   let current=cfg.last?.rounds?.at(-1)?.grid||cfg.last_purchase?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
@@ -59,21 +60,25 @@
   }
   function queueBonus(){
     clearTimeout(autoTimer);autoTimer=0;
-    if(!state.free_spins||busy||pending||bonusPaused||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open)return;
+    if(autoPlay&&!state.free_spins&&state.balance<cfg.bets[betIndex]){autoPlay=false;controls();message("Авто остановлено: недостаточно средств");}
+    if((!state.free_spins&&!autoPlay)||busy||pending||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open)return;
     const delay=Math.max(reduced.matches?160:550,(cfg.min_spin_interval_ms||0)+80-(performance.now()-lastRequestAt));
     autoTimer=setTimeout(()=>{autoTimer=0;request("spin",true);},delay);
   }
   $("bonus-pause").addEventListener("click",()=>{unlockAudio(true);if(autoBlocked){request();return;}bonusPaused=!bonusPaused;controls();queueBonus();});
-  document.addEventListener("visibilitychange",()=>{if(document.hidden){clearTimeout(autoTimer);stopAudio();}else{unlockAudio();queueBonus();}});
-  window.addEventListener("pagehide",()=>{pageSuspended=true;clearTimeout(autoTimer);stopAudio();});
+  document.addEventListener("visibilitychange",()=>{if(document.hidden){autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();}else{unlockAudio();queueBonus();}});
+  window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
   window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
   function controls(){
+    $("auto").setAttribute("aria-pressed",String(autoPlay));
+    $("auto").querySelector("span").textContent=autoPlay?"СТОП":"АВТО";
+    $("auto").disabled=!autoPlay&&(busy||!!pending||state.free_spins>0||state.balance<cfg.bets[betIndex]);
     $("balance").textContent=money(state.balance);$("free").textContent=state.free_spins;
     $("bet").textContent=money(state.free_spins?state.bonus_bet:cfg.bets[betIndex]);$("spin").disabled=busy;
     $("spin").querySelector("span").textContent=busy?"СПИН…":pending?"ПОВТОРИТЬ":state.free_spins?"FREE SPIN":"КРУТИТЬ";
-    $("minus").disabled=busy||!!pending||state.free_spins>0||betIndex===0;
-    $("plus").disabled=busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
-    $("reset").disabled=busy||!!pending;$("scenario").disabled=busy||!!pending;
+    $("minus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===0;
+    $("plus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
+    $("reset").disabled=autoPlay||busy||!!pending;$("scenario").disabled=autoPlay||busy||!!pending;
     const hud=$("bonus-hud"),visible=state.bonus.granted>0,changed=hud.hidden===visible;
     hud.hidden=!visible;hud.classList.toggle("is-complete",visible&&!state.free_spins);machine.classList.toggle("has-bonus-hud",visible);
     setAmount($("bonus-total"),state.bonus.win);
@@ -82,7 +87,7 @@
     $("win-label").textContent=visible?"ЗА СПИН":"ВЫИГРЫШ";
     if(changed)scheduleFit();
     const retry=pending?.action==="buy_bonus",stake=retry?pending.bet:cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;
-    $("buy").disabled=busy||state.free_spins>0||(!retry&&(!!pending||state.balance<cost));
+    $("buy").disabled=autoPlay||busy||state.free_spins>0||(!retry&&(!!pending||state.balance<cost));
     $("buy-label").textContent=state.free_spins?"БОНУС АКТИВЕН":retry?"ПОВТОРИТЬ ПОКУПКУ":"КУПИТЬ БОНУС";
     $("buy-count").textContent=state.free_spins||cfg.bonus_buy.spins;
     $("buy-caption").textContent=state.free_spins?"ОСТАЛОСЬ":"FREE SPINS";
@@ -106,7 +111,7 @@
     const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
     const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
     const maxWidth=Math.max(180,machine.clientWidth-24-side);
-    const board=Math.floor(Math.min(750,maxWidth,Math.max(wide?80:100,height-outside-overhead)*1.25));
+    const board=Math.floor(Math.min(750,maxWidth,full?Math.max(wide?80:100,height-outside-overhead)*1.25:Infinity));
     machine.style.setProperty("--board-size",`${board}px`);
     // The bottom control bar stays comfortably wide even in a short viewport.
     machine.style.setProperty("--cabinet-width",`${wide?Math.min(machine.clientWidth-24,Math.max(board+side,580)):machine.clientWidth-24}px`);
@@ -175,9 +180,6 @@
     fxCanvas.dataset.active="true";fxCanvas.dataset.effect=mode;
     if(!fxFrame)fxFrame=requestAnimationFrame(paintFX);
   }
-  $("effects").addEventListener("click",()=>{
-    fxEnabled=!fxEnabled;page.classList.toggle("effects-off",!fxEnabled);$("effects").setAttribute("aria-pressed",String(fxEnabled));$("effects").textContent=fxEnabled?"Эффекты вкл.":"Эффекты выкл.";if(!fxEnabled)stopFX();
-  });
   reduced.addEventListener("change",()=>{if(reduced.matches)stopFX();});document.addEventListener("visibilitychange",()=>{if(document.hidden)stopFX();});
   function clear(){svg.replaceChildren();$("particles").replaceChildren();reels.querySelectorAll(".is-winning,.is-exploding,.is-scatter").forEach(e=>e.classList.remove("is-winning","is-exploding","is-scatter"));}
   function line(win){
@@ -247,7 +249,7 @@
       callout(round.multiplier>1?`КАСКАД ×${round.multiplier}`:"ВЫИГРЫШ",`+${money(round.amount)}`);if(i)cue("cascade");
       clear();round.wins.flatMap(w=>w.cells).forEach(([c,r])=>columns[c].track.children[r]?.classList.add("is-winning"));message(`${round.wins.length} выигрышных линий · каскад +${money(round.amount)}`);await pause(400);
     }
-    state=data.state;controls();setAmount($("win"),result.payout);
+    state=data.state;if(state.free_spins)autoPlay=false;controls();setAmount($("win"),result.payout);
     if(result.awarded){
       reels.querySelectorAll('[data-symbol="scatter"]').forEach(el=>el.classList.add("is-scatter"));cue("bonus");
       if(result.free){callout("ЕЩЁ КРУГИ!",`+${result.awarded} FREE SPINS`,"bonus");await pause(800);}
@@ -261,7 +263,8 @@
   }
   async function request(action="spin",automatic=false){
     if(busy||!$("celebration").hidden||$("purchase").open)return;
-    if(automatic&&(!state.free_spins||bonusPaused||autoBlocked||document.hidden||pageSuspended))return;
+    if(automatic&&((!state.free_spins&&!autoPlay)||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended))return;
+    if(action!=="spin")autoPlay=false;
     clearTimeout(autoTimer);autoTimer=0;
     if(!automatic&&action==="spin"&&state.free_spins)bonusPaused=false;
     if(action==="reset"&&!confirm("Сбросить только свой тестовый баланс и бесплатные вращения?")){queueBonus();return;}
@@ -279,9 +282,10 @@
       else if(data.result){await present(data);}
       else{state=data.state;bonusPaused=false;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
       $("scenario").value="random";
-    }catch(error){autoBlocked=true;message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
+    }catch(error){autoPlay=false;autoBlocked=true;message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
     finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();if(!automatic)$("spin").focus({preventScroll:true});queueBonus();}
   }
+  $("auto").addEventListener("click",()=>{autoPlay=!autoPlay;autoBlocked=false;unlockAudio(true);controls();queueBonus();});
   $("spin").addEventListener("click",()=>request());$("reset").addEventListener("click",()=>request("reset"));
   function closePurchase(){const dialog=$("purchase");dialog.close();dialog.hidden=true;}
   $("buy").addEventListener("click",()=>{
@@ -296,9 +300,8 @@
   $("purchase").addEventListener("cancel",e=>{e.preventDefault();closePurchase();});
   $("purchase-confirm").addEventListener("click",()=>{closePurchase();request("buy_bonus");});
   $("minus").addEventListener("click",()=>{betIndex=Math.max(0,betIndex-1);controls();});$("plus").addEventListener("click",()=>{betIndex=Math.min(cfg.bets.length-1,betIndex+1);controls();});
-  $("sound").addEventListener("click",()=>{sound=!sound;$("sound").setAttribute("aria-pressed",String(sound));$("sound").setAttribute("aria-label",sound?"Выключить звук":"Включить звук");$("sound").textContent=sound?"Звук вкл.":"Звук выкл.";if(sound){unlockAudio(true);tone(660);}else stopAudio();});
   let oldOverflow="";
-  function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").textContent=on?"Выйти из экрана":"На весь экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
+  function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").querySelector("span").textContent=on?"Свернуть":"Полный экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
   $("fullscreen").addEventListener("click",()=>fullscreen(!page.classList.contains("is-fullscreen")));
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden&&!$("purchase").open)fullscreen(false);

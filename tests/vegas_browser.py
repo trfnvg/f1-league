@@ -147,6 +147,11 @@ def run(engine, output, cdn_dir=None):
                     expect(page.locator(".vegas-rules,#vegas-result-log,#vegas-line-picker")).to_have_count(0)
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "overflow")
                     expect(page.locator("#vegas-spin")).to_be_enabled()
+                    inline_board = page.locator("#vegas-board").bounding_box()
+                    page.set_viewport_size({"width": width, "height": height+80})
+                    page.wait_for_timeout(100)
+                    assert abs(page.locator("#vegas-board").bounding_box()["width"]-inline_board["width"]) < 1, "Browser toolbar must not resize inline reels"
+                    page.set_viewport_size({"width": width, "height": height})
                     page.locator("#vegas-fullscreen").click()
                     page.wait_for_timeout(150)
                     box = page.locator("#vegas-page").bounding_box()
@@ -339,11 +344,7 @@ def run(engine, output, cdn_dir=None):
                 page.screenshot(path=str(output/f"{engine}-390-winning-line.png"), full_page=True)
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
-                page.locator("#vegas-effects").click()
-                expect(page.locator("#vegas-effects")).to_have_attribute("aria-pressed", "false")
-                page.locator("#vegas-effects").click()
-                page.locator("#vegas-sound").click()
-                expect(page.locator("#vegas-sound")).to_have_attribute("aria-pressed", "false")
+                expect(page.locator("#vegas-effects,#vegas-sound")).to_have_count(0)
                 notes_before = page.evaluate("window.vegasNotesStarted || 0")
                 page.locator("#vegas-scenario").select_option("bigwin")
                 page.locator("#vegas-spin").click()
@@ -351,9 +352,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-celebration")).to_be_visible(timeout=20000)
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
-                assert page.evaluate("window.vegasNotesStarted || 0") == notes_before, "Mute must suppress all new sound nodes"
-                page.locator("#vegas-sound").click()
-                expect(page.locator("#vegas-sound")).to_have_attribute("aria-pressed", "true")
+                assert page.evaluate("window.vegasNotesStarted || 0") > notes_before, "Win sound should remain enabled"
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 page.emulate_media(reduced_motion="reduce")
                 # A lost response AFTER the real server commits must retry the same request.
@@ -372,8 +371,23 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(request_ids) == 2 and request_ids[0] == request_ids[1], request_ids
+                # Paid auto must issue sequential requests and stop without an extra debit.
+                before_auto = len(spin_requests)
+                page.locator("#vegas-auto").click()
+                expect(page.locator("#vegas-auto")).to_have_attribute("aria-pressed", "true")
+                for _ in range(100):
+                    if len(spin_requests) >= before_auto+2:
+                        break
+                    page.wait_for_timeout(100)
+                assert len(spin_requests) >= before_auto+2, "Auto should run multiple paid spins"
+                page.locator("#vegas-auto").click()
+                expect(page.locator("#vegas-auto")).to_have_attribute("aria-pressed", "false")
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                stopped = len(spin_requests)
+                page.wait_for_timeout(1200)
+                assert len(spin_requests) == stopped, "Stop must prevent the next paid spin"
                 assert not errors, errors
-                print(f"{engine}: responsive UI, automatic bonus totals, pause/background/reload, bonus and spin retries, audio/mute and FX OK")
+                print(f"{engine}: stable responsive UI, paid auto start/stop, automatic bonus totals, pause/background/reload, retries, audio and FX OK")
                 browser.close()
         finally:
             server.shutdown()
