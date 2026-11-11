@@ -1,5 +1,38 @@
 # Vegas Pit — visual assets
 
+## Current v4 portrait symbols
+
+`meme-symbols-v4.png` is the new transparent 3×3 atlas, generated with the
+built-in image tool and copied unchanged. Large recognizable painted portraits
+replace the object-only symbols. Bath Judge uses the existing game character
+(`doodle-jump/bath-boss-poses-v1.png`) as its identity reference.
+
+| Row | Column 1 | Column 2 | Column 3 |
+| --- | --- | --- | --- |
+| 1 | `tyre`: exhausted tyre | `duck`: GP2 engine | `banana`: Norris broken trophy |
+| 2 | `berry`: Banana Leclerc | `russell`: Strawberry Max | `toto`: Kimi ice cream |
+| 3 | `bath`: Alonso deckchair | `wild`: Bath Judge | `scatter`: Toto bonus |
+
+Internal keys, probabilities and payouts remain compatible with saved spins.
+Older art and mappings below are historical versions.
+
+### v4 prompt (verbatim; built-in mode)
+
+```text
+Use case: stylized-concept. Generate one production transparent 3x3 sprite atlas for a Formula One meme casino slot. Square canvas divided into NINE perfectly equal invisible square cells. Exactly one isolated symbol centered in each cell with 12% clear transparent padding on every side; nothing crosses cells. Genuine transparent alpha background, no grid, no panels, no text. Premium crisp hand-painted 2D casino illustration, polished highlights, strong silhouette, warm rim lighting. IMPORTANT likeness: named real people must be individually recognizable, anatomically credible portrait faces, NOT generic cartoon men or toys. Faces large, about half the icon, detailed eyes, characteristic nose, hairline and jaw, accurate individual age. Portrait realism integrated into painterly slot art, no airbrushed plastic.
+Exact row order:
+TOP LEFT exhausted black slick racing tyre with tiny white surrender flag and light smoke.
+TOP CENTER blue compact GP2 engine with silver exhaust and a puff of smoke.
+TOP RIGHT broken ornate blue-white porcelain trophy with gold handles, separated cracked cup and base, tiny orange racing glove alongside (Norris trophy meme), no person.
+MIDDLE LEFT CHARLES LECLERC recognizable smiling face, brown side-parted wavy hair, hazel eyes, distinctive eyebrows, slim face and light stubble, emerging from a peeled bright yellow banana costume, large face.
+MIDDLE CENTER MAX VERSTAPPEN recognizable broad angular face, characteristic nose and light eyes, short dark blond hair, a slight mischievous smile, his head atop a bright red strawberry with green leaves, large portrait.
+MIDDLE RIGHT KIMI RAIKKONEN recognizable middle-aged Finnish face, narrow light eyes and distinctive nose, short light blond hair, deadpan expression in red racing collar holding an ice cream cone prominently.
+BOTTOM LEFT FERNANDO ALONSO recognizable brown eyes, strong eyebrows, broad nose and dark short hair with graying beard, relaxed sly grin, reclining in an orange folding deckchair, blue racing clothes. Compose cropped knees-up with disproportionately prominent but anatomically faithful face so he reads on mobile.
+BOTTOM CENTER fictional Bath Judge: chubby brown-haired bespectacled man with rectangular black glasses, round cheeks, bare shoulders, gold medal on red ribbon, sitting in ivory gold clawfoot bathtub filled with white bubbles, emphatically raises index finger. Use provided reference only for THIS character identity and bathtub details; repaint in same non-pixel painterly style as other symbols.
+BOTTOM RIGHT TOTO WOLFF recognizable long angular face, high cheekbones, dark swept hair, strong nose, black team radio headset, shouting with mouth open, white shirt collar, one restrained gold lightning accent.
+All nine same visual size, clear dark outlines, rich gold/blue/red/green jewel accents. No letters, captions, watermarks, logos, scenery, floor shadows, crowns, extra people or duplicate faces. Existing image is only Bath Judge reference, not an edit target. Deliver an entirely new square nine-cell atlas.
+```
+
 ## Current v3 artwork and composition
 
 `strip-v3.png` is the painted violet/gold Las Vegas circuit background.

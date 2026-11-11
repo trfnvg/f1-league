@@ -61,7 +61,7 @@
 .vegas-reel:last-child { border-right:0; }
 .vegas-reel-track { display:grid; grid-template-rows:repeat(4,minmax(0,1fr)); gap:0; height:100%; }
 .vegas-cell { position:relative; display:flex; align-items:center; justify-content:center; min-width:0; min-height:0; overflow:hidden; border:1px solid transparent; border-radius:0; background:transparent; }
-.vegas-symbol-art { position:absolute; width:96%; aspect-ratio:1; top:2%; left:2%; background-image:url('images/vegas/meme-symbols-v3.png'); background-repeat:no-repeat; background-size:300% 300%; filter:drop-shadow(0 3px 2px #1b061b88); clip-path:inset(5%); pointer-events:none; }
+.vegas-symbol-art { position:absolute; width:96%; aspect-ratio:1; top:2%; left:2%; background-image:url('images/vegas/meme-symbols-v4.png'); background-repeat:no-repeat; background-size:300% 300%; filter:drop-shadow(0 3px 2px #1b061b88); clip-path:inset(5%); pointer-events:none; }
 .vegas-art-tyre { background-position:0 0; }.vegas-art-duck { background-position:50% 0; }.vegas-art-banana { background-position:100% 0; }
 .vegas-art-berry { background-position:0 50%; }.vegas-art-russell { background-position:50% 50%; }.vegas-art-toto { background-position:100% 50%; }
 .vegas-art-bath { background-position:0 100%; }.vegas-art-wild { background-position:50% 100%; }.vegas-art-scatter { background-position:100% 100%; }

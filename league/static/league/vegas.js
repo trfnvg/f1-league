@@ -5,7 +5,7 @@
   const cfg=JSON.parse(node.textContent), $=id=>document.getElementById(`vegas-${id}`);
   const page=$("page"), machine=$("machine"), reels=$("reels"), svg=$("lines");
   const reduced=matchMedia("(prefers-reduced-motion: reduce)"), symbols=new Map(cfg.symbols.map(s=>[s.key,s]));
-  const labels={banana:"SBINALLA",berry:"SMOOTH OPERATOR",russell:"T-POSE",toto:"NO, MICHAEL!",bath:"EL PLAN",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"SCATTER"};
+  const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕР",russell:"КЛУБНИКА МАКС",toto:"КИМИ С МОРОЖЕНЫМ",bath:"АЛОНСО В ШЕЗЛОНГЕ",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"БОНУС"};
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
   let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=true;
