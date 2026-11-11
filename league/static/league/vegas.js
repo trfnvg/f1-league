@@ -5,7 +5,7 @@
   const cfg=JSON.parse(node.textContent), $=id=>document.getElementById(`vegas-${id}`);
   const page=$("page"), machine=$("machine"), reels=$("reels"), svg=$("lines");
   const reduced=matchMedia("(prefers-reduced-motion: reduce)"), symbols=new Map(cfg.symbols.map(s=>[s.key,s]));
-  const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕР",russell:"КЛУБНИКА МАКС",toto:"КИМИ С МОРОЖЕНЫМ",bath:"АЛОНСО В ШЕЗЛОНГЕ",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"БОНУС"};
+const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕР",russell:"КЛУБНИКА МАКС",toto:"ПЕРЧИК РАССЕЛЛ",bath:"АЛОНСО В ШЕЗЛОНГЕ",tyre:"BONO, MY TYRES!",duck:"GP2 ENGINE",wild:"WILD",scatter:"БОНУС"};
   const money=v=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:v%100?2:0}).format(v/100);
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
   let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=true;
@@ -111,7 +111,7 @@
     const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
     const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
     const maxWidth=Math.max(180,machine.clientWidth-24-side);
-    const board=Math.floor(Math.min(750,maxWidth,full?Math.max(wide?80:100,height-outside-overhead)*1.25:Infinity));
+    const board=Math.floor(Math.min(750,maxWidth,full?Math.max(wide?60:100,height-outside-overhead)*1.25:Infinity));
     machine.style.setProperty("--board-size",`${board}px`);
     // The bottom control bar stays comfortably wide even in a short viewport.
     machine.style.setProperty("--cabinet-width",`${wide?Math.min(machine.clientWidth-24,Math.max(board+side,580)):machine.clientWidth-24}px`);
@@ -244,9 +244,17 @@
       if(i)await cascade(result.rounds[i-1].grid,round.grid,result.rounds[i-1].wins);
       $("multiplier").textContent=`×${round.multiplier}`;if(!round.wins.length)break;
       total+=round.amount;countAmount($("win"),total);if(result.free)countAmount($("bonus-total"),bonusBefore+total);
-      burstFX(round.multiplier>=3||round.amount>=result.bet*8?"fire":"electric",round.wins.flatMap(w=>w.cells));
+      const pepperWins=round.wins.filter(w=>w.symbol==="toto");
+      burstFX(pepperWins.length||round.multiplier>=3||round.amount>=result.bet*8?"fire":"electric",round.wins.flatMap(w=>w.cells));
+      if(pepperWins.length&&!reduced.matches&&!document.hidden){
+        const pepperCells=new Map(pepperWins.flatMap(w=>w.cells).map(pos=>[pos.join(","),pos]));
+        for(const [c,r] of pepperCells.values()){
+          const el=columns[c].track.children[r];if(el?.dataset.symbol!=="toto")continue;
+          el.animate([{filter:"drop-shadow(0 0 0 transparent)",transform:"scale(1)"},{filter:"drop-shadow(0 0 9px #ff771f)",transform:"scale(1.08)",offset:.45},{filter:"drop-shadow(0 0 0 transparent)",transform:"scale(1)"}],{duration:850,easing:"ease-out"});
+        }
+      }
       for(const win of round.wins.slice(0,5)){clear();line(win);message(`Линия ${win.line} · ${symbols.get(win.symbol).name} ×${win.count} · +${money(win.amount)}`);cue("line",i);await pause(300);}
-      callout(round.multiplier>1?`КАСКАД ×${round.multiplier}`:"ВЫИГРЫШ",`+${money(round.amount)}`);if(i)cue("cascade");
+      callout(pepperWins.length?"ПЕРЧИК ЖЖЁТ!":round.multiplier>1?`КАСКАД ×${round.multiplier}`:"ВЫИГРЫШ",`+${money(round.amount)}`);if(i)cue("cascade");
       clear();round.wins.flatMap(w=>w.cells).forEach(([c,r])=>columns[c].track.children[r]?.classList.add("is-winning"));message(`${round.wins.length} выигрышных линий · каскад +${money(round.amount)}`);await pause(400);
     }
     state=data.state;if(state.free_spins)autoPlay=false;controls();setAmount($("win"),result.payout);

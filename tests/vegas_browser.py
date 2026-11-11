@@ -386,6 +386,28 @@ def run(engine, output, cdn_dir=None):
                 stopped = len(spin_requests)
                 page.wait_for_timeout(1200)
                 assert len(spin_requests) == stopped, "Stop must prevent the next paid spin"
+                # Presentation-only fixture: isolate a low-value pepper win so
+                # fire cannot be triggered by the generic large-win threshold.
+                def pepper_response(route):
+                    response = route.fetch()
+                    data = response.json()
+                    result = data["result"]
+                    result.update(payout=100, awarded=0, free=False)
+                    result["rounds"] = [{
+                        "grid": [["toto", "tyre", "duck", "berry"] for _ in range(5)],
+                        "multiplier": 1, "amount": 100,
+                        "wins": [{"line": 1, "symbol": "toto", "count": 5, "rows": [0]*5,
+                                  "cells": [[c, 0] for c in range(5)], "amount": 100}],
+                    }]
+                    route.fulfill(response=response, json=data)
+                page.emulate_media(reduced_motion="no-preference")
+                page.route("**/arcade/lab/vegas/spin/", pepper_response, times=1)
+                page.locator("#vegas-spin").click()
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "fire", timeout=10000)
+                expect(page.locator("#vegas-callout-label")).to_have_text("ПЕРЧИК ЖЖЁТ!", timeout=10000)
+                page.screenshot(path=str(output/f"{engine}-pepper-win.png"), full_page=True)
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 assert not errors, errors
                 print(f"{engine}: stable responsive UI, paid auto start/stop, automatic bonus totals, pause/background/reload, retries, audio and FX OK")
                 browser.close()

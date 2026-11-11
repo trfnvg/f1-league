@@ -258,4 +258,24 @@
   .vegas-spin { grid-column:5; }
 }
 body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { outline:2px solid #ffe1a8!important;outline-offset:3px; }
+.vegas-art-toto { background-image:url('images/vegas/pepper-russell-v1.png'); background-size:contain; background-position:center; clip-path:none; }
+.vegas-console { border:1px solid #b891594d; background:linear-gradient(145deg,#281d2e,#18121f); box-shadow:0 8px 24px #10081740; }
+.vegas-console .vegas-spin,.vegas-console .vegas-auto { align-self:end; width:100%; height:64px; min-height:64px; gap:5px; padding:10px 6px; border:1px solid #c6a36e80; border-radius:12px; box-shadow:inset 0 1px 0 #ffffff12,0 3px 8px #0003; }
+.vegas-console .vegas-spin { background:linear-gradient(150deg,#488957,#286540); border-color:#94bd8099; }
+.vegas-console .vegas-auto { background:linear-gradient(150deg,#44334b,#302335); }
+.vegas-console .vegas-auto[aria-pressed=true] { background:linear-gradient(150deg,#8b4a32,#633227); border-color:#e2aa70; }
+.vegas-spin::before { display:none; }
+.vegas-console .vegas-spin svg,.vegas-console .vegas-auto svg { width:23px; height:23px; filter:none; stroke-width:2; }
+.vegas-console .vegas-spin span,.vegas-console .vegas-auto span { font:700 8px/1.25 Arial,sans-serif; letter-spacing:.03em; }
+.vegas-stake>div { min-height:48px; margin-top:5px; padding:3px; border:1px solid #a38b654d; border-radius:12px; background:#17101f; gap:3px; }
+.vegas-stake button { width:36px; min-width:36px; min-height:44px; border:0; border-radius:9px; background:#382b40; color:#f5dfb4; box-shadow:none; font:400 21px/1 Arial,sans-serif; }
+.vegas-stake strong { font-size:14px; }
+.vegas-toolbar #vegas-fullscreen { border-color:#b891594d; background:#302335; box-shadow:inset 0 1px #ffffff0a; }
+.vegas-buy { border:1px solid #dfba7770; border-radius:12px; background:linear-gradient(135deg,#703960,#472843); box-shadow:inset 0 1px #ffffff1a,0 4px 12px #160b2640; text-shadow:none; }
+.vegas-buy::before,.vegas-buy::after { display:none; }
+@media(min-width:650px) and (max-height:500px) {
+  .vegas-console .vegas-spin,.vegas-console .vegas-auto { height:54px; min-height:54px; padding:6px 4px; }
+  .has-bonus-hud .vegas-buy { display:none; }
+  .has-bonus-hud .vegas-stage { grid-template-columns:var(--board-size); gap:0; }
+}
 @media(hover:hover) { .vegas-spin:not(:disabled):hover,.vegas-buy:not(:disabled):hover { filter:brightness(1.08); }.vegas-toolbar button:hover { color:#fff0ce;border-color:#cfb37a; } }

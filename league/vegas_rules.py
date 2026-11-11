@@ -16,7 +16,7 @@ SYMBOLS = (
     {"key": "banana", "name": "Разбитый кубок Норриса", "weight": 18, "pays": (8, 25, 90)},
     {"key": "berry", "name": "Банана Леклер", "weight": 16, "pays": (8, 25, 90)},
     {"key": "russell", "name": "Клубника Макс", "weight": 12, "pays": (12, 40, 140)},
-    {"key": "toto", "name": "Кими с мороженым", "weight": 9, "pays": (18, 60, 200)},
+    {"key": "toto", "name": "Перчик Расселл", "weight": 9, "pays": (18, 60, 200)},
     {"key": "bath", "name": "Алонсо в шезлонге", "weight": 6, "pays": (25, 100, 400)},
     {"key": "wild", "name": "Банный судья · Wild", "weight": 3, "pays": (30, 150, 600)},
     {"key": "scatter", "name": "Тото Вольф · Бонус", "weight": 2, "pays": ()},

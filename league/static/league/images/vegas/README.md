@@ -1,5 +1,18 @@
 # Vegas Pit — visual assets
 
+## Pepper Russell override
+
+`pepper-russell-v1.png` replaces the ice-cream portrait (internal key `toto`).
+Generated using the built-in image tool, copied unchanged with transparency.
+The remaining eight symbols still use the v4 atlas. Winning pepper lines
+trigger bounded fire FX and a short portrait glow; payouts are unchanged.
+
+Prompt (verbatim):
+
+```text
+Use case: stylized-concept. A single premium hand-painted 2D casino SLOT SYMBOL on genuine transparent alpha background, square canvas. George Russell from Formula One as a bright red chili pepper meme. CRITICAL: large instantly recognizable portrait of the real GEORGE RUSSELL, young clean-shaven British man, characteristic long narrow face, angular jaw, prominent ears, straight nose, blue eyes, thick swept-up dark brown hair, cheeky confident smile. Accurate individual facial likeness, realistic portrait anatomy and painted skin texture, not a generic driver, not Sebastian Vettel, not Kimi Raikkonen. His large face emerges from a glossy curved red chili pepper costume with green stem/collar, compact silhouette; face occupies upper half of icon, red pepper curls below. A few tiny golden ember accents beside pepper, no large flame background. Rich painted highlights, crisp dark contours and restrained golden rim lighting, high quality illustrated online slot art, not plastic toy 3D. Entire icon centered with 12 percent transparent padding on all sides. Readable at 60px. No text, numbers, logos, frame, scenery, floor shadow or other characters.
+```
+
 ## Current v4 portrait symbols
 
 `meme-symbols-v4.png` is the new transparent 3×3 atlas, generated with the
