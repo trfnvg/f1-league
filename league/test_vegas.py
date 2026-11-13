@@ -117,6 +117,37 @@ class VegasLabTests(TestCase):
         wallet.save()
         self.assertEqual(self.client.get(self.page).context["vegas_config"]["state"]["balance"], 12345)
 
+    def test_balance_board_is_live_read_only_and_staff_only(self):
+        url = reverse("league:vegas_lab_balances")
+        rival = User.objects.create_user("vegas-rival", first_name="Друг")
+        wallet = VegasLabWallet.objects.create(user=rival, balance=750000)
+        data = self.client.get(url).json()
+        self.assertEqual(data["players"][0], {"id": rival.pk, "name": "Друг", "balance": 750000, "rank": 1, "is_you": False})
+        self.assertEqual(data["own_balance"], rules.START_BALANCE)
+        wallet.balance = 120000
+        wallet.save(update_fields=["balance"])
+        self.assertEqual(self.client.get(url).json()["players"][1]["balance"], 120000)
+        self.assertFalse(VegasLabWallet.objects.filter(user=self.player).exists())
+        self.assertEqual(self.client.post(url).status_code, 405)
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.logout()
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+    def test_balance_board_pages_ties_and_hides_inactive_accounts(self):
+        for i in range(53):
+            user = User.objects.create_user(f"wallet-{i:02d}", is_active=i != 0)
+            VegasLabWallet.objects.create(user=user, balance=1000)
+        url = reverse("league:vegas_lab_balances")
+        first = self.client.get(url).json()
+        second = self.client.get(url, {"offset": first["next_offset"]}).json()
+        self.assertEqual(len(first["players"]), 50)
+        self.assertEqual(len(second["players"]), 3)
+        self.assertIsNone(second["next_offset"])
+        self.assertFalse(set(p["id"] for p in first["players"]) & set(p["id"] for p in second["players"]))
+        self.assertEqual(second["players"][0]["rank"], 51)
+        self.assertEqual(self.client.get(url, {"offset": "bad"}).json()["players"], first["players"])
+
     def test_shop_is_read_only_and_keeps_server_balance(self):
         shop = reverse("league:vegas_lab_shop")
         before = VegasLabWallet.objects.get(user=self.staff)

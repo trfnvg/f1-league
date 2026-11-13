@@ -70,3 +70,23 @@
 }
 @media(max-height:500px) { .shop-dialog { padding:18px 24px; }.shop-detail-art { width:64px; height:96px; }.shop-dialog>p { margin:10px 0; font-size:12px; } }
 @media(prefers-reduced-motion:reduce) { .casino-shop * { animation:none!important; transition:none!important; } }
+
+body.casino-shop-open { overflow:hidden; }
+.casino-shop.is-fullscreen { position:fixed; inset:0; z-index:2000; width:100%; max-width:none; height:100dvh; overflow-y:auto; overscroll-behavior:contain; padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); background:#17121b; }
+.casino-shop.is-fullscreen .shop-nav { position:sticky; top:0; z-index:10; max-width:1240px; margin:0 auto 12px; padding:6px 0; background:#17121bf2; }
+.casino-shop.is-fullscreen .shop-scene { max-width:1240px; margin:auto; }
+@media(max-width:700px) {
+  .casino-shop.is-fullscreen .shop-scene { --scene-height:800px; --counter-edge:80%; --dealer-size:min(44%,180px); }
+  .casino-shop.is-fullscreen .shop-masthead { top:24px; }
+  .casino-shop.is-fullscreen .shop-masthead h1 { font-size:30px; }
+  .casino-shop.is-fullscreen .shop-product { top:96px; width:40%; height:160px; padding:0 5px 10px; }
+  .casino-shop.is-fullscreen .shop-product-shield,.casino-shop.is-fullscreen .shop-product-wheel,.casino-shop.is-fullscreen .shop-product-refund { left:6%; }
+  .casino-shop.is-fullscreen .shop-product-amnesty,.casino-shop.is-fullscreen .shop-product-pitstop { left:54%; }
+  .casino-shop.is-fullscreen .shop-product-wheel,.casino-shop.is-fullscreen .shop-product-pitstop { top:280px; }
+  .casino-shop.is-fullscreen .shop-product-refund { top:464px; }
+  .casino-shop.is-fullscreen .shop-item-art { width:64px; height:96px; }
+  .casino-shop.is-fullscreen .shop-price-tag { min-height:68px; margin-top:-14px; padding:6px 4px; }
+  .casino-shop.is-fullscreen .shop-price-tag>span { font-size:12px; min-height:30px; }
+  .casino-shop.is-fullscreen .shop-price-tag strong { font-size:16px; }
+  .casino-shop.is-fullscreen .shop-detail-art { width:108px; height:162px; }
+}

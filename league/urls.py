@@ -18,6 +18,7 @@ urlpatterns = [
     path("arcade/lab/vegas/", vegas_views.page, name="vegas_lab"),
     path("arcade/lab/vegas/shop/", vegas_shop.page, name="vegas_lab_shop"),
     path("arcade/lab/vegas/spin/", vegas_views.spin, name="vegas_lab_spin"),
+    path("arcade/lab/vegas/balances/", vegas_views.balances, name="vegas_lab_balances"),
     path("arcade/video/init/", arcade_video.initialize, name="arcade_video_init"),
     path("arcade/video/<uuid:upload_id>/part/", arcade_video.part, name="arcade_video_part"),
     path("arcade/video/<uuid:upload_id>/complete/", arcade_video.complete, name="arcade_video_complete"),

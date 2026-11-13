@@ -347,3 +347,37 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
   .vegas-page:not(.is-fullscreen) .vegas-console .vegas-spin,.vegas-page:not(.is-fullscreen) .vegas-console .vegas-auto { height:44px; min-height:44px; padding:3px; }
 }
 @media(prefers-reduced-motion:reduce) { .vegas-buy::after { animation:none!important; } }
+
+.vegas-finances { display:contents; }
+.vegas-balances { flex-shrink:0; height:76px; min-height:76px; padding:7px 12px; border-top:1px solid #bc995b33; background:#160f20ed; }
+.vegas-balances>header { display:flex; align-items:center; justify-content:space-between; max-width:1120px; margin:0 auto 5px; gap:10px; }
+.vegas-balances h3 { margin:0; color:#e0c797; font:650 10px/1.2 Arial,sans-serif; }
+#vegas-balances-status { color:#9fa895; font:9px/1.2 Arial,sans-serif; }
+.vegas-balance-strip { display:flex; align-items:center; gap:6px; max-width:1120px; margin:auto; overflow-x:auto; scrollbar-width:thin; scrollbar-color:#75563b transparent; overscroll-behavior-x:contain; }
+.vegas-balance-strip ol { display:flex; flex-shrink:0; gap:6px; margin:0; padding:0; list-style:none; }
+.vegas-balance-strip li { display:grid; grid-template-columns:23px minmax(65px,1fr); grid-template-rows:auto auto; align-items:center; column-gap:6px; min-width:150px; max-width:200px; height:36px; padding:4px 8px; border:1px solid #8e795331; border-radius:7px; color:#e5d3b1; background:#312333; }
+.vegas-balance-strip li.is-you { border-color:#bc94545e; background:#48332e; }
+.vegas-balance-rank { grid-row:1/3; color:#bc9b70; font:650 9px/1.2 monospace; }
+.vegas-balance-name { min-width:0; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#bfb3bd; font:10px/1.15 Arial,sans-serif; }
+.vegas-balance-strip strong { grid-column:2; color:#f2d89d; font:700 12px/1.15 Arial,sans-serif; font-variant-numeric:tabular-nums; white-space:nowrap; }
+#vegas-balances-more { flex-shrink:0; min-height:36px; padding:7px 12px; border:1px solid #8f7658; border-radius:7px; background:#332835; color:#dfc696; font:650 11px Arial,sans-serif; }
+@media(max-width:649px), (max-width:699px) and (min-height:501px) {
+  .vegas-console,.vegas-page:not(.is-fullscreen) .vegas-console { grid-template-columns:clamp(56px,16vw,64px) minmax(0,1fr) clamp(56px,16vw,64px); gap:7px; padding:8px; }
+  .vegas-finances { display:flex; align-items:baseline; justify-content:space-between; gap:12px; grid-column:1/-1; grid-row:1; }
+  .vegas-finances .vegas-meter { display:flex; align-items:baseline; gap:6px; container-type:normal; }
+  .vegas-finances .vegas-meter>span { font-size:7px; letter-spacing:0; }
+  .vegas-finances .vegas-meter>strong,.vegas-page:not(.is-fullscreen) .vegas-finances .vegas-meter>strong { margin:0; font-size:16px; }
+  .vegas-console .vegas-stake { grid-column:2; grid-row:2; text-align:center; }
+  .vegas-stake>div { max-width:210px; margin:3px auto 0; }
+  .vegas-console .vegas-auto { grid-column:1; grid-row:2; }
+  .vegas-console .vegas-spin,.has-bonus-hud .vegas-console .vegas-spin { grid-column:3; grid-row:2; }
+  .vegas-console .vegas-spin,.vegas-console .vegas-auto { height:56px; min-height:56px; }
+  .has-bonus-hud .vegas-console .vegas-stake { display:block; }
+}
+@media(min-width:650px) and (max-height:500px) {
+  .vegas-balances { display:flex; align-items:center; gap:10px; height:44px; min-height:44px; padding:4px 12px; }
+  .vegas-page:not(.is-fullscreen) .vegas-balances { display:none; }
+  .vegas-balances>header { flex-shrink:0; margin:0; }
+  #vegas-balances-status { display:none; }
+  .vegas-balance-strip { flex:1; min-width:0; }
+}

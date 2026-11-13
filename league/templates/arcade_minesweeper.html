@@ -134,5 +134,6 @@
 
 {% block extra_scripts %}
   <script src="{% static 'league/arcade-minesweeper.js' %}?v=isolated-test-v3" defer></script>
+  {% include 'arcade_launch_assets.html' %}
   <script src="{% static 'league/arcade-wheel.js' %}" defer></script>
 {% endblock %}

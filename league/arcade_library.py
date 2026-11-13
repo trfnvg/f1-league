@@ -151,7 +151,7 @@ def library(request):
         contest = freeze(contest)
     # New releases lead the library; the selected competition has its own hero card.
     newest_first = ("tetris", "doodle_jump", "flappy")
-    all_cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])} for key in newest_first]
+    all_cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])+"?fullscreen=1"} for key in newest_first]
     cards = [card for card in all_cards if card["key"] in permanent_games(settings)]
     now = timezone.now()
     contest_open = bool(contest and settings.public_enabled and not contest.frozen_at
@@ -403,6 +403,8 @@ def control(request):
          "description": "Собирай ряды под гоночный саундтрек и проверяй темп на трассах Гран-при.",
          "url": reverse("league:arcade_game", args=["tetris"]) + "?admin_test=1"},
     ]
+    for card in test_games:
+        card["url"] += ("&" if "?" in card["url"] else "?") + "fullscreen=1"
     contest_open = bool(previous and settings.public_enabled and previous.opened_at <= now < previous.event.deadline)
     return render(request, "arcade_library_control.html", {"settings": settings, "events": event_list, "games": GAMES.items(),
         "season": season, "plans": plans, "selected_event": selected_event,

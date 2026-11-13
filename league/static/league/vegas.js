@@ -10,6 +10,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   const pause=ms=>new Promise(r=>setTimeout(r,reduced.matches?Math.min(ms,35):ms));
   let state=cfg.state, betIndex=Math.max(0,cfg.bets.indexOf(cfg.default_bet)), busy=false, pending=null, audio=null, sound=true;
   let autoPlay=false,autoCount=25,autoRemaining=0;
+  let displayedBalance=null;
   let autoTimer=0, bonusPaused=false, autoBlocked=false, pageSuspended=false, lastRequestAt=0;
   let master=null;const voices=new Set(),counters=new Map();
   let current=cfg.last?.rounds?.at(-1)?.grid||cfg.last_purchase?.grid||Array.from({length:5},(_,c)=>Array.from({length:4},(_,r)=>cfg.symbols[(c*3+r)%cfg.symbols.length].key));
@@ -70,6 +71,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
   window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
   function controls(){
+    if(displayedBalance!==state.balance){displayedBalance=state.balance;document.dispatchEvent(new CustomEvent("vegas:balance",{detail:{balance:state.balance}}));}
     $("shop").setAttribute("aria-disabled",String(busy||!!pending));
     $("auto").setAttribute("aria-pressed",String(autoPlay));
     $("auto").querySelector("span").textContent=autoPlay?`СТОП${Number.isFinite(autoRemaining)?` · ${autoRemaining}`:""}`:"АВТО";
@@ -117,7 +119,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     }
     const outside=full?0:Math.max(0,machine.getBoundingClientRect().top+scrollY)+(document.querySelector(".nightshift-mobile-nav")?.getBoundingClientRect().height||0)+12;
     const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
-    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+(side?0:h(".vegas-buy")+8)+24;
+    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+h(".vegas-balances")+(side?0:h(".vegas-buy")+8)+24;
     const maxWidth=Math.max(180,machine.clientWidth-24-side);
     const board=Math.floor(Math.min(full?750:560,maxWidth,Math.max(full?(wide?60:100):40,(full?height:inlineHeight)-outside-overhead)*1.25));
     machine.style.setProperty("--board-size",`${board}px`);

@@ -95,5 +95,6 @@
 <script src="{% static 'league/tetris-audio.js' %}?v=continuous-audio-v11" defer></script>
 <script src="{% static 'league/tetris-feedback.js' %}?v=pit-stack-line-fx-v11" defer></script>
 <script src="{% static 'league/tetris.js' %}?v=video-v25" defer></script>
+{% include 'arcade_launch_assets.html' %}
 {% if wheel_event %}<script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endif %}
 {% endblock %}

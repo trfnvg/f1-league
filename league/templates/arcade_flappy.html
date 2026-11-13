@@ -119,4 +119,4 @@
 {% if wheel_event %}{% include "arcade_wheel_live_panel.html" %}{% endif %}
 </section>
 {% endblock %}
-{% block extra_scripts %}{% include 'arcade_video_assets.html' %}<script src="{% static 'league/arcade.js' %}?v=best-video-v6" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% endblock %}
+{% block extra_scripts %}{% include 'arcade_video_assets.html' %}<script src="{% static 'league/arcade.js' %}?v=best-video-v6" defer></script><script src="{% static 'league/arcade-wheel.js' %}" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}

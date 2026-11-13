@@ -204,8 +204,10 @@ def run(engine, output):
                         page.wait_for_load_state('networkidle')
                         assert not errors, errors
                         selector = {'vegas': '#vegas-machine', 'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
-                                    'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-launch-start' if width <= 600 else '#tetris-canvas'}[card['key']]
+                                    'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-canvas'}[card['key']]
                         expect(page.locator(selector)).to_be_visible()
+                        full = {'vegas':'#vegas-page', 'tetris':'#tetris-machine', 'doodle_jump':'.doodle-machine', 'flappy':'#flappy-machine', 'minesweeper':'#minesweeper-machine'}[card['key']]
+                        expect(page.locator(full)).to_have_class(__import__('re').compile(r'\bis-fullscreen\b'))
                         if card['key'] == 'minesweeper':
                             expect(page.locator(selector)).to_have_attribute('data-test-mode', 'true')
                             page.locator('#minesweeper-start').click()

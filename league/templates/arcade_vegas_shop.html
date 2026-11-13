@@ -1,10 +1,10 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Лавка казино · Vegas Pit · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=4-layers"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=5-full-window"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
 {% block content %}
-<main class="casino-shop" id="casino-shop">
-  <nav class="shop-nav" aria-label="Лавка казино"><a href="{% url 'league:vegas_lab' %}" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
+<main class="casino-shop is-fullscreen" id="casino-shop">
+  <nav class="shop-nav" aria-label="Лавка казино"><a href="{% url 'league:vegas_lab' %}?fullscreen=1" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
   <section class="shop-scene" aria-labelledby="shop-title">
     <header class="shop-masthead"><span>VEGAS PIT</span><h1 id="shop-title">Лавка <em>казино</em></h1></header>
     <div class="shop-shelves" aria-label="Пять товаров на витрине">
@@ -34,4 +34,4 @@
   {{ shop_balance|json_script:'shop-wallet' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=2-dealer" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=3-full-window" defer></script>{% endblock %}

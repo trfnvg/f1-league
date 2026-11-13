@@ -2,6 +2,7 @@
 (() => {
   "use strict";
   const root=document.getElementById("casino-shop");if(!root)return;
+  document.body.append(root);document.body.classList.add("casino-shop-open");
   const $=id=>document.getElementById(`shop-${id}`);
   const products=new Map(JSON.parse($("products").textContent).map(p=>[p.key,p]));
   $("balance").textContent=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(JSON.parse($("wallet").textContent)/100);
@@ -34,6 +35,7 @@
   dialog.addEventListener("click",e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close();}});
   dialog.addEventListener("cancel",()=>{hideTip();});
   window.addEventListener("scroll",hideTip,{passive:true});window.addEventListener("resize",hideTip);
+  root.addEventListener("scroll",hideTip,{passive:true});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")hideTip();});
 
   // One short sequence at a time; no background polling or animation work

@@ -13,6 +13,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from .models import VegasLabWallet
+from .identity import display_name
 from . import vegas_rules as rules
 
 
@@ -41,8 +42,34 @@ def page(request):
               "bonus_buy": {"multiplier": rules.BONUS_BUY_MULTIPLIER, "spins": rules.BONUS_BUY_SPINS},
               "min_spin_interval_ms": int(getattr(settings, "VEGAS_LAB_MIN_INTERVAL", 0.8)*1000),
               "symbols": rules.SYMBOLS, "bets": rules.BETS, "default_bet": rules.DEFAULT_BET,
-              "spin_url": reverse("league:vegas_lab_spin")}
+              "spin_url": reverse("league:vegas_lab_spin"),
+              "balances_url": reverse("league:vegas_lab_balances")}
+    config["player"] = {"id": request.user.pk, "name": display_name(request.user)}
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
+
+
+@login_required
+@require_GET
+@never_cache
+def balances(request):
+    if not request.user.is_active or not request.user.is_staff:
+        return HttpResponseForbidden()
+    # Only public names and virtual balances. Reading this board never creates
+    # wallets. Deterministic ordering and bounded pages keep polling cheap.
+    try:
+        offset = max(0, min(int(request.GET.get("offset", 0)), 100_000))
+    except (ValueError, TypeError):
+        offset = 0
+    wallets = VegasLabWallet.objects.filter(user__is_active=True).select_related("user").only(
+        "balance", "user_id", "user__id", "user__first_name", "user__last_name", "user__username"
+    ).order_by("-balance", "user_id")
+    batch = list(wallets[offset:offset+51])
+    return JsonResponse({"players": [
+        {"id": wallet.user_id, "name": display_name(wallet.user), "balance": wallet.balance,
+         "rank": offset+index+1, "is_you": wallet.user_id == request.user.pk}
+        for index, wallet in enumerate(batch[:50])],
+        "next_offset": offset+50 if len(batch)>50 else None,
+        "own_balance": VegasLabWallet.objects.filter(user=request.user).values_list("balance", flat=True).first()})
 
 
 @login_required

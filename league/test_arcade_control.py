@@ -42,7 +42,8 @@ class ArcadeControlTests(TestCase):
         cards = response.context["test_games"]
         self.assertEqual([card["key"] for card in cards], ["vegas", "doodle_jump", "flappy", "minesweeper", "tetris"])
         for card in cards:
-            self.assertContains(response, f'href="{card["url"]}"')
+            from django.utils.html import escape
+            self.assertContains(response, f'href="{escape(card["url"])}"')
         self.assertNotContains(response, "flight=1")
         self.assertContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')

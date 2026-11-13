@@ -39,6 +39,9 @@ def run(engine, output, cdn_dir=None):
                 user, _ = User.objects.get_or_create(username=f"vegas-browser-{engine}", defaults={"is_staff": True})
                 client = Client(enforce_csrf_checks=True)
                 client.force_login(user)
+                from league.models import VegasLabWallet
+                rival = User.objects.create_user(username=f"vegas-rival-{engine}", first_name="Соперник")
+                VegasLabWallet.objects.create(user=rival, balance=600000)
                 return client
             client = database.submit(initialize).result(timeout=15)
             original = vegas_rules.outcome
@@ -123,11 +126,20 @@ def run(engine, output, cdn_dir=None):
                         if urlsplit(request.url).path == "/arcade/lab/vegas/spin/" else None)
                 page.goto(base)
                 expect(page.locator("#vegas-spin")).to_be_enabled()
+                expect(page.locator("#vegas-balances-status")).to_have_text("Сейчас")
+                expect(page.locator("#vegas-balances-list li")).to_have_count(2)
+                def update_rival():
+                    from league.models import VegasLabWallet
+                    VegasLabWallet.objects.filter(user__username=f"vegas-rival-{engine}").update(balance=654321)
+                database.submit(update_rival).result(timeout=5)
+                page.evaluate("dispatchEvent(new PageTransitionEvent('pageshow'))")
+                expect(page.locator("#vegas-balances-list li:not(.is-you) strong")).to_have_text("6\u00a0543,21\u00a0$")
                 assert page.evaluate("document.activeElement === document.body"), "Fresh page must not require a click"
                 with page.expect_request("**/arcade/lab/vegas/spin/"):
                     page.keyboard.press("Space")
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(spin_requests) == 1 and spin_requests[-1]["bet"] == 5000
+                expect(page.locator("#vegas-balances-list .is-you strong")).to_have_text(page.locator("#vegas-balance").inner_text())
                 # Space on another focused control spins once without its native click.
                 page.locator("#vegas-plus").focus()
                 with page.expect_request("**/arcade/lab/vegas/spin/"):
@@ -209,6 +221,11 @@ def run(engine, output, cdn_dir=None):
                     expect(page.locator("#vegas-page")).not_to_have_class("vegas-page is-fullscreen")
                     if width in (390, 1440):
                         page.screenshot(path=str(output/f"{engine}-{width}-idle.png"), full_page=True)
+                before_launch = len(spin_requests)
+                page.goto(base+"?fullscreen=1")
+                expect(page.locator("#vegas-fullscreen")).to_have_attribute("aria-pressed", "true")
+                assert len(spin_requests) == before_launch, "Fullscreen launch must not spend or spin"
+                page.goto(base)
                 page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-reset").click()
                 expect(page.locator("#vegas-message")).to_contain_text("сброшен")
@@ -436,6 +453,8 @@ def run(engine, output, cdn_dir=None):
                 # without POSTs, on both the wide scene and narrow shelf layout.
                 page.emulate_media(reduced_motion="reduce")
                 page.locator("#vegas-shop").click()
+                shop_box = page.locator("#casino-shop").bounding_box()
+                assert abs(shop_box["width"]-page.viewport_size["width"]) <= 1 and abs(shop_box["height"]-page.viewport_size["height"]) <= 1
                 expect(page.locator("#shop-title")).to_have_text("Лавка казино")
                 expect(page.locator(".shop-product")).to_have_count(5)
                 expect(page.locator(".shop-counter img")).to_have_attribute("src", "/static/league/images/vegas/shop-counter-v2.png")
@@ -466,6 +485,7 @@ def run(engine, output, cdn_dir=None):
                     page.evaluate("scrollTo(0,0)")
                     page.locator(".shop-back").focus()
                     page.mouse.move(0, 0)
+                    page.locator("#casino-shop").evaluate("el=>el.scrollTop=0")
                     page.screenshot(path=str(output/f"{engine}-{width}-shop.png"), full_page=True)
                 page.set_viewport_size({"width":1440,"height":1050})
                 # The counter clips only the vest; animation honors motion
@@ -495,7 +515,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#shop-product-dialog")).not_to_be_visible()
                 expect(dealer).to_have_attribute("data-animating", "true")
                 page.set_viewport_size({"width":390,"height":300})
-                page.evaluate("scrollTo(0,document.body.scrollHeight)")
+                page.locator("#casino-shop").evaluate("el=>el.scrollTop=0")
                 expect(dealer).to_have_attribute("data-animating", "false")
                 dealer.scroll_into_view_if_needed()
                 expect(dealer).to_have_attribute("data-animating", "true")
