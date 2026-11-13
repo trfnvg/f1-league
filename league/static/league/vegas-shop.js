@@ -35,4 +35,56 @@
   dialog.addEventListener("cancel",()=>{hideTip();});
   window.addEventListener("scroll",hideTip,{passive:true});window.addEventListener("resize",hideTip);
   document.addEventListener("keydown",e=>{if(e.key==="Escape")hideTip();});
+
+  // One short sequence at a time; no background polling or animation work
+  // while the shop is offscreen, a product is open, or motion is disabled.
+  const dealer=$("dealer"),motion=matchMedia("(prefers-reduced-motion: reduce)");
+  if(!dealer)return;
+  let timer=null,inView=false,running=false,pageActive=true,turn=0;
+  const gestures=["greet","blink","toss","blink","blink","toss"];
+  const poses={
+    blink:[["blink",130]],
+    greet:[["greet",700]],
+    toss:[["prepare",180],["release",1000],["catch",200]],
+  };
+  function pose(name){
+    dealer.dataset.pose=name;
+    dealer.classList.toggle("is-tossing",name==="release");
+    dealer.classList.toggle("is-greeting",name==="greet");
+  }
+  function stopDealer(){
+    clearTimeout(timer);timer=null;running=false;pose("idle");
+    dealer.dataset.animating="false";
+  }
+  function nextGesture(){
+    const frames=poses[gestures[turn++%gestures.length]];
+    let frame=0;
+    function advance(){
+      if(!running)return;
+      if(frame===frames.length){
+        pose("idle");timer=setTimeout(nextGesture,2800+Math.random()*1400);return;
+      }
+      const [name,duration]=frames[frame++];pose(name);
+      timer=setTimeout(advance,duration);
+    }
+    advance();
+  }
+  function syncDealer(){
+    if(!inView||!pageActive||document.hidden||motion.matches||dialog.open){stopDealer();return;}
+    if(running)return;
+    running=true;dealer.dataset.animating="true";
+    timer=setTimeout(nextGesture,1200);
+  }
+  if("IntersectionObserver" in window){
+    const observer=new IntersectionObserver(entries=>{
+      inView=entries[0].isIntersecting;syncDealer();
+    },{threshold:0});
+    observer.observe(dealer);
+  }else{inView=true;syncDealer();}
+  motion.addEventListener("change",syncDealer);
+  document.addEventListener("visibilitychange",syncDealer);
+  // MutationObserver also covers browsers without the dialog toggle event.
+  new MutationObserver(syncDealer).observe(dialog,{attributes:true,attributeFilter:["open"]});
+  window.addEventListener("pagehide",()=>{pageActive=false;stopDealer();});
+  window.addEventListener("pageshow",()=>{pageActive=true;syncDealer();});
 })();

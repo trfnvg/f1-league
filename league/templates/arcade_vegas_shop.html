@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Лавка казино · Vegas Pit · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=2-counter">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=3-dealer"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-croupier-poses-v2.png' %}">{% endblock %}
 {% block content %}
 <main class="casino-shop" id="casino-shop">
   <nav class="shop-nav" aria-label="Лавка казино"><a href="{% url 'league:vegas_lab' %}" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
@@ -15,7 +15,7 @@
       </button>
       {% endfor %}
     </div>
-    <div class="shop-dealer" aria-hidden="true"><img src="{% static 'league/images/vegas/shop-croupier-v1.png' %}" alt="" width="1024" height="1536" fetchpriority="high"></div>
+    <div class="shop-dealer" id="shop-dealer" data-pose="idle" aria-hidden="true"><div class="shop-dealer-figure"><span class="shop-dealer-pose"></span><span class="shop-dealer-chip"></span></div></div>
     <div class="shop-counter" aria-hidden="true"></div>
   </section>
   <p class="shop-preview-note">Демовитрина · покупки скоро</p>
@@ -34,4 +34,4 @@
   {{ shop_balance|json_script:'shop-wallet' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=1" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=2-dealer" defer></script>{% endblock %}
