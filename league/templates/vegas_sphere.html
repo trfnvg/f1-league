@@ -1,0 +1,29 @@
+<div class="vegas-sphere" id="vegas-sphere" aria-hidden="true">
+  <svg viewBox="0 0 240 252" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="vegas-sphere-skin" cx="36%" cy="28%" r="75%">
+        <stop stop-color="#fff59a"/><stop offset=".28" stop-color="#ffe341"/><stop offset=".65" stop-color="#f7c21b"/><stop offset=".9" stop-color="#c57b08"/><stop offset="1" stop-color="#69401b"/>
+      </radialGradient>
+      <radialGradient id="vegas-sphere-eye" cx="38%" cy="25%" r="85%">
+        <stop stop-color="#fffef0"/><stop offset=".7" stop-color="#f5edd1"/><stop offset="1" stop-color="#bda863"/>
+      </radialGradient>
+      <pattern id="vegas-sphere-led" width="3" height="3" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r=".65" fill="#69400b"/></pattern>
+      <clipPath id="vegas-sphere-disc"><circle cx="120" cy="120" r="116"/></clipPath>
+    </defs>
+    <path d="M58 216H182L196 246H44Z" fill="#39263a"/>
+    <path d="M52 232H188M48 239H192" stroke="#a48143" stroke-opacity=".6" stroke-width="2"/>
+    <circle cx="120" cy="120" r="116" fill="url(#vegas-sphere-skin)" stroke="#ffd75b" stroke-opacity=".35"/>
+    <g class="vegas-sphere-eyes">
+      <ellipse cx="86" cy="101" rx="29" ry="38" fill="url(#vegas-sphere-eye)"/>
+      <ellipse cx="153" cy="101" rx="29" ry="38" fill="url(#vegas-sphere-eye)"/>
+      <g class="vegas-sphere-gaze">
+        <ellipse cx="90" cy="104" rx="13" ry="21" fill="#26200f"/>
+        <ellipse cx="157" cy="104" rx="13" ry="21" fill="#26200f"/>
+        <ellipse cx="86" cy="97" rx="4" ry="6" fill="#fff" opacity=".85"/>
+        <ellipse cx="153" cy="97" rx="4" ry="6" fill="#fff" opacity=".85"/>
+      </g>
+    </g>
+    <path d="M99 165Q120 181 143 162" fill="none" stroke="#6d420e" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="120" cy="120" r="116" fill="url(#vegas-sphere-led)" opacity=".18" clip-path="url(#vegas-sphere-disc)"/>
+  </svg>
+</div>
