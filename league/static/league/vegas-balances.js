@@ -4,7 +4,10 @@
   const root=document.getElementById("vegas-balances");if(!root)return;
   const cfg=JSON.parse(document.getElementById("vegas-config").textContent);
   const list=document.getElementById("vegas-balances-list"),more=document.getElementById("vegas-balances-more"),status=document.getElementById("vegas-balances-status");
-  const money=n=>new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:n%100?2:0}).format(n/100);
+  const whole=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:0});
+  const cents=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2});
+  const money=n=>(n%100?cents:whole).format(n/100);
+  const text=(el,value)=>{if(el.textContent!==value)el.textContent=value;};
   let ownBalance=cfg.state.balance,revision=0,pages=1,timer=0,controller=null,visible=false,active=true;
   const rows=new Map();
   function row(player){
@@ -15,9 +18,9 @@
       rank.className="vegas-balance-rank";name.className="vegas-balance-name";li.append(rank,name,amount);rows.set(player.id,li);
     }
     li.classList.toggle("is-you",player.is_you);
-    li.children[0].textContent=player.is_you?"ТЫ":String(player.rank).padStart(2,"0");
-    li.children[1].textContent=player.name;li.children[1].title=player.name;
-    li.children[2].textContent=money(player.is_you?ownBalance:player.balance);
+    text(li.children[0],player.is_you?"ТЫ":String(player.rank).padStart(2,"0"));
+    text(li.children[1],player.name);if(li.children[1].title!==player.name)li.children[1].title=player.name;
+    text(li.children[2],money(player.is_you?ownBalance:player.balance));
     return li;
   }
   function render(players){

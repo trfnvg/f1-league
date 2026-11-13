@@ -15,7 +15,7 @@
 .vegas-page button:focus { box-shadow:none; }
 .vegas-page button:focus-visible,.vegas-page summary:focus-visible,.vegas-page select:focus-visible { outline:2px solid #ffe1a8; outline-offset:3px; }
 .vegas-machine { position:relative; isolation:isolate; overflow:hidden; border:1px solid #675040; border-radius:12px; background:#2b103b; box-shadow:0 24px 60px #0004; }
-.vegas-night { position:absolute; inset:0; z-index:-1; background:linear-gradient(#170a2420 60%,#100a2388),url('images/vegas/strip-v3.png') center bottom/cover; }
+.vegas-night { position:absolute; inset:0; z-index:-1; background:linear-gradient(#170a2420 60%,#100a2388),url('images/vegas/strip-v3-web.webp') center bottom/cover; }
 .vegas-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:44px; padding:0 14px; background:#140a24aa; border-bottom:1px solid #d8b57320; }
 .vegas-toolbar>span { font:700 8px/1.5 monospace; color:#a2a3ac; letter-spacing:.06em; }
 .vegas-toolbar i { display:inline-block; width:5px; height:5px; margin-right:5px; border-radius:50%; background:#ef805f; box-shadow:0 0 7px #ff8f5b60; }
@@ -63,7 +63,7 @@
 .vegas-reel:last-child { border-right:0; }
 .vegas-reel-track { display:grid; grid-template-rows:repeat(4,minmax(0,1fr)); gap:0; height:100%; }
 .vegas-cell { position:relative; display:flex; align-items:center; justify-content:center; min-width:0; min-height:0; overflow:hidden; border:1px solid transparent; border-radius:0; background:transparent; }
-.vegas-symbol-art { position:absolute; width:96%; aspect-ratio:1; top:2%; left:2%; background-image:url('images/vegas/meme-symbols-v4.png'); background-repeat:no-repeat; background-size:300% 300%; filter:drop-shadow(0 3px 2px #1b061b88); clip-path:inset(5%); pointer-events:none; }
+.vegas-symbol-art { position:absolute; width:96%; aspect-ratio:1; top:2%; left:2%; background-image:url('images/vegas/meme-symbols-v4-web.webp'); background-repeat:no-repeat; background-size:300% 300%; clip-path:inset(5%); pointer-events:none; }
 .vegas-art-tyre { background-position:0 0; }.vegas-art-duck { background-position:50% 0; }.vegas-art-banana { background-position:100% 0; }
 .vegas-art-berry { background-position:0 50%; }.vegas-art-russell { background-position:50% 50%; }.vegas-art-toto { background-position:100% 50%; }
 .vegas-art-bath { background-position:0 100%; }.vegas-art-wild { background-position:50% 100%; }.vegas-art-scatter { background-position:100% 100%; }
@@ -77,7 +77,7 @@
 .vegas-cell.is-winning::after { content:''; position:absolute; inset:0; border:1px solid #ffe2a4; border-radius:3px; background:linear-gradient(115deg,transparent 25%,#fff4c755 48%,transparent 65%); background-size:250% 100%; animation:vegas-win-sheen .7s ease-out both; pointer-events:none; }
 .vegas-cell.is-exploding { animation:vegas-explode .35s ease-in forwards; }
 .vegas-cell.is-scatter { box-shadow:inset 0 0 20px #fccf6266; border-color:#f7d48a; }
-.is-spinning .vegas-reel:not(.is-stopped) .vegas-reel-track { height:200%; grid-template-rows:repeat(8,minmax(0,1fr)); filter:blur(1px); animation:vegas-roll .3s linear infinite; }
+.is-spinning .vegas-reel:not(.is-stopped) .vegas-reel-track { height:200%; grid-template-rows:repeat(8,minmax(0,1fr)); will-change:transform; animation:vegas-roll .3s linear infinite; }
 .vegas-reel.is-stopped .vegas-reel-track { animation:vegas-stop .22s ease-out; }
 .vegas-fx,.vegas-particles { position:absolute; inset:0; width:100%; height:100%; z-index:4; pointer-events:none; overflow:hidden; }
 .vegas-win-callout { position:absolute; top:36%; left:4%; right:4%; z-index:5; padding:10px 8px; opacity:0; pointer-events:none; text-align:center; background:radial-gradient(ellipse,#1e102ce8,transparent 72%); }
@@ -159,14 +159,14 @@
 @keyframes vegas-symbol-pop { 0% {transform:scale(.86)} 50% {transform:scale(1.05)} 100% {transform:scale(1)} }
 @keyframes vegas-win-sheen { from {background-position:130% 0;opacity:0} 20% {opacity:1} to {background-position:-30% 0;opacity:0} }
 @keyframes vegas-medallion { from {transform:translateY(10px) scale(.7) rotate(-10deg);opacity:0} 65% {transform:translateY(0) scale(1.08) rotate(3deg);opacity:1} to {transform:scale(1);opacity:1} }
-@keyframes vegas-explode { to {opacity:0;transform:scale(1.25);filter:blur(3px)} }
+@keyframes vegas-explode { to {opacity:0;transform:scale(.8)} }
 @keyframes vegas-spark { to {opacity:0;translate:var(--dx) var(--dy);rotate:120deg} }
 @keyframes vegas-ring { to {transform:rotate(360deg)} }
 @keyframes vegas-electric { 10% {box-shadow:0 0 24px #91e9ee55} 100% {box-shadow:0 0 8px #91e9ee00} }
 @keyframes vegas-fire-edge { 10% {box-shadow:0 0 26px #f9944055} 100% {box-shadow:0 0 8px #f9944000} }
 @media(max-width:700px) {
   .vegas-page { padding:14px 10px 36px; }
-  .vegas-night { background-image:linear-gradient(#170a2420 60%,#100a2344),url('images/vegas/strip-mobile-v3.png'); }
+  .vegas-night { background-image:linear-gradient(#170a2420 60%,#100a2344),url('images/vegas/strip-mobile-v3-web.webp'); }
   .vegas-page-heading { gap:7px; margin-bottom:12px; align-items:start; }
   .vegas-page-heading p { display:none; }.vegas-page-heading>a { max-width:95px; text-align:right; font-size:9px; margin-top:8px; }
   .vegas-eyebrow { font-size:8px; }.vegas-page h1 { font-size:27px; }
@@ -258,7 +258,7 @@
   .vegas-spin { grid-column:5; }
 }
 body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { outline:2px solid #ffe1a8!important;outline-offset:3px; }
-.vegas-art-toto { background-image:url('images/vegas/pepper-russell-v1.png'); background-size:contain; background-position:center; clip-path:none; }
+.vegas-art-toto { background-image:url('images/vegas/pepper-russell-v1-web.webp'); background-size:contain; background-position:center; clip-path:none; }
 .vegas-toolbar>div { display:flex; align-items:center; gap:8px; }
 .vegas-page .vegas-shop-link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; gap:8px; padding:10px 14px; border:1px solid #b8915970; border-radius:10px; background:#49303c; color:#f3d6a3; font:650 12px/1.2 Arial,sans-serif; white-space:nowrap; }
 .vegas-shop-link[aria-disabled=true] { opacity:.5; cursor:wait; }
@@ -285,7 +285,7 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
 @media(hover:hover) { .vegas-spin:not(:disabled):hover,.vegas-buy:not(:disabled):hover { filter:brightness(1.08); }.vegas-toolbar button:hover { color:#fff0ce;border-color:#cfb37a; } }
 
 /* Ferrari tractor keeps the existing symbol's server weight and payouts. */
-.vegas-art-duck { background-image:url('images/vegas/ferrari-tractor-v1.png'); background-size:contain; background-position:center; clip-path:none; }
+.vegas-art-duck { background-image:url('images/vegas/ferrari-tractor-v1-web.webp'); background-size:contain; background-position:center; clip-path:none; }
 
 /* Warm pit-board LEDs, with a slow glow rather than a flashing CTA. */
 .vegas-buy { overflow:hidden; padding-top:20px; border-color:#f2bd65; color:#ffe8a0; background:radial-gradient(circle,#d0954520 1px,transparent 1.5px) 0 0/5px 5px,linear-gradient(145deg,#33281b,#19151b); box-shadow:inset 0 0 0 3px #100d13,inset 0 0 20px #f8aa2720,0 0 14px #ffba4626; }
@@ -381,3 +381,32 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
   #vegas-balances-status { display:none; }
   .vegas-balance-strip { flex:1; min-width:0; }
 }
+
+/* One visible navigation action: fullscreen launch offers the arcade library. */
+.vegas-page #vegas-exit { display:none; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:10px 14px; border:1px solid #b8915966; border-radius:10px; background:#302335; color:#f3ddb3; font:650 12px/1.2 Arial,sans-serif; white-space:nowrap; }
+.is-fullscreen #vegas-fullscreen { display:none; }
+.vegas-page.is-fullscreen #vegas-exit { display:inline-flex; }
+.vegas-machine { font-family:"Inter",Arial,sans-serif; }
+.vegas-toolbar { padding:8px 12px; }
+.vegas-marquee h2 { letter-spacing:-.035em; }
+.vegas-line-plaque,.vegas-bonus-counter { border-radius:6px; }
+.vegas-board { contain:layout paint; }
+.vegas-reel { contain:layout paint; }
+.vegas-board::after { content:''; position:absolute; z-index:2; inset:0; pointer-events:none; opacity:0; box-shadow:inset 0 0 60px #ff551e66; transition:opacity .2s; }
+.vegas-machine.is-fire .vegas-board::after { opacity:1; }
+.vegas-machine.is-fire .vegas-board-frame { animation:none; box-shadow:0 0 0 2px #9c512c,inset 0 0 0 2px #7f451d,0 0 24px #f87b392b; }
+.vegas-machine.is-electric .vegas-board-frame { animation:none; box-shadow:0 0 0 2px #6f7777,inset 0 0 0 2px #7f451d,0 0 18px #7cddd926; }
+.vegas-win-callout[data-kind=fire] { background:radial-gradient(ellipse,#39150bf2,transparent 75%); }
+.vegas-win-callout[data-kind=fire] span { color:#ffd6a3; text-shadow:0 0 12px #ff5c2370,0 2px #40160a; }
+.vegas-win-callout[data-kind=fire] strong { color:#ffeac4; text-shadow:0 2px #8f3316,0 0 18px #ff78214d; }
+.vegas-console { border-radius:10px; }
+.vegas-announcer { font-variant-numeric:tabular-nums; }
+.vegas-machine.is-suspended * { animation-play-state:paused!important; }
+@media(max-width:600px) {
+  .vegas-page #vegas-exit { padding:10px 8px; font-size:11px; }
+  .vegas-buy { border-radius:10px; }
+  .vegas-buy-kicker { line-height:1.4; }
+  .vegas-marquee p { letter-spacing:.1em; }
+  .vegas-announcer { min-height:27px; padding:3px 6px; font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) { .vegas-board::after { transition:none; } }

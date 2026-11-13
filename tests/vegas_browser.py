@@ -100,6 +100,7 @@ def run(engine, output, cdn_dir=None):
             with sync_playwright() as p:
                 browser = getattr(p, engine).launch()
                 context = browser.new_context(reduced_motion="reduce")
+                context.add_init_script("""(()=>{const original=requestAnimationFrame;window.requestAnimationFrame=callback=>original.call(window,time=>{window.vegasRafCallbacks=(window.vegasRafCallbacks||0)+1;callback(time)})})()""")
                 context.add_init_script("""(()=>{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const create=Audio.prototype.createOscillator;Audio.prototype.createOscillator=function(...args){const o=create.apply(this,args),start=o.start;o.start=function(...args){window.vegasNotesStarted=(window.vegasNotesStarted||0)+1;return start.apply(this,args)};return o}})()""")
                 if cdn_dir:
                     # Optional exact upstream Bootstrap files for environments where
@@ -135,6 +136,7 @@ def run(engine, output, cdn_dir=None):
                 page.evaluate("dispatchEvent(new PageTransitionEvent('pageshow'))")
                 expect(page.locator("#vegas-balances-list li:not(.is-you) strong")).to_have_text("6\u00a0543,21\u00a0$")
                 assert page.evaluate("document.activeElement === document.body"), "Fresh page must not require a click"
+                page.evaluate("window.vegasInitialCells=[...document.querySelectorAll('.vegas-cell')]")
                 with page.expect_request("**/arcade/lab/vegas/spin/"):
                     page.keyboard.press("Space")
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
@@ -148,6 +150,7 @@ def run(engine, output, cdn_dir=None):
                     page.keyboard.up("Space")
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(spin_requests) == 2 and spin_requests[-1]["bet"] == 5000
+                assert page.evaluate("[...document.querySelectorAll('.vegas-cell')].every((el,i)=>el===vegasInitialCells[i])"), "Spins must reuse existing cell nodes"
                 for width, height in ((320, 568), (320, 740), (390, 844), (667, 375), (844, 390), (1280, 720), (1440, 1050)):
                     page.set_viewport_size({"width": width, "height": height})
                     try:
@@ -189,7 +192,7 @@ def run(engine, output, cdn_dir=None):
                     deck = page.locator(".vegas-console").bounding_box()
                     assert deck["y"] >= board["y"]+board["height"], (engine, width, "controls must stay below reels")
                     assert page.locator('.vegas-cell:not([data-symbol="wild"]):not([data-symbol="scatter"]) small:visible').count() == 0
-                    expected_background = "strip-mobile-v3.png" if width <= 700 else "strip-v3.png"
+                    expected_background = "strip-mobile-v3-web.webp" if width <= 700 else "strip-v3-web.webp"
                     assert expected_background in page.locator(".vegas-night").evaluate("el=>getComputedStyle(el).backgroundImage")
                     expect(page.locator("#vegas-minus")).to_have_css("min-height", "44px")
                     buy = page.locator("#vegas-buy").bounding_box()
@@ -224,6 +227,10 @@ def run(engine, output, cdn_dir=None):
                 before_launch = len(spin_requests)
                 page.goto(base+"?fullscreen=1")
                 expect(page.locator("#vegas-fullscreen")).to_have_attribute("aria-pressed", "true")
+                expect(page.locator("#vegas-fullscreen")).not_to_be_visible()
+                expect(page.locator("#vegas-exit")).to_have_text("Все аркады")
+                page.locator("#vegas-exit").click()
+                expect(page.locator(".arcade-library")).to_be_visible()
                 assert len(spin_requests) == before_launch, "Fullscreen launch must not spend or spin"
                 page.goto(base)
                 page.locator(".vegas-lab-tools > summary").click()
@@ -442,13 +449,21 @@ def run(engine, output, cdn_dir=None):
                     }]
                     route.fulfill(response=response, json=data)
                 page.emulate_media(reduced_motion="no-preference")
+                page.locator("#vegas-fullscreen").click()
                 page.route("**/arcade/lab/vegas/spin/", pepper_response, times=1)
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "fire", timeout=10000)
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-theme", "pepper")
                 expect(page.locator("#vegas-callout-label")).to_have_text("ПЕРЧИК ЖЖЁТ!", timeout=10000)
+                page.wait_for_timeout(200)
                 page.screenshot(path=str(output/f"{engine}-pepper-win.png"), full_page=True)
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
+                assert int(page.locator("#vegas-fx").get_attribute("data-frames")) > 0
+                page.wait_for_timeout(100)
+                idle_frames = page.evaluate("vegasRafCallbacks")
+                page.wait_for_timeout(350)
+                assert page.evaluate("vegasRafCallbacks") == idle_frames, "FX must leave no idle animation loop"
                 # Read-only shop uses the same wallet and offers all descriptions
                 # without POSTs, on both the wide scene and narrow shelf layout.
                 page.emulate_media(reduced_motion="reduce")
