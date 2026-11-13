@@ -9,6 +9,8 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   const cashFormat=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:0});
   const centsFormat=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2});
   const money=v=>(v%100?centsFormat:cashFormat).format(v/100);
+  const unlimited=cfg.unlimited_balance===true;
+  const canAfford=cost=>unlimited||state.balance>=cost;
   const pause=ms=>new Promise(resolve=>{
     let timer;
     const finish=()=>{clearTimeout(timer);document.removeEventListener("visibilitychange",hidden);resolve();};
@@ -82,7 +84,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   }
   function queueBonus(){
     clearTimeout(autoTimer);autoTimer=0;
-    if(autoPlay&&!state.free_spins&&state.balance<cfg.bets[betIndex]){autoPlay=false;controls();message("Авто остановлено: недостаточно средств");}
+    if(autoPlay&&!state.free_spins&&!canAfford(cfg.bets[betIndex])){autoPlay=false;controls();message("Авто остановлено: недостаточно средств");}
     if((!state.free_spins&&!autoPlay)||busy||pending||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open)return;
     const delay=Math.max(reduced.matches?160:550,(cfg.min_spin_interval_ms||0)+80-(performance.now()-lastRequestAt));
     autoTimer=setTimeout(()=>{autoTimer=0;request("spin",true);},delay);
@@ -98,8 +100,9 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     $("auto").querySelector("span").textContent=autoPlay?`СТОП${Number.isFinite(autoRemaining)?` · ${autoRemaining}`:""}`:"АВТО";
     $("auto").setAttribute("aria-label",autoPlay?`Остановить автопрокрутку${Number.isFinite(autoRemaining)?`, осталось ${autoRemaining}`:""}`:"Выбрать количество автопрокрутов");
     $("auto").dataset.remaining=autoPlay?String(autoRemaining):"0";
-    $("auto").disabled=!autoPlay&&(busy||!!pending||state.free_spins>0||state.balance<cfg.bets[betIndex]);
-    $("balance").textContent=money(state.balance);$("free").textContent=state.free_spins;
+    $("auto").disabled=!autoPlay&&(busy||!!pending||state.free_spins>0||!canAfford(cfg.bets[betIndex]));
+    $("balance").textContent=unlimited?"∞":money(state.balance);$("free").textContent=state.free_spins;
+    if(unlimited)$("balance").setAttribute("aria-label","Неограниченный тестовый баланс");
     $("bet").textContent=money(state.free_spins?state.bonus_bet:cfg.bets[betIndex]);$("spin").disabled=busy||autoPlay;
     $("spin").querySelector("span").textContent=busy?"СПИН…":pending?"ПОВТОРИТЬ":state.free_spins?"FREE SPIN":"КРУТИТЬ";
     $("minus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===0;
@@ -113,12 +116,12 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     $("win-label").textContent=visible?"ЗА СПИН":"ВЫИГРЫШ";
     if(changed)scheduleFit();
     const retry=pending?.action==="buy_bonus",stake=retry?pending.bet:cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;
-    $("buy").disabled=autoPlay||busy||state.free_spins>0||(!retry&&(!!pending||state.balance<cost));
+    $("buy").disabled=autoPlay||busy||state.free_spins>0||(!retry&&(!!pending||!canAfford(cost)));
     $("buy-label").textContent=state.free_spins?"БОНУС АКТИВЕН":retry?"ПОВТОРИТЬ ПОКУПКУ":"КУПИТЬ БОНУС";
     $("buy-count").textContent=state.free_spins||cfg.bonus_buy.spins;
     $("buy-caption").textContent=state.free_spins?"ОСТАЛОСЬ":"FREE SPINS";
     $("buy-price").textContent=state.free_spins?money(state.bonus_bet):money(cost);
-    $("buy-note").textContent=state.free_spins?"СТАВКА СЕРИИ":state.balance<cost&&!retry?"НЕДОСТАТОЧНО СРЕДСТВ":`${cfg.bonus_buy.multiplier}× ставка`;
+    $("buy-note").textContent=state.free_spins?"СТАВКА СЕРИИ":!canAfford(cost)&&!retry?"НЕДОСТАТОЧНО СРЕДСТВ":`${cfg.bonus_buy.multiplier}× ставка`;
     $("buy").setAttribute("aria-label",state.free_spins?`Бонус активен, осталось ${state.free_spins} вращений`:`${retry?"Повторить покупку":"Купить"} ${cfg.bonus_buy.spins} бесплатных вращений за ${money(cost)}`);
     machine.classList.toggle("is-bonus",state.free_spins>0);machine.setAttribute("aria-busy",String(busy));
   }
@@ -353,7 +356,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   }
   function autoQuote(){
     for(const option of page.querySelectorAll("[data-auto-count]"))option.setAttribute("aria-pressed",String(Number(option.dataset.autoCount)===autoCount));
-    $("auto-quote").textContent=autoCount?`${autoCount} вращений · ${money(cfg.bets[betIndex]*autoCount)} при текущей ставке`:`Ставка ${money(cfg.bets[betIndex])} за вращение`;
+    $("auto-quote").textContent=unlimited?`${autoCount?`${autoCount} вращений`:"Без ограничения вращений"} · без списания тестового баланса`:autoCount?`${autoCount} вращений · ${money(cfg.bets[betIndex]*autoCount)} при текущей ставке`:`Ставка ${money(cfg.bets[betIndex])} за вращение`;
     $("auto-start").textContent=autoCount?`Запустить ${autoCount}`:"Запустить";
   }
   $("auto").addEventListener("click",()=>{
@@ -371,8 +374,8 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   $("buy").addEventListener("click",()=>{
     if(pending?.action==="buy_bonus"){request();return;}
     if(busy||pending||state.free_spins||!$("celebration").hidden)return;
-    const stake=cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;if(state.balance<cost)return;
-    $("purchase-bet").textContent=money(stake);$("purchase-cost").textContent=money(cost);$("purchase-balance").textContent=money(state.balance-cost);$("purchase-spins").textContent=cfg.bonus_buy.spins;
+    const stake=cfg.bets[betIndex],cost=stake*cfg.bonus_buy.multiplier;if(!canAfford(cost))return;
+    $("purchase-bet").textContent=money(stake);$("purchase-cost").textContent=money(cost);$("purchase-balance").textContent=unlimited?"∞":money(state.balance-cost);$("purchase-spins").textContent=cfg.bonus_buy.spins;
     $("purchase-confirm").textContent=`Купить за ${money(cost)}`;
     $("purchase").hidden=false;$("purchase").showModal();$("purchase-cancel").focus();
   });

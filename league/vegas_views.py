@@ -45,6 +45,7 @@ def page(request):
               "spin_url": reverse("league:vegas_lab_spin"),
               "balances_url": reverse("league:vegas_lab_balances")}
     config["player"] = {"id": request.user.pk, "name": display_name(request.user)}
+    config["unlimited_balance"] = request.user.is_superuser
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
 
 
@@ -60,7 +61,7 @@ def balances(request):
         offset = max(0, min(int(request.GET.get("offset", 0)), 100_000))
     except (ValueError, TypeError):
         offset = 0
-    wallets = VegasLabWallet.objects.filter(user__is_active=True).select_related("user").only(
+    wallets = VegasLabWallet.objects.filter(user__is_active=True, user__is_superuser=False).select_related("user").only(
         "balance", "user_id", "user__id", "user__first_name", "user__last_name", "user__username"
     ).order_by("-balance", "user_id")
     batch = list(wallets[offset:offset+51])
@@ -79,6 +80,9 @@ def balances(request):
 def spin(request):
     if not request.user.is_active or not request.user.is_staff:
         return HttpResponseForbidden()
+    # Only the server's current superuser permission grants a test bankroll.
+    # Never accept a client flag or inflate a wallet that could enter a ranking.
+    unlimited = request.user.is_superuser
     try:
         if int(request.META.get("CONTENT_LENGTH") or 0) > 2048 or len(request.body) > 2048:
             raise ValueError
@@ -118,9 +122,10 @@ def spin(request):
         if wallet.free_spins:
             return JsonResponse({"error": "Сначала заверши текущий бонусный стинт."}, status=400)
         cost = data["bet"] * rules.BONUS_BUY_MULTIPLIER
-        if wallet.balance < cost:
+        if not unlimited and wallet.balance < cost:
             return JsonResponse({"error": "Недостаточно игровых денег для покупки бонуса."}, status=400)
-        wallet.balance -= cost
+        if not unlimited:
+            wallet.balance -= cost
         wallet.bonus_bet, wallet.free_spins = data["bet"], rules.BONUS_BUY_SPINS
         bonus = {"win": 0, "played": 0, "granted": rules.BONUS_BUY_SPINS}
         purchase = {"bet": data["bet"], "cost": cost, "spins": rules.BONUS_BUY_SPINS,
@@ -128,10 +133,11 @@ def spin(request):
     else:
         free = wallet.free_spins > 0
         bet = wallet.bonus_bet if free else data["bet"]
-        if not free and wallet.balance < bet:
+        if not unlimited and not free and wallet.balance < bet:
             return JsonResponse({"error": "Недостаточно игровых денег. В тесте можно сбросить баланс."}, status=400)
         result = rules.outcome(bet, free=free, scenario=scenario)
-        wallet.balance += result["payout"] - (0 if free else bet)
+        if not unlimited:
+            wallet.balance += result["payout"] - (0 if free else bet)
         old_remaining = wallet.free_spins
         wallet.free_spins = min(rules.MAX_FREE_SPINS, wallet.free_spins - int(free) + result["awarded"])
         if free:

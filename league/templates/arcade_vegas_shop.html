@@ -31,6 +31,7 @@
   </dialog>
   {{ products|json_script:'shop-products' }}
   {{ shop_balance|json_script:'shop-wallet' }}
+  {{ shop_unlimited_balance|json_script:'shop-unlimited' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=3-full-window" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=4-admin-bankroll" defer></script>{% endblock %}

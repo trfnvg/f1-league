@@ -7,6 +7,7 @@
   const whole=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:0});
   const cents=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2});
   const money=n=>(n%100?cents:whole).format(n/100);
+  const ownMoney=n=>cfg.unlimited_balance===true?"∞":money(n);
   const text=(el,value)=>{if(el.textContent!==value)el.textContent=value;};
   let ownBalance=cfg.state.balance,revision=0,pages=1,timer=0,controller=null,visible=false,active=true;
   const rows=new Map();
@@ -20,7 +21,7 @@
     li.classList.toggle("is-you",player.is_you);
     text(li.children[0],player.is_you?"ТЫ":String(player.rank).padStart(2,"0"));
     text(li.children[1],player.name);if(li.children[1].title!==player.name)li.children[1].title=player.name;
-    text(li.children[2],money(player.is_you?ownBalance:player.balance));
+    text(li.children[2],player.is_you?ownMoney(ownBalance):money(player.balance));
     return li;
   }
   function render(players){
@@ -58,7 +59,7 @@
       if(visible&&active&&!document.hidden)timer=setTimeout(refresh,15000);
     }
   }
-  document.addEventListener("vegas:balance",event=>{ownBalance=event.detail.balance;revision++;const li=rows.get(cfg.player.id);if(li)li.children[2].textContent=money(ownBalance);});
+  document.addEventListener("vegas:balance",event=>{ownBalance=event.detail.balance;revision++;const li=rows.get(cfg.player.id);if(li)li.children[2].textContent=ownMoney(ownBalance);});
   more.addEventListener("click",()=>{pages++;more.disabled=true;refresh();});
   document.addEventListener("visibilitychange",()=>{if(document.hidden)stop();else refresh();});
   window.addEventListener("pagehide",()=>{active=false;stop();});

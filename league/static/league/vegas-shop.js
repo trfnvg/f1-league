@@ -5,7 +5,9 @@
   document.body.append(root);document.body.classList.add("casino-shop-open");
   const $=id=>document.getElementById(`shop-${id}`);
   const products=new Map(JSON.parse($("products").textContent).map(p=>[p.key,p]));
-  $("balance").textContent=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(JSON.parse($("wallet").textContent)/100);
+  const unlimited=JSON.parse($("unlimited").textContent)===true;
+  $("balance").textContent=unlimited?"∞":new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(JSON.parse($("wallet").textContent)/100);
+  if(unlimited)$("balance").setAttribute("aria-label","Неограниченный тестовый баланс");
   const dialog=$("product-dialog"),tip=$("tooltip"),hover=matchMedia("(hover:hover) and (pointer:fine)");
   let active=null,tipTarget=null;
   function hideTip(){tip.hidden=true;tipTarget?.removeAttribute("aria-describedby");tipTarget=null;}

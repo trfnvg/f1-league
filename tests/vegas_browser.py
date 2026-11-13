@@ -542,6 +542,33 @@ def run(engine, output, cdn_dir=None):
                 page.locator(".shop-back").click()
                 expect(page.locator("#vegas-machine")).to_be_visible()
                 assert len(spin_requests) == shop_requests, "Shop browsing must not spend or spin"
+                # A server-owned superuser bankroll must work even at zero.
+                def enable_admin_bankroll():
+                    from league.models import VegasLabWallet
+                    User.objects.filter(username=f"vegas-browser-{engine}").update(is_superuser=True)
+                    VegasLabWallet.objects.filter(user__username=f"vegas-browser-{engine}").update(balance=0, free_spins=0, last_payload={})
+                database.submit(enable_admin_bankroll).result(timeout=5)
+                page.goto(base+"?fullscreen=1")
+                expect(page.locator("#vegas-balance")).to_have_text("∞")
+                expect(page.locator("#vegas-balances-list .is-you strong")).to_have_text("∞")
+                expect(page.locator("#vegas-auto")).to_be_enabled()
+                page.keyboard.press("Space")
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                expect(page.locator("#vegas-balance")).to_have_text("∞")
+                for _ in range(20):
+                    if page.locator("#vegas-plus").is_disabled():
+                        break
+                    page.locator("#vegas-plus").click()
+                page.locator("#vegas-buy").click()
+                expect(page.locator("#vegas-purchase-balance")).to_have_text("∞")
+                page.locator("#vegas-purchase-confirm").click()
+                expect(page.locator('#vegas-celebration[data-kind="summary"]')).to_be_visible(timeout=30000)
+                page.locator("#vegas-celebration-close").click()
+                expect(page.locator("#vegas-spin")).to_be_enabled()
+                expect(page.locator("#vegas-balance")).to_have_text("∞")
+                page.screenshot(path=str(output/f"{engine}-admin-bankroll.png"))
+                page.locator("#vegas-shop").click()
+                expect(page.locator("#shop-balance")).to_have_text("∞")
                 assert not errors, errors
                 print(f"{engine}: stable responsive UI, paid auto start/stop, automatic bonus totals, pause/background/reload, retries, audio and FX OK")
                 browser.close()

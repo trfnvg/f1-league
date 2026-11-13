@@ -100,6 +100,61 @@ class VegasLabTests(TestCase):
     def post(self, data):
         return self.client.post(self.url, json.dumps(data), content_type="application/json")
 
+    def enable_unlimited_admin(self):
+        self.staff.is_superuser = True
+        self.staff.save(update_fields=["is_superuser"])
+        VegasLabWallet.objects.filter(user=self.staff).update(balance=0)
+
+    def test_unlimited_admin_can_spin_at_zero_without_changing_wallet(self):
+        self.assertFalse(self.client.get(self.page).context["vegas_config"]["unlimited_balance"])
+        self.enable_unlimited_admin()
+        self.assertTrue(self.client.get(self.page).context["vegas_config"]["unlimited_balance"])
+        for payout in (0, 123456):
+            with self.subTest(payout=payout):
+                payload = self.payload(bet=max(rules.BETS))
+                with patch("league.vegas_rules.outcome", return_value={"payout": payout, "awarded": 0}) as outcome:
+                    response = self.post(payload)
+                    self.assertEqual(response.status_code, 200)
+                    data = response.json()
+                    self.assertEqual(data["state"]["balance"], 0)
+                    self.assertEqual(data["result"]["payout"], payout)
+                    self.assertEqual(self.post(payload).json(), data)
+                    outcome.assert_called_once()
+        self.assertEqual(VegasLabWallet.objects.get(user=self.staff).balance, 0)
+
+    def test_unlimited_admin_bonus_at_zero_keeps_totals_and_retry_safety(self):
+        self.enable_unlimited_admin()
+        payload = self.payload(action="buy_bonus", bet=max(rules.BETS))
+        bought = self.post(payload)
+        self.assertEqual(bought.status_code, 200)
+        self.assertEqual(self.post(payload).json(), bought.json())
+        self.assertEqual(bought.json()["state"]["balance"], 0)
+        self.assertEqual(bought.json()["state"]["free_spins"], rules.BONUS_BUY_SPINS)
+        with patch("league.vegas_rules.outcome", return_value={"payout": 12345, "awarded": 0}) as outcome:
+            data = self.post(self.payload()).json()
+        outcome.assert_called_once_with(max(rules.BETS), free=True, scenario="random")
+        self.assertEqual(data["state"]["balance"], 0)
+        self.assertEqual(data["state"]["bonus"], {"win": 12345, "played": 1, "granted": rules.BONUS_BUY_SPINS})
+
+    def test_unlimited_admin_is_not_ranked_and_shop_remains_read_only(self):
+        self.enable_unlimited_admin()
+        VegasLabWallet.objects.filter(user=self.staff).update(balance=99999999)
+        VegasLabWallet.objects.create(user=self.player, balance=1000)
+        data = self.client.get(reverse("league:vegas_lab_balances")).json()
+        self.assertEqual([p["id"] for p in data["players"]], [self.player.pk])
+        self.assertEqual(data["players"][0]["rank"], 1)
+        response = self.client.get(reverse("league:vegas_lab_shop"))
+        self.assertTrue(response.context["shop_unlimited_balance"])
+        self.assertEqual(VegasLabWallet.objects.get(user=self.staff).balance, 99999999)
+
+    def test_revoked_superuser_cannot_keep_unlimited_funds(self):
+        self.enable_unlimited_admin()
+        self.staff.is_superuser = False
+        self.staff.save(update_fields=["is_superuser"])
+        self.assertEqual(self.post(self.payload()).status_code, 400)
+        self.assertEqual(self.post(self.payload(action="buy_bonus")).status_code, 400)
+        self.assertFalse(self.client.get(self.page).context["vegas_config"]["unlimited_balance"])
+
     def test_staff_only_all_endpoints(self):
         self.client.logout()
         self.assertEqual(self.client.get(self.page).status_code, 302)
@@ -201,7 +256,7 @@ class VegasLabTests(TestCase):
         self.assertEqual(VegasLabWallet.objects.get(user=self.staff).revision, 1)
 
     def test_invalid_client_money_and_bets_rejected(self):
-        for changes in ({"balance": 999999}, {"bet": -5000}, {"bet": True}, {"bet": 1}, {"bet": 501},
+        for changes in ({"balance": 999999}, {"unlimited_balance": True}, {"bet": -5000}, {"bet": True}, {"bet": 1}, {"bet": 501},
                         {"revision": True}, {"request_id": "bad"}, {"scenario": "cheat"}):
             with self.subTest(changes=changes):
                 self.assertEqual(self.post(self.payload(**changes)).status_code, 400)

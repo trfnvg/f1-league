@@ -38,5 +38,6 @@ def page(request):
     balance = VegasLabWallet.objects.filter(user=request.user).values_list("balance", flat=True).first()
     return render(request, "arcade_vegas_shop.html", {
         "products": PRODUCTS, "shop_balance": START_BALANCE if balance is None else balance,
+        "shop_unlimited_balance": request.user.is_superuser,
         "arcade_test_mode": True,
     })
