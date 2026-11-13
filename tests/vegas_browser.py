@@ -414,16 +414,20 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-shop").click()
                 expect(page.locator("#shop-title")).to_have_text("Лавка казино")
                 expect(page.locator(".shop-product")).to_have_count(5)
+                expect(page.locator(".shop-counter img")).to_have_attribute("src", "/static/league/images/vegas/shop-counter-v2.png")
+                assert page.locator(".shop-counter").evaluate("el=>getComputedStyle(el).clipPath==='none' && getComputedStyle(el).backgroundImage==='none'"), "Counter must be independent alpha art, not a clipped copy of the room"
                 shop_requests = len(spin_requests)
                 for width, height in ((1440, 1050), (390, 844), (320, 568)):
                     page.set_viewport_size({"width": width, "height": height})
                     page.evaluate("scrollTo(0,0)")
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "shop overflow")
-                    scene = page.locator(".shop-scene").bounding_box()
                     for item in ("shield", "amnesty", "wheel", "pitstop", "refund"):
                         button = page.locator(f'[data-product="{item}"]')
-                        box = button.bounding_box()
-                        assert box["x"] >= scene["x"] and box["x"]+box["width"] <= scene["x"]+scene["width"], (width,item,"shelf overflow")
+                        # Read both boxes in the same layout frame: resizing
+                        # the site's sidebar can still move the scene while
+                        # product dialogs are opened and closed.
+                        geometry = button.evaluate("el=>{const b=el.getBoundingClientRect(),s=el.closest('.shop-scene').getBoundingClientRect();return {left:b.left,right:b.right,sceneLeft:s.left,sceneRight:s.right}}")
+                        assert geometry["left"] >= geometry["sceneLeft"] and geometry["right"] <= geometry["sceneRight"], (width,item,"shelf overflow",geometry)
                         button.click()
                         expect(page.locator("#shop-product-dialog")).to_be_visible()
                         expect(page.locator("#shop-detail-name")).not_to_be_empty()
@@ -434,6 +438,7 @@ def run(engine, output, cdn_dir=None):
                         if item == "shield" and width == 390:
                             page.screenshot(path=str(output/f"{engine}-390-shop-detail.png"))
                         page.locator("#shop-done").click()
+                        assert page.locator(".shop-scene").evaluate("el=>el.scrollLeft===0"), "Focusing a product must not pan the oversized foreground"
                     page.evaluate("scrollTo(0,0)")
                     page.locator(".shop-back").focus()
                     page.mouse.move(0, 0)
@@ -449,6 +454,7 @@ def run(engine, output, cdn_dir=None):
                 dealer.scroll_into_view_if_needed()
                 expect(dealer).to_have_attribute("data-animating", "true")
                 expect(dealer).to_have_attribute("data-pose", "greet", timeout=6000)
+                assert page.locator(".shop-dealer-figure").evaluate("el=>getComputedStyle(el).transform==='none'"), "Greeting must not rotate the waist through the table"
                 page.wait_for_function("shopPoses.includes('blink')", timeout=8000)
                 expect(dealer).to_have_attribute("data-pose", "release", timeout=8000)
                 page.wait_for_timeout(400)

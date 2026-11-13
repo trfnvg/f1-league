@@ -7,7 +7,7 @@
 .shop-back svg,.shop-dialog-close svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; }
 .shop-wallet { text-align:right; }.shop-wallet span { display:block; color:#b7a589; font:9px/1.5 monospace; letter-spacing:.08em; }
 .shop-wallet strong { color:#f6ddb1; font:700 20px/1.4 Arial,sans-serif; font-variant-numeric:tabular-nums; }
-.shop-scene { position:relative; isolation:isolate; --scene-height:740px; --interior-size:100% 100%; --counter-edge:72%; --dealer-size:clamp(180px,24%,240px); height:var(--scene-height); border:1px solid #95713b80; border-radius:18px; overflow:hidden; background:#28101e url('images/vegas/shop-interior-v1.png') center/var(--interior-size) no-repeat; box-shadow:0 24px 60px #0004; }
+.shop-scene { position:relative; isolation:isolate; --scene-height:740px; --interior-size:100% 100%; --counter-edge:72%; --dealer-size:clamp(180px,24%,250px); height:var(--scene-height); border:1px solid #95713b80; border-radius:18px; overflow:clip; background:#28101e url('images/vegas/shop-room-v2.png') center/var(--interior-size) no-repeat; box-shadow:0 24px 60px #0004; }
 .shop-masthead { position:absolute; z-index:2; top:34px; left:10%; width:80%; text-align:center; pointer-events:none; }
 .shop-masthead>span { color:#d3b884; font:9px/1.5 monospace; letter-spacing:.22em; }
 .shop-masthead h1 { margin:6px 0; color:#f5ddb0; font:italic 700 clamp(30px,4vw,48px)/1.1 Georgia,serif; text-shadow:0 3px 14px #180b0a; }
@@ -22,11 +22,12 @@
 .shop-item-shield { background-position:0 0; }.shop-item-amnesty { background-position:50% 0; }.shop-item-wheel { background-position:100% 0; }.shop-item-pitstop { background-position:0 100%; }.shop-item-refund { background-position:50% 100%; }
 .shop-price-tag { position:relative; display:flex; align-items:center; flex-direction:column; gap:3px; width:100%; max-width:180px; min-height:46px; margin-top:-18px; padding:7px 5px; background:linear-gradient(#37231d,#211618); border:1px solid #c29c5e80; border-radius:6px; box-shadow:0 3px 6px #0004; }
 .shop-price-tag>span { color:#e9d4b5; font:600 11px/1.25 Arial,sans-serif; }.shop-price-tag strong { color:#ffdc8d; font:750 15px/1.1 Arial,sans-serif; font-variant-numeric:tabular-nums; }
-.shop-dealer { position:absolute; z-index:4; width:var(--dealer-size); aspect-ratio:1; top:var(--counter-edge); left:50%; transform:translate(-50%,-95%); pointer-events:none; }
-/* The counter masks ONLY the bottom 5% of the vest. Both sleeves and hands
-   are inside the square sprite, above this shared counter-plane anchor. */
-.shop-dealer-figure { position:absolute; inset:0; transform-origin:50% 95%; }
-.shop-dealer-pose { position:absolute; inset:0; background:url('images/vegas/shop-croupier-poses-v2.png') 0 0/300% 200% no-repeat; }
+.shop-dealer { position:absolute; z-index:4; width:var(--dealer-size); aspect-ratio:1; top:var(--counter-edge); left:50%; transform:translate(-50%,-92%); pointer-events:none; }
+/* Three independent layers: empty room, registered character, alpha counter.
+   The counter's rear edge sits at 22% of its own image; it masks the waist
+   naturally instead of slicing a duplicate background at a horizontal line. */
+.shop-dealer-figure { position:absolute; inset:0; }
+.shop-dealer-pose { position:absolute; inset:0; background:url('images/vegas/shop-simply-poses-v3.png') 0 0/300% 200% no-repeat; }
 .shop-dealer[data-pose="blink"] .shop-dealer-pose { background-position:50% 0; }
 .shop-dealer[data-pose="prepare"] .shop-dealer-pose { background-position:100% 0; }
 .shop-dealer[data-pose="release"] .shop-dealer-pose { background-position:0 100%; }
@@ -36,14 +37,13 @@
 .shop-dealer-chip::before { content:''; position:absolute; inset:17%; border:1px solid #f3d397; border-radius:50%; background:radial-gradient(circle at 35% 25%,#d94b3e,#7e1728); }
 .shop-dealer[data-pose="prepare"] .shop-dealer-chip { opacity:0; }
 .shop-dealer.is-tossing .shop-dealer-chip { animation:shop-chip-toss 1000ms both; }
-.shop-dealer.is-greeting .shop-dealer-figure { animation:shop-dealer-greet 700ms ease-in-out both; }
 @keyframes shop-chip-toss {
   0% { transform:translateY(0) rotate(-15deg) scaleX(1); animation-timing-function:cubic-bezier(.15,.65,.4,1); }
   50% { transform:translateY(-430%) rotate(165deg) scaleX(.35); animation-timing-function:cubic-bezier(.6,0,.85,.35); }
   100% { transform:translateY(0) rotate(345deg) scaleX(1); }
 }
-@keyframes shop-dealer-greet { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-1.5deg); } }
-.shop-counter { position:absolute; z-index:5; inset:0; background:url('images/vegas/shop-interior-v1.png') center/var(--interior-size) no-repeat; clip-path:inset(var(--counter-edge) 0 0); pointer-events:none; }
+.shop-counter { position:absolute; z-index:5; top:var(--counter-edge); left:50%; width:max(100%,900px); aspect-ratio:3; transform:translate(-50%,-22%); pointer-events:none; }
+.shop-counter img { display:block; width:100%; height:auto; max-width:none; }
 .shop-preview-note { margin:18px auto 0; color:#aaa2a6; text-align:center; font:12px/1.7 Arial,sans-serif; max-width:720px; }.shop-preview-note span { display:block; margin-bottom:4px; color:#bfa575; font:9px/1.4 monospace; letter-spacing:.15em; }
 .shop-tooltip { position:fixed; z-index:2100; width:280px; max-width:calc(100vw - 24px); padding:18px; border:1px solid #c4a06d80; border-radius:12px; color:#eadbc9; background:#241c29; box-shadow:0 12px 36px #0008; pointer-events:none; }
 .shop-tooltip[hidden] { display:none; }.shop-tooltip>span,.shop-detail-kind { color:#c4a174; font:10px/1.5 monospace; text-transform:uppercase; letter-spacing:.13em; }

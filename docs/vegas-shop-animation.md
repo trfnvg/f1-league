@@ -1,5 +1,7 @@
 ## Animated croupier v2
 
+Historical version, superseded by [the independent layers and Simply portrait](vegas-shop-layers.md).
+
 `league/static/league/images/vegas/shop-croupier-poses-v2.png` is a 1536×1024 RGBA atlas: 3 columns × 2 rows, square frames in order idle, blink, prepare, release, catch, greet. Created with the built-in image tool; no CLI/API fallback and no raster edits. Final output copied unchanged into the project's static assets. Source: `exec-1bbe10d8-32d3-470e-b57f-60fe8a4894e6.png` in the generator output folder.
 
 The bottom 5% of the sprite contains vest only and is behind the counter. The `.shop-dealer` and `.shop-counter` share `--counter-edge`, independent of viewport size. The chip is a small code-native CSS casino token, animated above the palm on a 1-second arc; it is not painted into the atlas. A single timer schedules blink, greeting and throw/catch poses with pauses. Reduced motion, hidden document, offscreen dealer, open product dialog and pagehide stop the sequence and restore idle. No purchase, score or wallet behavior changes.
