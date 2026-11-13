@@ -12,7 +12,7 @@ MAX_TUMBLES = 6
 MAX_FREE_SPINS = 30
 SYMBOLS = (
     {"key": "tyre", "name": "Bono, my tyres!", "weight": 18, "pays": (6, 18, 60)},
-    {"key": "duck", "name": "GP2 Engine", "weight": 16, "pays": (6, 20, 70)},
+    {"key": "duck", "name": "Трактор Ferrari", "weight": 16, "pays": (6, 20, 70)},
     {"key": "banana", "name": "Разбитый кубок Норриса", "weight": 18, "pays": (8, 25, 90)},
     {"key": "berry", "name": "Банана Леклер", "weight": 16, "pays": (8, 25, 90)},
     {"key": "russell", "name": "Клубника Макс", "weight": 12, "pays": (12, 40, 140)},

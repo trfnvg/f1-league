@@ -147,6 +147,14 @@ def run(engine, output, cdn_dir=None):
                     expect(page.locator(".vegas-rules,#vegas-result-log,#vegas-line-picker")).to_have_count(0)
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "overflow")
                     expect(page.locator("#vegas-spin")).to_be_enabled()
+                    page.wait_for_timeout(150)
+                    inline_machine = page.locator("#vegas-machine").bounding_box()
+                    bottom_nav = page.locator(".nightshift-mobile-nav").bounding_box()
+                    bottom_inset = bottom_nav["height"] if bottom_nav else 0
+                    if inline_machine["y"]+inline_machine["height"] > height-bottom_inset+2:
+                        page.screenshot(path=str(output/f"{engine}-inline-failure.png"), full_page=True)
+                        print(page.locator("#vegas-machine").evaluate("el=>({style:el.getAttribute('style'),parts:[...el.querySelectorAll('.vegas-toolbar,.vegas-marquee,.vegas-announcer,.vegas-console,.vegas-stage,.vegas-buy')].map(n=>({cls:n.className,rect:n.getBoundingClientRect().toJSON()}))})"),flush=True)
+                    assert inline_machine["y"]+inline_machine["height"] <= height-bottom_inset+2, (engine,width,height,"inline cabinet must fit",inline_machine,bottom_inset)
                     inline_board = page.locator("#vegas-board").bounding_box()
                     page.set_viewport_size({"width": width, "height": height+80})
                     page.wait_for_timeout(100)
@@ -374,6 +382,10 @@ def run(engine, output, cdn_dir=None):
                 # Paid auto must issue sequential requests and stop without an extra debit.
                 before_auto = len(spin_requests)
                 page.locator("#vegas-auto").click()
+                expect(page.locator("#vegas-auto-dialog")).to_be_visible()
+                assert len(spin_requests) == before_auto, "Choosing a series must not spin"
+                page.locator('[data-auto-count="25"]').click()
+                page.locator("#vegas-auto-start").click()
                 expect(page.locator("#vegas-auto")).to_have_attribute("aria-pressed", "true")
                 for _ in range(100):
                     if len(spin_requests) >= before_auto+2:
@@ -386,6 +398,18 @@ def run(engine, output, cdn_dir=None):
                 stopped = len(spin_requests)
                 page.wait_for_timeout(1200)
                 assert len(spin_requests) == stopped, "Stop must prevent the next paid spin"
+                # A fixed series completes exactly five paid requests, and
+                # does not submit a sixth one after the counter reaches zero.
+                before_fixed = len(spin_requests)
+                page.locator("#vegas-auto").click()
+                page.locator('[data-auto-count="5"]').click()
+                page.locator("#vegas-auto-start").click()
+                expect(page.locator("#vegas-auto")).to_have_attribute("aria-pressed", "false", timeout=30000)
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                assert len(spin_requests) == before_fixed+5
+                expect(page.locator("#vegas-message")).to_have_text("Серия из 5 вращений завершена")
+                page.wait_for_timeout(1000)
+                assert len(spin_requests) == before_fixed+5
                 # Presentation-only fixture: isolate a low-value pepper win so
                 # fire cannot be triggered by the generic large-win threshold.
                 def pepper_response(route):

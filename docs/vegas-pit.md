@@ -153,3 +153,19 @@ CSRF и изоляцию. `tests/vegas_browser.py --engine chromium|webkit` ис
 Перед публичным турниром нужны отдельный дизайн магазина и дедлайнов, массовая
 проверка экономики и дисперсии, журнал всех спинов и тесты конкурентных транзакций
 на PostgreSQL. Ни магазин, ни публикация автоматически этой версией не включаются.
+
+## Compact cabinet and finite auto series
+
+The inline cabinet is sized to the viewport above the site's mobile navigation. It keeps a stable height baseline when browser toolbars retract; fullscreen continues to use the visible viewport and safe areas. Short screens omit the page heading and cabinet marquee. The full control panel remains available.
+
+Auto opens a native dialog offering 5, 10, 25, 50, 100 paid spins or an open-ended run. A finite counter decreases once per successful server response. A stop finishes only the current request; errors, hidden page, insufficient funds or natural bonus stop the paid series. Free spins retain their existing separate automatic sequence. Opening/cancelling the selector never submits a spin.
+
+The bonus purchase CTA is a dot-matrix pit board with five amber/red LEDs and a slow glow; disabled/reduced-motion states stop the animation.
+
+`league/static/league/images/vegas/ferrari-tractor-v1.png` replaces the visual for internal key `duck`. Public name: `Трактор Ferrari`. Weight, payouts and server rules stay the same. Built-in image generation, genuine alpha output copied unchanged, no raster edits or CLI/API fallback.
+
+Tractor prompt (verbatim):
+
+```text
+Use case: stylized-concept. Asset: single production slot-machine symbol, genuine transparent alpha background. A humorous bright Ferrari-red FARM TRACTOR reimagined as a Formula racing machine: unmistakable compact agricultural tractor with large black rear tires and smaller front tires, exposed red hood, steering wheel, open driver seat, small black exhaust pipe, low racing front wing and rear wing, tiny golden-yellow shield-shaped badge WITHOUT any lettering or official logo. Three-quarter front view, facing right, strong squat silhouette. Premium richly colored hand-painted 2D online casino symbol, crisp dark contour, glossy red painted highlights, gold details, restrained warm rim light. Vehicle alone fills central 80 percent of a square image, entire wheels and wings visible, 10 percent clear transparent margin all sides. No person, no scenery, no ground shadow, no glow halo, no frame, no text, no letters, no watermark, no extra symbols. Readable at 50 pixels. One polished meme icon only.
+```

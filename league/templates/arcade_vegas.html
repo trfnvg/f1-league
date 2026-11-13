@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=11-casino-shop">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=12-compact-auto">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
@@ -43,6 +43,17 @@
         <p class="vegas-purchase-footnote">Оплата игровым балансом</p>
       </div>
     </dialog>
+    <dialog class="vegas-auto-dialog" id="vegas-auto-dialog" aria-labelledby="vegas-auto-title">
+      <span class="vegas-purchase-eyebrow">VEGAS PIT · AUTO RUN</span>
+      <h3 id="vegas-auto-title">Автопрокрутка</h3>
+      <p>Количество вращений</p>
+      <div class="vegas-auto-options" role="group" aria-label="Количество автопрокрутов">
+        <button type="button" data-auto-count="5" aria-pressed="false">5</button><button type="button" data-auto-count="10" aria-pressed="false">10</button><button type="button" data-auto-count="25" aria-pressed="true">25</button><button type="button" data-auto-count="50" aria-pressed="false">50</button><button type="button" data-auto-count="100" aria-pressed="false">100</button><button type="button" data-auto-count="0" aria-pressed="false">До остановки</button>
+      </div>
+      <p id="vegas-auto-quote"></p>
+      <small>Серия остановится при выпадении бонуса или нехватке баланса.</small>
+      <div class="vegas-purchase-actions"><button type="button" id="vegas-auto-cancel">Назад</button><button type="button" id="vegas-auto-start">Запустить 25</button></div>
+    </dialog>
   </section>
   <p class="vegas-play-money-note">Все деньги и выигрыши вымышленные и не имеют денежной стоимости. Игра предназначена для развлечения: пополнения и вывода реальных денег нет.</p>
   <details class="vegas-lab-tools"><summary>Пульт тестирования <span>Только администратору</span></summary><div><label for="vegas-scenario">Следующий спин<select id="vegas-scenario"><option value="random">Обычный · случайный результат</option><option value="bonus">Проверить бонус: три Scatter</option><option value="bigwin">Проверить выигрыш: пять El Plan</option><option value="wild">Проверить замену Wild</option></select></label><button type="button" id="vegas-reset">Сбросить тест до $5 000</button></div><p>Принудительные сценарии помечаются как тестовые. Нет соревнования, магазина, колеса и начислений в лиге.</p></details>
@@ -50,4 +61,4 @@
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=11-casino-shop" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=12-compact-auto" defer></script>{% endblock %}
