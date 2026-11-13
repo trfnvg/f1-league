@@ -77,11 +77,14 @@ class VegasTopupTests(TestCase):
         claim = self.submitted()
         self.approve(claim)
         self.wallet.refresh_from_db()
-        self.assertEqual(self.wallet.balance, 599999)
+        self.assertEqual(self.wallet.balance, 399999)
         self.assertEqual(self.wallet.revision, 1)
+        self.assertEqual(LeagueActivity.objects.get(action="vegas_topup_reviewed").details["amount"], 300000)
 
     def test_one_active_task_even_across_leagues(self):
-        self.claim()
+        claim = self.claim()
+        self.assertEqual(self.activate("meme", league=self.b).status_code, 400)
+        self.assertEqual(self.action(claim).status_code, 200)
         self.assertEqual(self.activate("meme", league=self.b).status_code, 400)
         self.assertEqual(VegasTopupClaim.objects.filter(user=self.player).count(), 1)
 
@@ -92,20 +95,38 @@ class VegasTopupTests(TestCase):
         self.approve(claim)
         self.approve(claim)
         self.wallet.refresh_from_db()
-        self.assertEqual(self.wallet.balance, 599999)
+        self.assertEqual(self.wallet.balance, 399999)
         self.assertEqual(LeagueActivity.objects.filter(action="vegas_topup_reviewed").count(), 1)
 
     def test_second_task_requires_low_balance_again_and_no_repeated_reward(self):
         claim = self.submitted()
         self.approve(claim)
         self.assertEqual(self.activate("meme").status_code, 400)
+        VegasLabWallet.objects.filter(pk=self.wallet.pk).update(balance=100000)
+        self.assertEqual(self.activate("meme").status_code, 400)
         VegasLabWallet.objects.filter(pk=self.wallet.pk).update(balance=500)
+        status = self.client.get(reverse("league:vegas_topup_status")).json()["topup"]
+        self.assertTrue(status["can_activate"])
+        self.assertEqual({task["key"]: task["available"] for task in status["tasks"]}, {"ban": False, "meme": True})
         self.assertEqual(self.activate("meme").status_code, 200)
         second = VegasTopupClaim.objects.get(user=self.player, task="meme")
         self.action(second)
         self.approve(second)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 300500)
+        self.assertEqual(self.wallet.revision, 2)
+        self.assertEqual(VegasTopupClaim.objects.filter(user=self.player, status="approved").count(), 2)
+        VegasLabWallet.objects.filter(pk=self.wallet.pk).update(balance=0)
         self.assertEqual(self.activate("ban", league=self.b).status_code, 400)
         self.assertEqual(self.activate("meme", league=self.b).status_code, 400)
+        self.assertFalse(self.client.get(reverse("league:vegas_topup_status")).json()["topup"]["can_activate"])
+
+    def test_topup_copy_and_status_share_the_server_reward(self):
+        response = self.client.get(reverse("league:vegas_lab"))
+        self.assertContains(response, '>ДОДЕП</button>')
+        self.assertContains(response, '<strong>3 000</strong>')
+        self.assertContains(response, 'За этап можно выполнить все задания')
+        self.assertEqual(self.client.get(reverse("league:vegas_topup_status")).json()["topup"]["reward"], 300000)
 
     def test_cancel_allows_switching_but_does_not_credit(self):
         claim = self.claim()
@@ -192,7 +213,7 @@ class VegasTopupTests(TestCase):
         claim = self.submitted()
         self.approve(claim)
         retry = self.client.post(reverse("league:vegas_lab_spin"), json.dumps(spin), content_type="application/json")
-        self.assertEqual(retry.json()["state"]["balance"], 594999)
+        self.assertEqual(retry.json()["state"]["balance"], 394999)
         self.assertEqual(retry.json()["state"]["revision"], 2)
         spin["request_id"] = str(uuid.uuid4())
         self.assertEqual(self.client.post(reverse("league:vegas_lab_spin"), json.dumps(spin), content_type="application/json").status_code, 409)
@@ -215,12 +236,12 @@ class VegasTopupTests(TestCase):
         self.assertEqual(self.wallet.balance, before)
         self.client.force_login(self.owner)
         url = reverse("league:friend_league_event", args=[self.a.league_id, self.event.pk])+"?manage=1"
-        self.assertContains(self.client.get(url), "Засчитать +5 000")
+        self.assertContains(self.client.get(url), "Засчитать +3 000")
         self.assertContains(self.client.get(url), "Показал мем участнику лиги.")
         review_url = reverse("league:vegas_topup_review", args=[self.a.league_id, self.event.pk, claim.pk])
         self.assertEqual(self.client.post(review_url, {"decision": "approve", "amount": 9000000}).status_code, 302)
         self.wallet.refresh_from_db()
-        self.assertEqual(self.wallet.balance, 599999)
+        self.assertEqual(self.wallet.balance, 399999)
 
     def test_no_new_public_access_and_csrf_remains_required(self):
         client = Client(enforce_csrf_checks=True)

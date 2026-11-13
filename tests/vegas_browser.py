@@ -641,7 +641,7 @@ def run(engine, output, cdn_dir=None):
                 owner_tab.close()
                 page.locator("#vegas-topup-close").click()
                 page.locator("#vegas-topup").click()
-                expect(page.locator("#vegas-balance")).to_have_text("5\u00a0000\u00a0$")
+                expect(page.locator("#vegas-balance")).to_have_text("3\u00a0000\u00a0$")
                 expect(page.locator("#vegas-topup-history")).to_contain_text("Засчитано")
                 expect(page.locator('#vegas-topup-tasks [data-task="meme"]')).to_be_disabled()
                 page.screenshot(path=str(output/f"{engine}-390-topup-credited.png"))

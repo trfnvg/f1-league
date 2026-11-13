@@ -34,6 +34,7 @@ def state(wallet, bonus=None):
 @require_GET
 @never_cache
 def page(request):
+    from .vegas_topup import reward_display
     if not request.user.is_active or not request.user.is_staff:
         return HttpResponseForbidden()
     wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
@@ -50,7 +51,8 @@ def page(request):
                             "submit": reverse("league:vegas_topup_submit", args=[0]),
                             "cancel": reverse("league:vegas_topup_cancel", args=[0])}
     config["unlimited_balance"] = request.user.is_superuser
-    return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
+    return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True,
+                                               "vegas_topup_reward": reward_display()})
 
 
 @login_required

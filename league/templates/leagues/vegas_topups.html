@@ -1,10 +1,10 @@
 <section class="leagues-panel vegas-topup-management" id="vegas-topup-management" aria-labelledby="topup-manage-title">
-  <header><h2 id="topup-manage-title">Додеп · задания игроков</h2><p class="leagues-help">За каждое подтверждённое задание — 5 000 на игровой баланс. Активация и подтверждение — до первой практики. Повторное подтверждение не начисляет деньги снова.</p></header>
+  <header><h2 id="topup-manage-title">Додеп · задания игроков</h2><p class="leagues-help">За каждое подтверждённое задание — {{ vegas_topup_reward }} на игровой баланс. Все задания доступны за этап, но только по очереди и при балансе меньше 1 000 в момент активации. Активация и подтверждение — до первой практики. Повторное подтверждение не начисляет деньги снова.</p></header>
   {% for claim in vegas_topups %}
   <article class="topup-review-row">
     <div><strong>{{ claim.user|player_name }}</strong><p>{{ claim.get_task_display }}</p><small>{% if claim.is_expired %}Дедлайн прошёл{% else %}{{ claim.get_status_display }}{% endif %} · до {{ claim.expires_at|date:'d.m H:i' }} МСК</small>{% if claim.note %}<p class="topup-review-note">{{ claim.note }}</p>{% endif %}{% if claim.reviewed_by %}<small>Решение: {{ claim.reviewed_by|player_name }} · {{ claim.reviewed_at|date:'d.m H:i' }}</small>{% endif %}</div>
     {% if claim.can_review and claim.user_id != request.user.id %}
-    <form method="post" action="{% url 'league:vegas_topup_review' league.id event.id claim.id %}">{% csrf_token %}<button type="submit" name="decision" value="approve" class="leagues-button">Засчитать +5 000</button><button type="submit" name="decision" value="reject" class="leagues-text-button">Не засчитывать</button></form>
+    <form method="post" action="{% url 'league:vegas_topup_review' league.id event.id claim.id %}">{% csrf_token %}<button type="submit" name="decision" value="approve" class="leagues-button">Засчитать +{{ vegas_topup_reward }}</button><button type="submit" name="decision" value="reject" class="leagues-text-button">Не засчитывать</button></form>
     {% elif claim.user_id == request.user.id and claim.status == 'review' %}<small>Нельзя засчитать своё задание.</small>{% endif %}
   </article>
   {% empty %}<p class="leagues-help">Когда участник активирует задание в слоте, оно появится здесь. Засчитать его можно после отправки на проверку.</p>{% endfor %}

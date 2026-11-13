@@ -27,7 +27,7 @@
     $("tasks").replaceChildren(...data.tasks.map(task=>{
       const button=document.createElement("button"),caption=document.createElement("small");
       button.type="button";button.dataset.task=task.key;button.textContent=task.text;
-      caption.textContent=task.available?"Активировать · награда 5 000":task.status;button.append(caption);
+      caption.textContent=task.available?"Активировать · награда "+new Intl.NumberFormat("ru-RU").format(data.reward/100):task.status;button.append(caption);
       button.disabled=sending||!data.can_activate||!task.available;
       button.addEventListener("click",()=>send("activate",{league_id:$("league").value,event_id:data.event.id,task:task.key}));return button;
     }));

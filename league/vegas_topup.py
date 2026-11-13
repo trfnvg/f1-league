@@ -19,9 +19,13 @@ from .league_management import require_owner
 from .models import (League, LeagueActivity, LeagueSeasonEntry, RaceCalendarRound,
                      VegasLabWallet, VegasTopupClaim)
 
-REWARD = 500_000
+REWARD = 300_000
 THRESHOLD = 100_000
 OPEN = (VegasTopupClaim.Status.ACTIVE, VegasTopupClaim.Status.REVIEW)
+
+
+def reward_display():
+    return f"{REWARD // 100:,}".replace(",", " ")
 
 
 def current_round(now):
@@ -275,5 +279,5 @@ def review_view(request, league_id, event_id, claim_id):
     except ValidationError as exc:
         messages.error(request, " ".join(exc.messages))
     else:
-        messages.success(request, "Задание засчитано · +5 000 на игровой баланс." if decision == "approve" else "Задание не засчитано.")
+        messages.success(request, f"Задание засчитано · +{reward_display()} на игровой баланс." if decision == "approve" else "Задание не засчитано.")
     return redirect(reverse("league:friend_league_event", args=[league_id, event_id])+"?manage=1#vegas-topup-management")
