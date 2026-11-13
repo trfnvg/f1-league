@@ -13,8 +13,10 @@
 .shop-product::before { content:''; position:absolute; z-index:-1; left:0; bottom:0; width:100%; height:8px; background:linear-gradient(#e8bd73,#704019 30%,#251310); border-radius:1px; box-shadow:0 6px 9px #0006; }
 .shop-product::after { content:none; }
 .shop-item-art { display:block; flex-shrink:0; width:94px; height:94px; background:url('images/vegas/shop-goods-v2-web.webp') 0 0/300% 300% no-repeat; pointer-events:none; filter:drop-shadow(0 5px 4px #0008); transition:transform .22s,filter .22s; }
-.shop-item-wheel { background-position:0 0; }.shop-item-tyres { background-position:50% 0; }.shop-item-shield { background-position:100% 0; }
+.shop-item-wheel { background-position:0 0; }.shop-item-tyres { background-position:50% 0; }
 .shop-item-redflag { background-position:0 50%; }.shop-item-mirrors { background-position:50% 50%; }.shop-item-teamorder { background-position:100% 50%; }.shop-item-insurance { background-position:0 100%; }
+.shop-item-constructors,.shop-item-paddockpass { background-image:url('images/vegas/shop-premium-v1-web.webp'); background-size:200% 100%; }
+.shop-item-constructors { background-position:0 0; }.shop-item-paddockpass { background-position:100% 0; }
 .shop-price-tag { position:relative; display:flex; align-items:center; flex-direction:column; gap:4px; width:100%; min-height:44px; padding:0; background:none; border:0; border-radius:0; box-shadow:none; text-align:center; text-shadow:0 2px 4px #160910; }
 .shop-price-tag>span { display:flex; align-items:center; justify-content:center; min-height:28px; color:#f3e2c6; font:600 12px/1.15 Arial,sans-serif; }.shop-price-tag strong { color:#ffdc8d; font:750 17px/1.1 Arial,sans-serif; font-variant-numeric:tabular-nums; }
 .shop-dealer { position:absolute; z-index:4; width:var(--dealer-size); aspect-ratio:1; top:var(--counter-edge); left:50%; transform:translate(-50%,-92%); pointer-events:none; }

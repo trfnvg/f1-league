@@ -12,6 +12,7 @@ ASSETS = {
     "ferrari-tractor-v1": (512, 512),
     "lando-wild-v1": (512, 512),
     "shop-goods-v2": (1200, 1200),
+    "shop-premium-v1": (1024, 512),
     "strip-v3": (1440, 960),
     "strip-mobile-v3": (900, 1350),
 }

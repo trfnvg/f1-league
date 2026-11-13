@@ -208,7 +208,7 @@ class VegasLabTests(TestCase):
         before = VegasLabWallet.objects.get(user=self.staff)
         response = self.client.get(shop)
         self.assertContains(response, 'id="shop-product-dialog"')
-        self.assertEqual(len(response.context["products"]), 7)
+        self.assertEqual(len(response.context["products"]), 8)
         self.assertEqual(response.context["shop_balance"], before.balance)
         after = VegasLabWallet.objects.get(user=self.staff)
         self.assertEqual((after.balance, after.revision, after.last_payload),
@@ -228,8 +228,9 @@ class VegasLabTests(TestCase):
     def test_shop_catalogue_prices_and_post_duel_scoring_contract(self):
         response = self.client.get(reverse("league:vegas_lab_shop"))
         products = {p["key"]: p for p in response.context["products"]}
-        prices = {"wheel": 10000, "tyres": 5000, "shield": 12000, "redflag": 8000,
-                  "mirrors": 15000, "teamorder": 7000, "insurance": 8000}
+        prices = {"wheel": 10000, "tyres": 5000, "redflag": 15000,
+                  "mirrors": 15000, "teamorder": 7000, "insurance": 8000,
+                  "constructors": 35000, "paddockpass": 40000}
         self.assertEqual(set(products), set(prices))
         for key, price in prices.items():
             with self.subTest(product=key):
@@ -238,7 +239,11 @@ class VegasLabTests(TestCase):
                 self.assertEqual(item["price"], f"{price:,} $".replace(",", " "))
                 self.assertEqual(item["scoring_phase"], "before_race" if key == "redflag" else "after_duel")
         self.assertEqual({k: p["points"] for k, p in products.items() if "points" in p},
-                         {"wheel": -3, "tyres": 1, "teamorder": 2})
+                         {"wheel": -3, "tyres": 1, "teamorder": 2, "constructors": 3, "paddockpass": 3})
+        self.assertEqual(products["constructors"]["ally_points"], 3)
+        self.assertTrue(products["paddockpass"]["blocks_attacks"])
+        self.assertIn("tyres", products["paddockpass"]["incompatible_with"])
+        self.assertNotContains(response, 'data-product="shield"')
 
     def test_expanded_stakes_charge_the_selected_amount(self):
         config = self.client.get(self.page).context["vegas_config"]

@@ -477,7 +477,7 @@ def run(engine, output, cdn_dir=None):
                 assert abs(shop_box["width"]-page.viewport_size["width"]) <= 1 and abs(shop_box["height"]-page.viewport_size["height"]) <= 1
                 expect(page.locator(".shop-masthead,#shop-title")).to_have_count(0)
                 expect(page.get_by_role("region", name="Витрина товаров")).to_be_visible()
-                expect(page.locator(".shop-product")).to_have_count(7)
+                expect(page.locator(".shop-product")).to_have_count(8)
                 expect(page.locator(".shop-counter img")).to_have_attribute("src", "/static/league/images/vegas/shop-counter-v2.png")
                 assert page.locator(".shop-counter").evaluate("el=>getComputedStyle(el).clipPath==='none' && getComputedStyle(el).backgroundImage==='none'"), "Counter must be independent alpha art, not a clipped copy of the room"
                 shop_requests = len(spin_requests)
@@ -485,7 +485,7 @@ def run(engine, output, cdn_dir=None):
                     page.set_viewport_size({"width": width, "height": height})
                     page.evaluate("scrollTo(0,0)")
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "shop overflow")
-                    for item in ("wheel", "tyres", "shield", "redflag", "mirrors", "teamorder", "insurance"):
+                    for item in ("wheel", "tyres", "redflag", "mirrors", "teamorder", "insurance", "constructors", "paddockpass"):
                         button = page.locator(f'[data-product="{item}"]')
                         # Read both boxes in the same layout frame: resizing
                         # the site's sidebar can still move the scene while
@@ -500,7 +500,7 @@ def run(engine, output, cdn_dir=None):
                         expect(page.locator("#shop-detail-price")).to_contain_text("$")
                         modal = page.locator("#shop-product-dialog").bounding_box()
                         assert modal["width"] <= width and modal["y"] >= 0 and modal["y"]+modal["height"] <= height, (width,"shop dialog overflow",modal)
-                        if item == "shield" and width == 390:
+                        if item == "paddockpass" and width == 390:
                             page.screenshot(path=str(output/f"{engine}-390-shop-detail.png"))
                         page.locator("#shop-done").click()
                         assert page.locator(".shop-scene").evaluate("el=>el.scrollLeft===0"), "Focusing a product must not pan the oversized foreground"
@@ -527,10 +527,10 @@ def run(engine, output, cdn_dir=None):
                 page.screenshot(path=str(output/f"{engine}-shop-chip-toss.png"), full_page=True)
                 expect(dealer).to_have_attribute("data-pose", "idle", timeout=3000)
                 page.wait_for_function("shopPoses.includes('catch')")
-                page.locator('[data-product="shield"]').hover()
+                page.locator('[data-product="constructors"]').hover()
                 expect(page.locator("#shop-tooltip")).to_be_visible()
-                expect(page.locator("#shop-tip-title")).to_have_text("Щит паддока")
-                page.locator('[data-product="shield"]').click()
+                expect(page.locator("#shop-tip-title")).to_have_text("Кубок конструкторов")
+                page.locator('[data-product="constructors"]').click()
                 expect(dealer).to_have_attribute("data-animating", "false")
                 expect(dealer).to_have_attribute("data-pose", "idle")
                 page.keyboard.press("Escape")

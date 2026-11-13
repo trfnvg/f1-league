@@ -1,5 +1,20 @@
 # Vegas Pit — visual assets
 
+## Premium catalogue additions
+
+`shop-premium-v1.png` is the transparent 2×1 atlas for the Constructors Cup
+(left) and Paddock Pass (right), generated with the built-in image tool using
+`shop-goods-v2-web.webp` as a style reference. Copied unchanged, no raster edits
+or CLI/API fallback. `shop-premium-v1-web.webp` is the alpha-preserving web copy
+from `scripts/optimize_vegas_art.py`. The separate shield is no longer offered;
+its old atlas cell is retained as historical art, not a live product.
+
+Prompt (verbatim):
+
+```text
+Use case: stylized-concept. Asset type: one transparent production sprite atlas for TWO premium items in a Formula racing casino shop. Reference image is style only: match its crisp hand-painted 2D casino merchandise, polished gold metal, rich burgundy and emerald accents, strong readable silhouettes and warm highlights. Make a landscape 2:1 image consisting of exactly TWO equal invisible SQUARE cells side by side. LEFT CELL: an impressive gold constructors championship TROPHY with two elegant handles and a sculpted sleek Formula racing car sitting across the top of the cup, compact gold laurel accents and dark burgundy small plinth, no writing. RIGHT CELL: an exclusive paddock access PASS, a solid rectangular burgundy credential in a beveled gold holder attached to a short folded black-and-red lanyard; an embossed small gold protective shield and three small gold stars on the credential, clearly a wearable pit access pass rather than a trophy or playing card, no writing. Both objects centered in their respective cells, same apparent size, fully visible, 14 percent transparent empty margin inside every cell, never touching or overlapping between cells. Genuine transparent alpha background, no scenery, no shelves, no panels behind items, no oval frames, no label plates, no prices, no words or letters, no watermark, no people, no floor shadows, no extra objects or glitter clouds. Refined richly painted commercial casino adventure game art, not plastic toy 3D, readable at 70px. Only two objects, exact two-cell horizontal layout.
+```
+
 ## Approved seven-item shop catalogue
 
 `shop-goods-v2.png` is a new transparent 3×3 atlas generated with the built-in
