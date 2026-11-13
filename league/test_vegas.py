@@ -228,9 +228,9 @@ class VegasLabTests(TestCase):
     def test_shop_catalogue_prices_and_post_duel_scoring_contract(self):
         response = self.client.get(reverse("league:vegas_lab_shop"))
         products = {p["key"]: p for p in response.context["products"]}
-        prices = {"wheel": 10000, "tyres": 5000, "redflag": 15000,
-                  "mirrors": 15000, "teamorder": 7000, "insurance": 8000,
-                  "constructors": 35000, "paddockpass": 40000}
+        prices = {"wheel": 6000, "tyres": 2500, "redflag": 8000,
+                  "mirrors": 7000, "teamorder": 4500, "insurance": 3500,
+                  "constructors": 10000, "paddockpass": 12000}
         self.assertEqual(set(products), set(prices))
         for key, price in prices.items():
             with self.subTest(product=key):
@@ -244,6 +244,14 @@ class VegasLabTests(TestCase):
         self.assertTrue(products["paddockpass"]["blocks_attacks"])
         self.assertIn("tyres", products["paddockpass"]["incompatible_with"])
         self.assertNotContains(response, 'data-product="shield"')
+
+    def test_shop_prices_are_rendered_from_the_same_catalogue_as_product_details(self):
+        from django.utils.html import json_script
+        from .vegas_shop import PRODUCTS
+        response = self.client.get(reverse("league:vegas_lab_shop"))
+        self.assertContains(response, json_script(list(PRODUCTS), "shop-products"))
+        for item in PRODUCTS:
+            self.assertContains(response, item["price"])
 
     def test_expanded_stakes_charge_the_selected_amount(self):
         config = self.client.get(self.page).context["vegas_config"]
