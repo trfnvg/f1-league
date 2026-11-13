@@ -367,14 +367,14 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false")
                 page.emulate_media(reduced_motion="no-preference")
                 page.set_viewport_size({"width": 390, "height": 844})
+                page.evaluate("window.vegasWinEffects=[];new MutationObserver(()=>vegasWinEffects.push(document.getElementById('vegas-fx').dataset.effect)).observe(document.getElementById('vegas-fx'),{attributes:true,attributeFilter:['data-effect']})")
                 page.locator("#vegas-scenario").select_option("wild")
                 page.locator("#vegas-spin").click()
                 expect(page.locator("#vegas-lines polyline")).to_be_visible(timeout=10000)
-                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "true")
-                expect(page.locator("#vegas-fx")).to_have_attribute("data-effect", "electric")
-                page.wait_for_function("(()=>{const c=document.querySelector('#vegas-fx');return c.getContext('2d').getImageData(0,0,c.width,c.height).data.some((v,i)=>i%4===3&&v>0)})()")
+                expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false")
                 page.screenshot(path=str(output/f"{engine}-390-winning-line.png"), full_page=True)
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                assert page.evaluate("!vegasWinEffects.includes('electric')"), "Winning lines and cascades must not draw blue waves"
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 expect(page.locator("#vegas-effects,#vegas-sound")).to_have_count(0)
                 notes_before = page.evaluate("window.vegasNotesStarted || 0")
@@ -470,7 +470,8 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-shop").click()
                 shop_box = page.locator("#casino-shop").bounding_box()
                 assert abs(shop_box["width"]-page.viewport_size["width"]) <= 1 and abs(shop_box["height"]-page.viewport_size["height"]) <= 1
-                expect(page.locator("#shop-title")).to_have_text("Лавка казино")
+                expect(page.locator(".shop-masthead,#shop-title")).to_have_count(0)
+                expect(page.get_by_role("region", name="Витрина товаров")).to_be_visible()
                 expect(page.locator(".shop-product")).to_have_count(5)
                 expect(page.locator(".shop-counter img")).to_have_attribute("src", "/static/league/images/vegas/shop-counter-v2.png")
                 assert page.locator(".shop-counter").evaluate("el=>getComputedStyle(el).clipPath==='none' && getComputedStyle(el).backgroundImage==='none'"), "Counter must be independent alpha art, not a clipped copy of the room"

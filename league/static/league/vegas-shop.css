@@ -8,10 +8,6 @@
 .shop-wallet { text-align:right; }.shop-wallet span { display:block; color:#b7a589; font:9px/1.5 monospace; letter-spacing:.08em; }
 .shop-wallet strong { color:#f6ddb1; font:700 20px/1.4 Arial,sans-serif; font-variant-numeric:tabular-nums; }
 .shop-scene { position:relative; isolation:isolate; --scene-height:740px; --interior-size:100% 100%; --counter-edge:72%; --dealer-size:clamp(180px,24%,250px); height:var(--scene-height); border:1px solid #95713b80; border-radius:18px; overflow:clip; background:#28101e url('images/vegas/shop-room-v2.png') center/var(--interior-size) no-repeat; box-shadow:0 24px 60px #0004; }
-.shop-masthead { position:absolute; z-index:2; top:34px; left:10%; width:80%; text-align:center; pointer-events:none; }
-.shop-masthead>span { color:#d3b884; font:9px/1.5 monospace; letter-spacing:.22em; }
-.shop-masthead h1 { margin:6px 0; color:#f5ddb0; font:italic 700 clamp(30px,4vw,48px)/1.1 Georgia,serif; text-shadow:0 3px 14px #180b0a; }
-.shop-masthead h1 em { color:#e6b567; }.shop-masthead p { margin:6px 0 0; color:#d3baa0; font:12px/1.5 Arial,sans-serif; }
 .shop-shelves { position:absolute; inset:0; z-index:3; }
 .shop-product { position:absolute; top:17%; width:22%; height:176px; display:flex; align-items:center; flex-direction:column; justify-content:flex-end; padding:0 8px 14px; border:0; background:radial-gradient(ellipse at 50% 80%,#e0ab421a,transparent 70%); color:#ffe7ba; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 .shop-product::before { content:''; position:absolute; z-index:-1; left:-5%; bottom:0; width:110%; height:13px; background:linear-gradient(#e8bd73,#704019 25%,#251310); border-radius:3px; box-shadow:0 8px 10px #0007; }
@@ -60,7 +56,6 @@
 @media(max-width:700px) {
   .casino-shop { padding:16px 12px 32px; }.shop-nav { margin-bottom:12px; gap:10px; }.shop-wallet span { font-size:7px; }.shop-wallet strong { font-size:17px; }
   .shop-scene { --scene-height:900px; --interior-size:auto 100%; --counter-edge:72%; --dealer-size:min(46%,180px); border-radius:14px; }
-  .shop-masthead { top:32px; left:5%; width:90%; }.shop-masthead>span { font-size:8px; letter-spacing:.15em; }.shop-masthead h1 { font-size:34px; }.shop-masthead p { font-size:11px; }
   .shop-product { width:35%; height:170px; padding-bottom:14px; top:14%; }
   .shop-product-shield,.shop-product-wheel,.shop-product-refund { left:10%; }.shop-product-amnesty,.shop-product-pitstop { left:55%; }
   .shop-product-wheel,.shop-product-pitstop { top:33%; }.shop-product-refund { top:52%; }
@@ -77,8 +72,6 @@ body.casino-shop-open { overflow:hidden; }
 .casino-shop.is-fullscreen .shop-scene { max-width:1240px; margin:auto; }
 @media(max-width:700px) {
   .casino-shop.is-fullscreen .shop-scene { --scene-height:800px; --counter-edge:80%; --dealer-size:min(44%,180px); }
-  .casino-shop.is-fullscreen .shop-masthead { top:24px; }
-  .casino-shop.is-fullscreen .shop-masthead h1 { font-size:30px; }
   .casino-shop.is-fullscreen .shop-product { top:96px; width:40%; height:160px; padding:0 5px 10px; }
   .casino-shop.is-fullscreen .shop-product-shield,.casino-shop.is-fullscreen .shop-product-wheel,.casino-shop.is-fullscreen .shop-product-refund { left:6%; }
   .casino-shop.is-fullscreen .shop-product-amnesty,.casino-shop.is-fullscreen .shop-product-pitstop { left:54%; }

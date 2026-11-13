@@ -180,7 +180,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   }
   function stopFX(){
     cancelAnimationFrame(fxFrame);fxFrame=0;fxBursts=[];clearTimeout(edgeTimer);
-    machine.classList.remove("is-fire","is-electric");
+    machine.classList.remove("is-fire");
     fxContext?.clearRect(0,0,fxWidth,fxHeight);fxCanvas.dataset.active="false";fxCanvas.dataset.frames=String(fxDrawCount);
   }
   function stopTransient(){
@@ -196,40 +196,30 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     for(const burst of fxBursts){
       const t=Math.max(0,(now-burst.born)/burst.duration),fade=Math.min(1,t*8)*Math.min(1,(1-t)*4);
       ctx.save();ctx.globalAlpha=Math.max(0,fade);ctx.globalCompositeOperation="lighter";
-      const electric=burst.mode==="electric";
-      ctx.strokeStyle=electric?"#a1f4ff":"#ffbb65";ctx.lineWidth=1.8;
-      // Ribbons stay at cell borders, so faces and line labels remain legible.
+      // Flames stay at cell borders, so faces and line labels remain legible.
       for(const [col,row]of burst.cells){
         const x=col*fxWidth/5+3,y=row*fxHeight/4+3,cw=fxWidth/5-6,ch=fxHeight/4-6;
-        ctx.beginPath();
-        for(let k=0;k<=8;k++){
-          const dx=x+cw*k/8,dy=y+(k===0||k===8?0:Math.sin(k*8+burst.seed+now*.02)*Math.min(5,fxWidth*.009));
-          if(!k)ctx.moveTo(dx,dy);else ctx.lineTo(dx,dy);
-        }ctx.stroke();
-        if(electric){ctx.beginPath();ctx.moveTo(x+cw,y);ctx.lineTo(x+cw-3,y+ch*.35);ctx.lineTo(x+cw+1,y+ch*.65);ctx.lineTo(x+cw,y+ch);ctx.stroke();}
-        else for(let n=0;n<3;n++){
+        for(let n=0;n<3;n++){
           const pulse=.8+.2*Math.sin(now*.015+n*2+col+burst.seed);
           const fh=ch*(n===1?.35:burst.pepper?1.15:.7)*pulse;
           const fw=cw*(n===1?.3:.48),px=x+cw*(.08+n*.42)-fw/2;
           ctx.drawImage(fireTexture(),((n+col)%3)*80,0,80,192,px,y+ch-fh,fw,fh);
         }
       }
-      if(!electric){
-        for(let n=0;n<12;n++){
-          const x=(n+.5)*fxWidth/12,w=fxWidth/10,h=fxHeight*(.07+.06*(1+Math.sin(n*1.7+now*.012+burst.seed)))*(burst.pepper?1.2:1);
-          ctx.drawImage(fireTexture(),(n%3)*80,0,80,192,x-w/2,fxHeight-h,w,h);
-        }
+      for(let n=0;n<12;n++){
+        const x=(n+.5)*fxWidth/12,w=fxWidth/10,h=fxHeight*(.07+.06*(1+Math.sin(n*1.7+now*.012+burst.seed)))*(burst.pepper?1.2:1);
+        ctx.drawImage(fireTexture(),(n%3)*80,0,80,192,x-w/2,fxHeight-h,w,h);
       }
       for(let n=0;n<24;n++){
         const [c,r]=burst.cells[n%burst.cells.length],angle=n*2.4+burst.seed,travel=t*(18+n*2);
         const x=(c+.5)*fxWidth/5+Math.cos(angle)*travel,y=(r+.7)*fxHeight/4+Math.sin(angle)*travel-t*(burst.pepper?100:35);
-        ctx.fillStyle=electric?"#bceef5":n%3?"#ff9c36":"#fff4ad";ctx.fillRect(x,y,1.8,Math.max(2,6*(1-t)));
+        ctx.fillStyle=n%3?"#ff9c36":"#fff4ad";ctx.fillRect(x,y,1.8,Math.max(2,6*(1-t)));
       }
       ctx.restore();
     }
     fxFrame=requestAnimationFrame(paintFX);
   }
-  function burstFX(mode,cells,pepper=false){
+  function fireFX(cells,pepper=false){
     if(!fxContext||!fxEnabled||reduced.matches||document.hidden||!cells.length)return;
     const box=$("board").getBoundingClientRect();fxWidth=box.width;fxHeight=box.height;
     const mobile=innerWidth<650||matchMedia("(pointer:coarse)").matches;
@@ -239,10 +229,10 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     const unique=[...new Map(cells.map(pos=>[pos.join(","),pos])).values()].slice(0,8);
     if(!fxFrame){fxDrawCount=0;lastFxPaint=0;}
     const duration=pepper?1200:900;
-    fxBursts.push({mode,cells:unique,pepper,duration,born:performance.now(),seed:Math.random()*20});fxBursts=fxBursts.slice(-2);
-    machine.classList.remove("is-fire","is-electric");machine.classList.add(mode==="electric"?"is-electric":"is-fire");
-    clearTimeout(edgeTimer);edgeTimer=setTimeout(()=>machine.classList.remove("is-fire","is-electric"),duration);
-    fxCanvas.dataset.active="true";fxCanvas.dataset.effect=mode;fxCanvas.dataset.theme=pepper?"pepper":mode;
+    fxBursts.push({cells:unique,pepper,duration,born:performance.now(),seed:Math.random()*20});fxBursts=fxBursts.slice(-2);
+    machine.classList.add("is-fire");
+    clearTimeout(edgeTimer);edgeTimer=setTimeout(()=>machine.classList.remove("is-fire"),duration);
+    fxCanvas.dataset.active="true";fxCanvas.dataset.effect="fire";fxCanvas.dataset.theme=pepper?"pepper":"fire";
     if(!fxFrame)fxFrame=requestAnimationFrame(paintFX);
   }
   reduced.addEventListener("change",()=>{if(reduced.matches)stopTransient();});
@@ -254,13 +244,10 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     poly.setAttribute("points",win.rows.map((r,c)=>`${c*100+50},${r*100+50}`).join(" "));svg.append(poly);
     for(const[c,r]of win.cells){columns[c].track.children[r]?.classList.add("is-winning");const dot=document.createElementNS(poly.namespaceURI,"circle");dot.setAttribute("cx",c*100+50);dot.setAttribute("cy",r*100+50);dot.setAttribute("r",3);svg.append(dot);}
   }
-  function sparks(cells){
-    if(!fxBursts.some(b=>b.mode==="fire"))burstFX("electric",cells);
-  }
   async function cascade(previous,next,wins){
     const removed=new Set(wins.flatMap(w=>w.cells.map(([c,r])=>`${c},${r}`)));
     for(const key of removed){const[c,r]=key.split(",").map(Number);columns[c].track.children[r]?.classList.add("is-exploding");}
-    sparks([...removed].map(k=>k.split(",").map(Number)));await pause(350);clear();const animations=[];
+    await pause(350);clear();const animations=[];
     for(let c=0;c<5;c++){
       const kept=previous[c].map((_,r)=>r).filter(r=>!removed.has(`${c},${r}`)),added=4-kept.length;column(c,next[c]);
       if(!reduced.matches&&!document.hidden){const height=columns[c].track.clientHeight/4;
@@ -299,7 +286,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     const purchase=data.bonus_purchase;await stopReels(purchase.grid);
     state=data.state;controls();$("multiplier").textContent="×2";
     const cells=[];purchase.grid.forEach((col,c)=>col.forEach((key,r)=>{if(key==="scatter"){columns[c].track.children[r].classList.add("is-scatter");cells.push([c,r]);}}));
-    burstFX("fire",cells);cue("bonus");callout("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,"bonus");
+    fireFX(cells);cue("bonus");callout("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,"bonus");
     await celebration("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,`Стоимость ${money(purchase.cost)} · ставка ${money(purchase.bet)}. Вращения начнутся автоматически.`,"VEGAS PIT · BONUS BUY",{autoMs:2000,kind:"entry"});
     message(`Бесплатных вращений: ${state.free_spins} · ставка не списывается`);
   }
@@ -311,7 +298,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       total+=round.amount;countAmount($("win"),total);if(result.free)countAmount($("bonus-total"),bonusBefore+total);
       const pepperWins=round.wins.filter(w=>w.symbol==="toto");
       const pepperCells=[...new Map(pepperWins.flatMap(w=>w.cells).map(pos=>[pos.join(","),pos])).values()];
-      burstFX(pepperWins.length||round.multiplier>=3||round.amount>=result.bet*8?"fire":"electric",pepperWins.length?pepperCells:round.wins.flatMap(w=>w.cells),!!pepperWins.length);
+      if(pepperWins.length||round.multiplier>=3||round.amount>=result.bet*8)fireFX(pepperWins.length?pepperCells:round.wins.flatMap(w=>w.cells),!!pepperWins.length);
       if(pepperWins.length&&!reduced.matches&&!document.hidden){
         for(const [c,r] of pepperCells){
           const el=columns[c].track.children[r];if(el?.dataset.symbol!=="toto")continue;

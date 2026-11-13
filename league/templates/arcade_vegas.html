@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · закрытый тест · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=15-lando-wild"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=16-no-blue-waves"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / ARCADE LAB</span><h1>Ночь в Вегасе.</h1><p>Мемы паддока. Сорок линий. Один ночной стинт.</p></div><a href="{% url 'league:arcade_control' %}">Вернуться в лабораторию ↗</a></header>
@@ -64,4 +64,4 @@
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=14-smooth-fire" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=2" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=16-no-blue-waves" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=2" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}
