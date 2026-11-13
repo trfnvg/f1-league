@@ -230,7 +230,7 @@ class VegasLabTests(TestCase):
         products = {p["key"]: p for p in response.context["products"]}
         prices = {"wheel": 6000, "tyres": 2500, "redflag": 8000,
                   "mirrors": 7000, "teamorder": 4500, "insurance": 3500,
-                  "constructors": 10000, "paddockpass": 12000}
+                  "constructors": 12000, "paddockpass": 15000}
         self.assertEqual(set(products), set(prices))
         for key, price in prices.items():
             with self.subTest(product=key):
