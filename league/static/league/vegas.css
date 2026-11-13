@@ -259,6 +259,10 @@
 }
 body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { outline:2px solid #ffe1a8!important;outline-offset:3px; }
 .vegas-art-toto { background-image:url('images/vegas/pepper-russell-v1.png'); background-size:contain; background-position:center; clip-path:none; }
+.vegas-toolbar>div { display:flex; align-items:center; gap:8px; }
+.vegas-page .vegas-shop-link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; gap:8px; padding:10px 14px; border:1px solid #b8915970; border-radius:10px; background:#49303c; color:#f3d6a3; font:650 12px/1.2 Arial,sans-serif; white-space:nowrap; }
+.vegas-shop-link[aria-disabled=true] { opacity:.5; cursor:wait; }
+@media(max-width:600px) { .vegas-toolbar>span { display:none; }.vegas-toolbar>div { width:100%; }.vegas-toolbar>div>* { flex:1; }.vegas-page .vegas-shop-link,.vegas-toolbar #vegas-fullscreen { padding:10px 8px; font-size:11px; } }
 .vegas-console { border:1px solid #b891594d; background:linear-gradient(145deg,#281d2e,#18121f); box-shadow:0 8px 24px #10081740; }
 .vegas-console .vegas-spin,.vegas-console .vegas-auto { align-self:end; width:100%; height:64px; min-height:64px; gap:5px; padding:10px 6px; border:1px solid #c6a36e80; border-radius:12px; box-shadow:inset 0 1px 0 #ffffff12,0 3px 8px #0003; }
 .vegas-console .vegas-spin { background:linear-gradient(150deg,#488957,#286540); border-color:#94bd8099; }

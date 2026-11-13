@@ -70,6 +70,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
   window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
   function controls(){
+    $("shop").setAttribute("aria-disabled",String(busy||!!pending));
     $("auto").setAttribute("aria-pressed",String(autoPlay));
     $("auto").querySelector("span").textContent=autoPlay?"СТОП":"АВТО";
     $("auto").disabled=!autoPlay&&(busy||!!pending||state.free_spins>0||state.balance<cfg.bets[betIndex]);
@@ -311,6 +312,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   let oldOverflow="";
   function fullscreen(on){if(on){oldOverflow=document.body.style.overflow;document.body.style.overflow="hidden";}else document.body.style.overflow=oldOverflow;page.classList.toggle("is-fullscreen",on);$("fullscreen").querySelector("span").textContent=on?"Свернуть":"Полный экран";$("fullscreen").setAttribute("aria-pressed",String(on));scheduleFit();}
   $("fullscreen").addEventListener("click",()=>fullscreen(!page.classList.contains("is-fullscreen")));
+  $("shop").addEventListener("click",e=>{if(busy||pending){e.preventDefault();message("Дождись подтверждения текущего вращения");return;}autoPlay=false;clearTimeout(autoTimer);controls();});
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden&&!$("purchase").open)fullscreen(false);
     if(e.code!=="Space"&&e.key!==" ")return;

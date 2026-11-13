@@ -117,6 +117,28 @@ class VegasLabTests(TestCase):
         wallet.save()
         self.assertEqual(self.client.get(self.page).context["vegas_config"]["state"]["balance"], 12345)
 
+    def test_shop_is_read_only_and_keeps_server_balance(self):
+        shop = reverse("league:vegas_lab_shop")
+        before = VegasLabWallet.objects.get(user=self.staff)
+        response = self.client.get(shop)
+        self.assertContains(response, 'id="shop-product-dialog"')
+        self.assertEqual(len(response.context["products"]), 5)
+        self.assertEqual(response.context["shop_balance"], before.balance)
+        after = VegasLabWallet.objects.get(user=self.staff)
+        self.assertEqual((after.balance, after.revision, after.last_payload),
+                         (before.balance, before.revision, before.last_payload))
+        self.assertEqual(self.client.post(shop).status_code, 405)
+        self.client.logout()
+        self.assertEqual(self.client.get(shop).status_code, 302)
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.get(shop).status_code, 403)
+
+    def test_shop_does_not_create_wallet_on_direct_visit(self):
+        VegasLabWallet.objects.filter(user=self.staff).delete()
+        response = self.client.get(reverse("league:vegas_lab_shop"))
+        self.assertEqual(response.context["shop_balance"], rules.START_BALANCE)
+        self.assertFalse(VegasLabWallet.objects.filter(user=self.staff).exists())
+
     def test_expanded_stakes_charge_the_selected_amount(self):
         config = self.client.get(self.page).context["vegas_config"]
         self.assertEqual(config["default_bet"], 5000)

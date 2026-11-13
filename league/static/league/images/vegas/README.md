@@ -1,5 +1,32 @@
 # Vegas Pit — visual assets
 
+## Casino shop artwork (built-in image generation)
+
+Three original assets are copied unchanged into this directory:
+`shop-interior-v1.png` (opaque interior), `shop-croupier-v1.png`
+(transparent Bath Judge in croupier attire), `shop-goods-v1.png`
+(transparent 3×2 merchandise atlas; bottom-right cell empty).
+The source Bath Judge sprite is the identity reference for the croupier.
+Prices, labels, shelves and interactions are rendered in HTML/CSS.
+
+### Interior prompt (verbatim)
+
+```text
+Use case: stylized-concept. Asset type: background plate for an interactive Formula racing casino shop game. Elegant illustrated 2D Las Vegas boutique interior, frontal almost orthographic view, landscape 3:2. Dark aubergine velvet back wall, walnut and antique brass wall panels, two tasteful warm brass wall sconces at extreme upper sides, subtle red neon accent. A quiet EMPTY wall in central 85 percent: interactive shelves and product icons will be added by code, so NO painted shelves, no merchandise or cabinets across center. Lower 18 percent a grand gently curved dark walnut sales counter with emerald velvet top and thin gold trim, facing the viewer. Warm theatrical light, rich but restrained jewel tones, crisp architectural perspective, premium hand-painted casino adventure game background. Central wall calm and moderately illuminated to make goods readable. No people, no products, no letters or text, no logos or signage, no UI panels, no watermarks. Full bleed opaque landscape illustration.
+```
+
+### Croupier prompt (verbatim)
+
+```text
+Use case: stylized-concept. Production transparent character cutout for a premium illustrated F1 meme casino shop. Supporting reference image depicts the Bath Judge; preserve his identity: stout cheerful man, short side-parted brown hair, round fleshy face, rectangular black glasses, confident knowing smile, gold medal. Repaint in crisp detailed hand-painted 2D casino adventure game art, NOT pixel art. Dress him as a casino CROUPIER: white long sleeve shirt, dark burgundy tailored waistcoat with small brass buttons, black bow tie, gold medal on a small red ribbon beneath bow tie. Framing waist-up, face turned toward viewer, one hand palm up presenting merchandise, other hand elegantly holding two small casino chips. Entire figure fully within canvas, modest transparent padding, recognizable broad round cheeks and distinctive spectacles. No bathtub, bubbles or other characters. Genuine transparent alpha background. Warm amber highlights and subtle purple rimlight, warm natural skin, detailed face, expressive humorous personality, tasteful rich velvet fabrics, polished professional game illustration not toy 3D. No text, official logos, podium, table or environment. Portrait 2:3 composition, character cutout only.
+```
+
+### Merchandise prompt (verbatim)
+
+```text
+Use case: stylized-concept. Asset type: one production game merchandise sprite atlas for a premium F1 meme casino shop. Square canvas with exactly SIX equal invisible square cells in a precise 3 columns by 2 rows grid. The last bottom-right cell must be completely EMPTY transparent. Five isolated item icons centered in the other five cells with generous 15 percent padding on every side. Genuine transparent alpha background. Same rich crisp hand-painted 2D commercial casino game art: polished metal, emerald and ruby jewel accents, warm gold rim highlights, readable strong silhouettes, no cartoon faces. TOP LEFT an emerald racing SHIELD with polished gold rim and a small racing helmet embossed at center. TOP CENTER an ivory parchment amnesty scroll with red broken wax seal and gold laurel, NO writing. TOP RIGHT a modern black Formula racing steering wheel smeared with a small comical patch of brown mud, red buttons, golden rimlight, recognizable steering wheel. BOTTOM LEFT a compact polished chrome pneumatic pit-stop wheel gun with bright red handle and two small gold stars. BOTTOM CENTER a lacquered burgundy casino chip chest open to reveal gold coins and one small green curved return arrow medallion in front. BOTTOM RIGHT empty. All same apparent scale, fully visible, consistent straight-on perspective. No shelves or environment, no panels or grid lines, no letters, words or numbers, no labels, prices, floor shadows, watermarks or logos. Exactly five items, no duplicates. Final game atlas, not a concept sheet.
+```
+
 ## Pepper Russell override
 
 `pepper-russell-v1.png` replaces the ice-cream portrait (internal key `toto`).

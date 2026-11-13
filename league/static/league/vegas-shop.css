@@ -1,0 +1,58 @@
+/* Illustrated showroom. Product controls sit on real shelves behind the croupier. */
+.casino-shop { --shop-gold:#e4c18b; max-width:1240px; padding:24px 24px 48px; margin:auto; color:#f6ebdd; }
+.casino-shop * { box-sizing:border-box; }
+.shop-nav { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; }
+.casino-shop a { text-decoration:none; }
+.shop-back { display:inline-flex; gap:8px; align-items:center; min-height:44px; padding:10px 14px; border:1px solid #bca07540; border-radius:10px; color:#efdab9; background:#24212a; font:650 12px/1.2 Arial,sans-serif; }
+.shop-back svg,.shop-dialog-close svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.shop-wallet { text-align:right; }.shop-wallet span { display:block; color:#b7a589; font:9px/1.5 monospace; letter-spacing:.08em; }
+.shop-wallet strong { color:#f6ddb1; font:700 20px/1.4 Arial,sans-serif; font-variant-numeric:tabular-nums; }
+.shop-scene { position:relative; isolation:isolate; height:740px; border:1px solid #95713b80; border-radius:18px; overflow:hidden; background:#28101e url('images/vegas/shop-interior-v1.png') center/100% 100% no-repeat; box-shadow:0 24px 60px #0004; }
+.shop-masthead { position:absolute; z-index:2; top:34px; left:10%; width:80%; text-align:center; pointer-events:none; }
+.shop-masthead>span { color:#d3b884; font:9px/1.5 monospace; letter-spacing:.22em; }
+.shop-masthead h1 { margin:6px 0; color:#f5ddb0; font:italic 700 clamp(30px,4vw,48px)/1.1 Georgia,serif; text-shadow:0 3px 14px #180b0a; }
+.shop-masthead h1 em { color:#e6b567; }.shop-masthead p { margin:6px 0 0; color:#d3baa0; font:12px/1.5 Arial,sans-serif; }
+.shop-shelves { position:absolute; inset:0; z-index:3; }
+.shop-product { position:absolute; top:22%; width:22%; height:188px; display:flex; align-items:center; flex-direction:column; justify-content:flex-end; padding:0 8px 14px; border:0; background:radial-gradient(ellipse at 50% 80%,#e0ab421a,transparent 70%); color:#ffe7ba; cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.shop-product::before { content:''; position:absolute; z-index:-1; left:-5%; bottom:0; width:110%; height:13px; background:linear-gradient(#e8bd73,#704019 25%,#251310); border-radius:3px; box-shadow:0 8px 10px #0007; }
+.shop-product::after { content:''; position:absolute; inset:0; border-radius:12px; border:1px solid transparent; transition:border-color .2s,background .2s; pointer-events:none; }
+.shop-product-shield { left:13%; }.shop-product-amnesty { left:39%; }.shop-product-wheel { left:65%; }
+.shop-product-pitstop { left:13%; top:51%; }.shop-product-refund { left:65%; top:51%; }
+.shop-item-art { display:block; flex-shrink:0; width:108px; height:162px; background:url('images/vegas/shop-goods-v1.png') 0 0/300% 200% no-repeat; pointer-events:none; filter:drop-shadow(0 5px 4px #0008); transition:transform .22s,filter .22s; }
+.shop-item-shield { background-position:0 0; }.shop-item-amnesty { background-position:50% 0; }.shop-item-wheel { background-position:100% 0; }.shop-item-pitstop { background-position:0 100%; }.shop-item-refund { background-position:50% 100%; }
+.shop-price-tag { position:relative; display:flex; align-items:center; flex-direction:column; gap:3px; width:100%; max-width:180px; min-height:46px; margin-top:-18px; padding:7px 5px; background:linear-gradient(#37231d,#211618); border:1px solid #c29c5e80; border-radius:6px; box-shadow:0 3px 6px #0004; }
+.shop-price-tag>span { color:#e9d4b5; font:600 11px/1.25 Arial,sans-serif; }.shop-price-tag strong { color:#ffdc8d; font:750 15px/1.1 Arial,sans-serif; font-variant-numeric:tabular-nums; }
+.shop-dealer { position:absolute; z-index:4; width:29%; height:36%; max-width:330px; bottom:18%; left:50%; transform:translateX(-50%); pointer-events:none; }
+.shop-dealer img { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 6px 12px #160b1890); animation:shop-breathe 6s ease-in-out infinite; transform-origin:bottom center; }
+.shop-counter { position:absolute; z-index:5; bottom:0; left:0; width:100%; height:18%; border-top:5px solid #795733; background:linear-gradient(#17392c 0 12%,#be9557 13%,#442819 18%,#271817 100%); box-shadow:0 -2px 12px #0005; pointer-events:none; }
+.shop-greeting { position:absolute; z-index:6; bottom:5%; left:8%; padding-left:16px; border-left:2px solid #bb8a48; }
+.shop-greeting>span { color:#c4a174; font:9px/1.6 monospace; letter-spacing:.1em; }.shop-greeting p { margin:5px 0 0; color:#f6deb7; font:italic 20px/1.25 Georgia,serif; }
+.shop-touch-hint { position:absolute; z-index:6; right:8%; bottom:5%; width:210px; margin:0; text-align:right; color:#c5ae94; font:12px/1.6 Arial,sans-serif; }
+.shop-preview-note { margin:18px auto 0; color:#aaa2a6; text-align:center; font:12px/1.7 Arial,sans-serif; max-width:720px; }.shop-preview-note span { display:block; margin-bottom:4px; color:#bfa575; font:9px/1.4 monospace; letter-spacing:.15em; }
+.shop-tooltip { position:fixed; z-index:2100; width:280px; max-width:calc(100vw - 24px); padding:18px; border:1px solid #c4a06d80; border-radius:12px; color:#eadbc9; background:#241c29; box-shadow:0 12px 36px #0008; pointer-events:none; }
+.shop-tooltip[hidden] { display:none; }.shop-tooltip>span,.shop-detail-kind { color:#c4a174; font:10px/1.5 monospace; text-transform:uppercase; letter-spacing:.13em; }
+.shop-tooltip strong { display:block; margin-top:6px; font:700 18px/1.3 Arial,sans-serif; }.shop-tooltip b { display:block; margin:8px 0; color:#efcf91; font:700 18px/1.2 Arial,sans-serif; }.shop-tooltip p { margin:0 0 10px; font:12px/1.6 Arial,sans-serif; }.shop-tooltip small { color:#aa9b8d; font-size:10px; }
+.shop-dialog { position:fixed; inset:0; margin:auto; padding:28px; width:420px; max-width:calc(100% - 28px); max-height:calc(100dvh - 40px); overflow:auto; border:1px solid #bb985f99; border-radius:18px; color:#f1e5d5; background:radial-gradient(ellipse at 50% 25%,#54352d55,transparent 60%),#251c29; text-align:center; box-shadow:0 20px 90px #0009; }
+.shop-dialog:not([open]) { display:none; }.shop-dialog::backdrop { background:#090910c9; backdrop-filter:blur(5px); }
+.shop-dialog-close { position:absolute; right:12px; top:12px; width:44px; height:44px; display:grid; place-items:center; padding:10px; border:1px solid #bb985f40; border-radius:10px; background:#352937; color:#ead9c5; cursor:pointer; }
+.shop-detail-kind { display:block; margin:7px 30px 0; }.shop-detail-art { margin:-5px auto -8px; width:116px; height:174px; }
+.shop-dialog h2 { margin:0 0 10px; font:700 26px/1.15 Arial,sans-serif; letter-spacing:-.04em; }.shop-detail-price { color:#f3ce89; font:750 26px/1.2 Arial,sans-serif; }
+.shop-dialog>p { font:14px/1.7 Arial,sans-serif; color:#cfc3b8; margin:16px 0; }.shop-dialog .shop-detail-rule { color:#e6c48c; font-size:12px; border-top:1px solid #bc9e6b30; padding-top:14px; }
+.shop-detail-note { padding:12px; background:#ffffff06; border-radius:8px; color:#ac9fa4; font:11px/1.6 Arial,sans-serif; }.shop-done { display:block; margin-top:16px; min-height:46px; width:100%; padding:12px; border:1px solid #b7905c66; border-radius:10px; color:#f1d5a7; background:#4b3336; font:650 12px/1.3 Arial,sans-serif; cursor:pointer; }
+.casino-shop :is(a,button):focus-visible { outline:2px solid #ffe2a5; outline-offset:4px; }.shop-noscript { padding:20px; font:14px/1.6 Arial,sans-serif; }
+@media(hover:hover) { .shop-product:hover .shop-item-art,.shop-product:focus-visible .shop-item-art { transform:translateY(-7px); filter:drop-shadow(0 6px 10px #dc9e4d66); }.shop-product:hover::after { border-color:#bba46c33; background:#d9ac4c08; }.shop-back:hover { color:#fff0d2; background:#352b34; } }
+@keyframes shop-breathe { 50% { transform:translateY(-3px) rotate(.3deg); } }
+@media(max-width:700px) {
+  .casino-shop { padding:16px 12px 32px; }.shop-nav { margin-bottom:12px; gap:10px; }.shop-wallet span { font-size:7px; }.shop-wallet strong { font-size:17px; }
+  .shop-scene { height:900px; border-radius:14px; background-size:auto 100%; }
+  .shop-masthead { top:32px; left:5%; width:90%; }.shop-masthead>span { font-size:8px; letter-spacing:.15em; }.shop-masthead h1 { font-size:34px; }.shop-masthead p { font-size:11px; }
+  .shop-product { width:35%; height:170px; padding-bottom:14px; top:17%; }
+  .shop-product-shield,.shop-product-wheel,.shop-product-refund { left:10%; }.shop-product-amnesty,.shop-product-pitstop { left:55%; }
+  .shop-product-wheel,.shop-product-pitstop { top:39%; }.shop-product-refund { top:61%; }
+  .shop-item-art { width:95px; height:142.5px; }.shop-price-tag { flex-shrink:0; min-height:56px; padding:6px 3px; margin-top:-10px; }.shop-price-tag>span { display:flex; align-items:center; justify-content:center; min-height:25px; font-size:10px; }.shop-price-tag strong { font-size:14px; }
+  .shop-dealer { width:51%; height:26%; max-width:220px; bottom:16%; left:76%; }
+  .shop-counter { height:16%; }.shop-greeting { left:7%; bottom:5.5%; }.shop-greeting>span { font-size:8px; }.shop-greeting p { font-size:18px; }.shop-touch-hint { left:7%; right:7%; width:auto; text-align:left; bottom:2%; font-size:10px; }
+  .shop-detail-art { width:108px; height:162px; }.shop-dialog { padding:24px 20px; }.shop-dialog h2 { font-size:24px; }
+}
+@media(max-height:500px) { .shop-dialog { padding:18px 24px; }.shop-detail-art { width:64px; height:96px; }.shop-dialog>p { margin:10px 0; font-size:12px; } }
+@media(prefers-reduced-motion:reduce) { .casino-shop * { animation:none!important; transition:none!important; } }
