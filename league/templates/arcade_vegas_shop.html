@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Лавка казино · Vegas Pit · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=1">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=2-counter">{% endblock %}
 {% block content %}
 <main class="casino-shop" id="casino-shop">
   <nav class="shop-nav" aria-label="Лавка казино"><a href="{% url 'league:vegas_lab' %}" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
   <section class="shop-scene" aria-labelledby="shop-title">
-    <header class="shop-masthead"><span>VEGAS PIT / PRIVATE BOUTIQUE</span><h1 id="shop-title">Лавка <em>казино</em></h1><p>У каждого преимущества своя цена.</p></header>
+    <header class="shop-masthead"><span>VEGAS PIT</span><h1 id="shop-title">Лавка <em>казино</em></h1></header>
     <div class="shop-shelves" aria-label="Пять товаров на витрине">
       {% for item in products %}
       <button type="button" class="shop-product shop-product-{{ item.key }}" data-product="{{ item.key }}" aria-haspopup="dialog" aria-controls="shop-product-dialog" aria-label="{{ item.name }}, {{ item.price }}. Подробнее">
@@ -17,10 +17,8 @@
     </div>
     <div class="shop-dealer" aria-hidden="true"><img src="{% static 'league/images/vegas/shop-croupier-v1.png' %}" alt="" width="1024" height="1536" fetchpriority="high"></div>
     <div class="shop-counter" aria-hidden="true"></div>
-    <div class="shop-greeting"><span>БАННЫЙ СУДЬЯ · КРУПЬЕ</span><p>«Выбирай с умом.<br>БАНы возврату не подлежат.»</p></div>
-    <p class="shop-touch-hint">Выбери товар на полке — расскажу подробнее.</p>
   </section>
-  <p class="shop-preview-note"><span>ПЕРВАЯ КОЛЛЕКЦИЯ</span> Демонстрационная витрина: цены и эффекты — примеры. Покупки ещё не открыты.</p>
+  <p class="shop-preview-note">Демовитрина · покупки скоро</p>
   <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }} · {{ item.price }}</strong><br>{{ item.description }}</p>{% endfor %}</div></noscript>
   <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><b id="shop-tip-price"></b><p id="shop-tip-copy"></p><small>Нажми, чтобы рассмотреть</small></div>
   <dialog class="shop-dialog" id="shop-product-dialog" aria-labelledby="shop-detail-name" aria-describedby="shop-detail-description shop-detail-note">
@@ -29,7 +27,7 @@
     <span class="shop-detail-art shop-item-art" id="shop-detail-art" aria-hidden="true"></span>
     <h2 id="shop-detail-name"></h2><strong class="shop-detail-price" id="shop-detail-price"></strong>
     <p id="shop-detail-description"></p><p class="shop-detail-rule" id="shop-detail-rule"></p>
-    <div class="shop-detail-note" id="shop-detail-note">Товар на примерке. Покупки откроются после утверждения правил магазина.</div>
+    <div class="shop-detail-note" id="shop-detail-note">Пример товара · покупки скоро</div>
     <button type="button" id="shop-done" class="shop-done">Вернуться к витрине</button>
   </dialog>
   {{ products|json_script:'shop-products' }}
