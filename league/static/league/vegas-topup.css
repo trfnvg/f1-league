@@ -1,0 +1,26 @@
+/* Flat controls: no pill cards, decorative badges or game-field resizing. */
+.vegas-toolbar .vegas-topup-trigger { min-height:44px; padding:8px 10px; border:1px solid #c6a36e70; border-radius:3px; background:#302335; color:#ffe2a4; font:700 11px/1.2 Arial,sans-serif; white-space:nowrap; }
+.vegas-topup-dialog { width:min(480px,calc(100% - 24px)); border-radius:4px; }
+.topup-dialog-head { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.topup-dialog-head h3 { margin:0; }
+.topup-dialog-head button { width:44px; height:44px; padding:0; border:1px solid #bfa17850; border-radius:3px; background:none; color:#eadac4; font-size:26px; }
+.vegas-topup-dialog [hidden] { display:none!important; }
+.vegas-topup-dialog label { display:block; margin:12px 0 6px; color:#c8b7a4; font:12px/1.4 Arial,sans-serif; }
+.vegas-topup-dialog :is(select,textarea) { display:block; width:100%; min-height:44px; padding:10px; border:1px solid #b79c6f55; border-radius:3px; background:#19131f; color:#f3e4d0; font:13px/1.4 Arial,sans-serif; }
+#vegas-topup-status { color:#e9bc77; }
+#vegas-topup-active { padding:14px 0; border-block:1px solid #b79c6f40; }
+#vegas-topup-tasks { display:grid; gap:10px; margin-top:12px; }
+#vegas-topup-tasks button { width:100%; min-height:60px; padding:12px; border:1px solid #b79c6f55; border-radius:3px; background:#382636; color:#f4e3cc; text-align:left; font:600 13px/1.5 Arial,sans-serif; }
+#vegas-topup-tasks button small { display:block; margin-top:5px; font:11px/1.4 Arial,sans-serif; color:#c4af98; }
+.topup-dialog-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.topup-dialog-actions button { flex:1; min-height:44px; padding:10px; border:1px solid #b79c6f66; border-radius:3px; background:#4a3338; color:#f6dfb9; font:600 12px/1.4 Arial,sans-serif; }
+.vegas-topup-dialog .topup-dialog-help { margin-top:18px; font-size:11px; color:#af9f98; }
+#vegas-topup-history { padding:0; margin:14px 0 0; list-style:none; }
+#vegas-topup-history li { padding:10px 0; border-top:1px solid #b79c6f2b; color:#c8b7a4; font:11px/1.5 Arial,sans-serif; }
+.topup-review-row { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:18px 0; border-top:1px solid #ffffff15; }
+.topup-review-row p { margin:5px 0; overflow-wrap:anywhere; }
+.topup-review-row small { color:#9ba5b2; }
+.topup-review-row form { display:flex; flex-wrap:wrap; gap:8px; flex-shrink:0; }
+.topup-review-note { white-space:pre-wrap; }
+@media(max-width:700px) { .vegas-toolbar .vegas-topup-trigger { flex:0 0 auto; padding:6px 8px; font-size:10px; }.vegas-toolbar>div { gap:5px; }.vegas-page .vegas-shop-link { gap:4px; }.topup-review-row { display:block; }.topup-review-row form { margin-top:12px; } }
+@media(max-width:400px) { .vegas-toolbar :is(.vegas-shop-link,#vegas-fullscreen,#vegas-exit) svg { display:none; }.vegas-page .vegas-toolbar :is(.vegas-shop-link,#vegas-fullscreen,#vegas-exit) { padding:8px 7px; font-size:10px; } }

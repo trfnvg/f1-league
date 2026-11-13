@@ -1792,6 +1792,44 @@ class VegasLabWallet(models.Model):
     last_spun_at = models.DateTimeField(null=True)
 
 
+class VegasTopupClaim(models.Model):
+    """One audited task award per player/event, never per league copy."""
+    class Task(models.TextChoices):
+        BAN = "ban", "Получить бан в паблике «Симпли Формула 1»"
+        MEME = "meme", "Повторить знаменитый формульный мем или сцену"
+
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Задание активно"
+        REVIEW = "review", "На проверке"
+        APPROVED = "approved", "Засчитано · +5 000"
+        REJECTED = "rejected", "Не засчитано"
+        CANCELLED = "cancelled", "Отменено игроком"
+        EXPIRED = "expired", "Дедлайн прошёл"
+
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="vegas_topups")
+    league_season = models.ForeignKey(LeagueSeason, on_delete=models.PROTECT, related_name="vegas_topups")
+    event = models.ForeignKey(Event, on_delete=models.PROTECT, related_name="vegas_topups")
+    task = models.CharField(max_length=8, choices=Task.choices)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    expires_at = models.DateTimeField()
+    activated_at = models.DateTimeField(default=timezone.now)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_vegas_topups")
+    credited_at = models.DateTimeField(null=True, blank=True)
+    note = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ("-activated_at", "-pk")
+        constraints = [
+            models.UniqueConstraint(fields=("user", "event", "task"), name="vegas_topup_task_once"),
+            models.UniqueConstraint(fields=("user",), condition=Q(status__in=("active", "review")), name="vegas_topup_one_open"),
+            models.CheckConstraint(condition=Q(task__in=("ban", "meme")), name="vegas_topup_task_valid"),
+            models.CheckConstraint(condition=Q(status__in=("active", "review", "approved", "rejected", "cancelled", "expired")), name="vegas_topup_status_valid"),
+            models.CheckConstraint(condition=(Q(status="approved", credited_at__isnull=False) | (~Q(status="approved") & Q(credited_at__isnull=True))), name="vegas_topup_credit_valid"),
+        ]
+
+
 class AuthRateBucket(models.Model):
     """Shared, expiring counters; keys contain no raw login, email or IP."""
 

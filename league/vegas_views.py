@@ -45,6 +45,10 @@ def page(request):
               "spin_url": reverse("league:vegas_lab_spin"),
               "balances_url": reverse("league:vegas_lab_balances")}
     config["player"] = {"id": request.user.pk, "name": display_name(request.user)}
+    config["topup_urls"] = {"status": reverse("league:vegas_topup_status"),
+                            "activate": reverse("league:vegas_topup_activate"),
+                            "submit": reverse("league:vegas_topup_submit", args=[0]),
+                            "cancel": reverse("league:vegas_topup_cancel", args=[0])}
     config["unlimited_balance"] = request.user.is_superuser
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True})
 
@@ -65,12 +69,14 @@ def balances(request):
         "balance", "user_id", "user__id", "user__first_name", "user__last_name", "user__username"
     ).order_by("-balance", "user_id")
     batch = list(wallets[offset:offset+51])
+    own_wallet = VegasLabWallet.objects.filter(user=request.user).first()
     return JsonResponse({"players": [
         {"id": wallet.user_id, "name": display_name(wallet.user), "balance": wallet.balance,
          "rank": offset+index+1, "is_you": wallet.user_id == request.user.pk}
         for index, wallet in enumerate(batch[:50])],
         "next_offset": offset+50 if len(batch)>50 else None,
-        "own_balance": VegasLabWallet.objects.filter(user=request.user).values_list("balance", flat=True).first()})
+        "own_balance": own_wallet.balance if own_wallet else None,
+        "own_state": state(own_wallet) if own_wallet else None})
 
 
 @login_required

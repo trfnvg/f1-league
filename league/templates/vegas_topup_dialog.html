@@ -1,0 +1,9 @@
+<dialog class="vegas-auto-dialog vegas-topup-dialog" id="vegas-topup-dialog" aria-labelledby="vegas-topup-title">
+  <div class="topup-dialog-head"><h3 id="vegas-topup-title">Додеп</h3><button type="button" id="vegas-topup-close" aria-label="Закрыть">×</button></div>
+  <p>Выполни одно задание — получи <strong>5 000</strong> после подтверждения владельцем лиги.</p>
+  <p id="vegas-topup-event"></p><p id="vegas-topup-status" role="status" aria-live="polite">Загрузка…</p>
+  <div id="vegas-topup-active" hidden><strong id="vegas-topup-active-text"></strong><p id="vegas-topup-active-meta"></p><div id="vegas-topup-submit-area"><label for="vegas-topup-note">Комментарий админу · необязательно</label><textarea id="vegas-topup-note" maxlength="300" rows="2"></textarea><div class="topup-dialog-actions"><button type="button" id="vegas-topup-submit">Выполнено · на проверку</button><button type="button" id="vegas-topup-cancel">Отменить задание</button></div></div></div>
+  <div id="vegas-topup-choices"><label for="vegas-topup-league">Кто проверит задание</label><select id="vegas-topup-league" aria-label="Лига для проверки задания"></select><div id="vegas-topup-tasks"></div></div>
+  <p class="topup-dialog-help">Только при балансе меньше 1 000. Одно активное задание за раз; каждое — один раз на этап. Выполнить и подтвердить нужно до первой практики.</p>
+  <ul id="vegas-topup-history" aria-label="Последние задания"></ul>
+</dialog>

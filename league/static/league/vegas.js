@@ -85,7 +85,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   function queueBonus(){
     clearTimeout(autoTimer);autoTimer=0;
     if(autoPlay&&!state.free_spins&&!canAfford(cfg.bets[betIndex])){autoPlay=false;controls();message("Авто остановлено: недостаточно средств");}
-    if((!state.free_spins&&!autoPlay)||busy||pending||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open)return;
+    if((!state.free_spins&&!autoPlay)||busy||pending||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||$("topup-dialog").open)return;
     const delay=Math.max(reduced.matches?160:550,(cfg.min_spin_interval_ms||0)+80-(performance.now()-lastRequestAt));
     autoTimer=setTimeout(()=>{autoTimer=0;request("spin",true);},delay);
   }
@@ -94,6 +94,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
   window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
   function controls(){
+    $("topup").disabled=busy||!!pending;
     if(displayedBalance!==state.balance){displayedBalance=state.balance;document.dispatchEvent(new CustomEvent("vegas:balance",{detail:{balance:state.balance}}));}
     $("shop").setAttribute("aria-disabled",String(busy||!!pending));
     $("auto").setAttribute("aria-pressed",String(autoPlay));
@@ -325,7 +326,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     message(result.free&&!state.free_spins?"Бонусный стинт завершён":state.free_spins?`Бесплатных вращений: ${state.free_spins} · ставка не списывается`:result.payout?`На баланс зачислено ${money(result.payout)}`:"Нет выигрышных комбинаций");
   }
   async function request(action="spin",automatic=false){
-    if(busy||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||(!automatic&&autoPlay&&action==="spin"))return;
+    if(busy||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||$("topup-dialog").open||(!automatic&&autoPlay&&action==="spin"))return;
     if(automatic&&((!state.free_spins&&!autoPlay)||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended))return;
     if(action!=="spin")autoPlay=false;
     clearTimeout(autoTimer);autoTimer=0;
@@ -366,6 +367,12 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   });
   for(const option of page.querySelectorAll("[data-auto-count]"))option.addEventListener("click",()=>{autoCount=Number(option.dataset.autoCount);autoQuote();});
   $("auto-cancel").addEventListener("click",()=>$("auto-dialog").close());
+  document.addEventListener("vegas:topup-open",()=>{autoPlay=false;clearTimeout(autoTimer);controls();});
+  document.addEventListener("vegas:topup-close",queueBonus);
+  document.addEventListener("vegas:topup-state",event=>{
+    const incoming=event.detail;
+    if(!busy&&!pending&&incoming.revision>=state.revision){state=incoming;controls();}
+  });
   $("auto-start").addEventListener("click",()=>{
     $("auto-dialog").close();autoRemaining=autoCount||Infinity;autoPlay=true;autoBlocked=false;unlockAudio(true);controls();queueBonus();
   });
@@ -389,10 +396,10 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   $("shop").addEventListener("click",e=>{if(busy||pending){e.preventDefault();message("Дождись подтверждения текущего вращения");return;}autoPlay=false;clearTimeout(autoTimer);controls();});
   $("exit").addEventListener("click",()=>{autoPlay=false;clearTimeout(autoTimer);stopAudio();stopTransient();});
   document.addEventListener("keydown",e=>{
-    if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden&&!$("purchase").open&&!$("auto-dialog").open)fullscreen(false);
+    if(e.key==="Escape"&&page.classList.contains("is-fullscreen")&&$("celebration").hidden&&!$("purchase").open&&!$("auto-dialog").open&&!$("topup-dialog").open)fullscreen(false);
     if(e.code!=="Space"&&e.key!==" ")return;
     if(e.isComposing||e.ctrlKey||e.altKey||e.metaKey||e.defaultPrevented)return;
-    if(!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
+    if(!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||$("topup-dialog").open||e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])'))return;
     // Works from the initial body focus and every game button. Suppress native
     // button activation/scrolling, including held-key repeats, to send one spin.
     e.preventDefault();if(!e.repeat)request();

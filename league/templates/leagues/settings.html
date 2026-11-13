@@ -52,7 +52,7 @@
 
   {% if management_section == 'judging' %}
     <section class="manage-card manage-rounds" aria-labelledby="manage-rounds-title">
-      <header class="manage-card-head"><div><h2 id="manage-rounds-title">Зачёт этапа</h2><p>Гонщик дня и крейзи-предикты оцениваются только для этой лиги.</p></div><span class="manage-head-mark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 18V3m0 1h11l-2 4 2 4H5"/></svg></span></header>
+      <header class="manage-card-head"><div><h2 id="manage-rounds-title">Зачёт этапа</h2><p>Гонщик дня, крейзи-предикты и подтверждение заданий на додеп. Выбери этап для проверки.</p></div><span class="manage-head-mark" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 18V3m0 1h11l-2 4 2 4H5"/></svg></span></header>
       <div class="manage-round-list">{% for event in events %}{% if forloop.counter <= 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% empty %}<p class="manage-empty">Здесь появятся этапы сезона.</p>{% endfor %}</div>
       {% if events|length > 5 %}<details class="manage-round-more"><summary>Все этапы <span>{{ events|length }}</span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg></summary><div class="manage-round-list">{% for event in events %}{% if forloop.counter > 5 %}{% include 'leagues/settings_round.html' %}{% endif %}{% endfor %}</div></details>{% endif %}
     </section>

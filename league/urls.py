@@ -11,6 +11,7 @@ from . import race_calendar
 from . import arcade_video
 from . import vegas_views
 from . import vegas_shop
+from . import vegas_topup
 
 app_name = "league"
 
@@ -19,6 +20,11 @@ urlpatterns = [
     path("arcade/lab/vegas/shop/", vegas_shop.page, name="vegas_lab_shop"),
     path("arcade/lab/vegas/spin/", vegas_views.spin, name="vegas_lab_spin"),
     path("arcade/lab/vegas/balances/", vegas_views.balances, name="vegas_lab_balances"),
+    path("arcade/lab/vegas/topup/", vegas_topup.status_view, name="vegas_topup_status"),
+    path("arcade/lab/vegas/topup/activate/", vegas_topup.action_view, {"action": "activate"}, name="vegas_topup_activate"),
+    path("arcade/lab/vegas/topup/<int:claim_id>/submit/", vegas_topup.action_view, {"action": "submit"}, name="vegas_topup_submit"),
+    path("arcade/lab/vegas/topup/<int:claim_id>/cancel/", vegas_topup.action_view, {"action": "cancel"}, name="vegas_topup_cancel"),
+    path("leagues/<uuid:league_id>/events/<int:event_id>/topup/<int:claim_id>/review/", vegas_topup.review_view, name="vegas_topup_review"),
     path("arcade/video/init/", arcade_video.initialize, name="arcade_video_init"),
     path("arcade/video/<uuid:upload_id>/part/", arcade_video.part, name="arcade_video_part"),
     path("arcade/video/<uuid:upload_id>/complete/", arcade_video.complete, name="arcade_video_complete"),

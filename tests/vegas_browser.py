@@ -31,6 +31,7 @@ def run(engine, output, cdn_dir=None):
     server = ThreadingHTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
     database = ThreadPoolExecutor(max_workers=1)
     errors = []
+    topup_fixture = {}
 
     def serve():
         try:
@@ -42,6 +43,25 @@ def run(engine, output, cdn_dir=None):
                 from league.models import VegasLabWallet
                 rival = User.objects.create_user(username=f"vegas-rival-{engine}", first_name="Соперник")
                 VegasLabWallet.objects.create(user=rival, balance=600000)
+                from datetime import timedelta
+                from django.urls import reverse
+                from django.utils import timezone
+                from league.models import Season, Event, RaceCalendarRound
+                from league.leagues import create_league, enroll_member
+                now = timezone.now()
+                owner = User.objects.create_user(username=f"vegas-owner-{engine}")
+                owner_client = Client(enforce_csrf_checks=True)
+                owner_client.force_login(owner)
+                season = Season.objects.create(year=2094)
+                event = Event.objects.create(name="Тестовый этап додепа", season_year=2094, round_number=1,
+                    deadline=now+timedelta(hours=1), race_datetime=now+timedelta(hours=6))
+                league = create_league(owner=owner, name="Тестовая лига", season=season, start_event=event, ruleset="paddock")
+                enroll_member(actor=owner, league_season=league, user=user)
+                calendar = RaceCalendarRound.objects.create(season_year=2094, round_number=1, circuit="vegas", title="Тестовый этап",
+                    location="Test", country="Test", circuit_name="Test", starts_on=now.date(), ends_on=(now+timedelta(days=1)).date(),
+                    practice1_at=now+timedelta(hours=3), race_at=event.race_datetime, prediction_event=event)
+                topup_fixture.update(owner=owner_client, calendar_id=calendar.pk,
+                    manage_url=reverse("league:friend_league_event", args=[league.league_id,event.pk])+"?manage=1")
                 return client
             client = database.submit(initialize).result(timeout=15)
             original = vegas_rules.outcome
@@ -74,15 +94,22 @@ def run(engine, output, cdn_dir=None):
                     for name in ("X-CSRFToken", "Origin", "Referer"):
                         if self.headers.get(name):
                             headers["HTTP_"+name.upper().replace("-", "_")] = self.headers[name]
-                    response = database.submit(client.generic, method, self.path, data=body,
+                    # Synthetic owner session for the second test tab only.
+                    selected_client = topup_fixture["owner"] if self.headers.get("X-Test-League-Owner") == "yes" else client
+                    response = database.submit(selected_client.generic, method, self.path, data=body,
                         content_type=self.headers.get("Content-Type", "application/octet-stream"), **headers).result(timeout=10)
                     self.send_response(response.status_code)
                     self.send_header("Content-Type", response.get("Content-Type", "text/html"))
+                    if response.get("Location"):
+                        self.send_header("Location", response["Location"])
                     self.end_headers()
                     self.wfile.write(response.content)
 
             server.RequestHandlerClass = Handler
-            with patch("league.vegas_rules.outcome", side_effect=lambda bet, **kw: original(bet, choice=random.Random(1 if kw.get("free") else 42).choice, **kw)):
+            def topup_round(now):
+                from league.models import RaceCalendarRound
+                return RaceCalendarRound.objects.select_related("prediction_event").get(pk=topup_fixture["calendar_id"])
+            with patch("league.vegas_topup.current_round", side_effect=topup_round), patch("league.vegas_rules.outcome", side_effect=lambda bet, **kw: original(bet, choice=random.Random(1 if kw.get("free") else 42).choice, **kw)):
                 ready.set()
                 server.serve_forever(poll_interval=.1)
         except Exception as error:
@@ -582,6 +609,42 @@ def run(engine, output, cdn_dir=None):
                 page.screenshot(path=str(output/f"{engine}-admin-bankroll.png"))
                 page.locator("#vegas-shop").click()
                 expect(page.locator("#shop-balance")).to_have_text("∞")
+                # Activate as a finite player, approve as the league owner in
+                # another tab, and refresh the real wallet without a reload.
+                def finite_player():
+                    from league.models import VegasLabWallet
+                    User.objects.filter(username=f"vegas-browser-{engine}").update(is_superuser=False)
+                    VegasLabWallet.objects.filter(user__username=f"vegas-browser-{engine}").update(balance=0, free_spins=0, last_payload={})
+                database.submit(finite_player).result(timeout=5)
+                page.set_viewport_size({"width":390,"height":844})
+                page.goto(base+"?fullscreen=1")
+                expect(page.locator("#vegas-balance")).to_have_text("0\u00a0$")
+                page.locator("#vegas-topup").click()
+                expect(page.locator('#vegas-topup-tasks [data-task="ban"]')).to_be_enabled()
+                page.screenshot(path=str(output/f"{engine}-390-topup-choose.png"))
+                page.locator('#vegas-topup-tasks [data-task="ban"]').click()
+                expect(page.locator("#vegas-topup-active")).to_be_visible()
+                expect(page.locator("#vegas-topup-choices")).not_to_be_visible()
+                page.locator("#vegas-topup-note").fill("Задание выполнено, участник лиги подтвердил.")
+                before_topup = len(spin_requests)
+                page.keyboard.press("Space")
+                assert len(spin_requests) == before_topup, "Topup typing must not spin"
+                page.locator("#vegas-topup-submit").click()
+                expect(page.locator("#vegas-topup-active-meta")).to_contain_text("На проверке")
+                owner_tab = context.new_page()
+                owner_tab.set_extra_http_headers({"X-Test-League-Owner":"yes"})
+                owner_tab.goto(f"http://127.0.0.1:{server.server_port}"+topup_fixture["manage_url"])
+                expect(owner_tab.locator("#vegas-topup-management")).to_contain_text("Задание выполнено")
+                owner_tab.screenshot(path=str(output/f"{engine}-topup-owner.png"),full_page=True)
+                owner_tab.locator('#vegas-topup-management button[value="approve"]').click()
+                expect(owner_tab.locator("#vegas-topup-management")).to_contain_text("Засчитано")
+                owner_tab.close()
+                page.locator("#vegas-topup-close").click()
+                page.locator("#vegas-topup").click()
+                expect(page.locator("#vegas-balance")).to_have_text("5\u00a0000\u00a0$")
+                expect(page.locator("#vegas-topup-history")).to_contain_text("Засчитано")
+                expect(page.locator('#vegas-topup-tasks [data-task="meme"]')).to_be_disabled()
+                page.screenshot(path=str(output/f"{engine}-390-topup-credited.png"))
                 assert not errors, errors
                 print(f"{engine}: stable responsive UI, paid auto start/stop, automatic bonus totals, pause/background/reload, retries, audio and FX OK")
                 browser.close()

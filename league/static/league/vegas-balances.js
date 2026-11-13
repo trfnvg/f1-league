@@ -48,7 +48,10 @@
         const response=await fetch(url,{credentials:"same-origin",cache:"no-store",signal:requestController.signal});
         if(!response.ok)throw new Error("balances");
         const data=await response.json();players.push(...data.players);next=data.next_offset;
-        if(startedRevision===revision&&Number.isSafeInteger(data.own_balance))ownBalance=data.own_balance;
+        if(startedRevision===revision&&Number.isSafeInteger(data.own_balance)){
+          ownBalance=data.own_balance;
+          if(data.own_state)document.dispatchEvent(new CustomEvent("vegas:topup-state",{detail:data.own_state}));
+        }
         if(next===null)break;offset=next;
       }
       const unique=[...new Map(players.map(p=>[p.id,p])).values()];
