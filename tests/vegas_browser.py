@@ -123,6 +123,7 @@ def run(engine, output, cdn_dir=None):
                 page.on("requestfailed", lambda request: outstanding.discard(request.url))
                 base = f"http://127.0.0.1:{server.server_port}/arcade/lab/vegas/"
                 spin_requests = []
+                ordinary_geometry = {}
                 page.on("request", lambda request: spin_requests.append(request.post_data_json)
                         if urlsplit(request.url).path == "/arcade/lab/vegas/spin/" else None)
                 page.goto(base)
@@ -188,6 +189,7 @@ def run(engine, output, cdn_dir=None):
                     label = page.locator("#vegas-spin span").bounding_box()
                     assert label["x"]-spin["x"] >= 8 and spin["x"]+spin["width"]-label["x"]-label["width"] >= 8, (engine, width, "spin label inset", label)
                     board = page.locator("#vegas-board").bounding_box()
+                    ordinary_geometry[(width, height)] = board
                     assert abs(board["width"]/board["height"]-1.25) < .01, board
                     deck = page.locator(".vegas-console").bounding_box()
                     assert deck["y"] >= board["y"]+board["height"], (engine, width, "controls must stay below reels")
@@ -295,6 +297,9 @@ def run(engine, output, cdn_dir=None):
                     page.set_viewport_size({"width": width, "height": height})
                     page.locator("#vegas-fullscreen").click()
                     page.wait_for_timeout(100)
+                    bonus_board = page.locator("#vegas-board").bounding_box()
+                    ordinary_board = ordinary_geometry[(width, height)]
+                    assert all(abs(bonus_board[key]-ordinary_board[key]) <= 1 for key in ("width", "height")), (engine, "bonus resized reels", width, ordinary_board, bonus_board)
                     spin_box = page.locator("#vegas-spin").bounding_box()
                     assert spin_box["y"]+spin_box["height"] <= height, (engine, "bonus viewport", width, spin_box)
                     expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "4000")
@@ -472,7 +477,7 @@ def run(engine, output, cdn_dir=None):
                 assert abs(shop_box["width"]-page.viewport_size["width"]) <= 1 and abs(shop_box["height"]-page.viewport_size["height"]) <= 1
                 expect(page.locator(".shop-masthead,#shop-title")).to_have_count(0)
                 expect(page.get_by_role("region", name="Витрина товаров")).to_be_visible()
-                expect(page.locator(".shop-product")).to_have_count(5)
+                expect(page.locator(".shop-product")).to_have_count(7)
                 expect(page.locator(".shop-counter img")).to_have_attribute("src", "/static/league/images/vegas/shop-counter-v2.png")
                 assert page.locator(".shop-counter").evaluate("el=>getComputedStyle(el).clipPath==='none' && getComputedStyle(el).backgroundImage==='none'"), "Counter must be independent alpha art, not a clipped copy of the room"
                 shop_requests = len(spin_requests)
@@ -480,7 +485,7 @@ def run(engine, output, cdn_dir=None):
                     page.set_viewport_size({"width": width, "height": height})
                     page.evaluate("scrollTo(0,0)")
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "shop overflow")
-                    for item in ("shield", "amnesty", "wheel", "pitstop", "refund"):
+                    for item in ("wheel", "tyres", "shield", "redflag", "mirrors", "teamorder", "insurance"):
                         button = page.locator(f'[data-product="{item}"]')
                         # Read both boxes in the same layout frame: resizing
                         # the site's sidebar can still move the scene while
@@ -488,6 +493,7 @@ def run(engine, output, cdn_dir=None):
                         geometry = button.evaluate("el=>{const b=el.getBoundingClientRect(),s=el.closest('.shop-scene').getBoundingClientRect();return {left:b.left,right:b.right,sceneLeft:s.left,sceneRight:s.right}}")
                         assert geometry["left"] >= geometry["sceneLeft"] and geometry["right"] <= geometry["sceneRight"], (width,item,"shelf overflow",geometry)
                         button.click()
+                        assert button.locator(".shop-price-tag").evaluate("el=>{const s=getComputedStyle(el);return s.borderRadius==='0px' && s.backgroundColor==='rgba(0, 0, 0, 0)'}"), "Prices must not sit in rounded pills"
                         expect(page.locator("#shop-product-dialog")).to_be_visible()
                         expect(page.locator("#shop-detail-name")).not_to_be_empty()
                         expect(page.locator("#shop-detail-description")).not_to_be_empty()
@@ -559,6 +565,7 @@ def run(engine, output, cdn_dir=None):
                     if page.locator("#vegas-plus").is_disabled():
                         break
                     page.locator("#vegas-plus").click()
+                admin_board_before = page.locator("#vegas-board").bounding_box()
                 page.locator("#vegas-buy").click()
                 expect(page.locator("#vegas-purchase-balance")).to_have_text("∞")
                 page.locator("#vegas-purchase-confirm").click()
@@ -566,6 +573,12 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
                 expect(page.locator("#vegas-balance")).to_have_text("∞")
+                completed_board = page.locator("#vegas-board").bounding_box()
+                assert all(abs(completed_board[key]-admin_board_before[key]) <= 1 for key in ("width", "height")), "Bonus completion must not resize the field"
+                page.locator("#vegas-spin").click()
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                resumed_board = page.locator("#vegas-board").bounding_box()
+                assert all(abs(resumed_board[key]-admin_board_before[key]) <= 1 for key in ("width", "height")), "Resuming paid spins must not resize the field"
                 page.screenshot(path=str(output/f"{engine}-admin-bankroll.png"))
                 page.locator("#vegas-shop").click()
                 expect(page.locator("#shop-balance")).to_have_text("∞")

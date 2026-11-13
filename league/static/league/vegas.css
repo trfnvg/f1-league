@@ -178,8 +178,6 @@
   .vegas-line-plaque span,.vegas-bonus-counter span { font-size:6px; }
   .vegas-marquee h2 { font-size:29px; }.vegas-marquee p { font-size:5px; letter-spacing:.12em; }
   .vegas-bonus-hud { min-height:56px;padding:5px 9px; }.vegas-bonus-hud strong { font-size:19px; }
-  .has-bonus-hud .vegas-buy,.has-bonus-hud .vegas-console .vegas-stake { display:none; }
-  .has-bonus-hud .vegas-stage { gap:0; }.has-bonus-hud .vegas-spin { grid-row:1; }
   .vegas-bonus-hud>div>span { font-size:7px; }.vegas-bonus-running { gap:7px; }#vegas-bonus-progress { max-width:80px; }
   .vegas-stage { grid-template-columns:minmax(0,1fr);gap:8px; }
   .vegas-buy { order:2; display:grid; grid-template-columns:1fr auto 1fr; grid-template-rows:1fr 1fr; column-gap:10px; row-gap:0; width:100%; min-height:60px; padding:7px 12px; }
@@ -212,7 +210,6 @@
   .vegas-spin { grid-column:4;grid-row:1;width:58px;height:58px;padding:8px;margin:0; }
   .vegas-spin svg { width:22px;height:22px; }.vegas-spin span { font-size:6.5px; }
   .vegas-stage { grid-template-columns:112px var(--board-size);gap:16px; }
-  .has-bonus-hud .vegas-stage { gap:16px; }.has-bonus-hud .vegas-buy { display:flex; }.has-bonus-hud .vegas-console .vegas-stake { display:block; }
   .vegas-buy { order:0;display:flex;width:112px;min-height:112px;gap:3px;padding:8px 5px; }
   .vegas-buy-kicker { font-size:9px;text-align:center; }
   .vegas-buy-count { font-size:29px; }.vegas-buy-caption { font-size:10px;align-self:auto; }
@@ -277,8 +274,6 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
 .vegas-buy::before,.vegas-buy::after { display:none; }
 @media(min-width:650px) and (max-height:500px) {
   .vegas-console .vegas-spin,.vegas-console .vegas-auto { height:54px; min-height:54px; padding:6px 4px; }
-  .has-bonus-hud .vegas-buy { display:none; }
-  .has-bonus-hud .vegas-stage { grid-template-columns:var(--board-size); gap:0; }
 }
 @media(hover:hover) { .vegas-spin:not(:disabled):hover,.vegas-buy:not(:disabled):hover { filter:brightness(1.08); }.vegas-toolbar button:hover { color:#fff0ce;border-color:#cfb37a; } }
 
@@ -399,6 +394,22 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
 .vegas-win-callout[data-kind=fire] { background:radial-gradient(ellipse,#39150bf2,transparent 75%); }
 .vegas-win-callout[data-kind=fire] span { color:#ffd6a3; text-shadow:0 0 12px #ff5c2370,0 2px #40160a; }
 .vegas-win-callout[data-kind=fire] strong { color:#ffeac4; text-shadow:0 2px #8f3316,0 0 18px #ff78214d; }
+/* The bonus HUD replaces the purchase panel in-place. Neither the field nor
+   the controls change geometry when a series starts or ends. */
+.vegas-bonus-panel { position:relative; min-width:0; width:112px; }
+.vegas-bonus-panel .vegas-bonus-hud { position:absolute; inset:0; min-height:0; margin:0; padding:10px 7px; border-radius:8px; flex-direction:column; justify-content:center; text-align:center; gap:8px; }
+.vegas-bonus-panel .vegas-bonus-running { flex-direction:column; gap:6px; }
+.vegas-bonus-panel #vegas-bonus-progress { max-width:none; text-align:center; font-size:10px; }
+.vegas-bonus-panel .vegas-bonus-hud strong { font-size:20px; overflow-wrap:anywhere; }
+.has-bonus-hud .vegas-bonus-panel .vegas-buy { visibility:hidden; }
+@media(max-width:649px), (max-width:700px) and (min-height:501px) {
+  .vegas-bonus-panel { order:2; width:100%; }
+  .vegas-bonus-panel .vegas-bonus-hud { flex-direction:row; justify-content:space-between; padding:5px 10px; gap:6px; text-align:left; }
+  .vegas-bonus-panel .vegas-bonus-running { flex-direction:row; gap:6px; }
+  .vegas-bonus-panel #vegas-bonus-progress { max-width:74px; font-size:9px; }
+  .vegas-bonus-panel .vegas-bonus-hud strong { font-size:18px; }
+  .vegas-bonus-panel .vegas-bonus-hud button { min-width:60px; padding:4px; }
+}
 .vegas-console { border-radius:10px; }
 .vegas-announcer { font-variant-numeric:tabular-nums; }
 .vegas-machine.is-suspended * { animation-play-state:paused!important; }

@@ -143,7 +143,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     }
     const outside=full?0:Math.max(0,machine.getBoundingClientRect().top+scrollY)+(document.querySelector(".nightshift-mobile-nav")?.getBoundingClientRect().height||0)+12;
     const side=innerWidth>700||(innerWidth>=650&&innerHeight<=500)?128:0;
-    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-bonus-hud")+h(".vegas-announcer")+h(".vegas-console")+h(".vegas-balances")+(side?0:h(".vegas-buy")+8)+24;
+    const overhead=h(".vegas-toolbar")+h(".vegas-marquee")+h(".vegas-announcer")+h(".vegas-console")+h(".vegas-balances")+(side?0:h(".vegas-bonus-panel")+8)+24;
     const maxWidth=Math.max(180,machine.clientWidth-24-side);
     const board=Math.floor(Math.min(full?750:560,maxWidth,Math.max(full?(wide?60:100):40,(full?height:inlineHeight)-outside-overhead)*1.25));
     machine.style.setProperty("--board-size",`${board}px`);
