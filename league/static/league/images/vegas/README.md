@@ -1,5 +1,22 @@
 # Vegas Pit — visual assets
 
+## Lando Norris WILD override
+
+`lando-wild-v1.png` is the approved transparent portrait generated with the
+built-in image tool (no CLI/API fallback), copied unchanged into this directory.
+`lando-wild-v1-web.webp` is its web-sized delivery copy produced by
+`scripts/optimize_vegas_art.py`, preserving alpha. It replaces only internal key
+`wild`: Lando Norris with a toothy party smile and neon WILD glasses. The word
+is painted on the lenses, so no duplicate caption is overlaid on the reels.
+The public accessible name is `Ландо Норрис · Wild`; probabilities, payouts and
+saved spin keys are unchanged. The historical atlas below retains the old art.
+
+Prompt (verbatim):
+
+```text
+Use case: stylized-concept. Asset type: a single square production WILD symbol for a polished illustrated Formula One meme Las Vegas slot game. Primary request: recognizable LANDO NORRIS in a joyful partying mood, very wide toothy grin showing smiling white teeth, wearing striking neon party glasses with the exact word "WILD" across the lenses. Subject: young Lando Norris, recognizable distinctive narrow angular face, curly brown hair with short sides, characteristic nose and smile, light stubble, cheerful confident expression. Close-up head and small papaya-orange racing collar, face occupies most of icon. Glasses have bold luminous pink and lime neon frames; dark lenses clearly spell W I on left lens and L D on right lens, together reading WILD, large simple block uppercase letters, undistorted and legible. Style: professional hand-painted 2D casino slot illustration, crisp controlled dark contours, rich saturated colors, sculpted painted highlights, attractive expressive likeness, not photorealistic collage, not plastic toy 3D, not generic anonymous cartoon face. Composition: centered front three-quarter portrait looking toward viewer, full hair and glasses visible, compact square silhouette with 9 percent clear transparent margin around all edges. Restrained magenta and lime rim highlights suggest a party without any environment. Background: genuine transparent alpha, no backdrop, no glow cloud, no rectangular panel. Text (verbatim): "WILD" on the glasses lenses ONLY, no other text. Constraints: exactly one portrait, no hands, no extra people, no cigarette, no drink, no watermark, no logos, no floating props, no border. Must read clearly at 60px on purple slot reels.
+```
+
 ## Casino shop artwork (built-in image generation)
 
 Three original assets are copied unchanged into this directory:

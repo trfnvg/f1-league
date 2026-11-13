@@ -286,6 +286,9 @@ body.apex-night-theme .vegas-page :is(button,select,summary,a):focus-visible { o
 
 /* Ferrari tractor keeps the existing symbol's server weight and payouts. */
 .vegas-art-duck { background-image:url('images/vegas/ferrari-tractor-v1-web.webp'); background-size:contain; background-position:center; clip-path:none; }
+.vegas-art-wild { background-image:url('images/vegas/lando-wild-v1-web.webp'); background-size:contain; background-position:center; clip-path:none; }
+/* WILD is part of Lando's neon glasses, not a second caption over his face. */
+.vegas-cell[data-symbol=wild] small { display:none; }
 
 /* Warm pit-board LEDs, with a slow glow rather than a flashing CTA. */
 .vegas-buy { overflow:hidden; padding-top:20px; border-color:#f2bd65; color:#ffe8a0; background:radial-gradient(circle,#d0954520 1px,transparent 1.5px) 0 0/5px 5px,linear-gradient(145deg,#33281b,#19151b); box-shadow:inset 0 0 0 3px #100d13,inset 0 0 20px #f8aa2720,0 0 14px #ffba4626; }

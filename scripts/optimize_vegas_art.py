@@ -10,6 +10,7 @@ ASSETS = {
     "meme-symbols-v4": (1200, 1200),
     "pepper-russell-v1": (512, 768),
     "ferrari-tractor-v1": (512, 512),
+    "lando-wild-v1": (512, 512),
     "strip-v3": (1440, 960),
     "strip-mobile-v3": (900, 1350),
 }

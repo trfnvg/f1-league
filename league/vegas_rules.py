@@ -18,7 +18,7 @@ SYMBOLS = (
     {"key": "russell", "name": "Клубника Макс", "weight": 12, "pays": (12, 40, 140)},
     {"key": "toto", "name": "Перчик Расселл", "weight": 9, "pays": (18, 60, 200)},
     {"key": "bath", "name": "Алонсо в шезлонге", "weight": 6, "pays": (25, 100, 400)},
-    {"key": "wild", "name": "Банный судья · Wild", "weight": 3, "pays": (30, 150, 600)},
+    {"key": "wild", "name": "Ландо Норрис · Wild", "weight": 3, "pays": (30, 150, 600)},
     {"key": "scatter", "name": "Тото Вольф · Бонус", "weight": 2, "pays": ()},
 )
 BY_KEY = {item["key"]: item for item in SYMBOLS}
