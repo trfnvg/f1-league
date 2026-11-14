@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 import json
-from .models import VegasSpin
+from .models import VegasSpin, VegasPurchase
 from django.db import transaction
 from django.db.models import DurationField, ExpressionWrapper, F
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -1200,6 +1200,25 @@ def video_player(video):
     if not video or not video.video:
         return "Видео не сохранено: старая попытка, ручной результат или браузер не завершил запись/загрузку."
     return format_html('<video controls preload="metadata" playsinline style="max-width:100%;width:560px;max-height:75vh" src="{}"></video><p><a href="{}" target="_blank" rel="noopener">Открыть видео по прямой ссылке</a></p>', video.video.url, video.video.url)
+
+
+@admin.register(VegasPurchase)
+class VegasPurchaseAdmin(admin.ModelAdmin):
+    list_display = ("id", "wallet", "product", "cost", "purchased_at", "activated_at", "league_season", "target")
+    list_select_related = ("wallet", "league_season", "target")
+    list_filter = ("product", "league_season", "activated_at")
+    search_fields = ("wallet__user__username", "wallet__user__first_name")
+    readonly_fields = tuple(field.name for field in VegasPurchase._meta.fields)
+    ordering = ("-purchased_at", "-pk")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(VegasSpin)

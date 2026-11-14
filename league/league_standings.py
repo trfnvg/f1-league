@@ -53,6 +53,8 @@ def standings(season):
     else:
         for score in LeagueEventScore.objects.filter(entry__league_season=season).select_related("entry__membership"):
             scores_map[(score.entry.membership.user_id, score.event_id)] = score
+    from .vegas_effects import apply_items
+    apply_items(season, scores_map)
     totals = defaultdict(int, bonuses)
     scored_ids = set()
     for (user_id, event_id), score in scores_map.items():

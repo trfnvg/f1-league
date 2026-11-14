@@ -268,12 +268,11 @@ def event_detail(request, league_id, event_id):
     if now >= event.deadline:
         predictions = {p.user_id: p for p in Prediction.objects.filter(event=event, created_at__lt=event.deadline,
             user_id__in=season.entries.filter(first_event__round_number__lte=event.round_number).values("membership__user_id"))}
-        scores = {s.entry_id: s for s in LeagueEventScore.objects.filter(event=event, entry__league_season=season)}
-        legacy_scores = standings(season)["scores_map"] if season.is_legacy else {}
+        local_scores = standings(season)["scores_map"]
         decisions = {d.entry_id: d for d in LeagueCrazyDecision.objects.filter(event=event, entry__league_season=season)}
         for entry in season.entries.filter(first_event__round_number__lte=event.round_number).select_related("membership__user"):
             p = predictions.get(entry.membership.user_id)
-            score = legacy_scores.get((entry.membership.user_id, event.pk)) if season.is_legacy else scores.get(entry.pk)
+            score = local_scores.get((entry.membership.user_id, event.pk))
             rows.append({"entry": entry, "prediction": p, "score": score, "decision": decisions.get(entry.pk)})
     day = LeagueDayDecision.objects.filter(league_season=season, event=event).first()
     day_form = LeagueDayForm(initial={"use_official": day is None, "drivers": day.drivers if day else []})

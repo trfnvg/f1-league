@@ -12,10 +12,14 @@ from . import arcade_video
 from . import vegas_views
 from . import vegas_shop
 from . import vegas_topup
+from . import vegas_inventory
 
 app_name = "league"
 
 urlpatterns = [
+    path("arcade/vegas/shop/inventory/", vegas_inventory.status_view, name="vegas_inventory"),
+    path("arcade/vegas/shop/buy/", vegas_inventory.action_view, {"action": "buy"}, name="vegas_buy"),
+    path("arcade/vegas/shop/apply/", vegas_inventory.action_view, {"action": "activate"}, name="vegas_apply"),
     path("arcade/vegas/spin/", vegas_views.spin, {"public": True}, name="vegas_public_spin"),
     path("arcade/vegas/balances/", vegas_views.balances, {"public": True}, name="vegas_public_balances"),
     path("arcade/vegas/shop/", vegas_shop.page, {"public": True}, name="vegas_public_shop"),

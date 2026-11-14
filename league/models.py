@@ -1828,6 +1828,28 @@ class VegasSpin(models.Model):
         constraints = [models.UniqueConstraint(fields=("wallet", "request_id"), name="vegas_spin_request_unique")]
 
 
+class VegasPurchase(models.Model):
+    wallet = models.ForeignKey(VegasWallet, on_delete=models.PROTECT, related_name="purchases")
+    product = models.CharField(max_length=20)
+    cost = models.PositiveIntegerField()
+    balance_before = models.PositiveBigIntegerField()
+    balance_after = models.PositiveBigIntegerField()
+    purchased_at = models.DateTimeField(default=timezone.now)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    league_season = models.ForeignKey(LeagueSeason, null=True, blank=True, on_delete=models.PROTECT)
+    target = models.ForeignKey(User, null=True, blank=True, on_delete=models.PROTECT, related_name="vegas_items_received")
+    duel = models.ForeignKey(DuelChallenge, null=True, blank=True, on_delete=models.PROTECT)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("wallet", "product"), name="vegas_product_once"),
+            models.CheckConstraint(condition=Q(product__in=("wheel", "tyres", "redflag", "mirrors", "teamorder", "insurance", "constructors", "paddockpass")), name="vegas_product_valid"),
+            models.CheckConstraint(condition=(Q(activated_at__isnull=True, league_season__isnull=True) | Q(activated_at__isnull=False, league_season__isnull=False)), name="vegas_activation_complete"),
+        ]
+        verbose_name = "Покупка Vegas Pit"
+        verbose_name_plural = "Покупки Vegas Pit"
+
+
 class VegasTopupClaim(models.Model):
     """One audited task award per player/event, never per league copy."""
     class Task(models.TextChoices):

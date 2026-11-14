@@ -51,7 +51,7 @@ class VegasReleaseTests(TestCase):
         self.assertEqual(config["spin_url"], self.spin_url)
         self.assertEqual(self.client.get(reverse("league:vegas_lab")).status_code, 403)
         self.assertEqual(self.client.get(reverse("league:vegas_lab_shop")).status_code, 403)
-        self.assertContains(self.client.get(reverse("league:vegas_public_shop")), "Покупка и применение пока недоступны")
+        self.assertContains(self.client.get(reverse("league:vegas_public_shop")), 'id="shop-buy"')
 
     def test_server_rejects_every_test_scenario_and_wallet_spoof(self):
         self.client.get(self.page)

@@ -1,4 +1,4 @@
-/* Read-only showroom: there are no purchases or wallet writes on this page. */
+/* Server-owned purchases and single-use event inventory; lab stays read-only. */
 (() => {
   "use strict";
   const root=document.getElementById("casino-shop");if(!root)return;
@@ -10,6 +10,70 @@
   if(unlimited)$("balance").setAttribute("aria-label","Неограниченный тестовый баланс");
   const dialog=$("product-dialog"),tip=$("tooltip"),hover=matchMedia("(hover:hover) and (pointer:fine)"),motion=matchMedia("(prefers-reduced-motion: reduce)");
   let active=null,tipTarget=null;
+  const cfg=JSON.parse($("config").textContent),targeted=new Set(["wheel","teamorder","constructors"]);
+  let inventory=cfg,sending=false;
+  const date=value=>new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}).format(new Date(value))+" МСК";
+  function refreshInventory(body){
+    if(inventory&&body.state.revision<inventory.state.revision)return;
+    inventory=body;
+    $("balance").textContent=new Intl.NumberFormat("ru-RU",{style:"currency",currency:"USD",maximumFractionDigits:2}).format(body.state.balance/100);
+    for(const [key,item] of Object.entries(body.items)){
+      const label=root.querySelector(`[data-item-state="${key}"]`);
+      if(label)label.textContent=item.applied?"ПРИМЕНЕНО":item.owned?"КУПЛЕНО":"";
+    }
+    const selected=$("league").value;
+    $("league").replaceChildren(...body.leagues.map(league=>{const option=document.createElement("option");option.value=league.id;option.textContent=league.name;return option;}));
+    if(body.leagues.some(l=>String(l.id)===selected))$("league").value=selected;
+    updateTargets();renderItem();
+  }
+  function updateTargets(){
+    const selected=$("target").value,league=inventory?.leagues.find(l=>String(l.id)===$("league").value);
+    const empty=document.createElement("option");empty.value="";empty.textContent="Выбери игрока";
+    $("target").replaceChildren(empty,...(league?.targets||[]).map(player=>{const option=document.createElement("option");option.value=player.id;option.textContent=player.name;return option;}));
+    if(league?.targets.some(p=>String(p.id)===selected))$("target").value=selected;
+  }
+  function renderItem(){
+    if(!active||!inventory)return;
+    const key=active.dataset.product,p=products.get(key),item=inventory.items[key];
+    $("buy").hidden=item.owned;$("apply").hidden=!item.owned||item.applied;
+    $("buy").textContent=`Купить · ${p.price}`;$("apply").textContent="Применить в выбранной лиге";
+    $("buy").disabled=sending||!inventory.can_buy||inventory.state.balance<p.cost;
+    $("activation").hidden=!item.owned||item.applied;
+    $("target-field").hidden=!targeted.has(key);
+    $("league").disabled=$("target").disabled=sending||!inventory.can_apply;
+    $("apply").disabled=sending||!inventory.can_apply||!$("league").value||(targeted.has(key)&&!$("target").value);
+    $("detail-note").textContent=item.applied?`Применено · ${item.league}${item.target?" → "+item.target:""}. Повторное применение недоступно.`:
+      item.owned?(inventory.can_apply?"Куплено. Выбери лигу: предмет можно применить только один раз.":`Куплено. Применение: с ${date(inventory.deadline)} до ${inventory.race_at?date(inventory.race_at):"старта гонки"}.`):
+      !inventory.can_buy?"Покупки закрыты или нет участия в лиге «Паддок». Купить предмет можно до дедлайна аркады.":
+      inventory.state.balance<p.cost?"Недостаточно игровых денег. Цена и баланс проверяются сервером.":"Можно купить один раз за этап. Применение откроется после дедлайна.";
+  }
+  async function requestInventory(action){
+    if(!cfg||sending||!active)return;
+    sending=true;renderItem();
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+    try{
+      const body={wallet_id:cfg.wallet_id,product:active.dataset.product};
+      if(action==="apply"){body.league_season_id=Number($("league").value);if(targeted.has(body.product))body.target_id=Number($("target").value);}
+      const response=await fetch(action==="buy"?cfg.buy_url:cfg.apply_url,{method:"POST",credentials:"same-origin",signal:controller.signal,
+        headers:{"Content-Type":"application/json","X-CSRFToken":root.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify(body)});
+      if(!response.headers.get("Content-Type")?.includes("application/json"))throw new Error("Обнови страницу и проверь вход в аккаунт.");
+      const data=await response.json();if(!response.ok)throw new Error(data.error||"Не удалось сохранить действие.");
+      refreshInventory(data);
+    }catch(error){$("detail-note").textContent=error.name==="AbortError"?"Нет подтверждения сервера. Повтори действие — повторного списания не будет.":error.message;}
+    finally{clearTimeout(timer);sending=false;$("buy").disabled=!inventory.can_buy||inventory.state.balance<products.get(active.dataset.product).cost;$("apply").disabled=!inventory.can_apply||!$("league").value||(targeted.has(active.dataset.product)&&!$("target").value);clearTimeout(inventoryTimer);inventoryTimer=setTimeout(pollInventory,15000);}
+  }
+  $("buy").addEventListener("click",()=>requestInventory("buy"));$("apply").addEventListener("click",()=>requestInventory("apply"));
+  $("league").addEventListener("change",()=>{updateTargets();renderItem();});$("target").addEventListener("change",renderItem);
+  let inventoryTimer=0;
+  async function pollInventory(){
+    clearTimeout(inventoryTimer);if(!cfg||document.hidden||sending)return;
+    try{const response=await fetch(cfg.status_url,{credentials:"same-origin",cache:"no-store"});if(response.ok)refreshInventory(await response.json());}catch(_){}
+    finally{if(!document.hidden)inventoryTimer=setTimeout(pollInventory,15000);}
+  }
+  if(cfg){refreshInventory(cfg);inventoryTimer=setTimeout(pollInventory,15000);}
+  document.addEventListener("visibilitychange",()=>{clearTimeout(inventoryTimer);if(!document.hidden)pollInventory();});
+  window.addEventListener("pagehide",()=>clearTimeout(inventoryTimer));
+  window.addEventListener("pageshow",()=>{if(cfg)pollInventory();});
   function hideTip(){tip.hidden=true;tipTarget?.removeAttribute("aria-describedby");tipTarget=null;}
   function showTip(button){
     if(!hover.matches||dialog.open)return;
@@ -31,6 +95,7 @@
       hideTip();active=button;
       for(const [id,key] of [["name","name"],["kind","kind"],["price","price"],["description","description"],["rule","rule"],["timing","timing"]])$("detail-"+id).textContent=p[key];
       $("detail-art").className=`shop-detail-art shop-item-art shop-item-${p.key}`;
+      renderItem();
       dialog.showModal();$("close").focus({preventScroll:true});
     });
   }

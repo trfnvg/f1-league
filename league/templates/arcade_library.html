@@ -7,11 +7,11 @@
   {% if current_game %}
   <section class="library-featured" data-contest-deadline="{{ contest.event.deadline|date:'c' }}" data-server-time="{{ library_server_time|date:'c' }}">
     <img src="{% static current_game.cover %}" alt="{{ current_game.title }}" width="1536" height="1024" fetchpriority="high">
-    <div class="library-featured-copy"><p class="library-eyebrow"><i></i> СОРЕВНОВАНИЕ ГРАН-ПРИ</p><p class="library-event">R{{ contest.event.round_number }} · {{ contest.event.name }}</p><h2>{{ current_game.title }}</h2><p>Результаты идут в зачёт до {{ contest.event.deadline|date:'d.m · H:i' }}. Победителю откроется колесо.</p><a class="library-play" href="{{ current_game.url }}">Участвовать <span>↗</span></a></div>
+    <div class="library-featured-copy"><p class="library-eyebrow"><i></i> СОРЕВНОВАНИЕ ГРАН-ПРИ</p><p class="library-event">R{{ contest.event.round_number }} · {{ contest.event.name }}</p><h2>{{ current_game.title }}</h2><p>Результаты идут в зачёт до {{ contest.event.deadline|date:'d.m · H:i' }}. {% if current_game.key == 'vegas' %}Покупай предметы сейчас и применяй после дедлайна до старта гонки.{% else %}Победителю откроется колесо.{% endif %}</p><a class="library-play" href="{{ current_game.url }}">Участвовать <span>↗</span></a></div>
   </section>
   {% endif %}
   <div class="library-section-heading"><h2>Библиотека игр</h2><span>Глобальные рекорды · без ограничения попыток</span></div>
-  <div class="library-grid">{% for game in games %}
+  <div class="library-grid">{% if vegas_shop_wallet %}<article class="library-card"><div class="library-card-copy"><p class="library-eyebrow">VEGAS PIT · МОИ ПРЕДМЕТЫ</p><h3>Лавка казино</h3><p>{{ contest.event.name }}. Купленные предметы сохранены; применить их можно до старта гонки.</p><a class="library-play" href="{% url 'league:vegas_public_shop' %}?wallet={{ vegas_shop_wallet.pk }}">Открыть инвентарь <span>↗</span></a></div></article>{% endif %}{% for game in games %}
     <article class="library-card"><a class="library-cover" href="{{ game.url }}" tabindex="-1" aria-hidden="true"><img src="{% static game.cover %}" alt="" loading="lazy"></a><div class="library-card-copy"><p class="library-eyebrow">{{ game.subtitle }}</p><h3>{{ game.title }}</h3><p>{{ game.description }}</p><a class="library-play" href="{{ game.url }}">Играть <span>↗</span></a></div></article>
   {% empty %}<p class="library-empty">Постоянная библиотека пока пуста. Новые игры появятся здесь после открытия администратором.</p>{% endfor %}</div>
 </main>

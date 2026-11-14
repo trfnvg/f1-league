@@ -62,7 +62,7 @@ def page(request, public=False):
     config["unlimited_balance"] = request.user.is_superuser and not public
     return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": not public,
         "vegas_public": public, "vegas_contest": contest,
-        "vegas_shop_url": reverse(f"league:{prefix}_shop"), "vegas_topup_reward": reward_display()})
+        "vegas_shop_url": reverse(f"league:{prefix}_shop")+(f"?wallet={wallet.pk}" if public else ""), "vegas_topup_reward": reward_display()})
 
 
 @login_required

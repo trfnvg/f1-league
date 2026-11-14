@@ -75,6 +75,11 @@
 @media(prefers-reduced-motion:reduce) { .casino-shop * { animation:none!important; transition:none!important; } }
 
 body.casino-shop-open { overflow:hidden; }
+.shop-item-state { display:block; min-height:14px; color:#f2ce82; font:700 10px/1.4 Arial,sans-serif; letter-spacing:.08em; }
+.shop-action { display:block; width:100%; min-height:48px; margin-top:14px; padding:12px 18px; border:1px solid #f0ca79; border-radius:3px; background:linear-gradient(#dfb567,#a56c25); color:#211417; font:750 15px/1.4 Arial,sans-serif; cursor:pointer; }
+.shop-action:disabled { opacity:.42; cursor:not-allowed; }.shop-action[hidden],.shop-activation[hidden] { display:none; }
+.shop-activation { margin-top:12px; }.shop-activation label { display:block; margin:12px 0 6px; color:#e8cdab; font:12px/1.4 Arial,sans-serif; }
+.shop-activation select { width:100%; min-width:0; min-height:46px; padding:9px 12px; border:1px solid #9d774a; border-radius:3px; background:#221822; color:#f2ddbe; font:16px/1.4 Arial,sans-serif; }
 .casino-shop.is-fullscreen { position:fixed; inset:0; z-index:2000; width:100%; max-width:none; height:100dvh; overflow-y:auto; overscroll-behavior:contain; padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)); background:#17121b; }
 .casino-shop.is-fullscreen .shop-nav { position:sticky; top:0; z-index:10; max-width:1240px; margin:0 auto 12px; padding:6px 0; background:#17121bf2; }
 .casino-shop.is-fullscreen .shop-scene { max-width:1240px; margin:auto; }

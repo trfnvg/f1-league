@@ -62,6 +62,7 @@ def explain(score, prediction, result, event):
         day = snapshot.get("local", {}).get("driver_of_day")
         if day:
             extras.append(dict(title="Гонщик дня · решение лиги: " + label(day["drivers"]), points=day["delta"]))
+    extras.extend(score.breakdown.get("vegas_items", []))
     allocated = sum(row["points"] for row in rows + extras)
     if score.points != allocated:
         extras.append(dict(title="Прочие сохранённые начисления (детализация отсутствует)", points=score.points-allocated))
@@ -134,7 +135,8 @@ def detail(request, event_id, user_id, league_id=None, recap=False):
                 names = ", ".join(dict(DRIVER_CHOICES).get(d, d) for d in day.drivers) or "Никто"
                 notes.append(f"Гонщик дня в этой лиге: {names}. Решение: {display_name(day.reviewed_by)}.")
         else:
-            score = get_object_or_404(LeagueEventScore, entry=entry, event=event)
+            get_object_or_404(LeagueEventScore, entry=entry, event=event)
+            score = standings(season)["scores_map"][(user_id, event_id)]
         decision = LeagueCrazyDecision.objects.filter(entry=entry, event=event).select_related("reviewed_by").first()
         # New projections describe the decision used at the time of calculation.
         local_crazy = getattr(score, "input_data", {}).get("local", {}).get("crazy")

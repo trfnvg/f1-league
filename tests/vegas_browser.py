@@ -680,7 +680,7 @@ def run(engine, output, cdn_dir=None):
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
                     page.screenshot(path=str(output/f"{engine}-{width}-released.png"))
                     page.locator("#vegas-shop").click()
-                    page.wait_for_url("**/arcade/vegas/shop/")
+                    page.wait_for_url("**/arcade/vegas/shop/?wallet=*")
                     expect(page.locator(".shop-scene")).to_be_visible()
                     page.locator(".shop-back").click()
                     page.wait_for_url("**/arcade/play/vegas/?fullscreen=1")
