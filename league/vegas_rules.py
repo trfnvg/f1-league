@@ -1,8 +1,12 @@
-"""Vegas Pit lab v1. Integer cents; fixed paylines, wilds and bounded tumbles."""
+"""Vegas Pit v2. Integer cents; fixed paylines, wilds and bounded tumbles."""
 from itertools import product
 import secrets
 
-VERSION = 1
+VERSION = 2
+# Uniform event rules: no balance-dependent odds or paid-spin quotas.
+PAID_RETURN_PERCENT = 118
+FREE_RETURN_PERCENT = 125
+BONUS_MIN_RETURN_PERCENT = 50
 START_BALANCE = 500_000
 BETS = (500, 1_000, 2_000, 2_500, 5_000, 7_500, 10_000, 15_000, 20_000, 30_000, 50_000)
 DEFAULT_BET = 5_000
@@ -60,7 +64,7 @@ def bonus_buy_grid(choice=secrets.choice):
     return grid
 
 
-def evaluate(grid, bet, multiplier=1):
+def evaluate(grid, bet, multiplier=1, return_percent=100):
     """One highest-paying interpretation per line; scatters never substitute."""
     wins = []
     for number, line in enumerate(PAYLINES, 1):
@@ -77,7 +81,7 @@ def evaluate(grid, bet, multiplier=1):
             if count < 3:
                 continue
             # Total stake covers all 40 lines. Round half a cent upwards.
-            amount = (bet * symbol["pays"][count-3] * multiplier + 20) // 40
+            amount = (bet * symbol["pays"][count-3] * multiplier * return_percent + 2000) // 4000
             if best is None or amount > best["amount"]:
                 best = {"line": number, "symbol": symbol["key"], "count": count,
                         "amount": amount, "rows": list(line),
@@ -100,7 +104,8 @@ def outcome(bet, *, free=False, scenario="random", choice=secrets.choice):
     for cascade in range(MAX_TUMBLES):
         multiplier = (cascade+1) * (2 if free else 1)
         scatters = max(scatters, sum(column.count("scatter") for column in grid))
-        wins = evaluate(grid, bet, multiplier)
+        wins = evaluate(grid, bet, multiplier,
+                        FREE_RETURN_PERCENT if free else PAID_RETURN_PERCENT)
         amount = sum(win["amount"] for win in wins)
         rounds.append({"grid": [column[:] for column in grid], "wins": wins,
                        "amount": amount, "multiplier": multiplier})
@@ -114,4 +119,5 @@ def outcome(bet, *, free=False, scenario="random", choice=secrets.choice):
     awarded = ((4 if free else 8 + min(scatters-3, 2)*2) if scatters >= 3 else 0)
     return {"rounds": rounds, "payout": payout, "scatters": scatters,
             "awarded": awarded, "free": free, "bet": bet, "scenario": scenario,
+            "rules_version": VERSION,
             "cascade_limit": len(rounds) == MAX_TUMBLES and bool(rounds[-1]["wins"])}

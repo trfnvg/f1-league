@@ -79,6 +79,8 @@
 .vegas-cell.is-scatter { box-shadow:inset 0 0 20px #fccf6266; border-color:#f7d48a; }
 .is-spinning .vegas-reel:not(.is-stopped) .vegas-reel-track { height:200%; grid-template-rows:repeat(8,minmax(0,1fr)); will-change:transform; animation:vegas-roll .3s linear infinite; }
 .vegas-reel.is-stopped .vegas-reel-track { animation:vegas-stop .22s ease-out; }
+.is-spinning .vegas-reel.is-anticipating:not(.is-stopped) .vegas-reel-track { animation-duration:.7s; }
+.vegas-reel.is-anticipating { box-shadow:inset 0 0 20px #ffcc66aa; outline:2px solid #ffd885; outline-offset:-2px; z-index:1; }
 .vegas-fx,.vegas-particles { position:absolute; inset:0; width:100%; height:100%; z-index:4; pointer-events:none; overflow:hidden; }
 .vegas-win-callout { position:absolute; top:36%; left:4%; right:4%; z-index:5; padding:10px 8px; opacity:0; pointer-events:none; text-align:center; background:radial-gradient(ellipse,#1e102ce8,transparent 72%); }
 .vegas-win-callout span { display:block; color:#fff2c8; font:800 clamp(8px,2.5cqw,15px)/1.3 "Inter",Arial,sans-serif; letter-spacing:.08em; text-shadow:0 2px 4px #301320; }

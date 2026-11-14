@@ -83,6 +83,53 @@ class VegasReleaseTests(TestCase):
         self.assertEqual(wallet.balance, balance)
         self.assertEqual(VegasSpin.objects.count(), 2)
 
+    def test_bonus_minimum_is_paid_once_on_last_spin_and_recorded_on_server(self):
+        self.client.get(self.page)
+        self.assertEqual(self.spin(action="buy_bonus").status_code, 200)
+        with patch("league.vegas_rules.outcome", side_effect=lambda *a, **kw: {
+                "bet": 5000, "payout": 0, "awarded": 0}):
+            for _ in range(9):
+                data = self.spin().json()
+                self.assertEqual(data["state"]["balance"], 400000)
+                self.assertNotIn("bonus_adjustment", data["result"])
+            request_id = str(uuid.uuid4())
+            data = self.spin(request_id=request_id).json()
+            self.assertEqual(data["state"]["balance"], 450000)
+            self.assertEqual(data["state"]["bonus"]["win"], 50000)
+            self.assertEqual(data["result"]["bonus_adjustment"], 50000)
+            self.assertEqual(data["result"]["payout"], 50000)
+            row = VegasSpin.objects.get(request_id=request_id)
+            self.assertEqual(row.balance_after-row.balance_before, 50000)
+            self.assertEqual(row.payload["result"]["bonus_adjustment"], 50000)
+            self.assertEqual(self.spin(request_id=request_id, revision=0).json()["state"]["balance"], 450000)
+            self.spin()
+            self.assertEqual(self.spin(request_id=request_id, revision=0).json()["state"]["balance"], 445000)
+            self.assertEqual(VegasSpin.objects.count(), 12)
+
+    def test_old_or_natural_bonus_has_no_retroactive_purchase_floor(self):
+        self.client.get(self.page)
+        VegasWallet.objects.filter(user=self.user).update(free_spins=1, bonus_bet=5000,
+            last_payload={"state": {"bonus": {"win": 100, "played": 9, "granted": 10}}})
+        with patch("league.vegas_rules.outcome", return_value={"bet": 5000, "payout": 0, "awarded": 0}):
+            data = self.spin().json()
+        self.assertEqual(data["state"]["balance"], 500000)
+        self.assertNotIn("bonus_adjustment", data["result"])
+
+    def test_bonus_floor_waits_for_retrigger_and_does_not_cap_big_wins(self):
+        self.client.get(self.page)
+        self.spin(action="buy_bonus")
+        VegasWallet.objects.filter(user=self.user).update(free_spins=1)
+        with patch("league.vegas_rules.outcome", return_value={"bet": 5000, "payout": 200000, "awarded": 4}):
+            data = self.spin().json()
+        self.assertEqual(data["state"]["free_spins"], 4)
+        self.assertNotIn("bonus_adjustment", data["result"])
+        with patch("league.vegas_rules.outcome", side_effect=lambda *a, **kw: {"bet": 5000, "payout": 0, "awarded": 0}):
+            for _ in range(4):
+                data = self.spin().json()
+        self.assertEqual(data["state"]["balance"], 600000)
+        self.assertEqual(data["state"]["bonus"]["win"], 200000)
+        self.assertNotIn("bonus_adjustment", data["result"])
+
     def test_deadline_freezes_balance_not_peak_or_total_winnings(self):
         self.client.get(self.page)
         wallet = VegasWallet.objects.get(user=self.user, competition=self.contest)

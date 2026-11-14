@@ -59,7 +59,8 @@ class VegasRulesTests(SimpleTestCase):
         self.assertEqual(result["payout"], sum(r["amount"] for r in result["rounds"]))
         self.assertEqual([r["multiplier"] for r in result["rounds"]], [1,2,3,4,5,6])
         free = rules.outcome(5000, free=True, choice=lambda _: "banana")
-        self.assertEqual(free["payout"], 2*result["payout"])
+        self.assertGreater(free["payout"], 2*result["payout"])
+        self.assertEqual(result["rules_version"], 2)
 
     def test_scatter_bonus_and_retrigger(self):
         normal = rules.outcome(5000, choice=lambda _: "scatter")
@@ -134,7 +135,7 @@ class VegasLabTests(TestCase):
             data = self.post(self.payload()).json()
         outcome.assert_called_once_with(max(rules.BETS), free=True, scenario="random")
         self.assertEqual(data["state"]["balance"], 0)
-        self.assertEqual(data["state"]["bonus"], {"win": 12345, "played": 1, "granted": rules.BONUS_BUY_SPINS})
+        self.assertEqual(data["state"]["bonus"], {"win": 12345, "played": 1, "granted": rules.BONUS_BUY_SPINS, "minimum_return": max(rules.BETS)*10})
 
     def test_unlimited_admin_is_not_ranked_and_shop_remains_read_only(self):
         self.enable_unlimited_admin()
@@ -325,7 +326,7 @@ class VegasLabTests(TestCase):
         data = response.json()
         self.assertEqual(data["state"], {"balance": rules.START_BALANCE-150000,
                          "revision": 1, "free_spins": 10, "bonus_bet": 7500,
-                         "bonus": {"win": 0, "played": 0, "granted": 10}})
+                         "bonus": {"win": 0, "played": 0, "granted": 10, "minimum_return": 75000}})
         self.assertIsNone(data["result"])
         self.assertEqual(data["bonus_purchase"]["cost"], 150000)
         self.assertEqual(data["bonus_purchase"]["spins"], 10)
@@ -375,7 +376,9 @@ class VegasLabTests(TestCase):
             with patch("league.vegas_rules.outcome", return_value={"payout": payout, "awarded": 0}):
                 response = self.post(payload).json()
             total += payout
-            self.assertEqual(response["state"]["bonus"], {"win": total, "played": n, "granted": 10})
+            if n == 10:
+                total = max(total, 50000)
+            self.assertEqual(response["state"]["bonus"], {"win": total, "played": n, "granted": 10, "minimum_return": 50000})
             self.assertEqual(response["state"]["free_spins"], 10-n)
             self.assertEqual(self.post(payload).json(), response)
             self.assertEqual(self.client.get(self.page).context["vegas_config"]["state"]["bonus"]["win"], total)
@@ -406,7 +409,7 @@ class VegasLabTests(TestCase):
         reset = self.post(self.payload(action="reset")).json()
         self.assertEqual(reset["state"]["bonus"], {"win": 0, "played": 0, "granted": 0})
         bought = self.post(self.payload(action="buy_bonus")).json()
-        self.assertEqual(bought["state"]["bonus"], {"win": 0, "played": 0, "granted": 10})
+        self.assertEqual(bought["state"]["bonus"], {"win": 0, "played": 0, "granted": 10, "minimum_return": 50000})
 
     @override_settings(VEGAS_LAB_MIN_INTERVAL=60)
     def test_rate_limit_and_duplicate_retry(self):

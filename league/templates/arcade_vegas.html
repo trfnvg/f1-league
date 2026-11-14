@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · {% if not vegas_public %}закрытый тест · {% endif %}Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=20-small-sphere"><link rel="stylesheet" href="{% static 'league/vegas-topup.css' %}?v=1"><link rel="stylesheet" href="{% static 'league/vegas-sphere.css' %}?v=3-small-sphere"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=21-suspense"><link rel="stylesheet" href="{% static 'league/vegas-topup.css' %}?v=1"><link rel="stylesheet" href="{% static 'league/vegas-sphere.css' %}?v=3-small-sphere"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / {% if vegas_public %}АРКАДЫ{% else %}ARCADE LAB{% endif %}</span><h1>Ночь в Вегасе.</h1><p>{% if vegas_contest %}R{{ vegas_contest.event.round_number }} · {{ vegas_contest.event.name }} · Баланс фиксируется на дедлайн прогнозов{% elif vegas_public %}Свободная игра · отдельный баланс вне зачёта{% else %}Мемы паддока. Сорок линий. Один ночной стинт.{% endif %}</p></div><a href="{% url 'league:arcade' %}">Все аркады ↗</a></header>
@@ -42,7 +42,7 @@
         <div class="vegas-purchase-art" aria-hidden="true"><span class="vegas-symbol-art vegas-art-scatter"></span></div>
         <h3 id="vegas-purchase-title">БОНУСНЫЙ СТИНТ</h3>
         <p class="vegas-purchase-offer"><b id="vegas-purchase-spins">10</b> FREE SPINS</p>
-        <p id="vegas-purchase-info">Множители ×2 → ×12. Ставка фиксируется на всю серию. Выигрыш не гарантирован.</p>
+        <p id="vegas-purchase-info">Множители ×2 → ×12. Ставка фиксируется на всю серию. Возврат за полную серию — минимум 50% стоимости покупки. При необходимости доплата начисляется с последним бесплатным вращением. Прибыль не гарантирована.</p>
         <dl class="vegas-purchase-quote"><div><dt>Ставка</dt><dd id="vegas-purchase-bet">—</dd></div><div><dt>Стоимость</dt><dd id="vegas-purchase-cost">—</dd></div><div><dt>Баланс после покупки</dt><dd id="vegas-purchase-balance">—</dd></div></dl>
         <div class="vegas-purchase-actions"><button type="button" id="vegas-purchase-cancel" autofocus>Назад</button><button type="button" id="vegas-purchase-confirm">Купить бонус</button></div>
         <p class="vegas-purchase-footnote">Оплата игровым балансом</p>
@@ -61,10 +61,10 @@
     </dialog>
     {% include 'vegas_topup_dialog.html' %}
   </section>
-  <p class="vegas-play-money-note">Все деньги и выигрыши вымышленные и не имеют денежной стоимости. Игра предназначена для развлечения: пополнения и вывода реальных денег нет.</p>
+  <p class="vegas-play-money-note">Все деньги и выигрыши вымышленные и не имеют денежной стоимости. Игра предназначена для развлечения: пополнения и вывода реальных денег нет. Выплаты повышены для всех игроков. Для новых купленных бонусок возврат за полную серию — не меньше 50% стоимости; доплата начисляется с последним бесплатным вращением. Число вращений не ограничено. Музыка включается после первого нажатия и отключается кнопкой «Музыка».</p>
   {% if not vegas_public %}<details class="vegas-lab-tools"><summary>Пульт тестирования <span>Только администратору</span></summary><div><label for="vegas-scenario">Следующий спин<select id="vegas-scenario"><option value="random">Обычный · случайный результат</option><option value="bonus">Проверить бонус: три Scatter</option><option value="bigwin">Проверить выигрыш: пять El Plan</option><option value="wild">Проверить замену Wild</option></select></label><button type="button" id="vegas-reset">Сбросить тест до $5 000</button></div><p>Принудительные сценарии доступны только здесь. Тестовый баланс не участвует в зачёте.</p></details>{% endif %}
   {% csrf_token %}
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=20-release" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=5-release" defer></script><script src="{% static 'league/vegas-topup.js' %}?v=3-release" defer></script><script src="{% static 'league/vegas-sphere.js' %}?v=2-mobile-off" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=21-return-music" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=5-release" defer></script><script src="{% static 'league/vegas-topup.js' %}?v=3-release" defer></script><script src="{% static 'league/vegas-sphere.js' %}?v=2-mobile-off" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}

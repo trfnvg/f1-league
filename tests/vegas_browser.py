@@ -136,6 +136,7 @@ def run(engine, output, cdn_dir=None):
                 context = browser.new_context(reduced_motion="reduce")
                 context.add_init_script("""(()=>{const original=requestAnimationFrame;window.requestAnimationFrame=callback=>original.call(window,time=>{window.vegasRafCallbacks=(window.vegasRafCallbacks||0)+1;callback(time)})})()""")
                 context.add_init_script("""(()=>{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const create=Audio.prototype.createOscillator;Audio.prototype.createOscillator=function(...args){const o=create.apply(this,args),start=o.start;o.start=function(...args){window.vegasNotesStarted=(window.vegasNotesStarted||0)+1;return start.apply(this,args)};return o}})()""")
+                context.add_init_script("""(()=>{const Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)return;const create=Audio.prototype.createBufferSource;Audio.prototype.createBufferSource=function(...args){const source=create.apply(this,args),start=source.start;source.start=function(...args){window.vegasMusicStarts=(window.vegasMusicStarts||0)+1;window.vegasMusicSource=source;return start.apply(this,args)};return source}})()""")
                 if cdn_dir:
                     # Optional exact upstream Bootstrap files for environments where
                     # WebKit cannot reach jsDelivr. Do not replace them with stubs.
@@ -324,7 +325,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=15000)
                 expect(page.locator("#vegas-bonus-pause")).to_have_attribute("aria-pressed", "true")
                 expect(page.locator("#vegas-free")).to_have_text("9")
-                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "4000")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "5000")
                 count_paused = len(spin_requests)
                 page.wait_for_timeout(400)
                 assert len(spin_requests) == count_paused, "Pause must stop the next spin"
@@ -337,7 +338,7 @@ def run(engine, output, cdn_dir=None):
                     assert all(abs(bonus_board[key]-ordinary_board[key]) <= 1 for key in ("width", "height")), (engine, "bonus resized reels", width, ordinary_board, bonus_board)
                     spin_box = page.locator("#vegas-spin").bounding_box()
                     assert spin_box["y"]+spin_box["height"] <= height, (engine, "bonus viewport", width, spin_box)
-                    expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "4000")
+                    expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "5000")
                     if width in (390, 1280):
                         page.screenshot(path=str(output/f"{engine}-{width}-bonus-running.png"))
                     page.keyboard.press("Escape")
@@ -360,8 +361,8 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-buy")).to_be_disabled()
                 expect(page.locator("#vegas-plus")).to_be_disabled()
                 restored = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent)")
-                assert restored["state"]["balance"] == 404000
-                assert restored["state"]["bonus"] == {"win": 4000, "played": 1, "granted": 10}
+                assert restored["state"]["balance"] == 405000
+                assert restored["state"]["bonus"] == {"win": 5000, "played": 1, "granted": 10, "minimum_return": 50000}
                 expect(page.locator("#vegas-spin span")).to_have_text("ПОВТОРИТЬ", timeout=15000)
                 failed_count = len(spin_requests)
                 page.wait_for_timeout(400)
@@ -374,7 +375,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator('#vegas-celebration[data-kind="summary"]')).to_be_visible(timeout=30000)
                 assert auto_retry_ids[0] == auto_retry_ids[1]
                 expect(page.locator("#vegas-free")).to_have_text("0")
-                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "40000")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "50000")
                 expect(page.locator("#vegas-bonus-progress")).to_contain_text("10 / 10")
                 assert page.evaluate("window.vegasNotesStarted > 0"), "Real audio nodes must play after user interaction"
                 page.screenshot(path=str(output/f"{engine}-bonus-summary.png"), full_page=True)
@@ -384,7 +385,7 @@ def run(engine, output, cdn_dir=None):
                 assert len(spin_requests) == finished_count, "Auto must never spend on a paid spin"
                 page.reload()
                 ended = page.locator("#vegas-config").evaluate("el=>JSON.parse(el.textContent).state")
-                assert ended["balance"] == 440000 and ended["bonus"]["win"] == 40000
+                assert ended["balance"] == 450000 and ended["bonus"]["win"] == 50000
                 page.locator(".vegas-lab-tools > summary").click()
                 page.locator("#vegas-reset").click()
                 expect(page.locator("#vegas-message")).to_contain_text("сброшен")
@@ -396,7 +397,7 @@ def run(engine, output, cdn_dir=None):
                 # Natural bonus entry and all free spins close/run without a click.
                 expect(page.locator('#vegas-celebration[data-kind="summary"]')).to_be_visible(timeout=30000)
                 expect(page.locator("#vegas-bonus-progress")).to_contain_text("8 / 8")
-                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "32000")
+                expect(page.locator("#vegas-bonus-total")).to_have_attribute("data-value", "40000")
                 page.keyboard.press("Space")
                 page.locator("#vegas-scenario").select_option("bigwin")
                 page.locator("#vegas-spin").click()
@@ -407,6 +408,9 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false")
                 page.emulate_media(reduced_motion="no-preference")
                 page.set_viewport_size({"width": 390, "height": 844})
+                expect(page.locator("#vegas-machine")).to_have_attribute("data-music", "playing")
+                music_starts = page.evaluate("vegasMusicStarts")
+                assert page.evaluate("vegasMusicSource.loop && vegasMusicSource.buffer.duration > 15")
                 page.evaluate("window.vegasWinEffects=[];new MutationObserver(()=>vegasWinEffects.push(document.getElementById('vegas-fx').dataset.effect)).observe(document.getElementById('vegas-fx'),{attributes:true,attributeFilter:['data-effect']})")
                 page.locator("#vegas-scenario").select_option("wild")
                 page.locator("#vegas-spin").click()
@@ -425,6 +429,7 @@ def run(engine, output, cdn_dir=None):
                 page.locator("#vegas-celebration-close").click()
                 expect(page.locator("#vegas-spin")).to_be_enabled()
                 assert page.evaluate("window.vegasNotesStarted || 0") > notes_before, "Win sound should remain enabled"
+                assert page.evaluate("vegasMusicStarts") == music_starts, "Wins must not restart the music buffer"
                 expect(page.locator("#vegas-fx")).to_have_attribute("data-active", "false", timeout=2000)
                 page.emulate_media(reduced_motion="reduce")
                 # A lost response AFTER the real server commits must retry the same request.
@@ -504,6 +509,30 @@ def run(engine, output, cdn_dir=None):
                 idle_frames = page.evaluate("vegasRafCallbacks")
                 page.wait_for_timeout(350)
                 assert page.evaluate("vegasRafCallbacks") == idle_frames, "FX must leave no idle animation loop"
+                # Presentation-only near miss: two genuine stopped Scatter
+                # columns keep later reels rolling, but submit no extra spins.
+                def near_miss(route):
+                    response = route.fetch()
+                    data = response.json()
+                    field = [["tyre", "duck", "berry", "banana"] for _ in range(5)]
+                    field[0][0] = field[1][0] = "scatter"
+                    data["result"].update(payout=0, awarded=0, free=False,
+                        rounds=[{"grid": field, "wins": [], "amount": 0, "multiplier": 1}])
+                    route.fulfill(response=response, json=data)
+                before_near_miss = len(spin_requests)
+                page.route("**/arcade/lab/vegas/spin/", near_miss, times=1)
+                page.locator("#vegas-spin").click()
+                expect(page.locator(".is-anticipating")).to_have_count(1)
+                expect(page.locator("#vegas-message")).to_contain_text("Два Scatter")
+                assert page.locator(".is-anticipating .vegas-reel-track").evaluate("el=>getComputedStyle(el).animationIterationCount==='infinite'")
+                page.screenshot(path=str(output/f"{engine}-anticipation.png"))
+                expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                expect(page.locator(".is-anticipating")).to_have_count(0)
+                assert len(spin_requests) == before_near_miss+1
+                page.locator("#vegas-music").click()
+                expect(page.locator("#vegas-machine")).to_have_attribute("data-music", "paused")
+                page.locator("#vegas-music").click()
+                expect(page.locator("#vegas-machine")).to_have_attribute("data-music", "playing")
                 # Read-only shop uses the same wallet and offers all descriptions
                 # without POSTs, on both the wide scene and narrow shelf layout.
                 page.emulate_media(reduced_motion="reduce")

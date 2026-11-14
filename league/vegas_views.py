@@ -168,6 +168,7 @@ def spin(request, public=False):
             wallet.balance -= cost
         wallet.bonus_bet, wallet.free_spins = data["bet"], rules.BONUS_BUY_SPINS
         bonus = {"win": 0, "played": 0, "granted": rules.BONUS_BUY_SPINS}
+        bonus["minimum_return"] = cost * rules.BONUS_MIN_RETURN_PERCENT // 100
         purchase = {"bet": data["bet"], "cost": cost, "spins": rules.BONUS_BUY_SPINS,
                     "grid": rules.bonus_buy_grid()}
     else:
@@ -184,6 +185,16 @@ def spin(request, public=False):
             bonus["win"] += result["payout"]
             bonus["played"] += 1
             bonus["granted"] += wallet.free_spins - (old_remaining-1)
+            # Only newly purchased series carry this promise. Existing series
+            # and naturally triggered bonuses are not retroactively reclassified.
+            if not wallet.free_spins:
+                adjustment = max(0, bonus.get("minimum_return", 0) - bonus["win"])
+                if adjustment:
+                    result["bonus_adjustment"] = adjustment
+                    result["payout"] += adjustment
+                    bonus["win"] += adjustment
+                    if not unlimited:
+                        wallet.balance += adjustment
         else:
             # The paid triggering spin has its own payout, outside the bonus.
             bonus = {"win": 0, "played": 0, "granted": wallet.free_spins}

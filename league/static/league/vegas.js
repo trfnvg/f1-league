@@ -23,6 +23,62 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   let displayedBalance=null;
   let autoTimer=0, bonusPaused=false, autoBlocked=false, pageSuspended=false, lastRequestAt=0;
   let master=null;const voices=new Set(),counters=new Map(),visualAnimations=new Set();
+  let musicBuffer=null,musicSource=null,musicGain=null,musicOffset=0,musicStarted=0;
+  const musicButton=document.createElement("button");
+  musicButton.type="button";musicButton.id="vegas-music";musicButton.textContent="♫ Музыка";
+  musicButton.setAttribute("aria-label","Выключить музыку");musicButton.setAttribute("aria-pressed","true");
+  page.querySelector(".vegas-toolbar>div").prepend(musicButton);
+  let musicEnabled=true;
+  // Original eight-bar casino lounge loop. A single sample-accurate looping
+  // buffer, independent from win effects, timers and reel/cascade animations.
+  function buildMusic(){
+    const rate=22050,beat=60/112,length=Math.round(32*beat*rate);
+    const buffer=audio.createBuffer(1,length,rate),out=buffer.getChannelData(0);
+    const note=(start,duration,midi,volume,bright=false)=>{
+      const first=Math.round(start*rate),count=Math.round(duration*rate),f=440*2**((midi-69)/12);
+      for(let i=0;i<count;i++){
+        const t=i/rate,envelope=Math.min(1,t/.012)*Math.min(1,(count-i)/(rate*.07))*Math.exp(-t*(bright?5:2));
+        const phase=2*Math.PI*f*t;
+        out[(first+i)%length]+=volume*envelope*(Math.sin(phase)+(bright?.28*Math.sin(phase*3):0));
+      }
+    };
+    const chords=[[57,60,64,67],[62,65,69,72],[55,59,62,65],[60,64,67,71]];
+    let seed=7127;const noise=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/2147483648-1;};
+    for(let bar=0;bar<8;bar++){
+      const chord=chords[bar%4],base=bar*4*beat;
+      chord.forEach(n=>{note(base,beat*1.3,n,.055);note(base+beat*2.5,beat*.8,n,.04);});
+      for(let b=0;b<4;b++)note(base+b*beat,beat*.7,chord[0]-24+(b===3?7:0),.16);
+      for(let step=0;step<8;step++)note(base+(step*.5+(step%2?.08:0))*beat,beat*.34,chord[(step+bar)%4]+12,.045,true);
+      for(let step=0;step<8;step++){
+        const first=Math.round((base+step*.5*beat)*rate),count=Math.round(rate*.055);
+        for(let i=0;i<count;i++)out[(first+i)%length]+=noise()*.035*Math.exp(-i/(rate*.009));
+      }
+      for(let b=0;b<4;b++){
+        const first=Math.round((base+b*beat)*rate);
+        for(let i=0;i<rate*.13;i++){const t=i/rate;out[(first+i)%length]+=.13*Math.sin(2*Math.PI*(55*t+5*(1-Math.exp(-t*30))))*Math.exp(-t*35);}
+      }
+    }
+    return buffer;
+  }
+  function startMusic(){
+    if(!musicEnabled||!audio||document.hidden||musicSource)return;
+    musicBuffer ||= buildMusic();musicGain ||= audio.createGain();musicGain.gain.value=.5;musicGain.connect(master);
+    musicSource=audio.createBufferSource();musicSource.buffer=musicBuffer;musicSource.loop=true;musicSource.connect(musicGain);
+    musicStarted=audio.currentTime;musicSource.start(0,musicOffset%musicBuffer.duration);
+    machine.dataset.music="playing";
+  }
+  function stopMusic(){
+    if(!musicSource)return;
+    musicOffset=(musicOffset+audio.currentTime-musicStarted)%musicBuffer.duration;
+    musicSource.stop();musicSource.disconnect();musicSource=null;musicGain.disconnect();machine.dataset.music="paused";
+  }
+  musicButton.addEventListener("click",()=>{
+    musicEnabled=!musicEnabled;musicButton.setAttribute("aria-pressed",String(musicEnabled));
+    musicButton.textContent=musicEnabled?"♫ Музыка":"♫ Без музыки";
+    musicButton.setAttribute("aria-label",musicEnabled?"Выключить музыку":"Включить музыку");
+    if(musicEnabled)unlockAudio(true);else stopMusic();
+  });
+  page.addEventListener("pointerdown",()=>unlockAudio(true),{once:true});
   function animate(el,frames,options){
     const animation=el.animate(frames,options);visualAnimations.add(animation);
     animation.finished.then(()=>visualAnimations.delete(animation),()=>visualAnimations.delete(animation));return animation;
@@ -58,9 +114,10 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
         master.connect(limiter);limiter.connect(audio.destination);
       }
       if(audio.state!=="running")audio.resume().catch(()=>{});
+      startMusic();
     }catch{/* Sound cannot block a server request. */}
   }
-  function stopAudio(){for(const voice of voices){try{voice.stop();}catch{}}voices.clear();}
+  function stopAudio(){stopMusic();for(const voice of voices){try{voice.stop();}catch{}}voices.clear();}
   function tone(f,delay=0,length=.1,type="sine",volume=.2){
     if(!sound||!audio||audio.state!=="running"||document.hidden||voices.size>=24)return;
     const o=audio.createOscillator(),g=audio.createGain(),t=audio.currentTime+delay;
@@ -92,7 +149,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   $("bonus-pause").addEventListener("click",()=>{unlockAudio(true);if(autoBlocked){request();return;}bonusPaused=!bonusPaused;controls();queueBonus();});
   document.addEventListener("visibilitychange",()=>{if(document.hidden){autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();}else{unlockAudio();queueBonus();}});
   window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
-  window.addEventListener("pageshow",()=>{pageSuspended=false;queueBonus();});
+  window.addEventListener("pageshow",()=>{pageSuspended=false;unlockAudio();queueBonus();});
   function controls(){
     $("topup").disabled=busy||!!pending;
     if(displayedBalance!==state.balance){displayedBalance=state.balance;document.dispatchEvent(new CustomEvent("vegas:balance",{detail:{balance:state.balance}}));}
@@ -284,7 +341,19 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   }
   async function stopReels(field){
     await pause(420);
-    for(let c=0;c<5;c++){columns[c].column.classList.add("is-stopped");column(c,field[c]);tone(240+c*70,0,.055);await pause(85);}
+    let scatters=0;
+    for(let c=0;c<5;c++){
+      const suspense=scatters===2&&!reduced.matches&&!document.hidden;
+      if(suspense){
+        columns[c].column.classList.add("is-anticipating");
+        message("Два Scatter уже есть… ждём барабан!");
+        for(let pulse=0;pulse<3;pulse++){tone(440+pulse*110,0,.1,"triangle",.10);await pause(280);}
+      }
+      columns[c].column.classList.remove("is-anticipating");
+      columns[c].column.classList.add("is-stopped");column(c,field[c]);
+      scatters+=field[c].filter(key=>key==="scatter").length;
+      tone(240+c*70,0,.055);await pause(110);
+    }
     machine.classList.remove("is-spinning");current=field;
   }
   async function presentPurchase(data){
@@ -315,6 +384,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       round.wins.flatMap(w=>w.cells).forEach(([c,r])=>columns[c].track.children[r]?.classList.add("is-winning"));message(`${round.wins.length} выигрышных линий · каскад +${money(round.amount)}`);await pause(280);
     }
     state=data.state;if(state.free_spins)autoPlay=false;controls();setAmount($("win"),result.payout);
+    if(result.bonus_adjustment){callout("ВОЗВРАТ БОНУСА",`+${money(result.bonus_adjustment)}`,"bonus");await pause(700);}
     if(result.awarded){
       reels.querySelectorAll('[data-symbol="scatter"]').forEach(el=>el.classList.add("is-scatter"));cue("bonus");
       if(result.free){callout("ЕЩЁ КРУГИ!",`+${result.awarded} FREE SPINS`,"bonus");await pause(800);}
@@ -355,7 +425,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       if($("scenario"))$("scenario").value="random";
       if(seriesComplete&&!state.free_spins)message(`Серия из ${autoCount} вращений завершена`);
     }catch(error){autoPlay=false;autoBlocked=true;message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
-    finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();if(!automatic)$("spin").focus({preventScroll:true});queueBonus();}
+    finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.remove("is-anticipating");el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();if(!automatic)$("spin").focus({preventScroll:true});queueBonus();}
   }
   function autoQuote(){
     for(const option of page.querySelectorAll("[data-auto-count]"))option.setAttribute("aria-pressed",String(Number(option.dataset.autoCount)===autoCount));
