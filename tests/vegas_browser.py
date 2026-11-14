@@ -513,13 +513,23 @@ def run(engine, output, cdn_dir=None):
                     page.set_viewport_size({"width": width, "height": height})
                     page.evaluate("scrollTo(0,0)")
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), (engine, width, "shop overflow")
+                    if width <= 700:
+                        assert page.locator('.shop-shelves').evaluate('el=>el.scrollWidth>el.clientWidth'), "Mobile products must scroll horizontally"
+                        center = page.locator('#shop-dealer').evaluate('el=>{const d=el.getBoundingClientRect(),s=el.closest(".shop-scene").getBoundingClientRect();return Math.abs(d.x+d.width/2-s.x-s.width/2)}')
+                        assert center <= 1, "Mobile dealer must remain centered"
                     for item in ("wheel", "tyres", "redflag", "mirrors", "teamorder", "insurance", "constructors", "paddockpass"):
                         button = page.locator(f'[data-product="{item}"]')
+                        button.scroll_into_view_if_needed()
                         # Read both boxes in the same layout frame: resizing
                         # the site's sidebar can still move the scene while
                         # product dialogs are opened and closed.
                         geometry = button.evaluate("el=>{const b=el.getBoundingClientRect(),s=el.closest('.shop-scene').getBoundingClientRect();return {left:b.left,right:b.right,sceneLeft:s.left,sceneRight:s.right}}")
-                        assert geometry["left"] >= geometry["sceneLeft"] and geometry["right"] <= geometry["sceneRight"], (width,item,"shelf overflow",geometry)
+                        if width <= 700:
+                            # A neighboring item may intentionally peek from
+                            # the clipped shelf; the target's center stays usable.
+                            assert geometry["sceneLeft"] <= (geometry["left"]+geometry["right"])/2 <= geometry["sceneRight"], (width,item,"carousel target",geometry)
+                        else:
+                            assert geometry["left"] >= geometry["sceneLeft"] and geometry["right"] <= geometry["sceneRight"], (width,item,"shelf overflow",geometry)
                         button.click()
                         assert button.locator(".shop-price-tag").evaluate("el=>{const s=getComputedStyle(el);return s.borderRadius==='0px' && s.backgroundColor==='rgba(0, 0, 0, 0)'}"), "Prices must not sit in rounded pills"
                         expect(page.locator("#shop-product-dialog")).to_be_visible()
@@ -564,7 +574,7 @@ def run(engine, output, cdn_dir=None):
                 page.keyboard.press("Escape")
                 expect(page.locator("#shop-product-dialog")).not_to_be_visible()
                 expect(dealer).to_have_attribute("data-animating", "true")
-                page.set_viewport_size({"width":390,"height":300})
+                page.set_viewport_size({"width":390,"height":200})
                 page.locator("#casino-shop").evaluate("el=>el.scrollTop=0")
                 expect(dealer).to_have_attribute("data-animating", "false")
                 dealer.scroll_into_view_if_needed()

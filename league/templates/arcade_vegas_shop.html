@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Лавка казино · Vegas Pit · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=8-premium-goods"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=9-mobile-shelves"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
 {% block content %}
 <main class="casino-shop is-fullscreen" id="casino-shop">
   <nav class="shop-nav" aria-label="Лавка казино"><a href="{% url 'league:vegas_lab' %}?fullscreen=1" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
@@ -14,18 +14,24 @@
       </button>
       {% endfor %}
     </div>
+    <nav class="shop-shelf-controls" aria-label="Прокрутка товаров">
+      <button type="button" id="shop-shelf-prev" aria-label="Предыдущие товары" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg></button>
+      <span id="shop-shelf-position">1–2 / {{ products|length }}</span>
+      <button type="button" id="shop-shelf-next" aria-label="Следующие товары"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg></button>
+    </nav>
     <div class="shop-dealer" id="shop-dealer" data-pose="idle" aria-hidden="true"><div class="shop-dealer-figure"><span class="shop-dealer-pose"></span><span class="shop-dealer-chip"></span></div></div>
     <div class="shop-counter" aria-hidden="true"><img src="{% static 'league/images/vegas/shop-counter-v2.png' %}" alt="" width="2172" height="724"></div>
   </section>
-  <p class="shop-preview-note">Сначала рассчитывается дуэль, затем — бонусы и штрафы предметов. Пока доступен просмотр товаров без покупок.</p>
-  <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }} · {{ item.price }}</strong><br>{{ item.description }}</p>{% endfor %}</div></noscript>
-  <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><b id="shop-tip-price"></b><p id="shop-tip-copy"></p><small>Нажми, чтобы рассмотреть</small></div>
-  <dialog class="shop-dialog" id="shop-product-dialog" aria-labelledby="shop-detail-name" aria-describedby="shop-detail-description shop-detail-note">
+  <p class="shop-preview-note">Бонусы и штрафы предметов — после расчёта дуэли. «Красный флаг» отменяет дуэль до старта гонки. Пока доступен просмотр товаров без покупок.</p>
+  <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }} · {{ item.price }}</strong><br>{{ item.description }}<br>{{ item.timing }}</p>{% endfor %}</div></noscript>
+  <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><b id="shop-tip-price"></b><p id="shop-tip-copy"></p><p class="shop-tooltip-timing" id="shop-tip-timing"></p><small>Нажми, чтобы рассмотреть</small></div>
+  <dialog class="shop-dialog" id="shop-product-dialog" aria-labelledby="shop-detail-name" aria-describedby="shop-detail-description shop-detail-rule shop-detail-timing shop-detail-note">
     <button type="button" class="shop-dialog-close" id="shop-close" aria-label="Закрыть описание"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     <span class="shop-detail-kind" id="shop-detail-kind"></span>
     <span class="shop-detail-art shop-item-art" id="shop-detail-art" aria-hidden="true"></span>
     <h2 id="shop-detail-name"></h2><strong class="shop-detail-price" id="shop-detail-price"></strong>
     <p id="shop-detail-description"></p><p class="shop-detail-rule" id="shop-detail-rule"></p>
+    <p class="shop-detail-timing" id="shop-detail-timing"></p>
     <div class="shop-detail-note" id="shop-detail-note">Покупка и применение пока недоступны.</div>
     <button type="button" id="shop-done" class="shop-done">Вернуться к витрине</button>
   </dialog>
@@ -34,4 +40,4 @@
   {{ shop_unlimited_balance|json_script:'shop-unlimited' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=4-admin-bankroll" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=5-mobile-shelves" defer></script>{% endblock %}

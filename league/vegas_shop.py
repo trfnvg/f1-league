@@ -9,7 +9,7 @@ from .models import VegasLabWallet
 from .vegas_rules import START_BALANCE
 
 
-PRODUCTS = (
+_CATALOGUE = (
     {"key": "wheel", "name": "Грязный руль", "price": "6 000 $", "cost": 600_000, "kind": "Атака",
      "description": "Отнимает 3 очка у выбранного соперника в зачёте этапа твоей лиги. Паддок-пасс блокирует атаку, зеркальные понтоны отражают её отправителю.",
      "rule": "−3 очка сопернику · после расчёта дуэли", "scoring_phase": "after_duel", "points": -3},
@@ -36,6 +36,12 @@ PRODUCTS = (
      "rule": "Защита от атак и +3 очка себе · после расчёта дуэли", "scoring_phase": "after_duel", "points": 3,
      "blocks_attacks": True, "incompatible_with": ["tyres"]},
 )
+
+SCORING_NOTES = {
+    "after_duel": "Эффект применяется после расчёта дуэли. Бонусы и штрафы предмета не влияют на её исход.",
+    "before_race": "Применяется до старта гонки: отменяет дуэль для обоих участников. Выигрыш и штраф за отменённую дуэль не начисляются.",
+}
+PRODUCTS = tuple({**item, "timing": SCORING_NOTES[item["scoring_phase"]]} for item in _CATALOGUE)
 
 
 @login_required
