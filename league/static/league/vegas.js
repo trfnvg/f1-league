@@ -108,7 +108,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     $("spin").querySelector("span").textContent=busy?"СПИН…":pending?"ПОВТОРИТЬ":state.free_spins?"FREE SPIN":"КРУТИТЬ";
     $("minus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===0;
     $("plus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
-    $("reset").disabled=autoPlay||busy||!!pending;$("scenario").disabled=autoPlay||busy||!!pending;
+    if($("reset"))$("reset").disabled=autoPlay||busy||!!pending;if($("scenario"))$("scenario").disabled=autoPlay||busy||!!pending;
     const hud=$("bonus-hud"),visible=state.bonus.granted>0,changed=hud.hidden===visible;
     hud.hidden=!visible;hud.classList.toggle("is-complete",visible&&!state.free_spins);machine.classList.toggle("has-bonus-hud",visible);
     setAmount($("bonus-total"),state.bonus.win);
@@ -125,6 +125,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     $("buy-note").textContent=state.free_spins?"СТАВКА СЕРИИ":!canAfford(cost)&&!retry?"НЕДОСТАТОЧНО СРЕДСТВ":`${cfg.bonus_buy.multiplier}× ставка`;
     $("buy").setAttribute("aria-label",state.free_spins?`Бонус активен, осталось ${state.free_spins} вращений`:`${retry?"Повторить покупку":"Купить"} ${cfg.bonus_buy.spins} бесплатных вращений за ${money(cost)}`);
     machine.classList.toggle("is-bonus",state.free_spins>0);machine.setAttribute("aria-busy",String(busy));
+    if(cfg.closed){for(const id of ["spin","auto","buy","topup","bonus-pause","minus","plus"])$(id).disabled=true;message("Зачёт завершён. Баланс зафиксирован на дедлайн.");}
   }
   // Responsive stage: size the field against BOTH viewport axes. No scale()
   // transforms, distorted tiles, polling loop, or scroll-blocking touch handlers.
@@ -332,7 +333,8 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     clearTimeout(autoTimer);autoTimer=0;
     if(!automatic&&action==="spin"&&state.free_spins)bonusPaused=false;
     if(action==="reset"&&!confirm("Сбросить только свой тестовый баланс и бесплатные вращения?")){queueBonus();return;}
-    if(!pending)pending={request_id:crypto.randomUUID(),revision:state.revision,bet:cfg.bets[betIndex],scenario:action==="buy_bonus"?"random":$("scenario").value,action};
+    if(cfg.closed)return;
+    if(!pending)pending={request_id:crypto.randomUUID(),revision:state.revision,bet:cfg.bets[betIndex],scenario:action==="buy_bonus"?"random":($("scenario")?.value||"random"),action,...(cfg.wallet_id?{wallet_id:cfg.wallet_id}:{})};
     const paidAuto=automatic&&autoPlay&&!state.free_spins&&pending.action==="spin";
     let seriesComplete=false;
     busy=true;stopTransient();clear();controls();setAmount($("win"),0);message(pending.action==="reset"?"Сбрасываем тестовый баланс…":pending.action==="buy_bonus"?"Открываем бонусный стинт…":"Барабаны вращаются…");
@@ -342,7 +344,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);let response;
       try{lastRequestAt=performance.now();response=await fetch(cfg.spin_url,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json","X-CSRFToken":page.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify(pending),signal:controller.signal});}finally{clearTimeout(timer);}
       let data;try{data=await response.json();}catch{throw new Error("Сервер не подтвердил результат. Повтори запрос — новая ставка не спишется.");}
-      if(!response.ok){if(data.state){state=data.state;pending=null;}if(response.status===400||response.status===403)pending=null;throw new Error(data.error||"Не удалось выполнить прокрутку.");}
+      if(!response.ok){if(data.state){state=data.state;pending=null;}if(data.closed){cfg.closed=true;autoPlay=false;}if(response.status===400||response.status===403)pending=null;throw new Error(data.error||"Не удалось выполнить прокрутку.");}
       pending=null;autoBlocked=false;
       if(paidAuto&&autoPlay&&Number.isFinite(autoRemaining)){
         autoRemaining--;if(autoRemaining===0){autoPlay=false;seriesComplete=true;}
@@ -350,7 +352,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       if(data.bonus_purchase){await presentPurchase(data);}
       else if(data.result){await present(data);}
       else{state=data.state;bonusPaused=false;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
-      $("scenario").value="random";
+      if($("scenario"))$("scenario").value="random";
       if(seriesComplete&&!state.free_spins)message(`Серия из ${autoCount} вращений завершена`);
     }catch(error){autoPlay=false;autoBlocked=true;message(error.name==="AbortError"?"Нет подтверждения сервера. Повтори запрос — без повторного списания.":error.message);}
     finally{machine.classList.remove("is-spinning");columns.forEach(({column:el,track},c)=>{el.classList.add("is-stopped");if(track.children.length!==4)column(c,current[c]);});busy=false;controls();if(!automatic)$("spin").focus({preventScroll:true});queueBonus();}
@@ -369,6 +371,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   $("auto-cancel").addEventListener("click",()=>$("auto-dialog").close());
   document.addEventListener("vegas:topup-open",()=>{autoPlay=false;clearTimeout(autoTimer);controls();});
   document.addEventListener("vegas:topup-close",queueBonus);
+  document.addEventListener("vegas:closed",()=>{cfg.closed=true;autoPlay=false;clearTimeout(autoTimer);controls();});
   document.addEventListener("vegas:topup-state",event=>{
     const incoming=event.detail;
     if(!busy&&!pending&&incoming.revision>=state.revision){state=incoming;controls();}
@@ -376,7 +379,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   $("auto-start").addEventListener("click",()=>{
     $("auto-dialog").close();autoRemaining=autoCount||Infinity;autoPlay=true;autoBlocked=false;unlockAudio(true);controls();queueBonus();
   });
-  $("spin").addEventListener("click",()=>request());$("reset").addEventListener("click",()=>request("reset"));
+  $("spin").addEventListener("click",()=>request());$("reset")?.addEventListener("click",()=>request("reset"));
   function closePurchase(){const dialog=$("purchase");dialog.close();dialog.hidden=true;}
   $("buy").addEventListener("click",()=>{
     if(pending?.action==="buy_bonus"){request();return;}

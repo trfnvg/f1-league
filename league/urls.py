@@ -16,6 +16,13 @@ from . import vegas_topup
 app_name = "league"
 
 urlpatterns = [
+    path("arcade/vegas/spin/", vegas_views.spin, {"public": True}, name="vegas_public_spin"),
+    path("arcade/vegas/balances/", vegas_views.balances, {"public": True}, name="vegas_public_balances"),
+    path("arcade/vegas/shop/", vegas_shop.page, {"public": True}, name="vegas_public_shop"),
+    path("arcade/vegas/topup/", vegas_topup.status_view, {"public": True}, name="vegas_public_topup_status"),
+    path("arcade/vegas/topup/activate/", vegas_topup.action_view, {"public": True, "action": "activate"}, name="vegas_public_topup_activate"),
+    path("arcade/vegas/topup/<int:claim_id>/submit/", vegas_topup.action_view, {"public": True, "action": "submit"}, name="vegas_public_topup_submit"),
+    path("arcade/vegas/topup/<int:claim_id>/cancel/", vegas_topup.action_view, {"public": True, "action": "cancel"}, name="vegas_public_topup_cancel"),
     path("arcade/lab/vegas/", vegas_views.page, name="vegas_lab"),
     path("arcade/lab/vegas/shop/", vegas_shop.page, name="vegas_lab_shop"),
     path("arcade/lab/vegas/spin/", vegas_views.spin, name="vegas_lab_spin"),

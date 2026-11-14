@@ -37,6 +37,7 @@
     $("submit").disabled=$("cancel").disabled=sending;
   }
   function sync(body){
+    if(cfg.wallet_id&&body.wallet_id!==cfg.wallet_id)throw new Error("Зачёт изменился. Обнови страницу игры.");
     data=body.topup;render();
     if(body.state)document.dispatchEvent(new CustomEvent("vegas:topup-state",{detail:body.state}));
   }

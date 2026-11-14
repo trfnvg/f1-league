@@ -47,7 +47,7 @@ class ArcadeControlTests(TestCase):
         self.assertNotContains(response, "flight=1")
         self.assertContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')
-        self.assertNotContains(response, '<option value="vegas"')
+        self.assertContains(response, '<option value="vegas"')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-competition" open>')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-wheel">')
         self.assertTrue(response.context["contest_open"])

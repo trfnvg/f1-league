@@ -1,5 +1,7 @@
 """End-to-end staff sandbox with synthetic users, in-memory DB and real APIs."""
 import argparse
+import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import mimetypes
@@ -42,6 +44,9 @@ def run(engine, output, cdn_dir=None):
                 client.force_login(user)
                 from league.models import VegasLabWallet
                 rival = User.objects.create_user(username=f"vegas-rival-{engine}", first_name="Соперник")
+                public_client = Client(enforce_csrf_checks=True)
+                public_client.force_login(rival)
+                topup_fixture["public"] = public_client
                 VegasLabWallet.objects.create(user=rival, balance=600000)
                 from datetime import timedelta
                 from django.urls import reverse
@@ -96,6 +101,8 @@ def run(engine, output, cdn_dir=None):
                             headers["HTTP_"+name.upper().replace("-", "_")] = self.headers[name]
                     # Synthetic owner session for the second test tab only.
                     selected_client = topup_fixture["owner"] if self.headers.get("X-Test-League-Owner") == "yes" else client
+                    if self.headers.get("X-Test-Public-Player") == "yes":
+                        selected_client = topup_fixture["public"]
                     response = database.submit(selected_client.generic, method, self.path, data=body,
                         content_type=self.headers.get("Content-Type", "application/octet-stream"), **headers).result(timeout=10)
                     self.send_response(response.status_code)
@@ -656,6 +663,33 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-topup-history")).to_contain_text("Засчитано")
                 expect(page.locator('#vegas-topup-tasks [data-task="meme"]')).to_be_disabled()
                 page.screenshot(path=str(output/f"{engine}-390-topup-credited.png"))
+                # Released UI uses a genuine non-staff session and public APIs.
+                page.set_extra_http_headers({"X-Test-Public-Player": "yes"})
+                for width, height in ((390, 844), (844, 390), (1440, 900)):
+                    page.set_viewport_size({"width": width, "height": height})
+                    page.goto(f"http://127.0.0.1:{server.server_port}/arcade/play/vegas/?fullscreen=1", wait_until="networkidle")
+                    expect(page.locator("#vegas-reset")).to_have_count(0)
+                    expect(page.locator("#vegas-scenario")).to_have_count(0)
+                    expect(page.locator("#vegas-page")).to_have_class(re.compile("is-fullscreen"))
+                    config = page.locator("#vegas-config").text_content()
+                    assert not json.loads(config)["unlimited_balance"]
+                    with page.expect_response(lambda r: "/arcade/vegas/spin/" in r.url and r.request.method == "POST") as sent:
+                        page.keyboard.press("Space")
+                    assert sent.value.status == 200
+                    expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
+                    page.screenshot(path=str(output/f"{engine}-{width}-released.png"))
+                    page.locator("#vegas-shop").click()
+                    page.wait_for_url("**/arcade/vegas/shop/")
+                    expect(page.locator(".shop-scene")).to_be_visible()
+                    page.locator(".shop-back").click()
+                    page.wait_for_url("**/arcade/play/vegas/?fullscreen=1")
+                expect(page.locator("#vegas-spin")).to_be_enabled()
+                closing_balance = page.locator("#vegas-balance").inner_text()
+                page.evaluate('document.dispatchEvent(new Event("vegas:closed"))')
+                expect(page.locator("#vegas-spin")).to_be_disabled()
+                expect(page.locator("#vegas-buy")).to_be_disabled()
+                expect(page.locator("#vegas-balance")).to_have_text(closing_balance)
                 assert not errors, errors
                 print(f"{engine}: stable responsive UI, paid auto start/stop, automatic bonus totals, pause/background/reload, retries, audio and FX OK")
                 browser.close()

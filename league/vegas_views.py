@@ -1,9 +1,10 @@
-"""Staff-only slot sandbox. Server owns funds, RNG, bonus state and retries."""
+"""Slot and isolated staff sandbox. Server owns funds, RNG, bonuses and retries."""
 import json
 import uuid
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render
@@ -12,7 +13,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
-from .models import VegasLabWallet
+from .models import VegasLabWallet, VegasWallet, VegasSpin
 from .identity import display_name
 from . import vegas_rules as rules
 
@@ -33,50 +34,67 @@ def state(wallet, bonus=None):
 @login_required
 @require_GET
 @never_cache
-def page(request):
+def page(request, public=False):
     from .vegas_topup import reward_display
-    if not request.user.is_active or not request.user.is_staff:
+    if not request.user.is_active or (not public and not request.user.is_staff):
         return HttpResponseForbidden()
-    wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
+    contest, closed = None, False
+    if public:
+        from .vegas_release import account
+        wallet, contest, closed = account(request)
+    else:
+        wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
+    prefix = "vegas_public" if public else "vegas_lab"
     config = {"state": state(wallet), "last": wallet.last_payload.get("result"),
               "last_purchase": wallet.last_payload.get("bonus_purchase"),
               "bonus_buy": {"multiplier": rules.BONUS_BUY_MULTIPLIER, "spins": rules.BONUS_BUY_SPINS},
               "min_spin_interval_ms": int(getattr(settings, "VEGAS_LAB_MIN_INTERVAL", 0.8)*1000),
               "symbols": rules.SYMBOLS, "bets": rules.BETS, "default_bet": rules.DEFAULT_BET,
-              "spin_url": reverse("league:vegas_lab_spin"),
-              "balances_url": reverse("league:vegas_lab_balances")}
+              "spin_url": reverse(f"league:{prefix}_spin"),
+              "balances_url": reverse(f"league:{prefix}_balances"),
+              "closed": closed, "wallet_id": wallet.pk if public else None}
     config["player"] = {"id": request.user.pk, "name": display_name(request.user)}
-    config["topup_urls"] = {"status": reverse("league:vegas_topup_status"),
-                            "activate": reverse("league:vegas_topup_activate"),
-                            "submit": reverse("league:vegas_topup_submit", args=[0]),
-                            "cancel": reverse("league:vegas_topup_cancel", args=[0])}
-    config["unlimited_balance"] = request.user.is_superuser
-    return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": True,
-                                               "vegas_topup_reward": reward_display()})
+    topup_prefix = "vegas_public_topup" if public else "vegas_topup"
+    config["topup_urls"] = {"status": reverse(f"league:{topup_prefix}_status"),
+                            "activate": reverse(f"league:{topup_prefix}_activate"),
+                            "submit": reverse(f"league:{topup_prefix}_submit", args=[0]),
+                            "cancel": reverse(f"league:{topup_prefix}_cancel", args=[0])}
+    config["unlimited_balance"] = request.user.is_superuser and not public
+    return render(request, "arcade_vegas.html", {"vegas_config": config, "arcade_test_mode": not public,
+        "vegas_public": public, "vegas_contest": contest,
+        "vegas_shop_url": reverse(f"league:{prefix}_shop"), "vegas_topup_reward": reward_display()})
 
 
 @login_required
 @require_GET
 @never_cache
-def balances(request):
-    if not request.user.is_active or not request.user.is_staff:
+def balances(request, public=False):
+    if not request.user.is_active or (not public and not request.user.is_staff):
         return HttpResponseForbidden()
-    # Only public names and virtual balances. Reading this board never creates
-    # wallets. Deterministic ordering and bounded pages keep polling cheap.
+    Model, scope = VegasLabWallet, {}
+    contest, closed = None, False
+    if public:
+        from .vegas_release import account
+        own_wallet, contest, closed = account(request)
+        Model, scope = VegasWallet, {"competition": contest, "user__is_staff": False}
+    # Only public names and virtual balances. Never create other players'
+    # accounts. Deterministic ordering and bounded pages keep polling cheap.
     try:
         offset = max(0, min(int(request.GET.get("offset", 0)), 100_000))
     except (ValueError, TypeError):
         offset = 0
-    wallets = VegasLabWallet.objects.filter(user__is_active=True, user__is_superuser=False).select_related("user").only(
+    wallets = Model.objects.filter(**scope, user__is_active=True, user__is_superuser=False).select_related("user").only(
         "balance", "user_id", "user__id", "user__first_name", "user__last_name", "user__username"
     ).order_by("-balance", "user_id")
     batch = list(wallets[offset:offset+51])
-    own_wallet = VegasLabWallet.objects.filter(user=request.user).first()
+    if not public:
+        own_wallet = VegasLabWallet.objects.filter(user=request.user).first()
     return JsonResponse({"players": [
         {"id": wallet.user_id, "name": display_name(wallet.user), "balance": wallet.balance,
          "rank": offset+index+1, "is_you": wallet.user_id == request.user.pk}
         for index, wallet in enumerate(batch[:50])],
         "next_offset": offset+50 if len(batch)>50 else None,
+        "closed": closed, "wallet_id": own_wallet.pk if public else None,
         "own_balance": own_wallet.balance if own_wallet else None,
         "own_state": state(own_wallet) if own_wallet else None})
 
@@ -85,17 +103,23 @@ def balances(request):
 @require_POST
 @never_cache
 @transaction.atomic
-def spin(request):
-    if not request.user.is_active or not request.user.is_staff:
+def spin(request, public=False):
+    if not request.user.is_active or (not public and not request.user.is_staff):
         return HttpResponseForbidden()
     # Only the server's current superuser permission grants a test bankroll.
     # Never accept a client flag or inflate a wallet that could enter a ranking.
-    unlimited = request.user.is_superuser
+    unlimited = request.user.is_superuser and not public
+    if public:
+        from .vegas_release import account
+        try:
+            wallet, contest, closed = account(request, writable=True)
+        except PermissionDenied:
+            return JsonResponse({"error": "Зачёт закрыт. Обнови страницу, чтобы увидеть итоговый баланс.", "closed": True}, status=403)
     try:
         if int(request.META.get("CONTENT_LENGTH") or 0) > 2048 or len(request.body) > 2048:
             raise ValueError
         data = json.loads(request.body)
-        if not isinstance(data, dict) or set(data) - {"request_id", "revision", "bet", "scenario", "action"}:
+        if not isinstance(data, dict) or set(data) - {"request_id", "revision", "bet", "scenario", "action", "wallet_id"}:
             raise ValueError
         request_id = uuid.UUID(data["request_id"])
         if type(data["revision"]) is not int or data["revision"] < 0:
@@ -106,12 +130,19 @@ def spin(request):
             raise ValueError
         if action == "buy_bonus" and scenario != "random":
             raise ValueError
+        if public and (action == "reset" or scenario != "random" or type(data.get("wallet_id")) is not int or data["wallet_id"] != wallet.pk):
+            raise ValueError
         if type(data.get("bet")) is not int or data["bet"] not in rules.BETS:
             raise ValueError
     except (ValueError, KeyError, TypeError, UnicodeDecodeError, RecursionError):
         return JsonResponse({"error": "Некорректный запрос прокрутки."}, status=400)
-    wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
-    wallet = VegasLabWallet.objects.select_for_update().get(pk=wallet.pk)
+    if not public:
+        wallet, _ = VegasLabWallet.objects.get_or_create(user=request.user)
+    wallet = type(wallet).objects.select_for_update().get(pk=wallet.pk)
+    if public:
+        receipt = VegasSpin.objects.filter(wallet=wallet, request_id=request_id).first()
+        if receipt:
+            return JsonResponse({**receipt.payload, "state": state(wallet)})
     if wallet.last_request == request_id:
         return JsonResponse(wallet.last_payload)
     if wallet.revision != data["revision"]:
@@ -122,6 +153,7 @@ def spin(request):
     if wallet.last_spun_at and (now-wallet.last_spun_at).total_seconds() < interval:
         return JsonResponse({"error": "Дождись завершения прокрутки."}, status=429)
     result, purchase = None, None
+    before = wallet.balance
     bonus = bonus_state(wallet)
     if action == "reset":
         wallet.balance, wallet.free_spins, wallet.bonus_bet = rules.START_BALANCE, 0, rules.DEFAULT_BET
@@ -142,7 +174,7 @@ def spin(request):
         free = wallet.free_spins > 0
         bet = wallet.bonus_bet if free else data["bet"]
         if not unlimited and not free and wallet.balance < bet:
-            return JsonResponse({"error": "Недостаточно игровых денег. В тесте можно сбросить баланс."}, status=400)
+            return JsonResponse({"error": "Недостаточно игровых денег."}, status=400)
         result = rules.outcome(bet, free=free, scenario=scenario)
         if not unlimited:
             wallet.balance += result["payout"] - (0 if free else bet)
@@ -163,4 +195,7 @@ def spin(request):
     if purchase:
         wallet.last_payload["bonus_purchase"] = purchase
     wallet.save()
+    if public:
+        VegasSpin.objects.create(wallet=wallet, request_id=request_id, action=action, bet=result["bet"] if result else data["bet"],
+            balance_before=before, balance_after=wallet.balance, payload=wallet.last_payload)
     return JsonResponse(wallet.last_payload)

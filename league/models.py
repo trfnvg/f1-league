@@ -1628,7 +1628,7 @@ class ArcadeGameClosure(models.Model):
 
 
 def default_arcade_library_games():
-    return ["flappy", "doodle_jump", "tetris"]
+    return ["flappy", "doodle_jump", "tetris", "vegas"]
 
 
 class ArcadeSettings(models.Model):
@@ -1637,6 +1637,7 @@ class ArcadeSettings(models.Model):
         DOODLE_JUMP = "doodle_jump", "Doodle GP · бесконечный забег"
         MINESWEEPER = "minesweeper", "Сапёр · Pitwall Sweep"
         TETRIS = "tetris", "Pit Stack · Тетрис"
+        VEGAS = "vegas", "Vegas Pit · F1-слот"
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     active_game = models.CharField(
@@ -1792,6 +1793,41 @@ class VegasLabWallet(models.Model):
     last_spun_at = models.DateTimeField(null=True)
 
 
+class VegasWallet(models.Model):
+    """Real play-money account; isolated from the staff sandbox and other events."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="vegas_wallets")
+    competition = models.ForeignKey(ArcadeCompetition, null=True, blank=True,
+        on_delete=models.PROTECT, related_name="vegas_wallets")
+    balance = models.PositiveBigIntegerField(default=500000)
+    revision = models.PositiveBigIntegerField(default=0)
+    free_spins = models.PositiveSmallIntegerField(default=0)
+    bonus_bet = models.PositiveIntegerField(default=5000)
+    last_request = models.UUIDField(null=True)
+    last_payload = models.JSONField(default=dict)
+    last_spun_at = models.DateTimeField(null=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=("user", "competition"), name="vegas_event_wallet_unique"),
+            models.UniqueConstraint(fields=("user",), condition=Q(competition__isnull=True), name="vegas_practice_wallet_unique"),
+        ]
+
+
+class VegasSpin(models.Model):
+    """Server-side ledger and durable idempotency receipts for released play."""
+    wallet = models.ForeignKey(VegasWallet, on_delete=models.PROTECT, related_name="spins")
+    request_id = models.UUIDField()
+    created_at = models.DateTimeField(default=timezone.now)
+    action = models.CharField(max_length=16)
+    bet = models.PositiveIntegerField()
+    balance_before = models.PositiveBigIntegerField()
+    balance_after = models.PositiveBigIntegerField()
+    payload = models.JSONField(default=dict)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("wallet", "request_id"), name="vegas_spin_request_unique")]
+
+
 class VegasTopupClaim(models.Model):
     """One audited task award per player/event, never per league copy."""
     class Task(models.TextChoices):
@@ -1801,7 +1837,7 @@ class VegasTopupClaim(models.Model):
     class Status(models.TextChoices):
         ACTIVE = "active", "Задание активно"
         REVIEW = "review", "На проверке"
-        APPROVED = "approved", "Засчитано · +5 000"
+        APPROVED = "approved", "Засчитано · +3 000"
         REJECTED = "rejected", "Не засчитано"
         CANCELLED = "cancelled", "Отменено игроком"
         EXPIRED = "expired", "Дедлайн прошёл"
@@ -1818,6 +1854,8 @@ class VegasTopupClaim(models.Model):
     reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_vegas_topups")
     credited_at = models.DateTimeField(null=True, blank=True)
     note = models.CharField(max_length=300, blank=True)
+    wallet = models.ForeignKey(VegasWallet, null=True, blank=True, on_delete=models.PROTECT,
+        related_name="topup_claims")
 
     class Meta:
         ordering = ("-activated_at", "-pk")

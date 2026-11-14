@@ -17,7 +17,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .league_management import require_owner
 from .models import (League, LeagueActivity, LeagueSeasonEntry, RaceCalendarRound,
-                     VegasLabWallet, VegasTopupClaim)
+                     VegasLabWallet, VegasWallet, VegasTopupClaim)
 
 REWARD = 300_000
 THRESHOLD = 100_000
@@ -68,17 +68,27 @@ def serialize(claim, now):
             "expires_at": claim.expires_at.isoformat(), "note": claim.note}
 
 
-def payload(user):
+def calendar_for(wallet, now):
+    if isinstance(wallet, VegasWallet):
+        if not wallet.competition_id:
+            return None
+        return RaceCalendarRound.objects.select_related("prediction_event").filter(
+            prediction_event_id=wallet.competition.event_id).first()
+    return current_round(now)
+
+
+def payload(user, wallet=None):
     from .vegas_views import state
-    wallet = VegasLabWallet.objects.filter(user=user).first()
+    wallet = wallet if wallet is not None else VegasLabWallet.objects.filter(user=user).first()
     now = timezone.now()
-    calendar = current_round(now)
-    claims = list(VegasTopupClaim.objects.filter(user=user).select_related("league_season__league", "event").order_by("-activated_at", "-pk"))
+    calendar = calendar_for(wallet, now)
+    public_wallet = wallet if wallet is not None and not isinstance(wallet, VegasLabWallet) else None
+    claims = list(VegasTopupClaim.objects.filter(user=user, wallet=public_wallet).select_related("league_season__league", "event").order_by("-activated_at", "-pk"))
     active = next((c for c in claims if c.status in OPEN and not expired(c, now)), None)
     event_claims = {c.task: c for c in claims if calendar and c.event_id == calendar.prediction_event_id}
     leagues = [{"id": str(e.league_season.league_id), "name": e.league_season.league.name}
                for e in eligible_entries(user, calendar)]
-    reason = ("У администратора уже неограниченный тестовый баланс." if user.is_superuser else
+    reason = (("Администраторы не участвуют в заданиях зачёта." if public_wallet else "У администратора уже неограниченный тестовый баланс.") if user.is_superuser else
               "Сначала заверши активное задание или дождись проверки." if active else
               "Додеп доступен только при балансе меньше 1 000." if not wallet or wallet.balance >= THRESHOLD else
               "Сначала заверши бесплатные вращения." if wallet.free_spins else
@@ -92,7 +102,8 @@ def payload(user):
                       "status": serialize(previous, now)["label"] if previous else ""})
     if not reason and not any(task["available"] for task in tasks):
         reason = "Оба задания для этого этапа уже использованы."
-    return {"state": state(wallet) if wallet else None, "topup": {
+    return {"wallet_id": public_wallet.pk if public_wallet else None,
+        "state": state(wallet) if wallet else None, "topup": {
         "reward": REWARD, "threshold": THRESHOLD, "can_activate": not reason,
         "reason": reason, "active": serialize(active, now) if active else None,
         "event": {"id": calendar.prediction_event_id, "name": calendar.prediction_event.name,
@@ -102,9 +113,11 @@ def payload(user):
     }}
 
 
-def require_player(user):
-    # The slot remains a staff-only lab; this does not publish the game.
-    if not user.is_active or not user.is_staff:
+def require_player(user, wallet=None):
+    # Public callers must resolve an authorized account through vegas_release.
+    if not user.is_active or (wallet is None and not user.is_staff):
+        raise PermissionDenied
+    if wallet is not None and wallet.user_id != user.pk:
         raise PermissionDenied
 
 
@@ -119,8 +132,11 @@ def management_claims(season, event, now, page_number):
     return page
 
 
-def locked_wallet(user):
-    wallet = get_object_or_404(VegasLabWallet.objects.select_for_update(), user=user)
+def locked_wallet(user, wallet=None):
+    if wallet is None:
+        wallet = get_object_or_404(VegasLabWallet.objects.select_for_update(), user=user)
+    else:
+        wallet = get_object_or_404(type(wallet).objects.select_for_update(), pk=wallet.pk, user=user)
     for claim in VegasTopupClaim.objects.select_for_update().filter(user=user, status__in=OPEN):
         if expired(claim, timezone.now()):
             claim.status = VegasTopupClaim.Status.EXPIRED
@@ -129,13 +145,13 @@ def locked_wallet(user):
 
 
 @transaction.atomic
-def activate(*, user, league_id, event_id, task):
-    require_player(user)
-    wallet = locked_wallet(user)
+def activate(*, user, league_id, event_id, task, wallet=None):
+    require_player(user, wallet)
+    wallet = locked_wallet(user, wallet)
     now = timezone.now()
-    calendar = current_round(now)
+    calendar = calendar_for(wallet, now)
     if user.is_superuser:
-        raise ValidationError("У администратора уже неограниченный баланс.")
+        raise ValidationError("Администраторы не участвуют в заданиях.")
     if not calendar or not calendar.practice1_at or now >= calendar.practice1_at:
         raise ValidationError("Активация доступна только до первой практики ближайшего этапа.")
     if type(event_id) is not int or event_id != calendar.prediction_event_id or task not in VegasTopupClaim.Task.values:
@@ -154,6 +170,8 @@ def activate(*, user, league_id, event_id, task):
         raise ValidationError("Одновременно можно активировать только одно задание.")
     values = dict(league_season=entry.league_season, status=VegasTopupClaim.Status.ACTIVE,
                   expires_at=calendar.practice1_at, activated_at=now)
+    if not isinstance(wallet, VegasLabWallet):
+        values["wallet"] = wallet
     if claim:
         for key, value in values.items():
             setattr(claim, key, value)
@@ -164,10 +182,10 @@ def activate(*, user, league_id, event_id, task):
 
 
 @transaction.atomic
-def submit(*, user, claim_id, note="", cancel=False):
-    require_player(user)
-    locked_wallet(user)
-    claim = get_object_or_404(VegasTopupClaim.objects.select_for_update(), pk=claim_id, user=user)
+def submit(*, user, claim_id, note="", cancel=False, wallet=None):
+    require_player(user, wallet)
+    locked_wallet(user, wallet)
+    claim = get_object_or_404(VegasTopupClaim.objects.select_for_update(), pk=claim_id, user=user, wallet=wallet)
     if claim.status == VegasTopupClaim.Status.REVIEW and not cancel:
         return claim
     if claim.status != VegasTopupClaim.Status.ACTIVE or expired(claim, timezone.now()):
@@ -187,7 +205,16 @@ def review(*, actor, league_id, event_id, claim_id, approved):
     # Same lock order as spins and activation: wallet, then claim.
     selected = get_object_or_404(VegasTopupClaim, pk=claim_id,
         league_season__league_id=league_id, event_id=event_id)
-    wallet = VegasLabWallet.objects.select_for_update().get(user_id=selected.user_id)
+    if selected.wallet_id:
+        from .models import ArcadeCompetition, VegasWallet
+        competition = selected.wallet.competition
+        if competition:
+            competition = ArcadeCompetition.objects.select_for_update().select_related("event").get(pk=competition.pk)
+            if competition.frozen_at or timezone.now() >= competition.event.deadline:
+                raise ValidationError("Зачёт уже закрыт.")
+        wallet = VegasWallet.objects.select_for_update().get(pk=selected.wallet_id)
+    else:
+        wallet = VegasLabWallet.objects.select_for_update().get(user_id=selected.user_id)
     claim = VegasTopupClaim.objects.select_for_update().select_related("league_season__league").get(pk=selected.pk)
     league = get_object_or_404(League.objects.select_for_update(), pk=league_id, archived_at__isnull=True)
     require_owner(actor, league)
@@ -237,16 +264,25 @@ def read_json(request, allowed):
 @login_required
 @never_cache
 @require_GET
-def status_view(request):
-    require_player(request.user)
-    return JsonResponse(payload(request.user))
+def status_view(request, public=False):
+    wallet = None
+    if public:
+        from .vegas_release import account
+        wallet, _, _ = account(request)
+    require_player(request.user, wallet)
+    return JsonResponse(payload(request.user, wallet))
 
 
 @login_required
 @never_cache
 @require_POST
-def action_view(request, action, claim_id=None):
-    require_player(request.user)
+@transaction.atomic
+def action_view(request, action, claim_id=None, public=False):
+    wallet = None
+    if public:
+        from .vegas_release import account
+        wallet, _, _ = account(request, writable=True)
+    require_player(request.user, wallet)
     try:
         if action == "activate":
             data = read_json(request, ("league_id", "event_id", "task"))
@@ -255,13 +291,15 @@ def action_view(request, action, claim_id=None):
                 league_id = uuid.UUID(str(data.get("league_id", "")))
             except ValueError:
                 raise ValidationError("Выбери лигу.")
-            activate(user=request.user, league_id=league_id, event_id=data.get("event_id"), task=data.get("task"))
+            activate(user=request.user, league_id=league_id, event_id=data.get("event_id"), task=data.get("task"), wallet=wallet)
         else:
             data = read_json(request, ("note",))
-            submit(user=request.user, claim_id=claim_id, note=data.get("note", ""), cancel=action == "cancel")
+            submit(user=request.user, claim_id=claim_id, note=data.get("note", ""), cancel=action == "cancel", wallet=wallet)
     except ValidationError as exc:
         return JsonResponse({"error": " ".join(exc.messages)}, status=400)
-    return JsonResponse(payload(request.user))
+    if wallet is not None:
+        wallet.refresh_from_db()
+    return JsonResponse(payload(request.user, wallet))
 
 
 @login_required

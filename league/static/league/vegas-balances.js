@@ -48,6 +48,8 @@
         const response=await fetch(url,{credentials:"same-origin",cache:"no-store",signal:requestController.signal});
         if(!response.ok)throw new Error("balances");
         const data=await response.json();players.push(...data.players);next=data.next_offset;
+        if(cfg.wallet_id&&data.wallet_id!==cfg.wallet_id)throw new Error("competition changed");
+        if(data.closed)document.dispatchEvent(new Event("vegas:closed"));
         if(startedRevision===revision&&Number.isSafeInteger(data.own_balance)){
           ownBalance=data.own_balance;
           if(data.own_state)document.dispatchEvent(new CustomEvent("vegas:topup-state",{detail:data.own_state}));

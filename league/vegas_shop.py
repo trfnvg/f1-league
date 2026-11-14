@@ -47,13 +47,18 @@ PRODUCTS = tuple({**item, "timing": SCORING_NOTES[item["scoring_phase"]]} for it
 @login_required
 @require_GET
 @never_cache
-def page(request):
-    if not request.user.is_active or not request.user.is_staff:
+def page(request, public=False):
+    if not request.user.is_active or (not public and not request.user.is_staff):
         return HttpResponseForbidden()
     # Opening the showroom never creates or changes a wallet.
-    balance = VegasLabWallet.objects.filter(user=request.user).values_list("balance", flat=True).first()
+    if public:
+        from .vegas_release import account
+        wallet, _, _ = account(request)
+        balance = wallet.balance
+    else:
+        balance = VegasLabWallet.objects.filter(user=request.user).values_list("balance", flat=True).first()
     return render(request, "arcade_vegas_shop.html", {
         "products": PRODUCTS, "shop_balance": START_BALANCE if balance is None else balance,
-        "shop_unlimited_balance": request.user.is_superuser,
-        "arcade_test_mode": True,
+        "shop_unlimited_balance": request.user.is_superuser and not public,
+        "vegas_public": public, "arcade_test_mode": not public,
     })

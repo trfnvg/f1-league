@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 import json
+from .models import VegasSpin
 from django.db import transaction
 from django.db.models import DurationField, ExpressionWrapper, F
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -1199,6 +1200,33 @@ def video_player(video):
     if not video or not video.video:
         return "Видео не сохранено: старая попытка, ручной результат или браузер не завершил запись/загрузку."
     return format_html('<video controls preload="metadata" playsinline style="max-width:100%;width:560px;max-height:75vh" src="{}"></video><p><a href="{}" target="_blank" rel="noopener">Открыть видео по прямой ссылке</a></p>', video.video.url, video.video.url)
+
+
+@admin.register(VegasSpin)
+class VegasSpinAdmin(admin.ModelAdmin):
+    list_display = ("id", "player", "event", "created_at", "action", "bet", "balance_before", "balance_after")
+    list_select_related = ("wallet__user", "wallet__competition__event")
+    list_filter = ("action", "wallet__competition__event", "created_at")
+    search_fields = ("wallet__user__username", "wallet__user__first_name")
+    readonly_fields = tuple(field.name for field in VegasSpin._meta.fields)
+    ordering = ("-created_at", "-pk")
+
+    @admin.display(description="Игрок")
+    def player(self, obj):
+        return obj.wallet.user
+
+    @admin.display(description="Этап")
+    def event(self, obj):
+        return obj.wallet.competition.event if obj.wallet.competition_id else "Свободная игра"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(ArcadeTrophyAward)

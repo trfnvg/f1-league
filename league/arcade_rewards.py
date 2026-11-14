@@ -96,6 +96,9 @@ def best_event_arcade_attempt(
     """Return the event leader, optionally limited to an admin-opened contest window."""
     if not event:
         return None
+    if game_key == "vegas":
+        # Vegas has its own balance standings and shop, never the prize wheel.
+        return None
     through = min(through or timezone.now(), event.deadline)
     window_start = opened_at or event.deadline - WHEEL_WINDOW
     eligible_users = Prediction.objects.filter(event=event).values("user_id")
@@ -309,6 +312,9 @@ def award_due_arcade_trophies(season_year, now=None):
 
 
 def wheel_window_is_open(event, now=None):
+    contest = getattr(event, "arcade_competition", None)
+    if contest and contest.game_key == "vegas":
+        return False
     now = now or timezone.now()
     return bool(
         event

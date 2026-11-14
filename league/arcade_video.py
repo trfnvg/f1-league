@@ -51,7 +51,7 @@ def storage_key(name):
 
 
 def current_attempt(user, game, attempt_id, *, lock_record=False):
-    if game not in library.GAMES:
+    if game not in {"flappy", "doodle_jump", "tetris"}:
         raise VideoRejected("Игра не поддерживает видеозапись.")
     Attempt, Record = library.models_for(game)
     records = Record.objects.select_for_update() if lock_record else Record.objects

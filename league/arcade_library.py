@@ -19,6 +19,7 @@ from .services import get_selected_season
 from . import arcade_rewards as rewards
 
 GAMES = {
+    "vegas": {"title": "Vegas Pit", "subtitle": "Лас-Вегас · F1-слот", "cover": "league/images/vegas/strip-helmet-v2-web.webp", "description": "40 линий, каскады, Wild и бонусные вращения. Только вымышленные деньги; в зачёте сравнивается баланс на дедлайн."},
     "tetris": {"title": "Pit Stack", "subtitle": "F1-тетрис · World Tour", "cover": "league/images/tetris-pit-garage-v1.png", "description": "Собирай линии на трассах Гран-при. Классический темп, мгновенный сброс и гоночный саундтрек."},
     "flappy": {"title": "Pit Lane Flight", "subtitle": "Банан Леклер · Flappy Bird", "cover": "league/images/arcade-flappy-cover-v1.png", "description": "Пролетай между воротами солнечного паддока и держи ритм."},
     "doodle_jump": {"title": "Cowboy GP", "subtitle": "Рассел на Диком Западе · Doodle Jump", "cover": "league/images/arcade-doodle-cover-v1.png", "description": "Прыгай через каньоны, облака и космос. Каждый забег — новая высота."},
@@ -29,9 +30,8 @@ PREVIEW_GAMES = {}
 
 
 def models_for(game):
-    if game == "tetris":
-        return TetrisAttempt, TetrisRecord
-    return (DoodleAttempt, DoodleRecord) if game == "doodle_jump" else (ArcadeAttempt, ArcadeRecord)
+    return {"tetris": (TetrisAttempt, TetrisRecord), "doodle_jump": (DoodleAttempt, DoodleRecord),
+            "flappy": (ArcadeAttempt, ArcadeRecord)}[game]
 
 
 def permanent_games(settings):
@@ -71,6 +71,9 @@ def selected_contest():
 def contest_rows(contest):
     if not contest.opened_at:
         return [], 0
+    if contest.game_key == "vegas":
+        from .vegas_release import standings
+        return standings(contest)
     Attempt, _ = models_for(contest.game_key)
     attempts = Attempt.objects.filter(competition=contest, user__is_staff=False, is_excluded=False,
         started_at__gte=contest.opened_at, started_at__lt=contest.event.deadline)
@@ -150,7 +153,7 @@ def library(request):
     if contest:
         contest = freeze(contest)
     # New releases lead the library; the selected competition has its own hero card.
-    newest_first = ("tetris", "doodle_jump", "flappy")
+    newest_first = ("vegas", "tetris", "doodle_jump", "flappy")
     all_cards = [{**GAMES[key], "key": key, "url": reverse("league:arcade_game", args=[key])+"?fullscreen=1"} for key in newest_first]
     cards = [card for card in all_cards if card["key"] in permanent_games(settings)]
     now = timezone.now()
@@ -166,6 +169,9 @@ def library(request):
 def game(request, game_key):
     if game_key not in GAMES:
         raise Http404
+    if game_key == "vegas":
+        from .vegas_views import page
+        return page(request, public=True)
     settings, contest = selected_contest()
     require_game_access(request, game_key, settings, contest, allow_wheel=True)
     is_current = bool(contest and contest.game_key == game_key)
@@ -218,6 +224,9 @@ def minesweeper_preview(request):
 
 @require_GET
 def leaderboard(request, game_key="flappy"):
+    if game_key == "vegas":
+        from .vegas_views import balances
+        return balances(request, public=True)
     settings, contest = selected_contest()
     require_game_access(request, game_key, settings, contest, allow_wheel=True)
     return JsonResponse(board(request.user, game_key))
@@ -389,7 +398,7 @@ def control(request):
     selected_key = (selected_assignment.game_key if selected_assignment else
                     settings.active_game if selected_event and settings.competition_event_id == selected_event.pk and not settings.competition_opened_at else "")
     test_games = [
-        {"key": "vegas", "title": "Vegas Pit", "genre": "F1 · мемный слот", "status": "Закрытый прототип",
+        {"key": "vegas", "title": "Vegas Pit", "genre": "F1 · мемный слот", "status": "Выпущена · отдельный тестовый баланс",
          "description": "40 линий, Wild, каскады и бесплатные вращения. Только игровые деньги, без влияния на зачёт.",
          "cover": "league/images/vegas/strip-v3.png", "url": reverse("league:vegas_lab")},
         {**GAMES["doodle_jump"], "key": "doodle_jump", "genre": "Doodle Jump", "status": "В библиотеке",
@@ -421,6 +430,8 @@ def control(request):
 
 
 def wheel_context(request, contest):
+    if contest.game_key == "vegas":
+        return {}
     now, event = timezone.now(), contest.event
     leader = rewards.best_event_arcade_attempt(event, through=now, game_key=contest.game_key, opened_at=contest.opened_at)
     spin = ArcadeWheelSpin.objects.filter(event=event).select_related("winner", "target_user").first()
