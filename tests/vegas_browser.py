@@ -221,7 +221,7 @@ def run(engine, output, cdn_dir=None):
                     deck = page.locator(".vegas-console").bounding_box()
                     assert deck["y"] >= board["y"]+board["height"], (engine, width, "controls must stay below reels")
                     assert page.locator('.vegas-cell:not([data-symbol="wild"]):not([data-symbol="scatter"]) small:visible').count() == 0
-                    expected_background = "strip-mobile-v3-web.webp" if width <= 700 else "strip-v3-web.webp"
+                    expected_background = "strip-helmet-mobile-v1-web.webp" if width <= 700 else "strip-helmet-v1-web.webp"
                     assert expected_background in page.locator(".vegas-night").evaluate("el=>getComputedStyle(el).backgroundImage")
                     expect(page.locator("#vegas-minus")).to_have_css("min-height", "44px")
                     buy = page.locator("#vegas-buy").bounding_box()

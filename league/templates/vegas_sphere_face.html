@@ -1,0 +1,16 @@
+<defs>
+  <linearGradient id="vegas-eye-{{ variant }}" x2=".25" y2="1">
+    <stop stop-color="#fffbe6"/><stop offset="1" stop-color="#d4cfbb"/>
+  </linearGradient>
+  <pattern id="vegas-led-{{ variant }}" width="2" height="2" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".38" fill="#615245"/></pattern>
+</defs>
+<g class="vegas-sphere-eyes">
+  <ellipse cx="70" cy="38" rx="22" ry="26" fill="url(#vegas-eye-{{ variant }})"/>
+  <ellipse cx="170" cy="38" rx="22" ry="26" fill="url(#vegas-eye-{{ variant }})"/>
+  <g class="vegas-sphere-gaze" fill="#29202a">
+    <ellipse cx="74" cy="44" rx="10" ry="14"/><ellipse cx="174" cy="44" rx="10" ry="14"/>
+  </g>
+  <g fill="url(#vegas-led-{{ variant }})" opacity=".22"><ellipse cx="70" cy="38" rx="22" ry="26"/><ellipse cx="170" cy="38" rx="22" ry="26"/></g>
+</g>
+<g fill="none" stroke="#322329" stroke-width="7" stroke-linecap="round"><path d="M48 4Q70 13 92 5"/><path d="M148 6Q168 -11 191 7"/></g>
+<ellipse cx="125" cy="81" rx="9" ry="12" fill="#322329"/>

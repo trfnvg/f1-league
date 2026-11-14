@@ -1,5 +1,15 @@
 # Vegas Pit — visual assets
 
+## Unified helmet Sphere city background
+
+`strip-helmet-v1.png` and `strip-helmet-mobile-v1.png` replace the live desktop
+and mobile city backgrounds. Each scene includes the helmet-wearing Sphere;
+SVG animates only its face in the same image coordinates. The original separate
+yellow SVG globe is no longer rendered. WebP copies total 476,684 bytes.
+Built-in image generation, source PNGs copied unchanged. See
+[`docs/vegas-helmet-background.md`](../../../../../docs/vegas-helmet-background.md)
+for saved paths, generation prompts and integration details.
+
 ## Premium catalogue additions
 
 `shop-premium-v1.png` is the transparent 2×1 atlas for the Constructors Cup

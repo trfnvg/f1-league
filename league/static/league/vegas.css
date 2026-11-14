@@ -15,7 +15,7 @@
 .vegas-page button:focus { box-shadow:none; }
 .vegas-page button:focus-visible,.vegas-page summary:focus-visible,.vegas-page select:focus-visible { outline:2px solid #ffe1a8; outline-offset:3px; }
 .vegas-machine { position:relative; isolation:isolate; overflow:hidden; border:1px solid #675040; border-radius:12px; background:#2b103b; box-shadow:0 24px 60px #0004; }
-.vegas-night { position:absolute; inset:0; z-index:-1; background:linear-gradient(#170a2420 60%,#100a2388),url('images/vegas/strip-v3-web.webp') center bottom/cover; }
+.vegas-night { position:absolute; inset:0; z-index:-1; background:#170a24 url('images/vegas/strip-helmet-v1-web.webp') center bottom/cover; }
 .vegas-toolbar { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:44px; padding:0 14px; background:#140a24aa; border-bottom:1px solid #d8b57320; }
 .vegas-toolbar>span { font:700 8px/1.5 monospace; color:#a2a3ac; letter-spacing:.06em; }
 .vegas-toolbar i { display:inline-block; width:5px; height:5px; margin-right:5px; border-radius:50%; background:#ef805f; box-shadow:0 0 7px #ff8f5b60; }
@@ -164,7 +164,7 @@
 @keyframes vegas-fire-edge { 10% {box-shadow:0 0 26px #f9944055} 100% {box-shadow:0 0 8px #f9944000} }
 @media(max-width:700px) {
   .vegas-page { padding:14px 10px 36px; }
-  .vegas-night { background-image:linear-gradient(#170a2420 60%,#100a2344),url('images/vegas/strip-mobile-v3-web.webp'); }
+  .vegas-night { background-image:url('images/vegas/strip-helmet-mobile-v1-web.webp'); background-position:right top; }
   .vegas-page-heading { gap:7px; margin-bottom:12px; align-items:start; }
   .vegas-page-heading p { display:none; }.vegas-page-heading>a { max-width:95px; text-align:right; font-size:9px; margin-top:8px; }
   .vegas-eyebrow { font-size:8px; }.vegas-page h1 { font-size:27px; }

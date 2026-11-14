@@ -2,6 +2,7 @@
 
 Developer-only tool: run with a Python environment containing Pillow.
 """
+import argparse
 from pathlib import Path
 from PIL import Image
 
@@ -15,11 +16,17 @@ ASSETS = {
     "shop-premium-v1": (1024, 512),
     "strip-v3": (1440, 960),
     "strip-mobile-v3": (900, 1350),
+    "strip-helmet-v1": (1536, 1024),
+    "strip-helmet-mobile-v1": (1024, 1536),
 }
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--only", nargs="+", choices=tuple(ASSETS), help="Build only the selected assets")
+    args = parser.parse_args()
     before = after = 0
-    for name, size in ASSETS.items():
+    for name in args.only or ASSETS:
+        size = ASSETS[name]
         source, target = ROOT / f"{name}.png", ROOT / f"{name}-web.webp"
         with Image.open(source) as image:
             image.thumbnail(size, Image.Resampling.LANCZOS)
