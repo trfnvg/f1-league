@@ -37,7 +37,7 @@ class ArcadeControlTests(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "arcade-control.css")
-        self.assertContains(response, 'league/arcade-control.js?v=2')
+        self.assertContains(response, 'league/arcade-control.js?v=3-autosave-url')
         self.assertContains(response, 'class="lab-game-card"', count=5)
         cards = response.context["test_games"]
         self.assertEqual([card["key"] for card in cards], ["vegas", "doodle_jump", "flappy", "minesweeper", "tetris"])

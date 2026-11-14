@@ -39,12 +39,20 @@
       const timeout = new AbortController();
       const timer = setTimeout(() => timeout.abort(), 15000);
       try {
-        const response = await fetch(form.action, {
+        // Controls named "action" shadow form.action with a RadioNodeList.
+        // Read the HTML attribute so autosave always reaches the real endpoint.
+        const response = await fetch(form.getAttribute("action") || location.href, {
           method: "POST", body: data, credentials: "same-origin",
           signal: timeout.signal,
           headers: {"X-Requested-With": "XMLHttpRequest"},
         });
-        if (!response.headers.get("Content-Type")?.includes("application/json")) throw new Error("Сессия истекла. Войди в аккаунт заново.");
+        if (response.status === 401 || (response.redirected && new URL(response.url).pathname === "/accounts/login/")) {
+          throw new Error("Нужно войти в аккаунт заново, затем повторить сохранение.");
+        }
+        if (response.status === 403) throw new Error("Сервер отклонил запрос: проверь права администратора и обнови страницу для проверки безопасности.");
+        if (response.status === 404) throw new Error("Адрес сохранения не найден (HTTP 404). Обнови страницу.");
+        if (response.status >= 500) throw new Error(`Ошибка сервера (HTTP ${response.status}). Попробуй чуть позже.`);
+        if (!response.headers.get("Content-Type")?.includes("application/json")) throw new Error(`Сервер вернул неожиданный ответ (HTTP ${response.status}). Обнови страницу.`);
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.message || "Не удалось сохранить выбор.");
         dirty = false;
