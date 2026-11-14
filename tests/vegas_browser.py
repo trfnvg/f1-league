@@ -736,7 +736,7 @@ def run(engine, output, cdn_dir=None):
                 expect(page.locator("#vegas-daily")).to_be_enabled()
                 page.locator("#vegas-daily").click()
                 expect(page.locator("#vegas-daily")).to_have_text("Сегодня получено")
-                expect(page.locator("#vegas-balance")).to_contain_text("3\u00a0099,99")
+                expect(page.locator("#vegas-balance")).to_contain_text("2\u00a0099,99")
                 page.reload()
                 expect(page.locator("#vegas-daily")).to_be_disabled()
                 expect(page.locator("#vegas-daily")).to_have_text("Сегодня получено")

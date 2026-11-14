@@ -17,7 +17,7 @@ from .vegas_release import account
 from .vegas_views import state
 
 MOSCOW = ZoneInfo("Europe/Moscow")
-AMOUNT = 300000
+AMOUNT = 200000
 THRESHOLD = 10000
 
 

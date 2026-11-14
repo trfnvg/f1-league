@@ -26,7 +26,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   function dailyControls(){
     if(!$("daily"))return;
     $("daily").disabled=dailySending||busy||!!pending||autoPlay||!daily||daily.claimed||cfg.closed||state.free_spins>0||state.balance>=10000;
-    $("daily").textContent=dailySending?"Начисляем…":daily?.claimed?"Сегодня получено":"Забрать +3 000 $";
+    $("daily").textContent=dailySending?"Начисляем…":daily?.claimed?"Сегодня получено":"Забрать +2 000 $";
     $("daily-note").textContent=cfg.closed?"Зачёт завершён":daily?.claimed?"Снова в 00:00 МСК":state.free_spins?"Заверши бонусную серию":"Баланс ниже 100 $ · обновление в 00:00 МСК";
   }
   async function dailyRequest(claim=false){
@@ -43,7 +43,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       if(data.state.revision<state.revision)return;
       daily=data;
       if(!busy&&!pending&&data.state.revision>=state.revision)state=data.state;
-      if(claim)message("Ежедневные +3 000 $ зачислены. Можно продолжать играть.");
+      if(claim)message("Ежедневные +2 000 $ зачислены. Можно продолжать играть.");
     }catch(error){if(claim)message(error.name==="AbortError"?"Нет подтверждения. Повтори — повторного начисления не будет.":error.message);}
     finally{clearTimeout(timer);if(claim)dailySending=false;controls();if(!document.hidden&&!pageSuspended)dailyTimer=setTimeout(()=>dailyRequest(),15000);}
   }

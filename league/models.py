@@ -1833,7 +1833,7 @@ class VegasDailyGrant(models.Model):
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="vegas_daily_grants")
     wallet = models.ForeignKey(VegasWallet, on_delete=models.PROTECT, related_name="daily_grants")
     day = models.DateField()
-    amount = models.PositiveIntegerField(default=300000)
+    amount = models.PositiveIntegerField(default=200000)
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

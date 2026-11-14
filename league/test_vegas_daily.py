@@ -34,17 +34,19 @@ class VegasDailyTests(TestCase):
         self.assertFalse(VegasDailyGrant.objects.exists())
         VegasWallet.objects.filter(pk=wallet.pk).update(balance=9999)
         data = self.claim(wallet.pk).json()
-        self.assertEqual(data["state"]["balance"], 309999)
+        self.assertEqual(data["state"]["balance"], 209999)
+        self.assertEqual(data["amount"], 200000)
+        self.assertEqual(VegasDailyGrant.objects.get().amount, 200000)
         self.assertEqual(data["state"]["revision"], 1)
         self.assertTrue(data["claimed"])
         self.assertFalse(data["can_claim"])
 
     def test_retry_and_second_tab_never_credit_twice_even_if_balance_is_low_again(self):
         wallet = self.wallet(balance=0, last_payload={"state": {"bonus": {"win": 0, "played": 0, "granted": 0}}})
-        self.assertEqual(self.claim(wallet.pk).json()["state"]["balance"], 300000)
-        self.assertEqual(self.claim(wallet.pk).json()["state"]["balance"], 300000)
+        self.assertEqual(self.claim(wallet.pk).json()["state"]["balance"], 200000)
+        self.assertEqual(self.claim(wallet.pk).json()["state"]["balance"], 200000)
         wallet.refresh_from_db()
-        self.assertEqual(wallet.last_payload["state"]["balance"], 300000)
+        self.assertEqual(wallet.last_payload["state"]["balance"], 200000)
         VegasWallet.objects.filter(pk=wallet.pk).update(balance=0)
         self.assertEqual(self.claim(wallet.pk).json()["state"]["balance"], 0)
         self.assertEqual(VegasDailyGrant.objects.count(), 1)
@@ -60,7 +62,7 @@ class VegasDailyTests(TestCase):
         VegasWallet.objects.filter(pk=wallet.pk).update(balance=0)
         with patch("django.utils.timezone.now", return_value=before+timedelta(seconds=1)):
             second = self.claim(wallet.pk).json()
-        self.assertEqual(second["state"]["balance"], 300000)
+        self.assertEqual(second["state"]["balance"], 200000)
         self.assertEqual(VegasDailyGrant.objects.count(), 2)
 
     def test_closed_contest_and_active_bonus_cannot_claim(self):
