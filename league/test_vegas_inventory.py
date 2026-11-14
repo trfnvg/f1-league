@@ -45,7 +45,10 @@ class VegasInventoryTests(TestCase):
 
     def buy(self, key, user=None):
         user = user or self.a
-        return purchase(user=user, wallet_id=self.wallets[user.pk].pk, product=key)
+        # Fixtures buy inside the new post-deadline shop window. The outer
+        # clock stays unchanged so pre-deadline activation tests remain real.
+        with patch("django.utils.timezone.now", return_value=self.event.deadline):
+            return purchase(user=user, wallet_id=self.wallets[user.pk].pk, product=key)
 
     def use(self, key, user=None, target=None, league=None):
         user = user or self.a
@@ -76,13 +79,15 @@ class VegasInventoryTests(TestCase):
                 self.buy(key)
         self.assertFalse(VegasPurchase.objects.exists())
 
-    def test_buy_before_deadline_apply_after_and_before_race(self):
+    def test_buy_and_apply_only_after_deadline_and_before_race(self):
+        self.assertFalse(payload(self.wallets[self.a.pk])["can_buy"])
+        with self.assertRaises(ValidationError):
+            purchase(user=self.a, wallet_id=self.wallets[self.a.pk].pk, product="wheel")
         self.buy("tyres")
         with self.assertRaises(ValidationError):
             self.use("tyres")
         self.close_betting()
-        with self.assertRaises(ValidationError):
-            self.buy("wheel")
+        self.assertTrue(payload(self.wallets[self.a.pk])["can_buy"])
         self.use("tyres")
         self.use("tyres")
         self.assertEqual(self.projected()[self.a.pk], 21)
@@ -90,6 +95,21 @@ class VegasInventoryTests(TestCase):
         self.assertEqual(VegasPurchase.objects.get().league_season_id, self.league.pk)
         with self.assertRaises(ValidationError):
             self.use("tyres", league=self.other)
+        self.clock.return_value = self.event.race_datetime
+        with self.assertRaises(ValidationError):
+            purchase(user=self.a, wallet_id=self.wallets[self.a.pk].pk, product="wheel")
+
+    def test_shop_spending_preserves_deadline_standings(self):
+        self.close_betting()
+        wallet = self.buy("tyres")
+        self.contest.refresh_from_db()
+        self.assertIsNotNone(self.contest.frozen_at)
+        row = next(row for row in self.contest.standings if row["user_id"] == self.a.pk)
+        self.assertEqual(row["balance"], 10000000)
+        self.assertEqual(wallet.balance, 9750000)
+        self.buy("teamorder")
+        self.contest.refresh_from_db()
+        self.assertEqual(self.contest.standings[0]["balance"], 10000000)
 
     def test_cannot_activate_at_race_start(self):
         self.buy("tyres")
@@ -251,7 +271,8 @@ class VegasInventoryTests(TestCase):
         self.assertEqual(scores[self.a.pk, self.event.pk].points, 21)
 
     def test_inventory_link_survives_deadline_even_if_game_is_not_permanent(self):
-        self.buy("tyres")
+        # The first purchase is now after the deadline, so the link must also
+        # exist for participants who do not own any products yet.
         ArcadeSettings.objects.filter(pk=1).update(library_games=[])
         self.close_betting()
         response = self.client.get(reverse("league:arcade"))

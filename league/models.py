@@ -1828,6 +1828,20 @@ class VegasSpin(models.Model):
         constraints = [models.UniqueConstraint(fields=("wallet", "request_id"), name="vegas_spin_request_unique")]
 
 
+class VegasDailyGrant(models.Model):
+    """One audited daily play-money rescue per account, across all wallets."""
+    user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="vegas_daily_grants")
+    wallet = models.ForeignKey(VegasWallet, on_delete=models.PROTECT, related_name="daily_grants")
+    day = models.DateField()
+    amount = models.PositiveIntegerField(default=300000)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=("user", "day"), name="vegas_daily_grant_once")]
+        verbose_name = "Ежедневное пополнение Vegas Pit"
+        verbose_name_plural = "Ежедневные пополнения Vegas Pit"
+
+
 class VegasPurchase(models.Model):
     wallet = models.ForeignKey(VegasWallet, on_delete=models.PROTECT, related_name="purchases")
     product = models.CharField(max_length=20)

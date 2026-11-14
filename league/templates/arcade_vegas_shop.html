@@ -23,7 +23,7 @@
     <div class="shop-dealer" id="shop-dealer" data-pose="idle" aria-hidden="true"><div class="shop-dealer-figure"><span class="shop-dealer-pose"></span><span class="shop-dealer-chip"></span></div></div>
     <div class="shop-counter" aria-hidden="true"><img src="{% static 'league/images/vegas/shop-counter-v2.png' %}" alt="" width="2172" height="724"></div>
   </section>
-  <p class="shop-preview-note">Каждый предмет можно купить один раз за этап до дедлайна. Применение — после дедлайна и до старта гонки в одной выбранной лиге «Паддок». Бонусы и штрафы не меняют исход дуэли.</p>
+  <p class="shop-preview-note">Покупки и применение откроются после дедлайна аркады и закроются со стартом гонки. Каждый предмет — один раз за этап, для одной выбранной лиги «Паддок». Бонусы и штрафы не меняют исход дуэли. Уже купленные предметы сохранены.</p>
   <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }} · {{ item.price }}</strong><br>{{ item.description }}<br>{{ item.timing }}</p>{% endfor %}</div></noscript>
   <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><b id="shop-tip-price"></b><p id="shop-tip-copy"></p><p class="shop-tooltip-timing" id="shop-tip-timing"></p><small>Нажми, чтобы рассмотреть</small></div>
   <dialog class="shop-dialog" id="shop-product-dialog" aria-labelledby="shop-detail-name" aria-describedby="shop-detail-description shop-detail-rule shop-detail-timing shop-detail-note">
@@ -49,4 +49,4 @@
   {% csrf_token %}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=6-inventory" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=7-post-deadline" defer></script>{% endblock %}

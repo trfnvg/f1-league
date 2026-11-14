@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Vegas Pit · {% if not vegas_public %}закрытый тест · {% endif %}Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=21-suspense"><link rel="stylesheet" href="{% static 'league/vegas-topup.css' %}?v=1"><link rel="stylesheet" href="{% static 'league/vegas-sphere.css' %}?v=3-small-sphere"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas.css' %}?v=22-daily"><link rel="stylesheet" href="{% static 'league/vegas-topup.css' %}?v=1"><link rel="stylesheet" href="{% static 'league/vegas-sphere.css' %}?v=3-small-sphere"><link rel="preload" as="image" href="{% static 'league/images/vegas/meme-symbols-v4-web.webp' %}">{% endblock %}
 {% block content %}
 <main class="vegas-page" id="vegas-page">
   <header class="vegas-page-heading"><div><span class="vegas-eyebrow">FASTLAP / {% if vegas_public %}АРКАДЫ{% else %}ARCADE LAB{% endif %}</span><h1>Ночь в Вегасе.</h1><p>{% if vegas_contest %}R{{ vegas_contest.event.round_number }} · {{ vegas_contest.event.name }} · Баланс фиксируется на дедлайн прогнозов{% elif vegas_public %}Свободная игра · отдельный баланс вне зачёта{% else %}Мемы паддока. Сорок линий. Один ночной стинт.{% endif %}</p></div><a href="{% url 'league:arcade' %}">Все аркады ↗</a></header>
@@ -29,6 +29,7 @@
         <div class="vegas-stake"><span>СТАВКА / ВСЕ ЛИНИИ</span><div><button type="button" id="vegas-minus" aria-label="Уменьшить ставку">−</button><strong id="vegas-bet">$50</strong><button type="button" id="vegas-plus" aria-label="Увеличить ставку">+</button></div></div>
         <button type="button" id="vegas-spin" class="vegas-spin" aria-keyshortcuts="Space"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M26 12A11 11 0 1 0 26 21M26 4v8h-8"/></svg><span>КРУТИТЬ</span></button>
         <button type="button" class="vegas-auto" id="vegas-auto" aria-pressed="false" aria-label="Автоматические вращения — запуск или остановка"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 7a8 8 0 1 0 2 8M18 2v5h-5"/><path d="m10 8 6 4-6 4Z"/></svg><span>АВТО</span></button>
+        {% if vegas_public %}<div class="vegas-daily"><button type="button" id="vegas-daily" disabled aria-describedby="vegas-daily-note">Забрать +3 000 $</button><small id="vegas-daily-note">Раз в сутки · при балансе ниже 100 $ · сброс в 00:00 МСК</small></div>{% endif %}
       </div>
     </div>
     <section class="vegas-balances" id="vegas-balances" aria-labelledby="vegas-balances-title">
@@ -67,4 +68,4 @@
   {{ vegas_config|json_script:'vegas-config' }}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=21-return-music" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=5-release" defer></script><script src="{% static 'league/vegas-topup.js' %}?v=3-release" defer></script><script src="{% static 'league/vegas-sphere.js' %}?v=2-mobile-off" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas.js' %}?v=22-daily-auto-win" defer></script><script src="{% static 'league/vegas-balances.js' %}?v=5-release" defer></script><script src="{% static 'league/vegas-topup.js' %}?v=3-release" defer></script><script src="{% static 'league/vegas-sphere.js' %}?v=2-mobile-off" defer></script>{% include 'arcade_launch_assets.html' %}{% endblock %}

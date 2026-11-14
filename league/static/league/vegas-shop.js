@@ -44,8 +44,8 @@
     $("apply").disabled=sending||!inventory.can_apply||!$("league").value||(targeted.has(key)&&!$("target").value);
     $("detail-note").textContent=item.applied?`Применено · ${item.league}${item.target?" → "+item.target:""}. Повторное применение недоступно.`:
       item.owned?(inventory.can_apply?"Куплено. Выбери лигу: предмет можно применить только один раз.":`Куплено. Применение: с ${date(inventory.deadline)} до ${inventory.race_at?date(inventory.race_at):"старта гонки"}.`):
-      !inventory.can_buy?"Покупки закрыты или нет участия в лиге «Паддок». Купить предмет можно до дедлайна аркады.":
-      inventory.state.balance<p.cost?"Недостаточно игровых денег. Цена и баланс проверяются сервером.":"Можно купить один раз за этап. Применение откроется после дедлайна.";
+      !inventory.can_buy?"Покупки доступны после дедлайна аркады и до старта гонки при участии в лиге «Паддок».":
+      inventory.state.balance<p.cost?"Недостаточно игровых денег. Цена и баланс проверяются сервером.":"Можно купить один раз за этап и сразу применить в выбранной лиге.";
   }
   async function requestInventory(action){
     if(!cfg||sending||!active)return;

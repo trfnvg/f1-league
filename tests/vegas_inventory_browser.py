@@ -107,11 +107,16 @@ def run(engine, output):
                     url = f"http://127.0.0.1:{server.server_port}/arcade/vegas/shop/?wallet={wallet_id}"
                     page.goto(url, wait_until="domcontentloaded")
                     page.locator('[data-product="tyres"]').click()
+                    expect(page.locator("#shop-buy")).to_be_disabled()
+                    expect(page.locator("#shop-detail-note")).to_contain_text("после дедлайна")
+                    clock.return_value = event.deadline
+                    page.reload(wait_until="domcontentloaded")
+                    page.locator('[data-product="tyres"]').click()
                     expect(page.locator("#shop-buy")).to_be_enabled()
                     page.locator("#shop-buy").click()
                     expect(page.locator("#shop-detail-note")).to_contain_text("Куплено")
                     expect(page.locator("#shop-buy")).to_be_hidden()
-                    expect(page.locator("#shop-apply")).to_be_disabled()
+                    expect(page.locator("#shop-apply")).to_be_enabled()
                     expect(page.locator("#shop-balance")).to_contain_text("2\u00a0500")
                     page.reload(wait_until="domcontentloaded")
                     expect(page.locator('[data-item-state="tyres"]')).to_have_text("КУПЛЕНО")

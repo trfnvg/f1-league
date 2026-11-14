@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 import json
-from .models import VegasSpin, VegasPurchase
+from .models import VegasSpin, VegasPurchase, VegasDailyGrant
 from django.db import transaction
 from django.db.models import DurationField, ExpressionWrapper, F
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -1219,6 +1219,16 @@ class VegasPurchaseAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(VegasDailyGrant)
+class VegasDailyGrantAdmin(VegasPurchaseAdmin):
+    list_display = ("id", "user", "wallet", "day", "amount", "created_at")
+    list_select_related = ("user", "wallet")
+    list_filter = ("day",)
+    search_fields = ("user__username", "user__first_name")
+    readonly_fields = tuple(field.name for field in VegasDailyGrant._meta.fields)
+    ordering = ("-created_at", "-pk")
 
 
 @admin.register(VegasSpin)

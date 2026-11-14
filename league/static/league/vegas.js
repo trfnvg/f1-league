@@ -22,6 +22,34 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   let autoPlay=false,autoCount=25,autoRemaining=0;
   let displayedBalance=null;
   let autoTimer=0, bonusPaused=false, autoBlocked=false, pageSuspended=false, lastRequestAt=0;
+  let daily=null,dailySending=false,dailyTimer=0;
+  function dailyControls(){
+    if(!$("daily"))return;
+    $("daily").disabled=dailySending||busy||!!pending||autoPlay||!daily||daily.claimed||cfg.closed||state.free_spins>0||state.balance>=10000;
+    $("daily").textContent=dailySending?"Начисляем…":daily?.claimed?"Сегодня получено":"Забрать +3 000 $";
+    $("daily-note").textContent=cfg.closed?"Зачёт завершён":daily?.claimed?"Снова в 00:00 МСК":state.free_spins?"Заверши бонусную серию":"Баланс ниже 100 $ · обновление в 00:00 МСК";
+  }
+  async function dailyRequest(claim=false){
+    clearTimeout(dailyTimer);
+    if(!cfg.daily_url||document.hidden||pageSuspended||(!claim&&dailySending))return;
+    if(claim){if(busy||pending||autoPlay||dailySending)return;dailySending=true;controls();}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+    try{
+      const response=await fetch(cfg.daily_url,{method:claim?"POST":"GET",credentials:"same-origin",signal:controller.signal,
+        ...(claim?{headers:{"Content-Type":"application/json","X-CSRFToken":page.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify({wallet_id:cfg.wallet_id})}:{})});
+      const data=await response.json();if(!response.ok)throw new Error(data.error||"Не удалось проверить пополнение.");
+      if(data.wallet_id!==cfg.wallet_id)return;
+      if(data.closed)cfg.closed=true;
+      if(data.state.revision<state.revision)return;
+      daily=data;
+      if(!busy&&!pending&&data.state.revision>=state.revision)state=data.state;
+      if(claim)message("Ежедневные +3 000 $ зачислены. Можно продолжать играть.");
+    }catch(error){if(claim)message(error.name==="AbortError"?"Нет подтверждения. Повтори — повторного начисления не будет.":error.message);}
+    finally{clearTimeout(timer);if(claim)dailySending=false;controls();if(!document.hidden&&!pageSuspended)dailyTimer=setTimeout(()=>dailyRequest(),15000);}
+  }
+  $("daily")?.addEventListener("click",()=>dailyRequest(true));
+  document.addEventListener("visibilitychange",()=>{clearTimeout(dailyTimer);if(!document.hidden)dailyRequest();});
+  window.addEventListener("pagehide",()=>clearTimeout(dailyTimer));
   let master=null;const voices=new Set(),counters=new Map(),visualAnimations=new Set();
   let musicBuffer=null,musicSource=null,musicGain=null,musicOffset=0,musicStarted=0;
   const musicButton=document.createElement("button");
@@ -151,6 +179,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   window.addEventListener("pagehide",()=>{pageSuspended=true;autoPlay=false;controls();clearTimeout(autoTimer);stopAudio();});
   window.addEventListener("pageshow",()=>{pageSuspended=false;unlockAudio();queueBonus();});
   function controls(){
+    dailyControls();
     $("topup").disabled=busy||!!pending;
     if(displayedBalance!==state.balance){displayedBalance=state.balance;document.dispatchEvent(new CustomEvent("vegas:balance",{detail:{balance:state.balance}}));}
     $("shop").setAttribute("aria-disabled",String(busy||!!pending));
@@ -161,7 +190,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     $("auto").disabled=!autoPlay&&(busy||!!pending||state.free_spins>0||!canAfford(cfg.bets[betIndex]));
     $("balance").textContent=unlimited?"∞":money(state.balance);$("free").textContent=state.free_spins;
     if(unlimited)$("balance").setAttribute("aria-label","Неограниченный тестовый баланс");
-    $("bet").textContent=money(state.free_spins?state.bonus_bet:cfg.bets[betIndex]);$("spin").disabled=busy||autoPlay;
+    $("bet").textContent=money(state.free_spins?state.bonus_bet:cfg.bets[betIndex]);$("spin").disabled=busy||autoPlay||dailySending;
     $("spin").querySelector("span").textContent=busy?"СПИН…":pending?"ПОВТОРИТЬ":state.free_spins?"FREE SPIN":"КРУТИТЬ";
     $("minus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===0;
     $("plus").disabled=autoPlay||busy||!!pending||state.free_spins>0||betIndex===cfg.bets.length-1;
@@ -192,6 +221,11 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     const height=(window.visualViewport?.height||innerHeight)-(safe?(parseFloat(safe.paddingTop)||0)+(parseFloat(safe.paddingBottom)||0):0);
     const wide=machine.clientWidth>=700||(innerWidth>=650&&height<500);
     machine.classList.toggle("is-wide",wide);
+    const dailyPanel=machine.querySelector(".vegas-daily");
+    if(dailyPanel){
+      const host=wide&&height<500?machine.querySelector(".vegas-toolbar>div"):machine.querySelector(".vegas-console");
+      if(dailyPanel.parentElement!==host)host.append(dailyPanel);
+    }
     // Measure the control rows at usable width, not at the previous small
     // board width (which otherwise feeds text wrapping back into the fitter).
     machine.style.setProperty("--cabinet-width",`${machine.clientWidth-24}px`);
@@ -326,7 +360,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
   }
   function celebration(title,value,copy,kicker="VEGAS PIT",{autoMs=0,kind="win"}={}){
     $("celebration-kicker").textContent=kicker;$("celebration-title").textContent=title;$("celebration-value").textContent=value;$("celebration-copy").textContent=copy;
-    const overlay=$("celebration"),button=$("celebration-close");overlay.dataset.kind=kind;button.textContent=autoMs?"Начать бонус":"Продолжить";
+    const overlay=$("celebration"),button=$("celebration-close");overlay.dataset.kind=kind;button.textContent=autoMs&&kind==="entry"?"Начать бонус":"Продолжить";
     $("celebration-art").className=`vegas-symbol-art vegas-art-${kind==="entry"?"scatter":"wild"}`;
     overlay.hidden=false;overlay.setAttribute("aria-labelledby","vegas-celebration-title");overlay.showModal();
     const inert=[...page.children].filter(el=>el!==machine).concat([...machine.children].filter(el=>el!==overlay));inert.forEach(el=>el.inert=true);button.focus();
@@ -336,7 +370,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       function cancel(e){e.preventDefault();finish();}
       function keys(e){if(e.key==="Escape"){e.preventDefault();e.stopPropagation();finish();}if(e.key==="Tab"){e.preventDefault();button.focus();}}
       button.addEventListener("click",finish);overlay.addEventListener("keydown",keys);overlay.addEventListener("cancel",cancel);
-      if(autoMs)timer=setTimeout(finish,reduced.matches?300:autoMs);
+      if(autoMs)timer=setTimeout(finish,reduced.matches&&kind==="entry"?300:autoMs);
     });
   }
   async function stopReels(field){
@@ -364,7 +398,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     await celebration("БОНУС КУПЛЕН",`${purchase.spins} FREE SPINS`,`Стоимость ${money(purchase.cost)} · ставка ${money(purchase.bet)}. Вращения начнутся автоматически.`,"VEGAS PIT · BONUS BUY",{autoMs:2000,kind:"entry"});
     message(`Бесплатных вращений: ${state.free_spins} · ставка не списывается`);
   }
-  async function present(data){
+  async function present(data,automatic=false){
     const result=data.result,first=result.rounds[0],bonusBefore=state.bonus.win;await stopReels(first.grid);let total=0;
     for(const[i,round]of result.rounds.entries()){
       if(i)await cascade(result.rounds[i-1].grid,round.grid,result.rounds[i-1].wins);
@@ -391,12 +425,13 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
       else await celebration("БОНУСНЫЙ СТИНТ",`+${result.awarded} FREE SPINS`,`Ставка ${money(state.bonus_bet)} зафиксирована. Вращения начнутся автоматически.`,"SCATTER · VEGAS",{autoMs:2000,kind:"entry"});
     }else if(result.payout>=result.bet*8){
       if(result.free){callout(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"bonus");cue("cascade");await pause(700);}
-      else{cue("summary");await celebration(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"Все выигрышные линии зачислены на тестовый баланс.");}
+      else{cue("summary");await celebration(result.payout>=result.bet*25?"MEGA WIN":"BIG WIN",money(result.payout),"Все выигрышные линии зачислены на игровой баланс.","VEGAS PIT",{autoMs:automatic?2500:0});}
     }
     if(result.free&&!state.free_spins){cue("summary");await celebration("БОНУС ЗАВЕРШЁН",money(state.bonus.win),`Общий выигрыш за ${state.bonus.played} вращений. Вся сумма уже на игровом балансе.`,"ИТОГ БОНУСНОГО СТИНТА",{kind:"summary"});}
     message(result.free&&!state.free_spins?"Бонусный стинт завершён":state.free_spins?`Бесплатных вращений: ${state.free_spins} · ставка не списывается`:result.payout?`На баланс зачислено ${money(result.payout)}`:"Нет выигрышных комбинаций");
   }
   async function request(action="spin",automatic=false){
+    if(dailySending)return;
     if(busy||!$("celebration").hidden||$("purchase").open||$("auto-dialog").open||$("topup-dialog").open||(!automatic&&autoPlay&&action==="spin"))return;
     if(automatic&&((!state.free_spins&&!autoPlay)||(state.free_spins&&bonusPaused)||autoBlocked||document.hidden||pageSuspended))return;
     if(action!=="spin")autoPlay=false;
@@ -420,7 +455,7 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
         autoRemaining--;if(autoRemaining===0){autoPlay=false;seriesComplete=true;}
       }
       if(data.bonus_purchase){await presentPurchase(data);}
-      else if(data.result){await present(data);}
+      else if(data.result){await present(data,automatic);}
       else{state=data.state;bonusPaused=false;message("Тестовый баланс сброшен до $5 000");$("multiplier").textContent="×1";}
       if($("scenario"))$("scenario").value="random";
       if(seriesComplete&&!state.free_spins)message(`Серия из ${autoCount} вращений завершена`);
@@ -477,5 +512,5 @@ const labels={banana:"КУБОК НОРРИСА",berry:"БАНАНА ЛЕКЛЕ�
     // button activation/scrolling, including held-key repeats, to send one spin.
     e.preventDefault();if(!e.repeat)request();
   });
-  grid(current);controls();fitStage();if(cfg.last)setAmount($("win"),cfg.last.payout);else if(state.free_spins)$("multiplier").textContent="×2";queueBonus();
+  grid(current);controls();fitStage();dailyRequest();if(cfg.last)setAmount($("win"),cfg.last.payout);else if(state.free_spins)$("multiplier").textContent="×2";queueBonus();
 })();

@@ -53,6 +53,7 @@ def page(request, public=False):
               "spin_url": reverse(f"league:{prefix}_spin"),
               "balances_url": reverse(f"league:{prefix}_balances"),
               "closed": closed, "wallet_id": wallet.pk if public else None}
+    config["daily_url"] = reverse("league:vegas_daily") if public else None
     config["player"] = {"id": request.user.pk, "name": display_name(request.user)}
     topup_prefix = "vegas_public_topup" if public else "vegas_topup"
     config["topup_urls"] = {"status": reverse(f"league:{topup_prefix}_status"),

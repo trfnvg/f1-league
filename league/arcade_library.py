@@ -163,8 +163,7 @@ def library(request):
     shop_wallet = None
     if request.user.is_authenticated and contest and contest.game_key == "vegas" and contest.event.deadline <= now:
         from .models import VegasWallet
-        shop_wallet = VegasWallet.objects.filter(user=request.user, competition=contest,
-            purchases__isnull=False).distinct().first()
+        shop_wallet = VegasWallet.objects.filter(user=request.user, competition=contest).first()
     return render(request, "arcade_library.html", {"games": cards, "current_game": current,
         "vegas_shop_wallet": shop_wallet,
         "contest": contest, "contest_open": contest_open, "library_server_time": now,

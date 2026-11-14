@@ -470,9 +470,19 @@ def run(engine, output, cdn_dir=None):
                 # A fixed series completes exactly five paid requests, and
                 # does not submit a sixth one after the counter reaches zero.
                 before_fixed = len(spin_requests)
+                def auto_big_win(route):
+                    response = route.fetch()
+                    data = response.json()
+                    data["result"].update(payout=50000, awarded=0, free=False,
+                        rounds=[{"grid": [["tyre", "duck", "berry", "banana"] for _ in range(5)],
+                                 "wins": [], "amount": 0, "multiplier": 1}])
+                    route.fulfill(response=response, json=data)
+                page.route("**/arcade/lab/vegas/spin/", auto_big_win, times=1)
                 page.locator("#vegas-auto").click()
                 page.locator('[data-auto-count="5"]').click()
                 page.locator("#vegas-auto-start").click()
+                expect(page.locator("#vegas-celebration-title")).to_have_text("BIG WIN", timeout=10000)
+                expect(page.locator("#vegas-celebration")).not_to_be_visible(timeout=4000)
                 expect(page.locator("#vegas-auto")).to_have_attribute("aria-pressed", "false", timeout=30000)
                 expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
                 assert len(spin_requests) == before_fixed+5
@@ -706,6 +716,11 @@ def run(engine, output, cdn_dir=None):
                         page.keyboard.press("Space")
                     assert sent.value.status == 200
                     expect(page.locator("#vegas-spin")).to_be_enabled(timeout=20000)
+                    expect(page.locator("#vegas-daily")).to_be_disabled()
+                    spin_box = page.locator("#vegas-spin").bounding_box()
+                    daily_box = page.locator("#vegas-daily").bounding_box()
+                    assert spin_box["y"]+spin_box["height"] <= height+1
+                    assert daily_box["y"]+daily_box["height"] <= height+1
                     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")
                     page.screenshot(path=str(output/f"{engine}-{width}-released.png"))
                     page.locator("#vegas-shop").click()
@@ -713,6 +728,18 @@ def run(engine, output, cdn_dir=None):
                     expect(page.locator(".shop-scene")).to_be_visible()
                     page.locator(".shop-back").click()
                     page.wait_for_url("**/arcade/play/vegas/?fullscreen=1")
+                def bankrupt_public_player():
+                    from league.models import VegasWallet
+                    VegasWallet.objects.filter(user__username=f"vegas-rival-{engine}").update(balance=9999, free_spins=0)
+                database.submit(bankrupt_public_player).result()
+                page.reload()
+                expect(page.locator("#vegas-daily")).to_be_enabled()
+                page.locator("#vegas-daily").click()
+                expect(page.locator("#vegas-daily")).to_have_text("Сегодня получено")
+                expect(page.locator("#vegas-balance")).to_contain_text("3\u00a0099,99")
+                page.reload()
+                expect(page.locator("#vegas-daily")).to_be_disabled()
+                expect(page.locator("#vegas-daily")).to_have_text("Сегодня получено")
                 expect(page.locator("#vegas-spin")).to_be_enabled()
                 closing_balance = page.locator("#vegas-balance").inner_text()
                 page.evaluate('document.dispatchEvent(new Event("vegas:closed"))')

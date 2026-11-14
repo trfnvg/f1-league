@@ -12,7 +12,7 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_GET, require_POST
 
 from .identity import display_name
-from .models import (ArcadeCompetition, ArcadeSettings, DuelChallenge, Event, League,
+from .models import (ArcadeCompetition, DuelChallenge, Event, League,
     LeagueActivity, LeagueSeasonEntry, Prediction, VegasPurchase, VegasWallet)
 from .vegas_shop import PRODUCTS
 from .vegas_views import state
@@ -54,9 +54,8 @@ def entries_for(user_id, event):
 
 def buying_open(wallet, now):
     contest, event = wallet.competition, wallet.competition.event
-    return bool(contest.opened_at and contest.opened_at <= now < event.deadline and not contest.frozen_at
-        and ArcadeSettings.objects.filter(pk=1, public_enabled=True, active_game="vegas",
-            competition_event_id=contest.event_id, competition_opened_at=contest.opened_at).exists())
+    return bool(contest.opened_at and event.deadline <= now
+        and event.race_datetime and now < event.race_datetime and event.status != Event.Status.SCORED)
 
 
 def payload(wallet):
@@ -91,12 +90,15 @@ def purchase(*, user, wallet_id, product):
     if existing:
         return wallet  # A lost response must never charge the same purchase twice.
     if not buying_open(wallet, timezone.now()):
-        raise ValidationError("Покупки закрыты. Купить предмет можно до дедлайна аркады.")
+        raise ValidationError("Покупки доступны после дедлайна аркады и до старта гонки.")
     if not entries_for(user.pk, wallet.competition.event).exists():
         raise ValidationError("Для предметов нужно участвовать в этом этапе лиги с правилами «Паддок».")
     cost = CATALOGUE[product]["cost"]
     if wallet.balance < cost:
         raise ValidationError("Недостаточно игровых денег.")
+    # Preserve the final contest ranking before spending its wallet in the shop.
+    from .arcade_library import freeze
+    freeze(wallet.competition)
     before = wallet.balance
     wallet.balance -= cost
     wallet.revision += 1
