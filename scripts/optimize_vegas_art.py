@@ -18,6 +18,8 @@ ASSETS = {
     "strip-mobile-v3": (900, 1350),
     "strip-helmet-v1": (1536, 1024),
     "strip-helmet-mobile-v1": (1024, 1536),
+    "strip-helmet-v2": (1536, 1024),
+    "strip-city-mobile-v2": (1024, 1536),
 }
 
 if __name__ == "__main__":
