@@ -36,7 +36,7 @@
     if(!active||!inventory)return;
     const key=active.dataset.product,p=products.get(key),item=inventory.items[key];
     $("buy").hidden=item.owned;$("apply").hidden=!item.owned||item.applied;
-    $("buy").textContent=`Купить · ${p.price}`;$("apply").textContent="Применить в выбранной лиге";
+    $("buy").textContent="Купить";$("apply").textContent="Применить в выбранной лиге";
     $("buy").disabled=sending||!inventory.can_buy||inventory.state.balance<p.cost;
     $("activation").hidden=!item.owned||item.applied;
     $("target-field").hidden=!targeted.has(key);
@@ -79,7 +79,7 @@
     if(!hover.matches||dialog.open)return;
     const p=products.get(button.dataset.product);if(!p)return;
     hideTip();tipTarget=button;button.setAttribute("aria-describedby",tip.id);
-    $("tip-kind").textContent=p.kind;$("tip-title").textContent=p.name;$("tip-price").textContent=p.price;$("tip-copy").textContent=p.description;
+    $("tip-kind").textContent=p.kind;$("tip-title").textContent=p.name;$("tip-copy").textContent=p.description;
     $("tip-timing").textContent=p.timing;
     tip.hidden=false;
     const rect=button.getBoundingClientRect(),box=tip.getBoundingClientRect();
@@ -93,7 +93,7 @@
     button.addEventListener("click",()=>{
       const p=products.get(button.dataset.product);if(!p)return;
       hideTip();active=button;
-      for(const [id,key] of [["name","name"],["kind","kind"],["price","price"],["description","description"],["rule","rule"],["timing","timing"]])$("detail-"+id).textContent=p[key];
+      for(const [id,key] of [["name","name"],["kind","kind"],["description","description"],["rule","rule"],["timing","timing"]])$("detail-"+id).textContent=p[key];
       $("detail-art").className=`shop-detail-art shop-item-art shop-item-${p.key}`;
       renderItem();
       dialog.showModal();$("close").focus({preventScroll:true});

@@ -246,13 +246,16 @@ class VegasLabTests(TestCase):
         self.assertIn("tyres", products["paddockpass"]["incompatible_with"])
         self.assertNotContains(response, 'data-product="shield"')
 
-    def test_shop_prices_are_rendered_from_the_same_catalogue_as_product_details(self):
+    def test_shop_prices_are_hidden_but_catalogue_costs_are_preserved(self):
         from django.utils.html import json_script
         from .vegas_shop import PRODUCTS
         response = self.client.get(reverse("league:vegas_lab_shop"))
         self.assertContains(response, json_script(list(PRODUCTS), "shop-products"))
+        self.assertNotContains(response, 'id="shop-detail-price"')
+        self.assertNotContains(response, 'id="shop-tip-price"')
+        visible_markup = response.content.decode().split('<script id="shop-products"')[0]
         for item in PRODUCTS:
-            self.assertContains(response, item["price"])
+            self.assertNotIn(item["price"], visible_markup)
 
     def test_expanded_stakes_charge_the_selected_amount(self):
         config = self.client.get(self.page).context["vegas_config"]

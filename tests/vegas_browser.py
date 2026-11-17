@@ -581,7 +581,7 @@ def run(engine, output, cdn_dir=None):
                         expect(page.locator("#shop-product-dialog")).to_be_visible()
                         expect(page.locator("#shop-detail-name")).not_to_be_empty()
                         expect(page.locator("#shop-detail-description")).not_to_be_empty()
-                        expect(page.locator("#shop-detail-price")).to_contain_text("$")
+                        expect(page.locator("#shop-detail-price,#shop-tip-price,.shop-price-tag strong")).to_have_count(0)
                         modal = page.locator("#shop-product-dialog").bounding_box()
                         assert modal["width"] <= width and modal["y"] >= 0 and modal["y"]+modal["height"] <= height, (width,"shop dialog overflow",modal)
                         if item == "paddockpass" and width == 390:
