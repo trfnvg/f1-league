@@ -18,7 +18,18 @@ from .vegas_shop import PRODUCTS
 from .vegas_views import state
 
 CATALOGUE = {p["key"]: p for p in PRODUCTS}
+PURCHASE_LIMIT = 3
+THIRD_PURCHASE_SURCHARGE = 2_500_000
+PREMIUM_PRODUCTS = {"constructors", "paddockpass"}
 TARGETED = {"wheel", "teamorder", "constructors"}
+
+
+def purchase_restriction(product, owned):
+    if len(owned) >= PURCHASE_LIMIT:
+        return "Лимит исчерпан: три предмета за этап."
+    if product in PREMIUM_PRODUCTS and PREMIUM_PRODUCTS.intersection(owned):
+        return "За этап можно купить только один премиальный предмет."
+    return ""
 
 
 def wallet_for(user, wallet_id, *, lock=False):
@@ -71,10 +82,13 @@ def payload(wallet):
             "targets": [{"id": t.membership.user_id, "name": display_name(t.membership.user)} for t in targets]})
     can_buy = buying_open(wallet, now) and bool(leagues)
     can_apply = bool(event.deadline <= now and event.race_datetime and now < event.race_datetime and event.status != Event.Status.SCORED)
+    surcharge = THIRD_PURCHASE_SURCHARGE if len(items) == PURCHASE_LIMIT - 1 else 0
     return {"wallet_id": wallet.pk, "state": state(wallet), "can_buy": can_buy,
+        "purchase_surcharge": surcharge,
         "can_apply": can_apply, "leagues": leagues,
         "deadline": event.deadline.isoformat(), "race_at": event.race_datetime.isoformat() if event.race_datetime else None,
         "event": event.name, "items": {key: {"owned": key in items,
+            "purchase_restriction": purchase_restriction(key, items),
             "applied": bool(key in items and items[key].activated_at),
             "league": items[key].league_season.league.name if key in items and items[key].league_season_id else None,
             "target": display_name(items[key].target) if key in items and items[key].target_id else None,
@@ -82,7 +96,7 @@ def payload(wallet):
 
 
 @transaction.atomic
-def purchase(*, user, wallet_id, product):
+def purchase(*, user, wallet_id, product, expected_surcharge=0):
     wallet = wallet_for(user, wallet_id, lock=True)
     if not isinstance(product, str) or product not in CATALOGUE:
         raise ValidationError("Предмет не найден.")
@@ -93,7 +107,14 @@ def purchase(*, user, wallet_id, product):
         raise ValidationError("Покупки доступны после дедлайна аркады и до старта гонки.")
     if not entries_for(user.pk, wallet.competition.event).exists():
         raise ValidationError("Для предметов нужно участвовать в этом этапе лиги с правилами «Паддок».")
-    cost = CATALOGUE[product]["cost"]
+    owned = set(wallet.purchases.values_list("product", flat=True))
+    restriction = purchase_restriction(product, owned)
+    if restriction:
+        raise ValidationError(restriction)
+    surcharge = THIRD_PURCHASE_SURCHARGE if len(owned) == PURCHASE_LIMIT - 1 else 0
+    if type(expected_surcharge) is not int or expected_surcharge != surcharge:
+        raise ValidationError("Условия покупки изменились. Проверь доплату и попробуй снова.")
+    cost = CATALOGUE[product]["cost"] + surcharge
     if wallet.balance < cost:
         raise ValidationError("Недостаточно игровых денег.")
     # Preserve the final contest ranking before spending its wallet in the shop.
@@ -187,11 +208,12 @@ def action_view(request, action):
         if len(request.body) > 2048:
             raise ValidationError("Слишком большой запрос.")
         data = json.loads(request.body)
-        allowed = {"wallet_id", "product"} | ({"league_season_id", "target_id"} if action == "activate" else set())
+        allowed = {"wallet_id", "product"} | ({"league_season_id", "target_id"} if action == "activate" else {"expected_surcharge"})
         if not isinstance(data, dict) or set(data)-allowed or type(data.get("wallet_id")) is not int or not isinstance(data.get("product"), str):
             raise ValidationError("Некорректный запрос.")
         if action == "buy":
-            wallet = purchase(user=request.user, wallet_id=data["wallet_id"], product=data["product"])
+            wallet = purchase(user=request.user, wallet_id=data["wallet_id"], product=data["product"],
+                expected_surcharge=data.get("expected_surcharge", 0))
         else:
             wallet = activate(user=request.user, wallet_id=data["wallet_id"], product=data["product"],
                 league_season_id=data.get("league_season_id"), target_id=data.get("target_id"))

@@ -36,31 +36,43 @@
     if(!active||!inventory)return;
     const key=active.dataset.product,p=products.get(key),item=inventory.items[key];
     $("buy").hidden=item.owned;$("apply").hidden=!item.owned||item.applied;
-    $("buy").textContent="Купить";$("apply").textContent="Применить в выбранной лиге";
-    $("buy").disabled=sending||!inventory.can_buy||inventory.state.balance<p.cost;
+    const surcharge=inventory.purchase_surcharge;
+    const surchargeLabel=surcharge?new Intl.NumberFormat("ru-RU").format(surcharge/100)+" $":"";
+    $("buy").textContent=surchargeLabel?"Купить с доплатой "+surchargeLabel:"Купить";
+    $("apply").textContent="Применить в выбранной лиге";
+    const purchaseNote=item.purchase_restriction||(!inventory.can_buy
+      ?"Покупки доступны после дедлайна аркады и до старта гонки при участии в лиге «Паддок»."
+      :inventory.state.balance<p.cost+surcharge?"Недостаточно игровых денег."
+      :"Можно купить один раз за этап и сразу применить в выбранной лиге.");
+    $("buy").disabled=sending||!inventory.can_buy||!!item.purchase_restriction||inventory.state.balance<p.cost+surcharge;
     $("activation").hidden=!item.owned||item.applied;
     $("target-field").hidden=!targeted.has(key);
     $("league").disabled=$("target").disabled=sending||!inventory.can_apply;
     $("apply").disabled=sending||!inventory.can_apply||!$("league").value||(targeted.has(key)&&!$("target").value);
     $("detail-note").textContent=item.applied?`Применено · ${item.league}${item.target?" → "+item.target:""}. Повторное применение недоступно.`:
       item.owned?(inventory.can_apply?"Куплено. Выбери лигу: предмет можно применить только один раз.":`Куплено. Применение: с ${date(inventory.deadline)} до ${inventory.race_at?date(inventory.race_at):"старта гонки"}.`):
-      !inventory.can_buy?"Покупки доступны после дедлайна аркады и до старта гонки при участии в лиге «Паддок».":
-      inventory.state.balance<p.cost?"Недостаточно игровых денег. Цена и баланс проверяются сервером.":"Можно купить один раз за этап и сразу применить в выбранной лиге.";
+      purchaseNote;
   }
   async function requestInventory(action){
     if(!cfg||sending||!active)return;
     sending=true;renderItem();
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);
+    let errorMessage;
     try{
       const body={wallet_id:cfg.wallet_id,product:active.dataset.product};
       if(action==="apply"){body.league_season_id=Number($("league").value);if(targeted.has(body.product))body.target_id=Number($("target").value);}
+      else body.expected_surcharge=inventory.purchase_surcharge;
       const response=await fetch(action==="buy"?cfg.buy_url:cfg.apply_url,{method:"POST",credentials:"same-origin",signal:controller.signal,
         headers:{"Content-Type":"application/json","X-CSRFToken":root.querySelector('[name="csrfmiddlewaretoken"]').value},body:JSON.stringify(body)});
       if(!response.headers.get("Content-Type")?.includes("application/json"))throw new Error("Обнови страницу и проверь вход в аккаунт.");
       const data=await response.json();if(!response.ok)throw new Error(data.error||"Не удалось сохранить действие.");
       refreshInventory(data);
-    }catch(error){$("detail-note").textContent=error.name==="AbortError"?"Нет подтверждения сервера. Повтори действие — повторного списания не будет.":error.message;}
-    finally{clearTimeout(timer);sending=false;$("buy").disabled=!inventory.can_buy||inventory.state.balance<products.get(active.dataset.product).cost;$("apply").disabled=!inventory.can_apply||!$("league").value||(targeted.has(active.dataset.product)&&!$("target").value);clearTimeout(inventoryTimer);inventoryTimer=setTimeout(pollInventory,15000);}
+    }catch(error){errorMessage=error.name==="AbortError"?"Нет подтверждения сервера. Повтори действие — повторного списания не будет.":error.message;}
+    finally{
+      clearTimeout(timer);sending=false;renderItem();
+      if(errorMessage)$("detail-note").textContent=errorMessage;
+      clearTimeout(inventoryTimer);inventoryTimer=setTimeout(pollInventory,15000);
+    }
   }
   $("buy").addEventListener("click",()=>requestInventory("buy"));$("apply").addEventListener("click",()=>requestInventory("apply"));
   $("league").addEventListener("change",()=>{updateTargets();renderItem();});$("target").addEventListener("change",renderItem);

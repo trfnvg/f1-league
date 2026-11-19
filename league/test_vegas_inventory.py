@@ -43,12 +43,13 @@ class VegasInventoryTests(TestCase):
             for user in (self.a, self.b, self.c)}
         self.client.force_login(self.a)
 
-    def buy(self, key, user=None):
+    def buy(self, key, user=None, *, expected_surcharge=0):
         user = user or self.a
         # Fixtures buy inside the new post-deadline shop window. The outer
         # clock stays unchanged so pre-deadline activation tests remain real.
         with patch("django.utils.timezone.now", return_value=self.event.deadline):
-            return purchase(user=user, wallet_id=self.wallets[user.pk].pk, product=key)
+            return purchase(user=user, wallet_id=self.wallets[user.pk].pk, product=key,
+                expected_surcharge=expected_surcharge)
 
     def use(self, key, user=None, target=None, league=None):
         user = user or self.a
@@ -78,6 +79,27 @@ class VegasInventoryTests(TestCase):
             with self.assertRaises(ValidationError):
                 self.buy(key)
         self.assertFalse(VegasPurchase.objects.exists())
+
+    def test_third_purchase_requires_confirmed_surcharge_and_caps_inventory(self):
+        self.buy("paddockpass")
+        with self.assertRaisesMessage(ValidationError, "только один премиальный"):
+            self.buy("constructors")
+        wallet = self.buy("wheel")
+        self.close_betting()
+        self.assertEqual(payload(wallet)["purchase_surcharge"], 2500000)
+        url = reverse("league:vegas_buy")
+        data = {"wallet_id": wallet.pk, "product": "teamorder", "expected_surcharge": 0}
+        self.assertEqual(self.client.post(url, data, content_type="application/json").status_code, 400)
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 7900000)
+        data["expected_surcharge"] = 2500000
+        for _ in range(2):
+            response = self.client.post(url, data, content_type="application/json")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["state"]["balance"], 4950000)
+        self.assertEqual(wallet.purchases.get(product="teamorder").cost, 2950000)
+        with self.assertRaisesMessage(ValidationError, "Лимит исчерпан"):
+            self.buy("mirrors")
 
     def test_buy_and_apply_only_after_deadline_and_before_race(self):
         self.assertFalse(payload(self.wallets[self.a.pk])["can_buy"])
@@ -149,8 +171,9 @@ class VegasInventoryTests(TestCase):
         self.assertFalse(VegasPurchase.objects.exists())
 
     def test_team_items_and_penalties_are_applied_once_only_in_selected_league(self):
-        for key in ("wheel", "constructors", "teamorder"):
-            self.buy(key)
+        self.buy("wheel")
+        self.buy("constructors")
+        self.buy("teamorder", expected_surcharge=2500000)
         self.close_betting()
         for key in ("wheel", "constructors", "teamorder"):
             self.use(key, target=self.b)
