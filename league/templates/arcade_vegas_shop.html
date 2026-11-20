@@ -1,16 +1,17 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Лавка казино · Vegas Pit · Fastlap{% endblock %}
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=10-inventory"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/vegas-shop.css' %}?v=11-price-rules"><link rel="preload" as="image" href="{% static 'league/images/vegas/shop-simply-poses-v3.png' %}">{% endblock %}
 {% block content %}
 <main class="casino-shop is-fullscreen" id="casino-shop">
   <nav class="shop-nav" aria-label="Лавка казино"><a href="{% if vegas_public %}{% url 'league:arcade_game' 'vegas' %}{% else %}{% url 'league:vegas_lab' %}{% endif %}?fullscreen=1" class="shop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6M8 12h12"/></svg>К автомату</a><div class="shop-wallet"><span>ИГРОВОЙ БАЛАНС</span><strong id="shop-balance">—</strong></div></nav>
+  <p class="shop-preview-note shop-purchase-rules"><strong>До 3 предметов за этап · максимум 1 премиальный.</strong> Первые два по цене на витрине, третий — с доплатой 25 000 $.</p>
   <section class="shop-scene" aria-label="Витрина товаров">
     <div class="shop-shelves" aria-label="Товары на витрине">
       {% for item in products %}
-      <button type="button" class="shop-product shop-product-{{ item.key }}" data-product="{{ item.key }}" aria-haspopup="dialog" aria-controls="shop-product-dialog" aria-label="{{ item.name }}. Подробнее">
+      <button type="button" class="shop-product shop-product-{{ item.key }}" data-product="{{ item.key }}" aria-haspopup="dialog" aria-controls="shop-product-dialog" aria-label="{{ item.name }}, {{ item.price }}. Подробнее">
         <span class="shop-item-art shop-item-{{ item.key }}" aria-hidden="true"></span>
-        <span class="shop-price-tag"><span>{{ item.name }}</span></span>
+        <span class="shop-price-tag"><span>{{ item.name }}</span><strong>{{ item.price }}</strong></span>
         <span class="shop-item-state" data-item-state="{{ item.key }}"></span>
       </button>
       {% endfor %}
@@ -23,14 +24,14 @@
     <div class="shop-dealer" id="shop-dealer" data-pose="idle" aria-hidden="true"><div class="shop-dealer-figure"><span class="shop-dealer-pose"></span><span class="shop-dealer-chip"></span></div></div>
     <div class="shop-counter" aria-hidden="true"><img src="{% static 'league/images/vegas/shop-counter-v2.png' %}" alt="" width="2172" height="724"></div>
   </section>
-  <p class="shop-preview-note">С дедлайна аркады до старта гонки можно купить до трёх разных предметов за этап и максимум один премиальный. Третий предмет стоит на 25 000 $ дороже. Каждый предмет применяется в одной лиге «Паддок». Уже купленные предметы учитываются в лимите.</p>
-  <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }}</strong><br>{{ item.description }}<br>{{ item.timing }}</p>{% endfor %}</div></noscript>
-  <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><p id="shop-tip-copy"></p><p class="shop-tooltip-timing" id="shop-tip-timing"></p><small>Нажми, чтобы рассмотреть</small></div>
+  <p class="shop-preview-note">Покупка и применение доступны с дедлайна аркады до старта гонки. Каждый предмет можно купить один раз за этап и применить в одной лиге «Паддок».</p>
+  <noscript><div class="shop-noscript">{% for item in products %}<p><strong>{{ item.name }} · {{ item.price }}</strong><br>{{ item.description }}<br>{{ item.timing }}</p>{% endfor %}</div></noscript>
+  <div class="shop-tooltip" id="shop-tooltip" role="tooltip" hidden><span id="shop-tip-kind"></span><strong id="shop-tip-title"></strong><b id="shop-tip-price"></b><p id="shop-tip-copy"></p><p class="shop-tooltip-timing" id="shop-tip-timing"></p><small>Нажми, чтобы рассмотреть</small></div>
   <dialog class="shop-dialog" id="shop-product-dialog" aria-labelledby="shop-detail-name" aria-describedby="shop-detail-description shop-detail-rule shop-detail-timing shop-detail-note">
     <button type="button" class="shop-dialog-close" id="shop-close" aria-label="Закрыть описание"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
     <span class="shop-detail-kind" id="shop-detail-kind"></span>
     <span class="shop-detail-art shop-item-art" id="shop-detail-art" aria-hidden="true"></span>
-    <h2 id="shop-detail-name"></h2>
+    <h2 id="shop-detail-name"></h2><strong class="shop-detail-price" id="shop-detail-price"></strong>
     <p id="shop-detail-description"></p><p class="shop-detail-rule" id="shop-detail-rule"></p>
     <p class="shop-detail-timing" id="shop-detail-timing"></p>
     <div class="shop-detail-note" id="shop-detail-note" role="status" aria-live="polite">{% if shop_config %}Проверяем инвентарь…{% else %}Покупки доступны в зачёте этапа. В лаборатории и свободной игре — только просмотр.{% endif %}</div>
@@ -49,4 +50,4 @@
   {% csrf_token %}
 </main>
 {% endblock %}
-{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=9-purchase-limit" defer></script>{% endblock %}
+{% block extra_scripts %}<script src="{% static 'league/vegas-shop.js' %}?v=10-visible-prices" defer></script>{% endblock %}

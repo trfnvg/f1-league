@@ -37,8 +37,10 @@
     const key=active.dataset.product,p=products.get(key),item=inventory.items[key];
     $("buy").hidden=item.owned;$("apply").hidden=!item.owned||item.applied;
     const surcharge=inventory.purchase_surcharge;
-    const surchargeLabel=surcharge?new Intl.NumberFormat("ru-RU").format(surcharge/100)+" $":"";
-    $("buy").textContent=surchargeLabel?"Купить с доплатой "+surchargeLabel:"Купить";
+    const formatPrice=cents=>new Intl.NumberFormat("ru-RU").format(cents/100)+" $";
+    $("buy").textContent="Купить за "+formatPrice(p.cost+surcharge);
+    $("detail-price").textContent=surcharge&&!item.owned
+      ?p.price+" + "+formatPrice(surcharge)+" за третью покупку":p.price;
     $("apply").textContent="Применить в выбранной лиге";
     const purchaseNote=item.purchase_restriction||(!inventory.can_buy
       ?"Покупки доступны после дедлайна аркады и до старта гонки при участии в лиге «Паддок»."
@@ -91,7 +93,7 @@
     if(!hover.matches||dialog.open)return;
     const p=products.get(button.dataset.product);if(!p)return;
     hideTip();tipTarget=button;button.setAttribute("aria-describedby",tip.id);
-    $("tip-kind").textContent=p.kind;$("tip-title").textContent=p.name;$("tip-copy").textContent=p.description;
+    $("tip-kind").textContent=p.kind;$("tip-title").textContent=p.name;$("tip-price").textContent=p.price;$("tip-copy").textContent=p.description;
     $("tip-timing").textContent=p.timing;
     tip.hidden=false;
     const rect=button.getBoundingClientRect(),box=tip.getBoundingClientRect();
@@ -105,7 +107,7 @@
     button.addEventListener("click",()=>{
       const p=products.get(button.dataset.product);if(!p)return;
       hideTip();active=button;
-      for(const [id,key] of [["name","name"],["kind","kind"],["description","description"],["rule","rule"],["timing","timing"]])$("detail-"+id).textContent=p[key];
+      for(const [id,key] of [["name","name"],["kind","kind"],["price","price"],["description","description"],["rule","rule"],["timing","timing"]])$("detail-"+id).textContent=p[key];
       $("detail-art").className=`shop-detail-art shop-item-art shop-item-${p.key}`;
       renderItem();
       dialog.showModal();$("close").focus({preventScroll:true});

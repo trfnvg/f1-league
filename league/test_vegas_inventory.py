@@ -133,6 +133,47 @@ class VegasInventoryTests(TestCase):
         self.contest.refresh_from_db()
         self.assertEqual(self.contest.standings[0]["balance"], 10000000)
 
+    def test_las_vegas_refund_restores_actual_charges_and_removes_item_effects(self):
+        from importlib import import_module
+
+        from django.apps import apps
+        from django.db import connection
+
+        self.buy("tyres", user=self.b)
+        self.buy("wheel", user=self.a)
+        self.buy("teamorder", user=self.a)
+        wallet = self.buy("constructors", expected_surcharge=2500000)
+        self.close_betting()
+        self.use("wheel", target=self.b)
+        self.assertEqual(self.projected()[self.b.pk], 17)
+
+        other_wallet = self.wallets[self.b.pk]
+        other_event = Event.objects.create(name="Other weekend", season_year=2026,
+            round_number=19, circuit="austin", deadline=self.event.deadline)
+        other_contest = ArcadeCompetition.objects.create(event=other_event, game_key="vegas", opened_at=self.now)
+        VegasWallet.objects.filter(pk=other_wallet.pk).update(competition=other_contest)
+        self.event.season_year = 2026
+        self.event.circuit = "las-vegas"
+        self.event.save(update_fields=["season_year", "circuit"])
+        wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 5250000)
+        VegasWallet.objects.filter(pk=wallet.pk).update(last_payload={"state": {"balance": wallet.balance,
+            "revision": wallet.revision, "bonus": {"win": 55}}})
+
+        migration = import_module("league.migrations.0074_refund_las_vegas_shop")
+        migration.refund_las_vegas_shop(apps, SimpleNamespace(connection=connection))
+        migration.refund_las_vegas_shop(apps, SimpleNamespace(connection=connection))
+
+        wallet.refresh_from_db()
+        other_wallet.refresh_from_db()
+        self.assertEqual(wallet.balance, 10000000)
+        self.assertEqual(wallet.last_payload["state"],
+            {"balance": 10000000, "revision": 5, "bonus": {"win": 55}})
+        self.assertFalse(wallet.purchases.exists())
+        self.assertEqual(other_wallet.balance, 9750000)
+        self.assertTrue(other_wallet.purchases.filter(product="tyres").exists())
+        self.assertEqual(self.projected()[self.b.pk], 20)
+
     def test_cannot_activate_at_race_start(self):
         self.buy("tyres")
         self.clock.return_value = self.event.race_datetime
