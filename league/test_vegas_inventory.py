@@ -189,6 +189,29 @@ class VegasInventoryTests(TestCase):
             "product": "tyres", "league_season_id": self.league.pk}), content_type="application/json")
         self.assertEqual(response.status_code, 404)
 
+    def test_admin_lists_purchase_players_and_application_targets(self):
+        self.a.first_name = "Покупатель"
+        self.a.save(update_fields=["first_name"])
+        self.b.first_name = "Соперник"
+        self.b.save(update_fields=["first_name"])
+        self.duel()
+        self.buy("wheel")
+        self.buy("tyres")
+        self.buy("redflag", user=self.b)
+        self.buy("mirrors", user=self.c)
+        self.close_betting()
+        self.use("wheel", target=self.b)
+        self.use("tyres")
+        self.use("redflag", user=self.b)
+        self.client.force_login(User.objects.create_superuser("shop-admin"))
+
+        response = self.client.get(reverse("admin:league_vegaspurchase_changelist"))
+        self.assertContains(response, "Кто купил")
+        self.assertContains(response, "На кого применён")
+        for label in ("Покупатель", "Грязный руль", "Соперник", "На себя",
+                      "Оба участника дуэли · Покупатель", "Не применён", "6 000 $"):
+            self.assertContains(response, label)
+
     def test_client_price_and_target_spoofing_rejected(self):
         for extras in ({"cost": 0}, {"balance": 999999999}, {"wallet_id": True}):
             data = {"wallet_id": self.wallets[self.a.pk].pk, "product": "tyres", **extras}

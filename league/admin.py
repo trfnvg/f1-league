@@ -1204,12 +1204,49 @@ def video_player(video):
 
 @admin.register(VegasPurchase)
 class VegasPurchaseAdmin(admin.ModelAdmin):
-    list_display = ("id", "wallet", "product", "cost", "purchased_at", "activated_at", "league_season", "target")
-    list_select_related = ("wallet", "league_season", "target")
-    list_filter = ("product", "league_season", "activated_at")
-    search_fields = ("wallet__user__username", "wallet__user__first_name")
+    list_display = ("id", "purchase_player", "product_name", "event_name", "paid_amount",
+                    "purchased_at", "used_on", "activated_at", "league_season")
+    list_select_related = ("wallet__user", "wallet__competition__event", "league_season__league",
+                           "target", "duel__challenger", "duel__opponent")
+    list_filter = ("wallet__competition__event", "product", "league_season", "activated_at")
+    search_fields = ("wallet__user__username", "wallet__user__first_name", "wallet__user__last_name",
+                     "target__username", "target__first_name", "target__last_name")
     readonly_fields = tuple(field.name for field in VegasPurchase._meta.fields)
     ordering = ("-purchased_at", "-pk")
+
+    @admin.display(description="Кто купил", ordering="wallet__user__username")
+    def purchase_player(self, obj):
+        return display_name(obj.wallet.user)
+
+    @admin.display(description="Предмет", ordering="product")
+    def product_name(self, obj):
+        from .vegas_inventory import CATALOGUE
+
+        return CATALOGUE.get(obj.product, {}).get("name", obj.product)
+
+    @admin.display(description="Этап", ordering="wallet__competition__event")
+    def event_name(self, obj):
+        return obj.wallet.competition.event if obj.wallet.competition_id else "Свободная игра"
+
+    @admin.display(description="Списано", ordering="cost")
+    def paid_amount(self, obj):
+        dollars, cents = divmod(obj.cost, 100)
+        amount = f"{dollars:,}".replace(",", " ")
+        return f"{amount},{cents:02d} $" if cents else f"{amount} $"
+
+    @admin.display(description="На кого применён")
+    def used_on(self, obj):
+        if not obj.activated_at:
+            return "Не применён"
+        if obj.target_id:
+            return display_name(obj.target)
+        if obj.duel_id:
+            duel = obj.duel
+            counterpart = duel.opponent if duel.challenger_id == obj.wallet.user_id else duel.challenger
+            if obj.product == "redflag":
+                return f"Оба участника дуэли · {display_name(counterpart)}"
+            return f"На себя · дуэль с {display_name(counterpart)}"
+        return "На себя"
 
     def has_add_permission(self, request):
         return False
