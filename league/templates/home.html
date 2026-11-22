@@ -43,11 +43,13 @@
       {% if featured_event %}<div class="ns-prediction-status"><span class="{% if featured_is_upcoming %}is-open{% endif %}"><i aria-hidden="true"></i>{% if featured_is_upcoming %}Прогнозы открыты{% else %}Прогнозы закрыты{% endif %}</span>{% if featured_is_upcoming %}<small>до {{ featured_event.deadline|date:'d.m · H:i' }} МСК</small>{% endif %}</div>{% endif %}
     </section>
     <section class="ns-ranktile">
-      <div class="ns-eyebrow">{% if home_league %}Твоя позиция / лига{% else %}Твоя позиция / общий рейтинг{% endif %}</div>
-      {% if personal_dashboard %}
+      <div class="ns-eyebrow">Твоя позиция / лига</div>
+      {% if home_league and personal_dashboard %}
         <div class="ns-score"><b>{% if personal_dashboard.rank %}{{ personal_dashboard.rank|stringformat:'02d' }}<span class="ns-rank-total"><span aria-hidden="true">/</span> {{ personal_dashboard.player_count|stringformat:'02d' }}</span>{% else %}—{% endif %}</b>{% if personal_dashboard.movement > 0 %}<small>↑ {{ personal_dashboard.movement }}</small>{% elif personal_dashboard.movement < 0 %}<small>↓ {{ personal_dashboard.movement|stringformat:"+d"|slice:"1:" }}</small>{% endif %}</div>
-        <p>{% if home_league %}{{ home_league.league.name }}{% else %}Общий рейтинг · {{ season.year }}{% endif %}</p>
-        <div class="ns-rank-gap">{% if not personal_dashboard.rank %}<span>Твоя гонка ещё впереди</span>{% elif personal_dashboard.leader_gap %}<span>До лидера <strong>{{ personal_dashboard.leader_gap }} очк.</strong></span>{% else %}<span>Ты лидируешь в зачёте</span>{% endif %}{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}" aria-label="Открыть таблицу лиги">{% include 'ui_arrow.html' %}</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}" aria-label="Открыть рейтинг">{% include 'ui_arrow.html' %}</a>{% endif %}</div>
+        <p>{{ home_league.league.name }}</p>
+        <div class="ns-rank-gap">{% if not personal_dashboard.rank %}<span>Твоя гонка ещё впереди</span>{% elif personal_dashboard.leader_gap %}<span>До лидера <strong>{{ personal_dashboard.leader_gap }} очк.</strong></span>{% else %}<span>Ты лидируешь в зачёте</span>{% endif %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}" aria-label="Открыть таблицу лиги">{% include 'ui_arrow.html' %}</a></div>
+      {% elif user.is_authenticated %}
+        <p>Вступи в лигу, чтобы увидеть свою позицию.</p><a class="ns-inline" href="{% url 'league:friend_leagues' %}">Мои лиги {% include 'ui_arrow.html' %}</a>
       {% else %}
         <div class="ns-score"><b>Твой ход<span>.</span></b></div><p>Войди, чтобы увидеть свою позицию.</p><a class="ns-inline" href="{% url 'login' %}">Войти в Fastlap {% include 'ui_arrow.html' %}</a>
       {% endif %}
@@ -112,11 +114,16 @@
   <div class="ns-sectionlabel"><div><h2>На пит-уолле</h2><p>Всё, что имеет значение перед следующей гонкой.</p></div><span>01 / SOCIAL</span></div>
   <div class="ns-socialgrid">
     <div class="ns-panel">
-      <div class="ns-panelheading"><h3>{% if home_league %}{{ home_league.league.name }}{% else %}Общий рейтинг{% endif %}</h3><span>{{ season.year }} / SEASON</span></div>
+      <div class="ns-panelheading"><h3>{% if home_league %}{{ home_league.league.name }}{% else %}Очки в лиге{% endif %}</h3><span>{{ season.year }} / SEASON</span></div>
+      {% if home_league %}
       <div class="ns-rankrows">{% for row in home_rows %}
         <a class="ns-rankrow{% if row.user.id == user.id %} is-you{% endif %}" href="{% url 'league:player_profile' user_id=row.user.id %}?season={{ season.year }}"><span class="ns-ranknum">{{ row.rank|stringformat:'02d' }}</span><span class="mini-avatar">{% if row.avatar_url %}<img src="{{ row.avatar_url }}" alt="" loading="lazy">{% else %}{{ row.user|player_name|slice:":1"|upper }}{% endif %}</span><span class="ns-nickname">{{ row.user|player_name }}</span><strong>{{ row.total }}</strong><span class="ns-delta">{% if row.movement > 0 %}↑ {{ row.movement }}{% elif row.movement < 0 %}↓ {{ row.movement|stringformat:"+d"|slice:"1:" }}{% else %}—{% endif %}</span></a>
       {% empty %}<p class="ns-empty">Таблица появится после первых прогнозов.</p>{% endfor %}</div>
-      <div class="ns-bottomstrip"><span>Каждый этап меняет расстановку сил.</span>{% if home_league %}<a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}">Моя лига {% include 'ui_arrow.html' %}</a>{% else %}<a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Вся таблица {% include 'ui_arrow.html' %}</a>{% endif %}</div>
+      <div class="ns-bottomstrip"><span>Каждый этап меняет расстановку сил.</span><a href="{% url 'league:friend_league' home_league.league_id %}?year={{ season.year }}">Моя лига {% include 'ui_arrow.html' %}</a></div>
+      {% else %}
+      <p class="ns-empty">Таблица очков появится здесь после вступления в лигу.</p>
+      <div class="ns-bottomstrip"><a href="{% url 'league:friend_leagues' %}">Мои лиги {% include 'ui_arrow.html' %}</a></div>
+      {% endif %}
     </div>
     <section class="ns-panel ns-live" aria-labelledby="live-paddock-title">
       <div class="paddock-radio-header">

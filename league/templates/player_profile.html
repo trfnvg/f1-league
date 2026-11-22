@@ -4,7 +4,7 @@
 {% block extra_head %}<link rel="stylesheet" href="{% static 'league/player-profile.css' %}?v=3">{% endblock %}
 {% block content %}
 <div class="player-page">
-  <div class="player-topline"><a href="{% url 'league:global_leaderboard' %}?season={{ season.year }}">Общий рейтинг</a><span>СЕЗОН {{ season.year }}</span>{% if can_edit_avatar %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="profile-logout-btn" type="submit">Выйти</button></form>{% endif %}</div>
+  <div class="player-topline"><a href="{% url 'league:friend_leagues' %}">Мои лиги</a><span>СЕЗОН {{ season.year }}</span>{% if can_edit_avatar %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="profile-logout-btn" type="submit">Выйти</button></form>{% endif %}</div>
   <header class="player-identity">
     <div class="player-identity-main">
       {% if can_edit_avatar %}
