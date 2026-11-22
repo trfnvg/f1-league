@@ -1813,6 +1813,8 @@ def event_detail(request, event_id: int):
         )
 
     profiles = picker_profiles(event.season_year)
+    from .vegas_effects import event_activity
+    vegas_activity = event_activity(event, viewer=request.user) if event.status == Event.Status.SCORED else []
     return render(
         request,
         "event_detail_v2.html",
@@ -1831,6 +1833,7 @@ def event_detail(request, event_id: int):
             "score": score,
             "comparison_rows": comparison_rows,
             "comparison_total": comparison_total,
+            "vegas_activity": vegas_activity,
             "can_view_community": can_view_community,
             "community_predictions": community_predictions,
             "crazy_vote_open": crazy_vote_open,

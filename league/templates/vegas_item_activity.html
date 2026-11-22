@@ -1,0 +1,22 @@
+{% if vegas_activity %}
+<section class="vegas-item-activity" aria-label="{% if personal %}Предметы в разборе очков{% else %}Предметы этапа{% endif %}">
+  <h2>{% if personal %}Предметы и их эффекты{% else %}Кто применил предметы{% endif %}</h2>
+  <ul>
+    {% for item in vegas_activity %}
+      {% if show_league %}{% ifchanged item.league.pk %}<li class="vegas-item-league"><a href="{% url 'league:friend_league_event' item.league.pk event.pk %}?manage=1">{{ item.league.name }}</a></li>{% endifchanged %}{% endif %}
+      <li class="vegas-item-row">
+        <div>
+          <strong>{{ item.product }}</strong>
+          <p>{{ item.actor }} <span aria-hidden="true">→</span><span class="visually-hidden"> применил к: </span> {{ item.target }}</p>
+          {% if personal %}
+            <small>{% if item.effect %}{{ item.effect.title }}{% else %}Без отдельного начисления игроку{% endif %}</small>
+          {% endif %}
+        </div>
+        {% if personal %}
+          {% if item.effect %}<span class="vegas-item-points{% if item.effect.points < 0 %} is-negative{% elif item.effect.points > 0 %} is-positive{% endif %}">{% if item.effect.points > 0 %}+{% endif %}{{ item.effect.points }} очк.</span>{% endif %}
+        {% else %}<time datetime="{{ item.activated_at|date:'c' }}">{{ item.activated_at|date:"d.m · H:i" }}</time>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}

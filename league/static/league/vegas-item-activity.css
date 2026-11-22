@@ -1,0 +1,27 @@
+.vegas-item-activity {
+  min-width: 0;
+  margin-bottom: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border: 1px solid #756044;
+  border-radius: 14px;
+  background: #191c24;
+}
+.vegas-item-activity h2 { margin: 0 0 .65rem; font-size: 1.2rem; }
+.vegas-item-activity ul { margin: 0; padding: 0; list-style: none; }
+.vegas-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: .65rem;
+  padding: .6rem 0;
+  border-top: 1px solid #ffffff20;
+  overflow-wrap: anywhere;
+}
+.vegas-item-row p { margin: .2rem 0 0; }
+.vegas-item-row small, .vegas-item-row time { color: #b5bfd0; }
+.vegas-item-row time, .vegas-item-points { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.vegas-item-points { font-weight: 700; }
+.vegas-item-points.is-positive { color: #8de5ac; }
+.vegas-item-points.is-negative { color: #ff9b8f; }
+.vegas-item-league { padding: .55rem 0; }
+.vegas-item-league a { color: #f0c484; }

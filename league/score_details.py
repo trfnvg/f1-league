@@ -158,12 +158,20 @@ def detail(request, event_id, user_id, league_id=None, recap=False):
     prediction = Prediction.objects.filter(event=event, user_id=user_id, created_at__lt=event.deadline).first()
     result = Result.objects.filter(event=event).first()
     rows, extras = explain(score, prediction, result, event)
+    vegas_activity = []
+    if season:
+        from .vegas_effects import event_activity
+        vegas_activity = event_activity(event, season=season, player=player,
+            effects=score.breakdown.get("vegas_items", []))
+        shown_item_ids = {item["id"] for item in vegas_activity}
+        extras = [item for item in extras if item.get("purchase_id") not in shown_item_ids]
     wildcard = None
     if not season or season.is_legacy:
         wildcard = PlayerWildcard.objects.filter(event=event, user_id=user_id).select_related("question").first()
     decorate_rows(rows, event.season_year)
     return render(request, "score_detail.html", dict(event=event, player=player, score=score,
         league=league, league_season=season, score_rows=rows, extras=extras, notes=notes,
+        vegas_activity=vegas_activity,
         prediction=prediction, wildcard=wildcard, show_crazy=not season or season.ruleset == "paddock",
         base_points=sum(row["points"] for row in rows), extra_points=sum(item["points"] for item in extras),
         hit_count=sum(row["points"] > 0 for row in rows)))

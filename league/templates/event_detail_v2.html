@@ -3,7 +3,7 @@
 
 {% block title %}{{ event.name }} · F1 Predictions {{ event.season_year }}{% endblock %}
 
-{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=8-forecast"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=3-podium">{% include 'social_assets.html' %}{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'league/event-page.css' %}?v=8-forecast"><link rel="stylesheet" href="{% static 'league/driver-profiles.css' %}?v=3-podium">{% if vegas_activity %}<link rel="stylesheet" href="{% static 'league/vegas-item-activity.css' %}">{% endif %}{% include 'social_assets.html' %}{% endblock %}
 
 {% block content %}
 <div class="event-page" data-event-workspace data-default-panel="{% if state != 'open' %}stage-results{% else %}stage-prediction{% endif %}">
@@ -246,6 +246,7 @@
 {% include "event_duel.html" %}
 
 <div id="stage-results" class="stage-results">
+{% include 'vegas_item_activity.html' with show_league=True %}
 {% if state == 'open' %}<div class="stage-result-pending"><h2>Результаты появятся после гонки</h2><p>Прогнозы участников откроются после дедлайна. Здесь будут твои очки и итоговая таблица этапа.</p></div>{% else %}
 {% if user.is_authenticated %}
   {% if score and state == 'scored' %}{% include 'race_finish.html' with finish_event=event finish_score=score %}{% endif %}

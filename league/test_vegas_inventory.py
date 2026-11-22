@@ -398,3 +398,46 @@ class VegasInventoryTests(TestCase):
         self.assertEqual(response.context["score"].points, 21)
         score.refresh_from_db()
         self.assertEqual(score.points, 20)
+
+    def test_event_and_score_pages_show_item_source_and_reflection_in_the_right_league(self):
+        from .models import LeagueEventScore
+
+        self.buy("wheel")
+        self.buy("mirrors", user=self.b)
+        self.buy("teamorder", user=self.c)
+        self.buy("tyres", user=self.c)  # Unused purchases stay out of the event log.
+        self.close_betting()
+        self.use("wheel", target=self.b)
+        self.use("mirrors", user=self.b)
+        self.use("teamorder", user=self.c, target=self.b, league=self.other)
+        event_url = reverse("league:event_detail", args=[self.event.pk])
+        self.assertNotContains(self.client.get(event_url), "Кто применил предметы")
+
+        for user in (self.a, self.b):
+            LeagueEventScore.objects.create(entry=self.league.entries.get(membership__user=user), event=self.event,
+                prediction=Prediction.objects.get(user=user, event=self.event), base_points=20, points=20,
+                breakdown={"base": {}}, input_data={}, input_digest="test")
+        self.event.status = Event.Status.SCORED
+        self.event.save(update_fields=["status"])
+        self.other.league.memberships.filter(user=self.a).update(is_active=False)
+        league_url = reverse("league:friend_league_event", args=[self.league.league_id, self.event.pk])
+        for url in (event_url, league_url):
+            response = self.client.get(url)
+            self.assertContains(response, "Кто применил предметы")
+            activity = response.context["vegas_activity"]
+            self.assertEqual([(row["actor"], row["product"], row["target"]) for row in activity],
+                [("shop-a", "Грязный руль", "shop-b"), ("shop-b", "Зеркальные понтоны", "На себя")])
+        score_url = reverse("league:friend_league_score", args=[self.league.league_id, self.event.pk, self.b.pk])
+        response = self.client.get(score_url)
+        self.assertContains(response, "Зеркальные понтоны отразили Грязный руль")
+        self.assertContains(response, "0 очк.")
+        self.assertEqual(response.context["vegas_activity"][0]["actor"], "shop-a")
+        self.assertEqual(response.context["score"].points, 20)
+        attacker_url = reverse("league:friend_league_score", args=[self.league.league_id, self.event.pk, self.a.pk])
+        response = self.client.get(attacker_url)
+        self.assertContains(response, "Отражённый Грязный руль")
+        self.assertContains(response, "-3 очк.")
+        self.assertEqual(response.context["score"].points, 17)
+        self.client.logout()
+        response = self.client.get(event_url)
+        self.assertNotContains(response, "Кто применил предметы")

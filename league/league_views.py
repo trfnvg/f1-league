@@ -277,9 +277,12 @@ def event_detail(request, league_id, event_id):
     day = LeagueDayDecision.objects.filter(league_season=season, event=event).first()
     day_form = LeagueDayForm(initial={"use_official": day is None, "drivers": day.drivers if day else []})
     from .vegas_topup import management_claims, reward_display
+    from .vegas_effects import event_activity
     topups = management_claims(season, event, now, request.GET.get("topups_page")) if league.owner_id == request.user.pk else []
+    vegas_activity = event_activity(event, season=season) if event.status == Event.Status.SCORED else []
     return render(request, "leagues/event.html", dict(league=league, league_season=season, event=event,
         vegas_topups=topups, vegas_topup_reward=reward_display(),
+        vegas_activity=vegas_activity,
         prediction=prediction, form=form, editable=editable, rows=rows, closed=now >= event.deadline, day_form=day_form,
         **_rights(request.user, league)))
 

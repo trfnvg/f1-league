@@ -6,7 +6,47 @@ Rebuilding a table or recalculating the base result cannot double the bonus.
 from collections import defaultdict
 from copy import copy
 
+from .identity import display_name
 from .models import DuelChallenge, VegasPurchase
+from .vegas_shop import PRODUCTS
+
+
+def event_activity(event, *, season=None, viewer=None, player=None, effects=()):
+    """Display activations only in the league where they were applied."""
+    if season is None and (viewer is None or not viewer.is_authenticated):
+        return []
+    items = VegasPurchase.objects.filter(
+        wallet__competition__event=event, activated_at__isnull=False,
+    ).select_related("wallet__user", "target", "duel__challenger", "duel__opponent", "league_season__league")
+    if season is not None:
+        items = items.filter(league_season=season)
+    else:
+        items = items.filter(league_season__league__archived_at__isnull=True,
+            league_season__league__memberships__user=viewer,
+            league_season__league__memberships__is_active=True)
+    names = {product["key"]: product["name"] for product in PRODUCTS}
+    effects_by_item = {effect["purchase_id"]: effect for effect in effects}
+    rows = []
+    for item in items.order_by("league_season__league__name", "league_season_id", "activated_at", "pk"):
+        actor = item.wallet.user
+        recipient = item.target or actor
+        recipients = {recipient.pk}
+        target = display_name(recipient) if item.target_id else "На себя"
+        if item.duel_id:
+            duel = item.duel
+            opponent = duel.opponent if actor.pk == duel.challenger_id else duel.challenger
+            if item.product == "redflag":
+                recipients.add(opponent.pk)
+                target = f"Оба участника дуэли с {display_name(opponent)}"
+            else:
+                target = f"На себя · дуэль с {display_name(opponent)}"
+        effect = effects_by_item.get(item.pk)
+        if player is not None and player.pk != actor.pk and player.pk not in recipients and effect is None:
+            continue
+        rows.append(dict(id=item.pk, actor=display_name(actor), target=target,
+            product=names.get(item.product, item.product), league=item.league_season.league,
+            activated_at=item.activated_at, effect=effect))
+    return rows
 
 
 def apply_items(season, scores_map):
