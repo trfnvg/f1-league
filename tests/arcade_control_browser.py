@@ -224,35 +224,40 @@ def run(engine, output):
                             )
                             page.evaluate('Math.random = () => 0.9')
                             page.evaluate("""() => {
-                              window.lightsOutSounds = { lamps: 0, starts: 0 };
+                              window.lightsOutSounds = [];
                               const audio = (window.AudioContext || window.webkitAudioContext).prototype;
-                              for (const [method, key] of [['createOscillator', 'lamps'], ['createBufferSource', 'starts']]) {
-                                const create = audio[method];
-                                audio[method] = function () {
-                                  const node = create.call(this);
-                                  const start = node.start;
-                                  node.start = function (...args) {
-                                    start.apply(this, args);
-                                    window.lightsOutSounds[key] += 1;
-                                  };
-                                  return node;
+                              const create = audio.createBufferSource;
+                              audio.createBufferSource = function () {
+                                const node = create.call(this);
+                                const start = node.start;
+                                node.start = function (...args) {
+                                  start.apply(this, args);
+                                  window.lightsOutSounds.push({
+                                    lamps: document.querySelectorAll('.is-lit').length,
+                                    duration: node.buffer.duration,
+                                  });
                                 };
-                              }
+                                return node;
+                              };
                             }""")
+                            expect(game).to_have_attribute('data-sound-url', __import__('re').compile(r'/lights-out-lamp\.wav$'))
                             press()
                             expect(game).to_have_attribute('data-state', 'countdown')
                             press()
                             expect(game).to_have_attribute('data-state', 'false-start')
-                            lamps_before = page.evaluate('lightsOutSounds.lamps')
+                            lamps_before = page.evaluate('lightsOutSounds.length')
                             press()
                             expect(game.locator('.is-lit')).to_have_count(5)
-                            assert page.evaluate('lightsOutSounds.lamps') - lamps_before == 5, (engine, width, 'Each lamp must play a tone')
+                            sounds = page.evaluate('before => lightsOutSounds.slice(before)', lamps_before)
+                            assert [sound['lamps'] for sound in sounds] == [1, 2, 3, 4, 5], (engine, width, sounds)
+                            assert all(.35 < sound['duration'] < .38 for sound in sounds)
                             page.screenshot(path=str(output / f'{width}-lights-out.png'))
                             expect(game).to_have_attribute('data-state', 'go')
                             expect(game.locator('.is-lit')).to_have_count(0)
-                            assert page.evaluate('lightsOutSounds.starts') == 1, (engine, width, 'Play the release sound')
+                            assert page.evaluate('lightsOutSounds.length') == lamps_before + 5, (engine, width, 'Lights out stays silent')
                             press()
                             expect(game).to_have_attribute('data-state', 'result')
+                            assert page.evaluate('lightsOutSounds.length') == lamps_before + 5, (engine, width, 'The reaction button stays silent')
                             expect(game.locator('[data-result]')).to_be_visible()
                             record = game.locator('[data-best]').inner_text()
                             assert 0 < int(record.split()[0]) <= 10000

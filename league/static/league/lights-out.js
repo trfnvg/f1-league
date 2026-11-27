@@ -28,6 +28,7 @@
   let audioContext;
   let audioOutput;
   let soundBuffer;
+  let soundDownload;
   let loadingSound = false;
   let frame = 0;
   let nextLightAt = 0;
@@ -45,6 +46,19 @@
     if (audioOutput) audioOutput.gain.value = soundEnabled ? 1 : 0;
   }
 
+  function downloadSound() {
+    soundDownload ||= fetch(game.dataset.soundUrl)
+      .then(response => {
+        if (!response.ok) throw new Error("Lamp sound unavailable");
+        return response.arrayBuffer();
+      })
+      .catch(() => {
+        soundDownload = null;
+        return null;
+      });
+    return soundDownload;
+  }
+
   function prepareSound() {
     if (!soundEnabled) return;
     const AudioEngine = window.AudioContext || window.webkitAudioContext;
@@ -58,12 +72,8 @@
       if (audioContext.state !== "running") audioContext.resume().catch(() => {});
       if (!loadingSound && !soundBuffer) {
         loadingSound = true;
-        fetch(game.dataset.soundUrl)
-          .then(response => {
-            if (!response.ok) throw new Error("Start sound unavailable");
-            return response.arrayBuffer();
-          })
-          .then(data => audioContext.decodeAudioData(data))
+        downloadSound()
+          .then(data => data && audioContext.decodeAudioData(data.slice(0)))
           .then(buffer => { soundBuffer = buffer; })
           .catch(() => { /* The visual signal still works. */ })
           .finally(() => { loadingSound = false; });
@@ -71,33 +81,8 @@
     } catch { /* The visual signal still works. */ }
   }
 
-  function playLightTone(pitch = 850) {
-    if (!soundEnabled || audioContext?.state !== "running") return;
-    const now = audioContext.currentTime;
-    const tone = audioContext.createOscillator();
-    const envelope = audioContext.createGain();
-    tone.type = "triangle";
-    tone.frequency.setValueAtTime(pitch, now);
-    tone.frequency.exponentialRampToValueAtTime(pitch * 0.85, now + 0.095);
-    envelope.gain.setValueAtTime(0.001, now);
-    envelope.gain.exponentialRampToValueAtTime(0.22, now + 0.008);
-    envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.105);
-    tone.connect(envelope);
-    envelope.connect(audioOutput);
-    tone.onended = () => {
-      tone.disconnect();
-      envelope.disconnect();
-    };
-    tone.start(now);
-    tone.stop(now + 0.11);
-  }
-
-  function playStartSound() {
-    if (!soundEnabled || audioContext?.state !== "running") return;
-    if (!soundBuffer) {
-      playLightTone(470);
-      return;
-    }
+  function playLampSound() {
+    if (!soundEnabled || !soundBuffer || audioContext?.state !== "running") return;
     const source = audioContext.createBufferSource();
     source.buffer = soundBuffer;
     source.connect(audioOutput);
@@ -129,13 +114,12 @@
     if (phase === "countdown" && now >= nextLightAt) {
       if (lightCount < lamps.length) {
         setLamps(lightCount + 1);
-        playLightTone();
+        playLampSound();
         nextLightAt = now + (lightCount === lamps.length ? 450 + Math.random() * 1850 : 650);
       } else {
         setLamps(0);
         showPhase("go", "Огни погасли!", "Старт", "Жми сейчас");
         goAt = performance.now();
-        playStartSound();
       }
     } else if (phase === "go" && now - goAt >= 10000) {
       endAttempt("expired", "Старт пропущен");
@@ -224,4 +208,5 @@
 
   showBest();
   showSound();
+  if (soundEnabled) downloadSound();
 })();

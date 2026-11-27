@@ -11,7 +11,7 @@
 </head>
 <body>
   <main class="lights-out" data-lights-out data-player-id="{{ user.pk }}"
-    data-sound-url="{% static 'league/audio/lights-out-release.wav' %}" data-state="ready">
+    data-sound-url="{% static 'league/audio/lights-out-lamp.wav' %}" data-state="ready">
     <div class="lights-out-scene" aria-hidden="true">
       <picture>
         <source media="(max-aspect-ratio: 4/5)" srcset="{% static 'league/images/lights-out/yas-marina-cockpit-pitlane-mobile.webp' %}">
@@ -54,7 +54,7 @@
     </footer>
     <noscript><p class="lights-out-noscript">Включи JavaScript, чтобы сыграть.</p></noscript>
   </main>
-  <script src="{% static 'league/lights-out.js' %}?v=2-start-tones" defer></script>
+  <script src="{% static 'league/lights-out.js' %}?v=3-lamp-sample" defer></script>
   <script src="{% static 'league/lights-out-crowd.js' %}?v=1" defer></script>
 </body>
 </html>
