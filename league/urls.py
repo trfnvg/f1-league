@@ -14,10 +14,12 @@ from . import vegas_shop
 from . import vegas_topup
 from . import vegas_inventory
 from . import vegas_daily
+from . import lights_out
 
 app_name = "league"
 
 urlpatterns = [
+    path("arcade/lab/lights-out/", lights_out.preview, name="lights_out_lab"),
     path("arcade/vegas/daily/", vegas_daily.daily_view, name="vegas_daily"),
     path("arcade/vegas/shop/inventory/", vegas_inventory.status_view, name="vegas_inventory"),
     path("arcade/vegas/shop/buy/", vegas_inventory.action_view, {"action": "buy"}, name="vegas_buy"),

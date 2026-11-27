@@ -103,14 +103,14 @@ def run(engine, output):
             browser = getattr(pw, engine).launch()
             for width in (320, 390, 768, 1024, 1280, 1440, 1920):
                 context = browser.new_context(viewport={'width': width, 'height': 900}, device_scale_factor=2,
-                    reduced_motion='reduce')
+                    reduced_motion='reduce', has_touch=width <= 600)
                 context.route('https://**', lambda route: route.abort())
                 page = context.new_page()
                 page.on('pageerror', lambda error: errors.append(str(error)))
                 page.on('request', lambda request: writes.append(request.url) if request.method == 'POST' else None)
                 for path in ('/arcade/control/', '/lab-expired/', '/lab-empty/'):
                     page.goto(base + path, wait_until='networkidle')
-                    expect(page.locator('.lab-game-card')).to_have_count(5)
+                    expect(page.locator('.lab-game-card')).to_have_count(6)
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), (width, path)
                     assert page.locator('#lab-competition').evaluate('node=>node.open')
                     expect(page.locator('#arcade-game-select')).to_be_visible()
@@ -130,8 +130,8 @@ def run(engine, output):
                         page.evaluate('window.scrollTo(0, 0)')
                         page.screenshot(path=str(output / f'{width}-lab.png'), full_page=True)
                     expect(page.locator('#arcade-game-select')).to_be_visible()
-                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value).filter(Boolean)') == ['tetris', 'flappy', 'doodle_jump']
-                    expect(page.locator('.lab-library-option input')).to_have_count(3)
+                    assert page.locator('#arcade-game-select option').evaluate_all('(nodes)=>nodes.map(n=>n.value).filter(Boolean)') == ['vegas', 'tetris', 'flappy', 'doodle_jump']
+                    expect(page.locator('.lab-library-option input')).to_have_count(4)
                     expect(page.locator('.lab-library-option input[value="tetris"]')).to_be_checked()
                     assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                     page.locator('#lab-wheel>summary').click()
@@ -203,6 +203,33 @@ def run(engine, output):
                         page.locator(f'[data-test-game="{card["key"]}"] a').click()
                         page.wait_for_load_state('networkidle')
                         assert not errors, errors
+                        if card['key'] == 'lights-out':
+                            game = page.locator('[data-lights-out]')
+                            button = game.locator('[data-action]')
+                            press = button.tap if width == 390 else lambda: page.keyboard.press('Space')
+                            expect(button).to_be_in_viewport()
+                            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
+                            image = game.locator('picture img')
+                            assert image.evaluate('img => img.naturalWidth > 0')
+                            assert ('-mobile.webp' in image.evaluate('img => img.currentSrc')) == (width == 390)
+                            page.evaluate('Math.random = () => 0.9')
+                            press()
+                            expect(game).to_have_attribute('data-state', 'countdown')
+                            press()
+                            expect(game).to_have_attribute('data-state', 'false-start')
+                            press()
+                            expect(game.locator('.is-lit')).to_have_count(5)
+                            page.screenshot(path=str(output / f'{width}-lights-out.png'))
+                            expect(game).to_have_attribute('data-state', 'go')
+                            expect(game.locator('.is-lit')).to_have_count(0)
+                            press()
+                            expect(game).to_have_attribute('data-state', 'result')
+                            expect(game.locator('[data-result]')).to_be_visible()
+                            record = game.locator('[data-best]').inner_text()
+                            assert 0 < int(record.split()[0]) <= 10000
+                            page.reload()
+                            expect(game.locator('[data-best]')).to_have_text(record)
+                            continue
                         selector = {'vegas': '#vegas-machine', 'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
                                     'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-canvas'}[card['key']]
                         expect(page.locator(selector)).to_be_visible()
@@ -230,7 +257,7 @@ def run(engine, output):
             browser.close()
         assert not errors, errors
         assert len(writes) == 4, writes  # One failed autosave + one explicit retry at each test width.
-        print(f'Arcade lab OK ({engine}): seven widths, same-document stage selection/back, stable scroll, unsaved library retained, autosave/retry, failed reads, four test games, no publishing. {output}')
+        print(f'Arcade lab OK ({engine}): seven widths, stage selection, autosave/retry, six test games, Lights Out keyboard/touch and no publishing. {output}')
     finally:
         server.shutdown()
 

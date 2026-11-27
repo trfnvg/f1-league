@@ -403,6 +403,9 @@ def control(request):
     selected_key = (selected_assignment.game_key if selected_assignment else
                     settings.active_game if selected_event and settings.competition_event_id == selected_event.pk and not settings.competition_opened_at else "")
     test_games = [
+        {"key": "lights-out", "title": "Огни погасли", "genre": "Яс-Марина · скорость реакции",
+         "status": "Закрытый тест", "description": "Дождись, когда погаснут пять огней, и стартуй. Рекорд в миллисекундах.",
+         "cover": "league/images/lights-out/yas-marina-cockpit.webp", "url": reverse("league:lights_out_lab")},
         {"key": "vegas", "title": "Vegas Pit", "genre": "F1 · мемный слот", "status": "Выпущена · отдельный тестовый баланс",
          "description": "40 линий, Wild, каскады и бесплатные вращения. Только игровые деньги, без влияния на зачёт.",
          "cover": "league/images/vegas/strip-v3.png", "url": reverse("league:vegas_lab")},

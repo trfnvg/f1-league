@@ -33,24 +33,36 @@ class ArcadeControlTests(TestCase):
         self.contest = ArcadeCompetition.objects.create(event=self.event, game_key="doodle_jump",
             opened_at=self.settings.competition_opened_at)
 
-    def test_five_games_share_one_lab_with_separate_publishing_settings(self):
+    def test_games_share_one_lab_with_separate_publishing_settings(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "arcade-control.css")
         self.assertContains(response, 'league/arcade-control.js?v=3-autosave-url')
-        self.assertContains(response, 'class="lab-game-card"', count=5)
+        self.assertContains(response, 'class="lab-game-card"', count=6)
         cards = response.context["test_games"]
-        self.assertEqual([card["key"] for card in cards], ["vegas", "doodle_jump", "flappy", "minesweeper", "tetris"])
+        self.assertEqual([card["key"] for card in cards], ["lights-out", "vegas", "doodle_jump", "flappy", "minesweeper", "tetris"])
         for card in cards:
             from django.utils.html import escape
             self.assertContains(response, f'href="{escape(card["url"])}"')
         self.assertNotContains(response, "flight=1")
         self.assertContains(response, '<option value="tetris"')
         self.assertNotContains(response, '<option value="minesweeper"')
+        self.assertNotContains(response, '<option value="lights-out"')
         self.assertContains(response, '<option value="vegas"')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-competition" open>')
         self.assertContains(response, '<details class="lab-disclosure" id="lab-wheel">')
         self.assertTrue(response.context["contest_open"])
+
+    def test_lights_out_is_staff_only_and_not_in_public_arcade(self):
+        preview = reverse("league:lights_out_lab")
+        self.assertContains(self.client.get(preview), "data-lamp", count=5)
+        public_game = reverse("league:arcade_game", args=["lights-out"])
+        self.assertEqual(self.client.get(public_game).status_code, 404)
+        self.client.force_login(self.player)
+        self.assertEqual(self.client.get(preview).status_code, 403)
+        self.assertNotContains(self.client.get(reverse("league:arcade")), preview)
+        self.client.logout()
+        self.assertEqual(self.client.get(preview).status_code, 302)
 
     def test_every_card_opens_without_results_or_competition_changes(self):
         response = self.client.get(self.url)

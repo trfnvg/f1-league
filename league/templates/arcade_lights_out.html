@@ -1,0 +1,48 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#121318">
+  <title>Огни погасли · Fastlap</title>
+  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=1">
+</head>
+<body>
+  <main class="lights-out" data-lights-out data-player-id="{{ user.pk }}"
+    data-sound-url="{% static 'league/audio/lights-out-release.wav' %}" data-state="ready">
+    <picture class="lights-out-scene">
+      <source media="(max-aspect-ratio: 4/5)" srcset="{% static 'league/images/lights-out/yas-marina-cockpit-mobile.webp' %}">
+      <img src="{% static 'league/images/lights-out/yas-marina-cockpit.webp' %}"
+        alt="" width="1672" height="941" fetchpriority="high">
+    </picture>
+    <header class="lights-out-header">
+      <div class="lights-out-heading">
+        <a class="lights-out-back" href="{% url 'league:arcade_control' %}">← К тестированию</a>
+        <p>Финал сезона · Яс-Марина</p>
+        <h1>Огни погасли</h1>
+      </div>
+      <div class="lights-out-tools">
+        <button type="button" class="lights-out-audio" data-audio aria-label="Звук" aria-pressed="true">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h4l5-4v14l-5-4H3z"/><path class="lights-out-waves" d="M16 9a4 4 0 0 1 0 6m2-9a8 8 0 0 1 0 12"/><path class="lights-out-muted" d="m16 9 6 6m0-6-6 6"/></svg>
+        </button>
+        <div class="lights-out-best"><span>Рекорд</span><strong data-best>—</strong></div>
+      </div>
+    </header>
+    <section class="lights-out-signal" aria-label="Стартовый светофор">
+      <div class="lights-out-gantry" aria-hidden="true">
+        <span data-lamp></span><span data-lamp></span><span data-lamp></span><span data-lamp></span><span data-lamp></span>
+      </div>
+      <p class="lights-out-status" role="status" aria-atomic="true" data-status>Готов к старту?</p>
+    </section>
+    <footer class="lights-out-controls">
+      <p class="lights-out-result" data-result hidden><strong data-time></strong><span>мс</span></p>
+      <button type="button" class="lights-out-action" data-action>Старт</button>
+      <p class="lights-out-hint"><span data-hint>Нажми, когда погаснут все пять огней</span><kbd>Пробел</kbd></p>
+    </footer>
+    <noscript><p class="lights-out-noscript">Включи JavaScript, чтобы сыграть.</p></noscript>
+  </main>
+  <script src="{% static 'league/lights-out.js' %}?v=1" defer></script>
+</body>
+</html>
