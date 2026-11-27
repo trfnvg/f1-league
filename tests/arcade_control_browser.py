@@ -223,15 +223,34 @@ def run(engine, output):
                                 arg=before,
                             )
                             page.evaluate('Math.random = () => 0.9')
+                            page.evaluate("""() => {
+                              window.lightsOutSounds = { lamps: 0, starts: 0 };
+                              const audio = (window.AudioContext || window.webkitAudioContext).prototype;
+                              for (const [method, key] of [['createOscillator', 'lamps'], ['createBufferSource', 'starts']]) {
+                                const create = audio[method];
+                                audio[method] = function () {
+                                  const node = create.call(this);
+                                  const start = node.start;
+                                  node.start = function (...args) {
+                                    start.apply(this, args);
+                                    window.lightsOutSounds[key] += 1;
+                                  };
+                                  return node;
+                                };
+                              }
+                            }""")
                             press()
                             expect(game).to_have_attribute('data-state', 'countdown')
                             press()
                             expect(game).to_have_attribute('data-state', 'false-start')
+                            lamps_before = page.evaluate('lightsOutSounds.lamps')
                             press()
                             expect(game.locator('.is-lit')).to_have_count(5)
+                            assert page.evaluate('lightsOutSounds.lamps') - lamps_before == 5, (engine, width, 'Each lamp must play a tone')
                             page.screenshot(path=str(output / f'{width}-lights-out.png'))
                             expect(game).to_have_attribute('data-state', 'go')
                             expect(game.locator('.is-lit')).to_have_count(0)
+                            assert page.evaluate('lightsOutSounds.starts') == 1, (engine, width, 'Play the release sound')
                             press()
                             expect(game).to_have_attribute('data-state', 'result')
                             expect(game.locator('[data-result]')).to_be_visible()

@@ -26,14 +26,15 @@
   if (!Number.isFinite(best) || best < 1 || best > 10000) best = 0;
   let soundEnabled = load(soundKey) !== "off";
   let audioContext;
+  let audioOutput;
   let soundBuffer;
   let loadingSound = false;
-  let playingSound;
   let frame = 0;
   let nextLightAt = 0;
   let lightCount = 0;
   let goAt = 0;
   let phase = "ready";
+  let pendingTouchStart = null;
 
   function showBest() {
     bestDisplay.textContent = best ? best + " мс" : "—";
@@ -41,6 +42,7 @@
 
   function showSound() {
     audioButton.setAttribute("aria-pressed", String(soundEnabled));
+    if (audioOutput) audioOutput.gain.value = soundEnabled ? 1 : 0;
   }
 
   function prepareSound() {
@@ -48,7 +50,11 @@
     const AudioEngine = window.AudioContext || window.webkitAudioContext;
     if (!AudioEngine) return;
     try {
-      audioContext ||= new AudioEngine();
+      if (!audioContext) {
+        audioContext = new AudioEngine();
+        audioOutput = audioContext.createGain();
+        audioOutput.connect(audioContext.destination);
+      }
       if (audioContext.state !== "running") audioContext.resume().catch(() => {});
       if (!loadingSound && !soundBuffer) {
         loadingSound = true;
@@ -65,16 +71,37 @@
     } catch { /* The visual signal still works. */ }
   }
 
-  function playSound() {
-    if (!soundEnabled || !soundBuffer || audioContext.state !== "running") return;
+  function playLightTone(pitch = 850) {
+    if (!soundEnabled || audioContext?.state !== "running") return;
+    const now = audioContext.currentTime;
+    const tone = audioContext.createOscillator();
+    const envelope = audioContext.createGain();
+    tone.type = "triangle";
+    tone.frequency.setValueAtTime(pitch, now);
+    tone.frequency.exponentialRampToValueAtTime(pitch * 0.85, now + 0.095);
+    envelope.gain.setValueAtTime(0.001, now);
+    envelope.gain.exponentialRampToValueAtTime(0.22, now + 0.008);
+    envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.105);
+    tone.connect(envelope);
+    envelope.connect(audioOutput);
+    tone.onended = () => {
+      tone.disconnect();
+      envelope.disconnect();
+    };
+    tone.start(now);
+    tone.stop(now + 0.11);
+  }
+
+  function playStartSound() {
+    if (!soundEnabled || audioContext?.state !== "running") return;
+    if (!soundBuffer) {
+      playLightTone(470);
+      return;
+    }
     const source = audioContext.createBufferSource();
     source.buffer = soundBuffer;
-    source.connect(audioContext.destination);
-    source.onended = () => {
-      source.disconnect();
-      if (playingSound === source) playingSound = null;
-    };
-    playingSound = source;
+    source.connect(audioOutput);
+    source.onended = () => source.disconnect();
     source.start();
   }
 
@@ -102,12 +129,13 @@
     if (phase === "countdown" && now >= nextLightAt) {
       if (lightCount < lamps.length) {
         setLamps(lightCount + 1);
+        playLightTone();
         nextLightAt = now + (lightCount === lamps.length ? 450 + Math.random() * 1850 : 650);
       } else {
         setLamps(0);
         showPhase("go", "Огни погасли!", "Старт", "Жми сейчас");
         goAt = performance.now();
-        playSound();
+        playStartSound();
       }
     } else if (phase === "go" && now - goAt >= 10000) {
       endAttempt("expired", "Старт пропущен");
@@ -138,6 +166,7 @@
       endAttempt("result", (improved ? "Новый рекорд" : "Твоя реакция") + " · " + reaction + " мс");
       return;
     }
+    pendingTouchStart = null;
     prepareSound();
     result.hidden = true;
     setLamps(0);
@@ -154,7 +183,21 @@
   }
 
   action.addEventListener("pointerdown", event => {
-    if (event.isPrimary && event.button === 0) press(actionTime(event));
+    if (!event.isPrimary || event.button !== 0) return;
+    if (event.pointerType !== "mouse" && phase !== "countdown" && phase !== "go") {
+      pendingTouchStart = event.pointerId;
+      return;
+    }
+    press(actionTime(event));
+  });
+  action.addEventListener("pointerup", event => {
+    // Begin on touch release to unlock audio. Measure reactions on touch down.
+    if (event.pointerId !== pendingTouchStart) return;
+    pendingTouchStart = null;
+    press(actionTime(event));
+  });
+  action.addEventListener("pointercancel", event => {
+    if (event.pointerId === pendingTouchStart) pendingTouchStart = null;
   });
   action.addEventListener("click", event => {
     // Assistive technology and Enter trigger a click without pointerdown.
@@ -177,7 +220,6 @@
     save(soundKey, soundEnabled ? "on" : "off");
     showSound();
     if (soundEnabled) prepareSound();
-    else if (playingSound) playingSound.stop();
   });
 
   showBest();
