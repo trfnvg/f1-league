@@ -211,7 +211,8 @@ def run(engine, output):
                             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                             image = game.locator('picture img')
                             assert image.evaluate('img => img.naturalWidth > 0')
-                            assert ('-mobile.webp' in image.evaluate('img => img.currentSrc')) == (width == 390)
+                            expected_scene = 'yas-marina-cockpit-pitlane-mobile.webp' if width == 390 else 'yas-marina-cockpit-pitlane.webp'
+                            assert image.evaluate('img => img.currentSrc').endswith(expected_scene)
                             cloud = game.locator('.lights-out-cloud--near')
                             assert cloud.evaluate('img => img.naturalWidth > 0')
                             expect(cloud).to_have_css('animation-name', 'none')
