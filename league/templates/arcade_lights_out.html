@@ -7,16 +7,20 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#121318">
   <title>Огни погасли · Fastlap</title>
-  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=2">
 </head>
 <body>
   <main class="lights-out" data-lights-out data-player-id="{{ user.pk }}"
     data-sound-url="{% static 'league/audio/lights-out-release.wav' %}" data-state="ready">
-    <picture class="lights-out-scene">
-      <source media="(max-aspect-ratio: 4/5)" srcset="{% static 'league/images/lights-out/yas-marina-cockpit-mobile.webp' %}">
-      <img src="{% static 'league/images/lights-out/yas-marina-cockpit.webp' %}"
-        alt="" width="1672" height="941" fetchpriority="high">
-    </picture>
+    <div class="lights-out-scene" aria-hidden="true">
+      <picture>
+        <source media="(max-aspect-ratio: 4/5)" srcset="{% static 'league/images/lights-out/yas-marina-cockpit-mobile.webp' %}">
+        <img src="{% static 'league/images/lights-out/yas-marina-cockpit.webp' %}"
+          alt="" width="1672" height="941" fetchpriority="high">
+      </picture>
+      <svg class="lights-out-crowd lights-out-crowd--wide" data-grandstand="wide" viewBox="0 0 840 472.75"></svg>
+      <svg class="lights-out-crowd lights-out-crowd--portrait" data-grandstand="portrait" viewBox="0 0 480 720"></svg>
+    </div>
     <header class="lights-out-header">
       <div class="lights-out-heading">
         <a class="lights-out-back" href="{% url 'league:arcade_control' %}">← К тестированию</a>
@@ -44,5 +48,6 @@
     <noscript><p class="lights-out-noscript">Включи JavaScript, чтобы сыграть.</p></noscript>
   </main>
   <script src="{% static 'league/lights-out.js' %}?v=1" defer></script>
+  <script src="{% static 'league/lights-out-crowd.js' %}?v=1" defer></script>
 </body>
 </html>

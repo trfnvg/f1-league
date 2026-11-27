@@ -31,8 +31,52 @@ button { font: inherit; cursor: pointer; }
   height: 100%;
   pointer-events: none;
 }
-.lights-out-scene { z-index: -2; }
-.lights-out-scene img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 61%; }
+.lights-out-scene {
+  --scene-y: 61%;
+  z-index: -2;
+  container-type: size;
+  overflow: hidden;
+}
+.lights-out-scene img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% var(--scene-y); }
+.lights-out-crowd {
+  --scene-ratio: calc(1672 / 941);
+  position: absolute;
+  left: 50%;
+  top: var(--scene-y);
+  /* Match the cover image's size and crop at every viewport ratio. */
+  width: max(100cqw, calc(100cqh * var(--scene-ratio)));
+  height: auto;
+  transform: translate(-50%, calc(-1 * var(--scene-y)));
+}
+.lights-out-crowd--portrait { --scene-ratio: calc(1024 / 1536); display: none; }
+.lights-out-fan-motion,
+.lights-out-flag-cloth {
+  animation-delay: var(--stagger);
+  animation-duration: var(--tempo);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+.lights-out-fan-motion { animation-name: lights-out-cheer; opacity: .87; transition: opacity .3s ease; }
+.lights-out-flag-cloth { animation-name: lights-out-flutter; }
+[data-state="countdown"] .lights-out-fan-motion,
+[data-state="go"] .lights-out-fan-motion { animation-play-state: paused; opacity: .12; }
+@keyframes lights-out-cheer {
+  0%, 58%, 100% { transform: scaleY(.46); }
+  68%, 86% { transform: scaleY(1.22); }
+  76% { transform: scaleY(.86); }
+}
+@keyframes lights-out-flutter {
+  0%, 100% { transform: skewY(-5deg) scaleX(.8); }
+  35% { transform: skewY(11deg) scaleX(1.04); }
+  68% { transform: skewY(-9deg) scaleX(.67); }
+}
+@media (max-aspect-ratio: 4/5) {
+  .lights-out-crowd--wide { display: none; }
+  .lights-out-crowd--portrait { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lights-out-fan-motion, .lights-out-flag-cloth { animation: none; transition: none; }
+}
 .lights-out::before {
   content: "";
   z-index: -1;
@@ -179,7 +223,7 @@ button { font: inherit; cursor: pointer; }
   .lights-out-header { gap: .5rem; }
   .lights-out-tools { flex-direction: column-reverse; align-items: end; gap: .35rem; }
   .lights-out-best { min-width: 72px; padding: .45rem .55rem; }
-  .lights-out-scene img { object-position: 50% 68%; }
+  .lights-out-scene { --scene-y: 68%; }
   .lights-out-signal { padding-top: clamp(35px, 10svh, 108px); }
 }
 
