@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: Inter, "Helvetica Neue", Arial, sans-serif;
-  background: #121318;
+  background: #17131e;
   color: #fcf1df;
 }
 
@@ -37,7 +37,45 @@ button { font: inherit; cursor: pointer; }
   container-type: size;
   overflow: hidden;
 }
-.lights-out-scene img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% var(--scene-y); }
+.lights-out-scene picture img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% var(--scene-y); }
+.lights-out-sky {
+  position: absolute;
+  inset: 8% 0 auto;
+  height: 44%;
+  overflow: hidden;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 48%, #000 25%, transparent 84%);
+}
+.lights-out-sky .lights-out-cloud {
+  position: absolute;
+  left: 0;
+  width: clamp(320px, 62vw, 1160px);
+  height: auto;
+  object-fit: contain;
+  animation: lights-out-cloud-drift var(--drift-time) linear var(--drift-offset) infinite;
+}
+.lights-out-cloud--far {
+  --drift-time: 86s;
+  --drift-offset: -19s;
+  --cloud-scale: .96;
+  top: 3%;
+  opacity: .55;
+}
+.lights-out-cloud--near {
+  --drift-time: 64s;
+  --drift-offset: -34s;
+  --cloud-scale: -1;
+  top: 31%;
+  opacity: .77;
+}
+@keyframes lights-out-cloud-drift {
+  from { transform: translateX(-100%) scaleX(var(--cloud-scale)); }
+  to { transform: translateX(100cqw) scaleX(var(--cloud-scale)); }
+}
+[data-state="result"] .lights-out-scene { animation: lights-out-launch 680ms cubic-bezier(.2, .65, .25, 1) both; }
+@keyframes lights-out-launch {
+  from { transform: scale(1); }
+  to { transform: scale(1.035); }
+}
 .lights-out-crowd {
   --scene-ratio: calc(1672 / 941);
   position: absolute;
@@ -75,13 +113,19 @@ button { font: inherit; cursor: pointer; }
   .lights-out-crowd--portrait { display: block; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lights-out-fan-motion, .lights-out-flag-cloth { animation: none; transition: none; }
+  .lights-out-fan-motion, .lights-out-flag-cloth,
+  .lights-out-sky .lights-out-cloud, [data-state="result"] .lights-out-scene {
+    animation: none;
+    transition: none;
+  }
+  .lights-out-sky .lights-out-cloud--far { transform: translateX(-12%) scaleX(.96); }
+  .lights-out-sky .lights-out-cloud--near { transform: translateX(57cqw) scaleX(-1); }
 }
 .lights-out::before {
   content: "";
   z-index: -1;
-  background: linear-gradient(180deg, #0b0d12e8, #12131830 32%, transparent 47%, #100d1429 62%, #08090bea),
-    radial-gradient(ellipse at center, transparent 44%, #08090b66);
+  background: linear-gradient(180deg, #100b19e6, #25182d29 31%, transparent 53%, #220b171f 68%, #0b0b10e8),
+    radial-gradient(ellipse at 50% 54%, #f9a54715 0%, transparent 43%, #0d081866 100%);
 }
 
 .lights-out-header { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
@@ -97,21 +141,29 @@ button { font: inherit; cursor: pointer; }
 .lights-out-heading p, .lights-out-best span, .lights-out-status, .lights-out-hint {
   font-family: "SFMono-Regular", Consolas, monospace;
 }
-.lights-out-heading p { margin-top: .3rem; color: #f4caa0; font-size: clamp(.68rem, 1.3vw, .88rem); }
+.lights-out-heading p {
+  margin-top: .38rem;
+  color: #ffe0b7;
+  font-size: clamp(.68rem, 1.3vw, .88rem);
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
 .lights-out-heading h1 {
-  margin-top: .35rem;
+  margin-top: .55rem;
+  padding-left: .065em;
   font-size: clamp(1.8rem, 5.3vw, 5.1rem);
   font-weight: 900;
   line-height: .96;
-  letter-spacing: -.065em;
+  letter-spacing: -.05em;
   text-transform: uppercase;
+  transform: skew(-8deg);
   text-shadow: 0 4px 22px #0008;
 }
 .lights-out-tools { display: flex; align-items: start; gap: .55rem; }
 .lights-out-best, .lights-out-audio {
-  border: 1px solid #ffffff35;
+  border: 1px solid #f8d4a04f;
   border-radius: 8px;
-  background: #15151cda;
+  background: linear-gradient(135deg, #241e2eea, #14131be8);
   color: inherit;
 }
 .lights-out-best { min-width: 94px; padding: .6rem .75rem; text-align: right; }
@@ -132,11 +184,11 @@ button { font: inherit; cursor: pointer; }
   width: max-content;
   margin: auto;
   padding: clamp(7px, 1.2vw, 13px);
-  border: 1px solid #696465;
+  border: 1px solid #7a6767;
   border-bottom: 3px solid #08090b;
-  border-radius: 9px;
-  background: linear-gradient(#37363b, #111217 48%, #1e1f23);
-  box-shadow: 0 9px 25px #0e0c11a6;
+  border-radius: 6px;
+  background: linear-gradient(#3d333c, #18131c 44%, #211b20);
+  box-shadow: 0 9px 25px #0e0c11a6, inset 0 1px #ffdfb229;
 }
 .lights-out-gantry::before,
 .lights-out-gantry::after {
@@ -184,9 +236,9 @@ button { font: inherit; cursor: pointer; }
   width: 100%;
   min-height: 60px;
   padding: .55rem 1rem;
-  border: 1px solid #ff8379;
-  border-radius: 9px;
-  background: linear-gradient(180deg, #e43237, #b31822);
+  border: 1px solid #ff9685;
+  border-radius: 7px;
+  background: linear-gradient(105deg, #ec343b, #c52031 72%, #a81324);
   color: #fff6e8;
   box-shadow: inset 0 1px #ffffff42, 0 8px 25px #0b080bbc;
   font-weight: 900;
@@ -199,16 +251,35 @@ button { font: inherit; cursor: pointer; }
 }
 .lights-out-action:active { background: #9e1b24; }
 .lights-out-result {
+  display: flex;
+  align-items: baseline;
+  gap: .85rem;
   position: absolute;
   bottom: calc(100% + .55rem);
   left: 50%;
   transform: translateX(-50%);
-  padding: .3rem .8rem;
+  padding: .36rem 1rem;
   border: 1px solid #f5cc8c78;
   border-radius: 7px;
-  background: #18171fed;
+  background: linear-gradient(120deg, #2e2330fa, #18171ffa);
+  box-shadow: 0 6px 25px #09050bc0;
   color: #ffe8b8;
   white-space: nowrap;
+}
+.lights-out-result-label {
+  font: .74rem "SFMono-Regular", Consolas, monospace;
+  text-transform: uppercase;
+  color: #f4caa0;
+}
+.lights-out-result::before {
+  content: "";
+  align-self: center;
+  width: 22px;
+  height: 16px;
+  flex: none;
+  border: 1px solid #ffddae58;
+  background: conic-gradient(#f9d9ac 25%, #302332 0 50%, #f9d9ac 0 75%, #302332 0) 0 0 / 10px 10px;
+  transform: skewX(-12deg);
 }
 .lights-out-result strong { font-size: clamp(1.5rem, 4.5vw, 2.5rem); margin-right: .25rem; line-height: 1; }
 .lights-out-hint { margin-top: .65rem; font-size: .72rem; color: #efe4d9; }
@@ -224,6 +295,7 @@ button { font: inherit; cursor: pointer; }
   .lights-out-tools { flex-direction: column-reverse; align-items: end; gap: .35rem; }
   .lights-out-best { min-width: 72px; padding: .45rem .55rem; }
   .lights-out-scene { --scene-y: 68%; }
+  .lights-out-sky { inset-block-start: 12%; height: 41%; }
   .lights-out-signal { padding-top: clamp(35px, 10svh, 108px); }
 }
 

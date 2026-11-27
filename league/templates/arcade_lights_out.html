@@ -5,9 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="theme-color" content="#121318">
+  <meta name="theme-color" content="#17131e">
   <title>Огни погасли · Fastlap</title>
-  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=3-finale">
 </head>
 <body>
   <main class="lights-out" data-lights-out data-player-id="{{ user.pk }}"
@@ -18,13 +18,17 @@
         <img src="{% static 'league/images/lights-out/yas-marina-cockpit.webp' %}"
           alt="" width="1672" height="941" fetchpriority="high">
       </picture>
+      <div class="lights-out-sky">
+        <img class="lights-out-cloud lights-out-cloud--far" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
+        <img class="lights-out-cloud lights-out-cloud--near" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
+      </div>
       <svg class="lights-out-crowd lights-out-crowd--wide" data-grandstand="wide" viewBox="0 0 840 472.75"></svg>
       <svg class="lights-out-crowd lights-out-crowd--portrait" data-grandstand="portrait" viewBox="0 0 480 720"></svg>
     </div>
     <header class="lights-out-header">
       <div class="lights-out-heading">
         <a class="lights-out-back" href="{% url 'league:arcade_control' %}">← К тестированию</a>
-        <p>Финал сезона · Яс-Марина</p>
+        <p>Абу-Даби · Финал сезона</p>
         <h1>Огни погасли</h1>
       </div>
       <div class="lights-out-tools">
@@ -38,10 +42,13 @@
       <div class="lights-out-gantry" aria-hidden="true">
         <span data-lamp></span><span data-lamp></span><span data-lamp></span><span data-lamp></span><span data-lamp></span>
       </div>
-      <p class="lights-out-status" role="status" aria-atomic="true" data-status>Готов к старту?</p>
+      <p class="lights-out-status" role="status" aria-atomic="true" data-status>Готов к последнему старту?</p>
     </section>
     <footer class="lights-out-controls">
-      <p class="lights-out-result" data-result hidden><strong data-time></strong><span>мс</span></p>
+      <p class="lights-out-result" data-result hidden>
+        <span class="lights-out-result-label">Реакция</span>
+        <span><strong data-time></strong> мс</span>
+      </p>
       <button type="button" class="lights-out-action" data-action>Старт</button>
       <p class="lights-out-hint"><span data-hint>Нажми, когда погаснут все пять огней</span><kbd>Пробел</kbd></p>
     </footer>

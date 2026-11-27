@@ -212,6 +212,15 @@ def run(engine, output):
                             image = game.locator('picture img')
                             assert image.evaluate('img => img.naturalWidth > 0')
                             assert ('-mobile.webp' in image.evaluate('img => img.currentSrc')) == (width == 390)
+                            cloud = game.locator('.lights-out-cloud--near')
+                            assert cloud.evaluate('img => img.naturalWidth > 0')
+                            expect(cloud).to_have_css('animation-name', 'none')
+                            page.emulate_media(reduced_motion='no-preference')
+                            before = cloud.evaluate('img => getComputedStyle(img).transform')
+                            page.wait_for_function(
+                                """before => getComputedStyle(document.querySelector('.lights-out-cloud--near')).transform !== before""",
+                                arg=before,
+                            )
                             page.evaluate('Math.random = () => 0.9')
                             press()
                             expect(game).to_have_attribute('data-state', 'countdown')
@@ -229,6 +238,7 @@ def run(engine, output):
                             assert 0 < int(record.split()[0]) <= 10000
                             page.reload()
                             expect(game.locator('[data-best]')).to_have_text(record)
+                            page.emulate_media(reduced_motion='reduce')
                             continue
                         selector = {'vegas': '#vegas-machine', 'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
                                     'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-canvas'}[card['key']]
