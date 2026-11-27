@@ -13,6 +13,7 @@
   const time = game.querySelector("[data-time]");
   const bestKey = "fastlap-lights-out-best-" + game.dataset.playerId;
   const soundKey = "fastlap-lights-out-sound";
+  const lampIntervalMs = 1000; // The interval between lamp cues in the supplied recording.
 
   function load(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -115,7 +116,7 @@
       if (lightCount < lamps.length) {
         setLamps(lightCount + 1);
         playLampSound();
-        nextLightAt = now + (lightCount === lamps.length ? 450 + Math.random() * 1850 : 650);
+        nextLightAt = now + (lightCount === lamps.length ? 450 + Math.random() * 1850 : lampIntervalMs);
       } else {
         setLamps(0);
         showPhase("go", "Огни погасли!", "Старт", "Жми сейчас");

@@ -235,6 +235,7 @@ def run(engine, output):
                                   window.lightsOutSounds.push({
                                     lamps: document.querySelectorAll('.is-lit').length,
                                     duration: node.buffer.duration,
+                                    time: performance.now(),
                                   });
                                 };
                                 return node;
@@ -247,10 +248,12 @@ def run(engine, output):
                             expect(game).to_have_attribute('data-state', 'false-start')
                             lamps_before = page.evaluate('lightsOutSounds.length')
                             press()
-                            expect(game.locator('.is-lit')).to_have_count(5)
+                            expect(game.locator('.is-lit')).to_have_count(5, timeout=6500)
                             sounds = page.evaluate('before => lightsOutSounds.slice(before)', lamps_before)
                             assert [sound['lamps'] for sound in sounds] == [1, 2, 3, 4, 5], (engine, width, sounds)
                             assert all(.35 < sound['duration'] < .38 for sound in sounds)
+                            intervals = [right['time'] - left['time'] for left, right in zip(sounds, sounds[1:])]
+                            assert all(975 <= interval <= 1250 for interval in intervals), (engine, width, intervals)
                             page.screenshot(path=str(output / f'{width}-lights-out.png'))
                             expect(game).to_have_attribute('data-state', 'go')
                             expect(game.locator('.is-lit')).to_have_count(0)
