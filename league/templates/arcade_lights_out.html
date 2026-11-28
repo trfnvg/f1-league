@@ -7,23 +7,39 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#17131e">
   <title>Огни погасли · Fastlap</title>
-  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=3-finale">
+  <link rel="stylesheet" href="{% static 'league/lights-out.css' %}?v=5-grid">
 </head>
 <body>
   <main class="lights-out" data-lights-out data-player-id="{{ user.pk }}"
     data-sound-url="{% static 'league/audio/lights-out-lamp.wav' %}" data-state="ready">
-    <div class="lights-out-scene" aria-hidden="true">
-      <picture>
-        <source media="(max-aspect-ratio: 4/5)" srcset="{% static 'league/images/lights-out/yas-marina-cockpit-pitlane-mobile.webp' %}">
-        <img src="{% static 'league/images/lights-out/yas-marina-cockpit-pitlane.webp' %}"
-          alt="" width="1672" height="941" fetchpriority="high">
-      </picture>
-      <div class="lights-out-sky">
-        <img class="lights-out-cloud lights-out-cloud--far" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
-        <img class="lights-out-cloud lights-out-cloud--near" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
+    <div class="lights-out-scene" aria-hidden="true" data-server-ms="{{ server_ms|stringformat:'s' }}" data-deadline-ms="{{ deadline_ms|stringformat:'s' }}">
+      <div class="grid-matte">
+        <picture>
+          <source media="(max-aspect-ratio: 1/1)" sizes="max(100vw, 56.3vh)" srcset="{% static 'league/images/lights-out/grid-portrait.webp' %} 941w, {% static 'league/images/lights-out/grid-portrait-hd.webp' %} 1440w">
+          <img src="{% static 'league/images/lights-out/grid-wide.webp' %}" sizes="max(100vw, 177.8vh)" srcset="{% static 'league/images/lights-out/grid-wide.webp' %} 1672w, {% static 'league/images/lights-out/grid-wide-hd.webp' %} 3840w" alt="" width="1672" height="941" fetchpriority="high">
+        </picture>
+        <div class="grid-people"></div>
+        <div class="grid-night"></div>
+        <div class="grid-practicals"></div>
+        <div class="grid-atmosphere">
+          <div class="grid-sun"></div>
+          <div class="lights-out-sky">
+            <img class="lights-out-cloud lights-out-cloud--far" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
+            <img class="lights-out-cloud lights-out-cloud--near" src="{% static 'league/images/lights-out/yas-marina-clouds.webp' %}" alt="" decoding="async">
+          </div>
+        </div>
       </div>
-      <svg class="lights-out-crowd lights-out-crowd--wide" data-grandstand="wide" viewBox="0 0 840 472.75"></svg>
-      <svg class="lights-out-crowd lights-out-crowd--portrait" data-grandstand="portrait" viewBox="0 0 480 720"></svg>
+      <svg width="0" height="0" class="grid-filter"><defs><filter id="grid-grade" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+        <feColorMatrix type="saturate" values="1"/>
+        <feComponentTransfer><feFuncR type="identity"/><feFuncG type="identity"/><feFuncB type="identity"/></feComponentTransfer>
+      </filter>
+      <filter id="grid-emission" x="0" y="0" width="1" height="1" color-interpolation-filters="sRGB">
+        <feComponentTransfer>
+          <feFuncR type="table" tableValues="0 0 0 0 0 0 .02 .38 .95"/>
+          <feFuncG type="table" tableValues="0 0 0 0 0 0 .04 .53 1"/>
+          <feFuncB type="table" tableValues="0 0 0 0 0 0 .10 .76 1"/>
+        </feComponentTransfer>
+      </filter></defs></svg>
     </div>
     <header class="lights-out-header">
       <div class="lights-out-heading">
@@ -55,6 +71,6 @@
     <noscript><p class="lights-out-noscript">Включи JavaScript, чтобы сыграть.</p></noscript>
   </main>
   <script src="{% static 'league/lights-out.js' %}?v=4-lamp-cadence" defer></script>
-  <script src="{% static 'league/lights-out-crowd.js' %}?v=1" defer></script>
+  <script src="{% static 'league/lights-out-scene.js' %}?v=1" defer></script>
 </body>
 </html>

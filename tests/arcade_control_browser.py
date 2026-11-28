@@ -5,6 +5,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import mimetypes
 import os
 from pathlib import Path
+import re
 import sys
 import threading
 from urllib.parse import urlsplit
@@ -51,6 +52,12 @@ def fixtures():
     pages[future_url] = client.get(future_url).content
     for card in cards:
         pages[card['url']] = client.get(card['url']).content
+        if card['key'] == 'lights-out':
+            markup = pages[card['url']]
+            epoch = int(re.search(rb'data-server-ms="(\d+)"', markup)[1])
+            for phase, hours_left in [('day', 200), ('dusk', 64), ('night', 0)]:
+                pages[f'/lab-light-{phase}/'] = re.sub(rb'data-deadline-ms="[^"]*"',
+                    f'data-deadline-ms="{epoch + hours_left * 3600000}"'.encode(), markup)
     event.deadline = now - timedelta(hours=1)
     event.save(update_fields=['deadline'])
     pages['/lab-expired/'] = client.get(reverse('league:arcade_control')).content
@@ -211,12 +218,15 @@ def run(engine, output):
                             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth + 1')
                             image = game.locator('picture img')
                             assert image.evaluate('img => img.naturalWidth > 0')
-                            expected_scene = 'yas-marina-cockpit-pitlane-mobile.webp' if width == 390 else 'yas-marina-cockpit-pitlane.webp'
-                            assert image.evaluate('img => img.currentSrc').endswith(expected_scene)
+                            expected_scene = 'grid-portrait' if width == 390 else 'grid-wide'
+                            assert expected_scene in image.evaluate('img => img.currentSrc')
+                            expect(game.locator('.grid-person')).to_have_count(0)
                             cloud = game.locator('.lights-out-cloud--near')
                             assert cloud.evaluate('img => img.naturalWidth > 0')
                             expect(cloud).to_have_css('animation-name', 'none')
                             page.emulate_media(reduced_motion='no-preference')
+                            expect(game.locator('.grid-person--fan').first).to_be_visible()
+                            expect(game.locator('.grid-person--crew').first).to_be_visible()
                             before = cloud.evaluate('img => getComputedStyle(img).transform')
                             page.wait_for_function(
                                 """before => getComputedStyle(document.querySelector('.lights-out-cloud--near')).transform !== before""",
@@ -267,6 +277,14 @@ def run(engine, output):
                             page.reload()
                             expect(game.locator('[data-best]')).to_have_text(record)
                             page.emulate_media(reduced_motion='reduce')
+                            for phase, expected in [('day', 0), ('dusk', .62), ('night', 1)]:
+                                page.goto(base + f'/lab-light-{phase}/', wait_until='networkidle')
+                                grade = page.locator('.grid-matte').evaluate(
+                                    "n => parseFloat(n.style.getPropertyValue('--dusk'))")
+                                assert abs(grade - expected) < .01, (phase, grade)
+                                if phase == 'night':
+                                    expect(page.locator('.grid-sun')).to_have_css('opacity', '0')
+                                page.screenshot(path=str(output / f'{width}-sky-{phase}.png'))
                             continue
                         selector = {'vegas': '#vegas-machine', 'doodle_jump': '#doodle-canvas', 'flappy': '#arcade-canvas',
                                     'minesweeper': '#minesweeper-game-screen', 'tetris': '#tetris-canvas'}[card['key']]

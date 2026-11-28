@@ -76,44 +76,71 @@ button { font: inherit; cursor: pointer; }
   from { transform: scale(1); }
   to { transform: scale(1.035); }
 }
-.lights-out-crowd {
-  --scene-ratio: calc(1672 / 941);
+/* One photographic coordinate system for the light, crowd and garage crew. */
+.grid-matte {
+  --ratio: calc(16 / 9);
+  --sun-start: 16%;
+  --sun-travel: 31%;
   position: absolute;
-  left: 50%;
-  top: var(--scene-y);
-  /* Match the cover image's size and crop at every viewport ratio. */
-  width: max(100cqw, calc(100cqh * var(--scene-ratio)));
-  height: auto;
-  transform: translate(-50%, calc(-1 * var(--scene-y)));
+  left: 50%; top: 50%;
+  width: max(100cqw, calc(100cqh * var(--ratio)));
+  aspect-ratio: var(--ratio);
+  transform: translate(-50%, -50%);
 }
-.lights-out-crowd--portrait { --scene-ratio: calc(1024 / 1536); display: none; }
-.lights-out-fan-motion,
-.lights-out-flag-cloth {
-  animation-delay: var(--stagger);
-  animation-duration: var(--tempo);
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
+.grid-filter { position: absolute; }
+.grid-people, .grid-atmosphere, .grid-night { position: absolute; inset: 0; }
+.grid-atmosphere {
+  overflow: hidden;
+  clip-path: polygon(22% 0,100% 0,100% 1%,93% 7%,81% 16%,74% 25%,66% 31%,60% 39%,59% 40%,60% 32%,58% 29%,56% 32%,57% 40%,55% 41%,55% 38%,52% 36%,46% 36%,40% 39%,40% 35%,36% 30%,33% 22%,30% 16%,25% 9%);
 }
-.lights-out-fan-motion { animation-name: lights-out-cheer; opacity: .87; transition: opacity .3s ease; }
-.lights-out-flag-cloth { animation-name: lights-out-flutter; }
-[data-state="countdown"] .lights-out-fan-motion,
-[data-state="go"] .lights-out-fan-motion { animation-play-state: paused; opacity: .12; }
-@keyframes lights-out-cheer {
-  0%, 58%, 100% { transform: scaleY(.46); }
-  68%, 86% { transform: scaleY(1.22); }
-  76% { transform: scaleY(.86); }
+.grid-night {
+  background: radial-gradient(ellipse 36% 58% at 50% 0%, #10182b 5%, #1c2639 60%, transparent 99%),
+    linear-gradient(#182235, #23314a 20%, transparent 52%);
+  mix-blend-mode: multiply;
+  opacity: var(--night, 0);
 }
-@keyframes lights-out-flutter {
-  0%, 100% { transform: skewY(-5deg) scaleX(.8); }
-  35% { transform: skewY(11deg) scaleX(1.04); }
-  68% { transform: skewY(-9deg) scaleX(.67); }
+.grid-practicals {
+  position: absolute; inset: 0;
+  background-size: 100% 100%;
+  mix-blend-mode: screen;
+  opacity: var(--night, 0);
+  clip-path: polygon(0 0, 41% 39%, 41% 41%, 57% 41%, 100% 18%, 100% 34%, 58% 46%, 40% 45%, 0 18%);
 }
-@media (max-aspect-ratio: 4/5) {
-  .lights-out-crowd--wide { display: none; }
-  .lights-out-crowd--portrait { display: block; }
+.grid-sun {
+  position: absolute;
+  top: calc(var(--sun-start) + var(--sun-travel) * var(--dusk, 0));
+  left: calc(48% + 5% * var(--dusk, 0));
+  width: 1.6%; aspect-ratio: 1; border-radius: 50%;
+  opacity: var(--sun-visible, 1);
+  background: #fff6c9; box-shadow: 0 0 8px 3px #ffdd8abe, 0 0 32px 12px #ffad4f77;
+}
+.grid-atmosphere .lights-out-sky { opacity: calc(.4 - .38 * var(--night, 0)); }
+.grid-person {
+  position: absolute;
+  background-repeat: no-repeat;
+  mask-image: radial-gradient(ellipse, #000 45%, transparent 73%);
+  transform-origin: 50% 90%;
+  animation: grid-cheer var(--period) ease-in-out var(--delay) infinite;
+}
+.grid-person--crew { animation-name: grid-crew; }
+@keyframes grid-cheer {
+  0%, 46%, 95%, 100% { transform: none; }
+  60%, 78% { transform: translateY(-4%) skewX(-3deg) scaleY(1.05); }
+  69% { transform: translateY(-1%) skewX(2deg); }
+}
+@keyframes grid-crew {
+  0%, 20%, 94%, 100% { transform: none; }
+  51%, 65% { transform: skewX(4deg) scaleY(.94); }
+}
+[data-state="countdown"] .grid-person, [data-state="go"] .grid-person { animation-play-state: paused; }
+@media (max-aspect-ratio: 1/1) {
+  .grid-matte { --ratio: calc(9 / 16); --sun-start: 35%; --sun-travel: 15%; }
+  .grid-atmosphere { clip-path: polygon(0 0,100% 0,100% 26%,87% 33%,75% 38%,64% 43%,61% 45.5%,58% 45%,53% 44.8%,48% 45.4%,46% 47%,42% 48%,40% 46%,33% 38%,27% 32%,21% 26%,13% 23%,7% 15%,0 13%); }
+  .grid-sun { width: 3.2%; left: calc(60% - 9% * var(--dusk, 0)); }
+  .grid-practicals { clip-path: polygon(0 26%, 42% 47%, 55% 47%, 100% 37%, 100% 49%, 56% 50%, 41% 50%, 0 38%); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lights-out-fan-motion, .lights-out-flag-cloth,
+  .grid-person,
   .lights-out-sky .lights-out-cloud, [data-state="result"] .lights-out-scene {
     animation: none;
     transition: none;
@@ -195,7 +222,7 @@ button { font: inherit; cursor: pointer; }
   position: absolute;
   z-index: -1;
   top: 50%;
-  width: min(26vw, 270px);
+  width: 50vw;
   height: 26px;
   content: "";
   transform: translateY(-50%);

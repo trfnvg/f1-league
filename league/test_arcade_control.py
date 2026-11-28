@@ -64,6 +64,15 @@ class ArcadeControlTests(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(preview).status_code, 302)
 
+    def test_lights_out_uses_the_prediction_deadline_of_abu_dhabi(self):
+        self.event.circuit = "yas-marina"
+        self.event.save(update_fields=["circuit"])
+        from .models import RaceCalendarRound
+        RaceCalendarRound.objects.filter(season_year=self.event.season_year, circuit="yas-marina").update(
+            prediction_event=self.event)
+        response = self.client.get(reverse("league:lights_out_lab"))
+        self.assertContains(response, f'data-deadline-ms="{int(self.event.deadline.timestamp() * 1000)}"')
+
     def test_every_card_opens_without_results_or_competition_changes(self):
         response = self.client.get(self.url)
         tracked = (ArcadeAttempt, DoodleAttempt, MinesweeperAttempt, ArcadeRecord, DoodleRecord, ArcadeWheelSpin)
